@@ -47,6 +47,11 @@ export async function getBiometricSupport(): Promise<BiometricSupport> {
   }
 }
 
+/**
+ * Token disimpan tanpa `requireAuthentication` kerana pilihan itu tidak disokong
+ * dalam Expo Go. Gerbang keselamatan ialah `promptBiometric()` yang mesti lulus
+ * sebelum token ini digunakan.
+ */
 export async function promptBiometric(promptMessage: string): Promise<boolean> {
   if (Platform.OS === 'web') return false;
 
@@ -74,6 +79,14 @@ export async function enableBiometric(refreshToken: string): Promise<void> {
   await setItem(ENABLED_KEY, '1');
 }
 
+/**
+ * Padam bendera DAN token biometrik.
+ *
+ * Hanya dipanggil bila pengguna sendiri OFF-kan toggle di Dashboard, atau melalui
+ * `signOutEverywhere()`. JANGAN panggil selepas satu kegagalan log masuk biometrik —
+ * kegagalan sementara (token luput, tiada rangkaian) mesti hanya jatuh balik ke
+ * skrin kata laluan, bukan mematikan ciri ini untuk selamanya.
+ */
 export async function disableBiometric(): Promise<void> {
   await removeItem(REFRESH_TOKEN_KEY);
   await removeItem(ENABLED_KEY);
@@ -84,9 +97,22 @@ export async function getStoredRefreshToken(): Promise<string | null> {
   return getItem(REFRESH_TOKEN_KEY);
 }
 
+/** Tulis ganti token tersimpan tanpa menyentuh bendera aktif/tidak. */
+export async function saveRefreshToken(refreshToken: string): Promise<void> {
+  if (Platform.OS === 'web') return;
+  await setItem(REFRESH_TOKEN_KEY, refreshToken);
+}
+
 /** Refresh token berputar setiap kali sesi dibaharui — kemas kini yang tersimpan. */
 export async function syncStoredRefreshToken(refreshToken: string | null | undefined): Promise<void> {
   if (Platform.OS === 'web' || !refreshToken) return;
   if (!(await isBiometricEnabled())) return;
-  await setItem(REFRESH_TOKEN_KEY, refreshToken);
+  await saveRefreshToken(refreshToken);
+}
+
+/** Butang "Log Masuk dengan Biometrik" hanya masuk akal bila kedua-duanya ada. */
+export async function hasBiometricLogin(): Promise<boolean> {
+  if (Platform.OS === 'web') return false;
+  const [enabled, token] = await Promise.all([isBiometricEnabled(), getStoredRefreshToken()]);
+  return enabled && Boolean(token);
 }

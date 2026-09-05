@@ -22,6 +22,7 @@ import {
   type BiometricSupport,
 } from '@/lib/biometrics';
 import { toMalayError } from '@/lib/errors';
+import { signOutFromDevice } from '@/lib/session';
 import { supabase } from '@/lib/supabase';
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -167,9 +168,9 @@ export default function DashboardScreen() {
 
   const signOut = useCallback(async () => {
     setSignOutBusy(true);
-    // Skop 'local' bila biometrik aktif supaya refresh token tersimpan kekal sah.
-    const scope = (await isBiometricEnabled()) ? 'local' : 'global';
-    const { error } = await supabase.auth.signOut({ scope });
+    // Bila biometrik aktif, sesi pelayan dikekalkan supaya refresh token tersimpan
+    // masih sah untuk log masuk biometrik seterusnya — lihat lib/session.ts.
+    const { error } = await signOutFromDevice();
     setSignOutBusy(false);
 
     if (error) setBanner({ tone: 'negative', message: toMalayError(error, 'Gagal log keluar.') });

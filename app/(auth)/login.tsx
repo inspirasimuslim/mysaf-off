@@ -8,13 +8,7 @@ import { Notice } from '@/components/ui/notice';
 import { Screen } from '@/components/ui/screen';
 import { TextField } from '@/components/ui/text-field';
 import { Colors } from '@/constants/theme';
-import {
-  disableBiometric,
-  getBiometricSupport,
-  getStoredRefreshToken,
-  isBiometricEnabled,
-  promptBiometric,
-} from '@/lib/biometrics';
+import { getBiometricSupport, getStoredRefreshToken, hasBiometricLogin, promptBiometric } from '@/lib/biometrics';
 import { toMalayError } from '@/lib/errors';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 
@@ -31,13 +25,9 @@ export default function LoginScreen() {
     let active = true;
 
     void (async () => {
-      const [support, enabled, token] = await Promise.all([
-        getBiometricSupport(),
-        isBiometricEnabled(),
-        getStoredRefreshToken(),
-      ]);
+      const [support, available] = await Promise.all([getBiometricSupport(), hasBiometricLogin()]);
       if (!active) return;
-      setBiometricLabel(support.usable && enabled && token ? support.label : null);
+      setBiometricLabel(support.usable && available ? support.label : null);
     })();
 
     return () => {
@@ -72,7 +62,6 @@ export default function LoginScreen() {
 
     const token = await getStoredRefreshToken();
     if (!token) {
-      setBiometricLabel(null);
       setError('Sesi biometrik tidak ditemui. Sila log masuk dengan kata laluan.');
       return;
     }
@@ -84,10 +73,11 @@ export default function LoginScreen() {
     const { error: refreshError } = await supabase.auth.refreshSession({ refresh_token: token });
     setBiometricBusy(false);
 
+    // Kegagalan di sini TIDAK mematikan ciri biometrik. Bendera dan token kekal
+    // tersimpan supaya butang ini masih ada selepas log masuk kata laluan; hanya
+    // pengguna yang boleh OFF-kan ciri ini melalui toggle di Dashboard.
     if (refreshError) {
-      await disableBiometric();
-      setBiometricLabel(null);
-      setError('Sesi biometrik telah tamat. Sila log masuk dengan kata laluan.');
+      setError('Gagal memulihkan sesi biometrik. Sila log masuk dengan kata laluan kali ini.');
     }
   }, []);
 
