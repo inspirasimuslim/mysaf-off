@@ -12,22 +12,30 @@ type Props = {
   title: string;
   description?: string;
   onClose: () => void;
+  /** `false` mengunci helaian semasa penghantaran berjalan supaya borang tidak hilang separuh jalan. */
+  dismissable?: boolean;
   children: ReactNode;
 };
 
 /** Helaian ringkas untuk borang pendek (tukar emel / kata laluan). */
-export function FormModal({ visible, title, description, onClose, children }: Props) {
+export function FormModal({ visible, title, description, onClose, dismissable = true, children }: Props) {
   const insets = useSafeAreaInsets();
 
+  const close = () => {
+    if (dismissable) onClose();
+  };
+
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={close}>
       <View className="flex-1 justify-end bg-black/40">
         {/* Ketuk di luar helaian untuk tutup. */}
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Tutup"
+          accessibilityState={{ disabled: !dismissable }}
+          disabled={!dismissable}
           className="absolute inset-0"
-          onPress={onClose}
+          onPress={close}
         />
 
         <KeyboardAvoidingView
@@ -45,9 +53,13 @@ export function FormModal({ visible, title, description, onClose, children }: Pr
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel="Tutup"
+                accessibilityState={{ disabled: !dismissable }}
+                disabled={!dismissable}
                 hitSlop={10}
-                onPress={onClose}
-                className="h-9 w-9 items-center justify-center rounded-pill border border-line bg-surface active:opacity-70">
+                onPress={close}
+                className={`h-9 w-9 items-center justify-center rounded-pill border border-line bg-surface ${
+                  dismissable ? 'active:opacity-70' : 'opacity-40'
+                }`}>
                 <Ionicons name="close" size={18} color={Colors.ink} />
               </Pressable>
             </View>

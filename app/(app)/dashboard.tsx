@@ -21,14 +21,46 @@ import {
   promptBiometric,
   type BiometricSupport,
 } from '@/lib/biometrics';
-import { toMalayError } from '@/lib/errors';
+import { errorCode, toMalayError } from '@/lib/errors';
 import { signOutFromDevice } from '@/lib/session';
 import { supabase } from '@/lib/supabase';
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MIN_PASSWORD_LENGTH = 8;
+const MISMATCH_MESSAGE = 'Pengesahan kata laluan tidak sepadan.';
 /** Em dash sebagai placeholder nilai yang belum ada. */
 const DASH = '—';
+
+/** Kod ralat yang berpunca daripada nilai yang ditaip, jadi dipapar di bawah medan berkenaan. */
+const EMAIL_FIELD_CODES = [
+  'email_exists',
+  'user_already_exists',
+  'email_address_invalid',
+  'email_address_not_authorized',
+  'email_conflict_identity_not_deletable',
+  'validation_failed',
+];
+const PASSWORD_FIELD_CODES = ['weak_password', 'same_password', 'validation_failed'];
+
+/**
+ * Tentukan sama ada ralat patut dipapar inline (bawah medan) atau sebagai notis borang.
+ * Ralat rangkaian / sesi tamat bukan salah nilai yang ditaip, jadi ia naik ke notis
+ * borang supaya pengguna tidak tersalah sangka nilai merekalah yang bermasalah.
+ */
+function belongsToField(error: unknown, codes: string[], messagePattern: RegExp): boolean {
+  const code = errorCode(error);
+  if (code) return codes.includes(code);
+  const raw = error instanceof Error ? error.message : '';
+  return messagePattern.test(raw);
+}
+
+function validatePassword(value: string): string | null {
+  if (!value) return 'Sila masukkan kata laluan baharu.';
+  if (value.length < MIN_PASSWORD_LENGTH) {
+    return 'Kata laluan mesti sekurang-kurangnya ' + MIN_PASSWORD_LENGTH + ' aksara.';
+  }
+  return null;
+}
 
 type Banner = { tone: 'positive' | 'info' | 'negative'; message: string } | null;
 
@@ -96,85 +128,190 @@ export default function DashboardScreen() {
   // --- Tukar emel ----------------------------------------------------------
   const [emailModal, setEmailModal] = useState(false);
   const [newEmail, setNewEmail] = useState('');
+  /** Ralat pada medan emel itu sendiri (format salah, sudah digunakan). */
   const [emailError, setEmailError] = useState<string | null>(null);
+  /** Ralat am borang (rangkaian, sesi tamat, had kadar). */
+  const [emailNotice, setEmailNotice] = useState<string | null>(null);
   const [emailBusy, setEmailBusy] = useState(false);
 
-  const submitEmail = useCallback(async () => {
-    setEmailError(null);
-    const value = newEmail.trim();
+  const validateEmail = useCallback(
+    (value: string): string | null => {
+      const trimmed = value.trim();
+      if (!trimmed) return 'Sila masukkan emel baharu.';
+      if (!EMAIL_PATTERN.test(trimmed)) return 'Format emel tidak sah. Contoh: nama@contoh.com';
+      if (user?.email && trimmed.toLowerCase() === user.email.toLowerCase()) {
+        return 'Emel baharu sama dengan emel semasa.';
+      }
+      return null;
+    },
+    [user?.email],
+  );
 
-    if (!EMAIL_PATTERN.test(value)) {
-      setEmailError('Format emel tidak sah.');
-      return;
-    }
-    if (value.toLowerCase() === user?.email?.toLowerCase()) {
-      setEmailError('Emel baharu sama dengan emel semasa.');
-      return;
-    }
+  const openEmailModal = useCallback(() => {
+    setBanner(null);
+    setNewEmail('');
+    setEmailError(null);
+    setEmailNotice(null);
+    setEmailBusy(false);
+    setEmailModal(true);
+  }, []);
+
+  const changeEmail = useCallback(
+    (value: string) => {
+      setNewEmail(value);
+      setEmailNotice(null);
+      // Ralat yang sudah terpapar dinilai semula supaya ia hilang sebaik dibetulkan.
+      if (emailError) setEmailError(validateEmail(value));
+    },
+    [emailError, validateEmail],
+  );
+
+  const submitEmail = useCallback(async () => {
+    if (emailBusy) return;
+
+    const value = newEmail.trim();
+    const invalid = validateEmail(value);
+    setEmailNotice(null);
+    setEmailError(invalid);
+    if (invalid) return;
 
     setEmailBusy(true);
-    const { error } = await supabase.auth.updateUser({ email: value });
-    setEmailBusy(false);
+    try {
+      const { data, error } = await supabase.auth.updateUser({ email: value });
 
-    if (error) {
-      setEmailError(toMalayError(error, 'Gagal menukar emel.'));
-      return;
+      if (error) {
+        const message = toMalayError(error, 'Gagal menukar emel. Sila cuba lagi.');
+        if (belongsToField(error, EMAIL_FIELD_CODES, /email|registered/i)) setEmailError(message);
+        else setEmailNotice(message);
+        return;
+      }
+
+      // Emel BELUM bertukar di sini — Supabase hanya menghantar pautan pengesahan.
+      // `new_email` ialah emel yang menunggu pengesahan; nilai taipan jadi sandaran.
+      const pending = data.user?.new_email || value;
+      setEmailModal(false);
+      setNewEmail('');
+      setEmailError(null);
+      setBanner({
+        tone: 'positive',
+        message:
+          'Pautan pengesahan telah dihantar ke ' +
+          pending +
+          '. Sila buka emel BAHARU itu dan klik pautan tersebut — emel akaun anda belum bertukar sehingga pengesahan selesai.' +
+          (user?.email ? ' Jika pengesahan berganda diaktifkan, semak juga peti masuk ' + user.email + '.' : ''),
+      });
+    } catch (caught) {
+      setEmailNotice(toMalayError(caught, 'Gagal menukar emel. Sila cuba lagi.'));
+    } finally {
+      // finally memastikan butang tidak kekal terkunci walau apa pun yang berlaku.
+      setEmailBusy(false);
     }
-
-    setEmailModal(false);
-    setNewEmail('');
-    setBanner({
-      tone: 'positive',
-      message: 'Pautan pengesahan telah dihantar. Sila sahkan melalui emel lama dan emel baharu.',
-    });
-  }, [newEmail, user?.email]);
+  }, [emailBusy, newEmail, user?.email, validateEmail]);
 
   // --- Tukar kata laluan ---------------------------------------------------
   const [passwordModal, setPasswordModal] = useState(false);
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [confirmError, setConfirmError] = useState<string | null>(null);
+  /** Ralat am borang (rangkaian, sesi tamat, had kadar). */
+  const [passwordNotice, setPasswordNotice] = useState<string | null>(null);
   const [passwordBusy, setPasswordBusy] = useState(false);
 
-  const submitPassword = useCallback(async () => {
-    setPasswordError(null);
-
-    if (password.length < MIN_PASSWORD_LENGTH) {
-      setPasswordError('Kata laluan mesti sekurang-kurangnya ' + MIN_PASSWORD_LENGTH + ' aksara.');
-      return;
-    }
-    if (password !== confirmPassword) {
-      setPasswordError('Pengesahan kata laluan tidak sepadan.');
-      return;
-    }
-
-    setPasswordBusy(true);
-    const { error } = await supabase.auth.updateUser({ password });
-    setPasswordBusy(false);
-
-    if (error) {
-      setPasswordError(toMalayError(error, 'Gagal menukar kata laluan.'));
-      return;
-    }
-
-    setPasswordModal(false);
+  const openPasswordModal = useCallback(() => {
+    setBanner(null);
     setPassword('');
     setConfirmPassword('');
-    setBanner({ tone: 'positive', message: 'Kata laluan berjaya dikemas kini.' });
-  }, [password, confirmPassword]);
+    setPasswordError(null);
+    setConfirmError(null);
+    setPasswordNotice(null);
+    setPasswordBusy(false);
+    setPasswordModal(true);
+  }, []);
+
+  const changePassword = useCallback(
+    (value: string) => {
+      setPassword(value);
+      setPasswordNotice(null);
+      if (passwordError) setPasswordError(validatePassword(value));
+      // Padanan dinilai semula supaya ralat "tidak sepadan" tidak tertinggal.
+      if (confirmPassword) setConfirmError(confirmPassword === value ? null : MISMATCH_MESSAGE);
+    },
+    [confirmPassword, passwordError],
+  );
+
+  const changeConfirmPassword = useCallback(
+    (value: string) => {
+      setConfirmPassword(value);
+      setPasswordNotice(null);
+      // Maklum balas serta-merta semasa menaip, bukan tunggu butang ditekan.
+      setConfirmError(value && value !== password ? MISMATCH_MESSAGE : null);
+    },
+    [password],
+  );
+
+  const submitPassword = useCallback(async () => {
+    if (passwordBusy) return;
+
+    const invalidPassword = validatePassword(password);
+    const invalidConfirm = !confirmPassword
+      ? 'Sila sahkan kata laluan baharu.'
+      : confirmPassword !== password
+        ? MISMATCH_MESSAGE
+        : null;
+
+    setPasswordNotice(null);
+    setPasswordError(invalidPassword);
+    setConfirmError(invalidConfirm);
+    if (invalidPassword || invalidConfirm) return;
+
+    setPasswordBusy(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password });
+
+      if (error) {
+        const message = toMalayError(error, 'Gagal menukar kata laluan. Sila cuba lagi.');
+        if (belongsToField(error, PASSWORD_FIELD_CODES, /password/i)) setPasswordError(message);
+        else setPasswordNotice(message);
+        return;
+      }
+
+      // Sesi semasa dikekalkan oleh Supabase — tiada log keluar paksa diperlukan.
+      // Medan dikosongkan supaya kata laluan tidak tertinggal pada skrin.
+      setPasswordModal(false);
+      setPassword('');
+      setConfirmPassword('');
+      setPasswordError(null);
+      setConfirmError(null);
+      setBanner({
+        tone: 'positive',
+        message: 'Kata laluan berjaya dikemas kini. Anda kekal log masuk pada peranti ini.',
+      });
+    } catch (caught) {
+      setPasswordNotice(toMalayError(caught, 'Gagal menukar kata laluan. Sila cuba lagi.'));
+    } finally {
+      setPasswordBusy(false);
+    }
+  }, [confirmPassword, password, passwordBusy]);
 
   // --- Log keluar ----------------------------------------------------------
   const [signOutBusy, setSignOutBusy] = useState(false);
 
   const signOut = useCallback(async () => {
-    setSignOutBusy(true);
-    // Bila biometrik aktif, sesi pelayan dikekalkan supaya refresh token tersimpan
-    // masih sah untuk log masuk biometrik seterusnya — lihat lib/session.ts.
-    const { error } = await signOutFromDevice();
-    setSignOutBusy(false);
+    if (signOutBusy) return;
 
-    if (error) setBanner({ tone: 'negative', message: toMalayError(error, 'Gagal log keluar.') });
-  }, []);
+    setSignOutBusy(true);
+    try {
+      // Bila biometrik aktif, sesi pelayan dikekalkan supaya refresh token tersimpan
+      // masih sah untuk log masuk biometrik seterusnya — lihat lib/session.ts.
+      const { error } = await signOutFromDevice();
+      if (error) setBanner({ tone: 'negative', message: toMalayError(error, 'Gagal log keluar.') });
+    } catch (caught) {
+      setBanner({ tone: 'negative', message: toMalayError(caught, 'Gagal log keluar.') });
+    } finally {
+      setSignOutBusy(false);
+    }
+  }, [signOutBusy]);
 
   const biometricSubtitle = !support
     ? 'Menyemak sokongan peranti...'
@@ -235,23 +372,14 @@ export default function DashboardScreen() {
                 icon="mail-outline"
                 title="Tukar Emel"
                 subtitle={user?.email ?? undefined}
-                onPress={() => {
-                  setEmailError(null);
-                  setNewEmail('');
-                  setEmailModal(true);
-                }}
+                onPress={openEmailModal}
               />
 
               <ActionRow
                 icon="lock-closed-outline"
                 title="Tukar Kata Laluan"
-                subtitle="Minimum 8 aksara"
-                onPress={() => {
-                  setPasswordError(null);
-                  setPassword('');
-                  setConfirmPassword('');
-                  setPasswordModal(true);
-                }}
+                subtitle={'Minimum ' + MIN_PASSWORD_LENGTH + ' aksara'}
+                onPress={openPasswordModal}
               />
             </View>
           </View>
@@ -263,47 +391,81 @@ export default function DashboardScreen() {
       <FormModal
         visible={emailModal}
         title="Tukar Emel"
-        description="Pautan pengesahan akan dihantar ke emel lama dan emel baharu."
+        description="Emel hanya bertukar selepas anda klik pautan pengesahan yang dihantar ke emel baharu."
+        dismissable={!emailBusy}
         onClose={() => setEmailModal(false)}>
+        {emailNotice ? <Notice tone="negative" message={emailNotice} /> : null}
+
         <TextField
           label="Emel baharu"
           placeholder="nama@contoh.com"
           value={newEmail}
-          onChangeText={setNewEmail}
+          onChangeText={changeEmail}
           autoCapitalize="none"
+          autoCorrect={false}
+          autoComplete="email"
           keyboardType="email-address"
           textContentType="emailAddress"
+          returnKeyType="go"
+          editable={!emailBusy}
+          onSubmitEditing={() => void submitEmail()}
           error={emailError}
         />
-        <Button label="Simpan Emel" loading={emailBusy} onPress={() => void submitEmail()} />
+
+        <Button label="Simpan Emel" loading={emailBusy} disabled={emailBusy} onPress={() => void submitEmail()} />
       </FormModal>
 
       <FormModal
         visible={passwordModal}
         title="Tukar Kata Laluan"
-        description="Kata laluan mesti sekurang-kurangnya 8 aksara."
+        description={
+          'Kata laluan mesti sekurang-kurangnya ' +
+          MIN_PASSWORD_LENGTH +
+          ' aksara. Anda kekal log masuk selepas menukarnya.'
+        }
+        dismissable={!passwordBusy}
         onClose={() => setPasswordModal(false)}>
+        {passwordNotice ? <Notice tone="negative" message={passwordNotice} /> : null}
+
         <TextField
           label="Kata laluan baharu"
           placeholder="Masukkan kata laluan baharu"
           value={password}
-          onChangeText={setPassword}
+          onChangeText={changePassword}
           autoCapitalize="none"
+          autoCorrect={false}
+          autoComplete="new-password"
           textContentType="newPassword"
+          returnKeyType="next"
+          editable={!passwordBusy}
+          error={passwordError}
           secure
         />
+
         <TextField
           label="Sahkan kata laluan"
           placeholder="Masukkan semula kata laluan"
           value={confirmPassword}
-          onChangeText={setConfirmPassword}
+          onChangeText={changeConfirmPassword}
           autoCapitalize="none"
+          autoCorrect={false}
+          autoComplete="new-password"
           textContentType="newPassword"
-          error={passwordError}
+          returnKeyType="go"
+          editable={!passwordBusy}
+          onSubmitEditing={() => void submitPassword()}
+          error={confirmError}
           secure
         />
-        <Button label="Simpan Kata Laluan" loading={passwordBusy} onPress={() => void submitPassword()} />
+
+        <Button
+          label="Simpan Kata Laluan"
+          loading={passwordBusy}
+          disabled={passwordBusy}
+          onPress={() => void submitPassword()}
+        />
       </FormModal>
+
     </>
   );
 }
