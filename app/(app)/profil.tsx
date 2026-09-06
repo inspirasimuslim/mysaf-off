@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
 
@@ -28,6 +29,7 @@ type Banner = { tone: 'positive' | 'negative'; message: string } | null;
  */
 export default function ProfilScreen() {
   const { user } = useAuth();
+  const router = useRouter();
   const userId = user?.id ?? null;
 
   const [member, setMember] = useState<Member | null>(null);
@@ -94,6 +96,8 @@ export default function ProfilScreen() {
       title="Profil"
       eyebrow={member?.nombor_ahli ? 'Ahli ' + member.nombor_ahli : undefined}
       subtitle={member ? generationLabel(member.generasi) : undefined}
+      /* Tetapan akaun tinggal berhampiran Profil, bukan lagi di Dashboard. */
+      action={{ icon: 'settings-outline', label: 'Tetapan', onPress: () => router.push('/(app)/tetapan') }}
     />
   );
 
