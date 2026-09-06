@@ -11,15 +11,28 @@ type Props = {
   subtitle?: string;
   /** Papar ikon loceng notifikasi di kanan bila diberi. */
   onBellPress?: () => void;
+  /** Papar anak panah kembali di kiri bila diberi — untuk skrin dalam (bukan tab). */
+  onBackPress?: () => void;
 };
 
 /** Kepala skrin hijau forest dengan sudut bawah membulat. */
-export function ScreenHeader({ title, eyebrow, subtitle, onBellPress }: Props) {
+export function ScreenHeader({ title, eyebrow, subtitle, onBellPress, onBackPress }: Props) {
   const insets = useSafeAreaInsets();
 
   return (
     <View className="rounded-b-[28px] bg-primary px-gutter pb-7" style={{ paddingTop: insets.top + 18 }}>
       <View className="flex-row items-center gap-4">
+        {onBackPress ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Kembali"
+            hitSlop={10}
+            onPress={onBackPress}
+            className="h-11 w-11 items-center justify-center rounded-pill bg-white/10 active:opacity-70">
+            <Ionicons name="chevron-back" size={20} color={Colors.white} />
+          </Pressable>
+        ) : null}
+
         <View className="flex-1">
           {eyebrow ? <Text className="text-sm text-white/70">{eyebrow}</Text> : null}
           <Text className="mt-0.5 text-2xl font-bold text-white" numberOfLines={1}>

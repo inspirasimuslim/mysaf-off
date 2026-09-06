@@ -66,6 +66,11 @@ export default function AppLayout() {
         name="profil"
         options={{ title: 'Profil', tabBarIcon: tabIcon('person-circle', 'person-circle-outline') }}
       />
+      {/*
+        Panel Super Admin dicapai melalui pautan di Dashboard, bukan tab.
+        `href: null` mengeluarkannya dari bar tab tanpa mematikan laluannya.
+      */}
+      <Tabs.Screen name="admin" options={{ href: null }} />
     </Tabs>
   );
 }

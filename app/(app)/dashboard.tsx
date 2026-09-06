@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
 
@@ -22,6 +23,7 @@ import {
   type BiometricSupport,
 } from '@/lib/biometrics';
 import { errorCode, toMalayError } from '@/lib/errors';
+import { usePermissions } from '@/lib/permissions';
 import { signOutFromDevice } from '@/lib/session';
 import { supabase } from '@/lib/supabase';
 
@@ -66,6 +68,8 @@ type Banner = { tone: 'positive' | 'info' | 'negative'; message: string } | null
 
 export default function DashboardScreen() {
   const { user } = useAuth();
+  const router = useRouter();
+  const { isSuperAdmin } = usePermissions();
 
   const [banner, setBanner] = useState<Banner>(null);
 
@@ -354,6 +358,39 @@ export default function DashboardScreen() {
               </View>
             </View>
           </View>
+
+          {/*
+            Panel Super Admin disorok SEPENUHNYA daripada admin dan ahli biasa —
+            bukan sekadar dilumpuhkan — supaya tiada petunjuk akses yang tidak
+            relevan. Kuasa sebenar tetap dikuatkuasakan oleh RLS di Supabase.
+          */}
+          {isSuperAdmin() ? (
+            <View>
+              <SectionTitle title="Panel Super Admin" caption="Urus department, admin dan Super Admin." />
+              <View className="gap-4">
+                <ActionRow
+                  icon="business-outline"
+                  title="Department"
+                  subtitle="Tambah, aktif/nonaktif dan padam department"
+                  onPress={() => router.push('/(app)/admin/departments')}
+                />
+
+                <ActionRow
+                  icon="shield-outline"
+                  title="Admin"
+                  subtitle="Lantik admin dan tetapkan kebenaran department"
+                  onPress={() => router.push('/(app)/admin/admins')}
+                />
+
+                <ActionRow
+                  icon="shield-checkmark-outline"
+                  title="Super Admin"
+                  subtitle="Lantik atau turunkan pangkat Super Admin"
+                  onPress={() => router.push('/(app)/admin/super-admins')}
+                />
+              </View>
+            </View>
+          ) : null}
 
           <View>
             <SectionTitle title="Tetapan Akaun" />
