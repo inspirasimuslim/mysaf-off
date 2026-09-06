@@ -22,6 +22,7 @@ import {
   promptBiometric,
   type BiometricSupport,
 } from '@/lib/biometrics';
+import { useMemberAccess } from '@/lib/department-access';
 import { errorCode, toMalayError } from '@/lib/errors';
 import { usePermissions } from '@/lib/permissions';
 import { signOutFromDevice } from '@/lib/session';
@@ -70,6 +71,7 @@ export default function DashboardScreen() {
   const { user } = useAuth();
   const router = useRouter();
   const { isSuperAdmin } = usePermissions();
+  const memberAccess = useMemberAccess();
 
   const [banner, setBanner] = useState<Banner>(null);
 
@@ -388,6 +390,34 @@ export default function DashboardScreen() {
                   subtitle="Lantik atau turunkan pangkat Super Admin"
                   onPress={() => router.push('/(app)/admin/super-admins')}
                 />
+              </View>
+            </View>
+          ) : null}
+
+          {/*
+            Modul ahli dimiliki oleh JABATAN DATA & SUMBER MANUSIA, bukan oleh
+            peranan Super Admin — jadi pautannya muncul untuk sesiapa yang
+            memegang kebenaran department itu, termasuk admin biasa.
+          */}
+          {memberAccess.canView ? (
+            <View>
+              <SectionTitle title="Panel Data & Sumber Manusia" caption="Urus rekod keahlian." />
+              <View className="gap-4">
+                <ActionRow
+                  icon="people-outline"
+                  title="Senarai Ahli"
+                  subtitle="Cari, semak dan sunting rekod ahli"
+                  onPress={() => router.push('/(app)/admin/ahli-list')}
+                />
+
+                {memberAccess.canEdit ? (
+                  <ActionRow
+                    icon="cloud-upload-outline"
+                    title="Muat Naik Ahli"
+                    subtitle="Import senarai ahli dari fail Excel"
+                    onPress={() => router.push('/(app)/admin/ahli-upload')}
+                  />
+                ) : null}
               </View>
             </View>
           ) : null}

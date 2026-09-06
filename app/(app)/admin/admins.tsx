@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Switch, Text, View } from 'react-native';
 
+import { NoAccessScreen, SUPER_ADMIN_ONLY } from '@/components/no-access';
 import { ScreenHeader } from '@/components/screen-header';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -75,7 +76,7 @@ function PermissionToggles({
 
 export default function AdminsScreen() {
   const goBack = useGoBack();
-  const { refresh: refreshPermissions, profile: me } = usePermissions();
+  const { refresh: refreshPermissions, profile: me, isSuperAdmin } = usePermissions();
 
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
@@ -241,6 +242,7 @@ export default function AdminsScreen() {
   }, [load, me?.id, pendingRemove, refreshPermissions, removeBusy]);
 
   if (loading) return <LoadingScreen />;
+  if (!isSuperAdmin()) return <NoAccessScreen title="Panel Super Admin" description={SUPER_ADMIN_ONLY} />;
 
   const editorTitle = editor?.picking ? 'Pilih Ahli' : editor?.profile ? profileName(editor.profile) : 'Lantik Admin';
 

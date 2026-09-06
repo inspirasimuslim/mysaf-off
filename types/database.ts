@@ -46,3 +46,152 @@ export function profileName(profile: Pick<Profile, 'full_name' | 'email'>): stri
   if (email) return email;
   return 'Tanpa nama';
 }
+
+// =============================================================================
+// Modul Senarai Ahli
+// Selari dengan `supabase/migrations/20260906000002_members.sql`.
+// =============================================================================
+
+export type Generation = {
+  id: string;
+  code: string;
+  label: string;
+  is_active: boolean;
+};
+
+export type StatusPengajian = 'tidak_belajar' | 'sedang_belajar' | 'sudah_tamat';
+
+export type StatusPekerjaan =
+  | 'bekerja'
+  | 'berniaga_usahawan'
+  | 'suri_rumah'
+  | 'belajar_sepenuh_masa'
+  | 'bekerja_dan_belajar'
+  | 'pesara'
+  | 'tidak_bekerja';
+
+export type StatusPerkahwinan = 'bujang' | 'berkahwin_mbm' | 'berkahwin_bukan_mbm';
+
+export type PendapatanRange = '<1000' | '1000-2999' | '3000-4999' | '5000-9999' | '10000+';
+
+export type Member = {
+  id: string;
+
+  // --- Identiti ---
+  nombor_ahli: string | null;
+  generasi: string | null;
+  full_name: string;
+  jantina: string | null;
+  nric: string | null;
+  email: string | null;
+  no_tel: string | null;
+  alamat: string | null;
+  alamat_semasa: string | null;
+  kawasan_usrah: string | null;
+  disekat: boolean;
+
+  // --- Jawatan ---
+  jawatan_ikhwan_1: string | null;
+  jawatan_ikhwan_2: string | null;
+  jawatan_ikhwan_3: string | null;
+  jawatan_pas_1: string | null;
+  jawatan_pas_2: string | null;
+  jawatan_pas_3: string | null;
+  no_keahlian_pas: string | null;
+
+  // --- Pendidikan ---
+  tahap_pendidikan: string | null;
+  status_pengajian: StatusPengajian | null;
+  sekolah: string | null;
+  nama_institusi: string | null;
+  alamat_institusi: string | null;
+  tahun_pengajian: string | null;
+  jurusan_pengajian: string | null;
+  sumber_pembiayaan: string | null;
+  pembiayaan_lain: string | null;
+
+  // --- Pekerjaan ---
+  status_pekerjaan: StatusPekerjaan | null;
+  sektor_pekerjaan: string | null;
+  jawatan_pekerjaan: string | null;
+  nama_majikan: string | null;
+  alamat_tempat_kerja: string | null;
+  anggaran_pendapatan_range: PendapatanRange | null;
+  jenis_perniagaan: string | null;
+
+  // --- Keluarga ---
+  status_perkahwinan: StatusPerkahwinan | null;
+  nama_pasangan: string | null;
+  tahun_berkahwin: string | null;
+  bil_anak: number | null;
+  anggaran_pendapatan_isi_rumah_range: PendapatanRange | null;
+  bil_tanggungan_selain_keluarga: number | null;
+  pekerjaan_ibu: string | null;
+  pekerjaan_bapa: string | null;
+  bil_tanggungan_ibu_bapa: number | null;
+
+  // --- Pautan akaun ---
+  user_id: string | null;
+};
+
+/** Bentuk baris untuk skrin senarai — kolum berat tidak dibaca. */
+export type MemberSummary = Pick<
+  Member,
+  'id' | 'nombor_ahli' | 'generasi' | 'full_name' | 'email' | 'disekat'
+>;
+
+/** Kolum yang hanya boleh diubah oleh admin — dikuatkuasakan oleh trigger di Supabase. */
+export const MEMBER_ADMIN_COLUMNS = ['nombor_ahli', 'generasi', 'email', 'disekat'] as const;
+
+// --- Pilihan dropdown --------------------------------------------------------
+// `label` ialah teks BM yang dipapar; `value` ialah nilai yang disimpan.
+
+export type Option<T extends string> = { value: T; label: string };
+
+export const STATUS_PENGAJIAN_OPTIONS: Option<StatusPengajian>[] = [
+  { value: 'tidak_belajar', label: 'Tidak belajar' },
+  { value: 'sedang_belajar', label: 'Sedang belajar' },
+  { value: 'sudah_tamat', label: 'Sudah tamat pengajian' },
+];
+
+export const STATUS_PEKERJAAN_OPTIONS: Option<StatusPekerjaan>[] = [
+  { value: 'bekerja', label: 'Bekerja' },
+  { value: 'berniaga_usahawan', label: 'Berniaga / Usahawan' },
+  { value: 'suri_rumah', label: 'Suri rumah' },
+  { value: 'belajar_sepenuh_masa', label: 'Belajar sepenuh masa' },
+  { value: 'bekerja_dan_belajar', label: 'Bekerja & belajar' },
+  { value: 'pesara', label: 'Pesara' },
+  { value: 'tidak_bekerja', label: 'Tidak bekerja' },
+];
+
+export const STATUS_PERKAHWINAN_OPTIONS: Option<StatusPerkahwinan>[] = [
+  { value: 'bujang', label: 'Bujang' },
+  { value: 'berkahwin_mbm', label: 'Berkahwin (MBM)' },
+  { value: 'berkahwin_bukan_mbm', label: 'Berkahwin (bukan MBM)' },
+];
+
+export const PENDAPATAN_RANGE_OPTIONS: Option<PendapatanRange>[] = [
+  { value: '<1000', label: 'Bawah RM1,000' },
+  { value: '1000-2999', label: 'RM1,000 – RM2,999' },
+  { value: '3000-4999', label: 'RM3,000 – RM4,999' },
+  { value: '5000-9999', label: 'RM5,000 – RM9,999' },
+  { value: '10000+', label: 'RM10,000 ke atas' },
+];
+
+export const JANTINA_OPTIONS: Option<string>[] = [
+  { value: 'Muslimin', label: 'Muslimin' },
+  { value: 'Muslimat', label: 'Muslimat' },
+];
+
+/** Teks paparan untuk satu nilai dropdown; nilai tak dikenali dipulangkan apa adanya. */
+export function optionLabel<T extends string>(options: Option<T>[], value: T | null): string {
+  if (!value) return '—';
+  return options.find((option) => option.value === value)?.label ?? value;
+}
+
+/** 'i07' → 'Ikhwan 07'. Digunakan bila senarai generasi belum dimuatkan. */
+export function generationLabel(code: string | null): string {
+  if (!code) return '—';
+  const match = /^i(\d{2})$/.exec(code);
+  return match ? 'Ikhwan ' + match[1] : code;
+}

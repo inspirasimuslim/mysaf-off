@@ -44,3 +44,7 @@ example
 
 # env files (jangan commit secret)
 .env
+
+# data peribadi ahli — JANGAN commit (fail import mentah, 300+ rekod peribadi)
+seed-data/
+*.xlsx

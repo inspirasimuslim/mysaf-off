@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Switch, Text, View } from 'react-native';
 
+import { NoAccessScreen, SUPER_ADMIN_ONLY } from '@/components/no-access';
 import { ScreenHeader } from '@/components/screen-header';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -22,12 +23,14 @@ import {
 } from '@/lib/admin';
 import { toMalayError } from '@/lib/errors';
 import { useGoBack } from '@/lib/navigation';
+import { usePermissions } from '@/lib/permissions';
 import type { Department } from '@/types/database';
 
 type Banner = { tone: 'positive' | 'info' | 'negative'; message: string } | null;
 
 export default function DepartmentsScreen() {
   const goBack = useGoBack();
+  const { isSuperAdmin } = usePermissions();
 
   const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(true);
@@ -146,6 +149,7 @@ export default function DepartmentsScreen() {
   }, [deleteBusy, load, pendingDelete]);
 
   if (loading) return <LoadingScreen />;
+  if (!isSuperAdmin()) return <NoAccessScreen title="Panel Super Admin" description={SUPER_ADMIN_ONLY} />;
 
   const activeCount = departments.filter((row) => row.is_active).length;
 

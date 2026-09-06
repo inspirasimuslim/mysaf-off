@@ -9,7 +9,7 @@ import { Screen } from '@/components/ui/screen';
 import { Colors } from '@/constants/theme';
 import { usePermissions } from '@/lib/permissions';
 
-/** Papar bila bukan Super Admin cuba membuka mana-mana skrin di bawah /admin. */
+/** Papar bila bukan admin cuba membuka mana-mana skrin di bawah /admin. */
 function NoAccess() {
   const router = useRouter();
 
@@ -20,7 +20,7 @@ function NoAccess() {
         <EmptyState
           icon="lock-closed-outline"
           title="Tiada akses"
-          description="Panel ini khusus untuk Super Admin sahaja. Hubungi Super Admin sedia ada jika anda memerlukan capaian."
+          description="Panel ini khusus untuk admin sahaja. Hubungi Super Admin jika anda memerlukan capaian."
         />
         <Button label="Kembali ke Utama" variant="secondary" onPress={() => router.replace('/(app)/dashboard')} />
       </View>
@@ -29,17 +29,21 @@ function NoAccess() {
 }
 
 /**
- * Pintu masuk tunggal panel Super Admin.
+ * Pintu masuk panel pentadbiran.
  *
- * Semakan dibuat di sini supaya setiap skrin di bawahnya tidak perlu mengulangi
- * guard yang sama. Ini kawalan UI sahaja — RLS di Supabase tetap menolak
- * sebarang tulisan daripada akaun bukan Super Admin.
+ * Guard di sini sengaja LONGGAR — ia hanya menapis ahli biasa. Setiap skrin di
+ * bawahnya mempunyai skop berbeza: skrin Super Admin (department, admin, super
+ * admin) menyemak `isSuperAdmin()` sendiri, manakala skrin modul ahli menyemak
+ * kebenaran department melalui `useMemberAccess()`. Menguatkuasakan
+ * Super Admin di sini akan menutup pintu kepada admin department yang sah.
+ *
+ * Ini kawalan UI sahaja — RLS di Supabase tetap penentu muktamad.
  */
 export default function AdminLayout() {
-  const { loading, isSuperAdmin } = usePermissions();
+  const { loading, isAdmin } = usePermissions();
 
   if (loading) return <LoadingScreen />;
-  if (!isSuperAdmin()) return <NoAccess />;
+  if (!isAdmin()) return <NoAccess />;
 
   return <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: Colors.background } }} />;
 }

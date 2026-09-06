@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Text, View } from 'react-native';
 
+import { NoAccessScreen, SUPER_ADMIN_ONLY } from '@/components/no-access';
 import { ScreenHeader } from '@/components/screen-header';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -24,7 +25,7 @@ type Banner = { tone: 'positive' | 'info' | 'negative'; message: string } | null
 
 export default function SuperAdminsScreen() {
   const goBack = useGoBack();
-  const { profile: me, refresh: refreshPermissions } = usePermissions();
+  const { profile: me, refresh: refreshPermissions, isSuperAdmin } = usePermissions();
 
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [assignments, setAssignments] = useState<AdminAssignment[]>([]);
@@ -143,6 +144,7 @@ export default function SuperAdminsScreen() {
   }, [assignments, demoteBusy, load, me?.id, pendingDemote, refreshPermissions]);
 
   if (loading) return <LoadingScreen />;
+  if (!isSuperAdmin()) return <NoAccessScreen title="Panel Super Admin" description={SUPER_ADMIN_ONLY} />;
 
   const demoteToRole = pendingDemote && assignments.some((row) => row.user_id === pendingDemote.id)
     ? ROLE_LABEL.admin
