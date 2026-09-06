@@ -1,4 +1,4 @@
-import type { Generation, Member, MemberSummary } from '@/types/database';
+import type { DirectoryMember, Generation, Member, MemberSummary } from '@/types/database';
 
 import type { ParsedMember } from './ahli-import';
 import { supabase } from './supabase';
@@ -32,6 +32,22 @@ export async function fetchGenerations(): Promise<Generation[]> {
     .order('code');
   if (error) throw error;
   return (data as Generation[] | null) ?? [];
+}
+
+// --- Direktori ---------------------------------------------------------------
+
+/**
+ * Direktori ringkas untuk tab Ahli — dibaca oleh SEMUA pengguna yang log masuk.
+ *
+ * Ini bukan `select` ke `members`: RLS menyembunyikan baris orang lain daripada
+ * ahli biasa, dengan sengaja. Fungsi `list_members_directory()` ialah laluan
+ * berasingan yang mendedahkan lapan kolum terpilih sahaja — lihat
+ * `20260906000004_members_directory.sql`.
+ */
+export async function fetchMemberDirectory(): Promise<DirectoryMember[]> {
+  const { data, error } = await supabase.rpc('list_members_directory');
+  if (error) throw error;
+  return (data as DirectoryMember[] | null) ?? [];
 }
 
 // --- Senarai ahli ------------------------------------------------------------

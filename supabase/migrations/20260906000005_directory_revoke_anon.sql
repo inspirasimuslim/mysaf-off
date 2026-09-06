@@ -1,0 +1,21 @@
+-- =============================================================================
+-- mysaf-off — Tutup direktori daripada peranan `anon`
+--
+-- Jalankan SELEPAS 20260906000004_members_directory.sql.
+-- Skrip ini idempotent: selamat dijalankan semula.
+--
+-- `revoke all ... from public` dalam migration 004 TIDAK mencukupi di Supabase.
+-- Projek Supabase menetapkan `alter default privileges` yang memberikan EXECUTE
+-- terus kepada `anon`, `authenticated` dan `service_role` pada setiap fungsi
+-- baharu dalam skema `public`. Kerana pemberian kepada `anon` itu EKSPLISIT dan
+-- bukan datang melalui `public`, mencabut daripada `public` meninggalkannya utuh:
+--
+--   {postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,...}
+--
+-- Kesannya `anon` — peranan yang digunakan oleh permintaan PostgREST TANPA log
+-- masuk — boleh memanggil direktori dan membaca nama, emel serta nombor telefon
+-- kesemua ahli. Cabutan di bawah menutupnya. `service_role` dikekalkan kerana
+-- ia kunci pelayan, bukan laluan pelayar.
+-- =============================================================================
+
+revoke all on function public.list_members_directory() from anon;

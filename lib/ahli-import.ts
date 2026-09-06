@@ -1,11 +1,12 @@
 import * as XLSX from 'xlsx';
 
-import type {
-  Member,
-  PendapatanRange,
-  StatusPekerjaan,
-  StatusPengajian,
-  StatusPerkahwinan,
+import {
+  generationOrder,
+  type Member,
+  type PendapatanRange,
+  type StatusPekerjaan,
+  type StatusPengajian,
+  type StatusPerkahwinan,
 } from '@/types/database';
 
 /**
@@ -26,8 +27,12 @@ import type {
 
 export type RawRow = Record<string, unknown>;
 
-/** Baris sedia untuk dimasukkan ke `members` (tanpa kolum yang dijana Supabase). */
-export type ParsedMember = Omit<Member, 'id' | 'user_id'>;
+/**
+ * Baris sedia untuk dimasukkan ke `members` (tanpa kolum yang dijana Supabase).
+ * `avatar_url` turut ditinggalkan — fail Excel tiada gambar, jadi import tidak
+ * sepatutnya menulis kolum itu langsung dan menimpa apa yang mungkin ada.
+ */
+export type ParsedMember = Omit<Member, 'id' | 'user_id' | 'avatar_url'>;
 
 export type ImportIssueLevel = 'ralat' | 'amaran';
 
@@ -250,13 +255,6 @@ function mapRow(raw: RawRow): ParsedMember {
 // =============================================================================
 // Penomboran ahli
 // =============================================================================
-
-/** 'i07' → 7, supaya susunan mengikut nombor dan bukan abjad. */
-function generationOrder(code: string | null): number {
-  if (!code) return Number.MAX_SAFE_INTEGER;
-  const parsed = Number.parseInt(code.replace(/^i/i, ''), 10);
-  return Number.isFinite(parsed) ? parsed : Number.MAX_SAFE_INTEGER;
-}
 
 /**
  * Susun i01 → i27, dan dalam setiap generasi ikut nama A–Z, kemudian berikan

@@ -88,6 +88,7 @@ export type Member = {
   alamat: string | null;
   alamat_semasa: string | null;
   kawasan_usrah: string | null;
+  avatar_url: string | null;
   disekat: boolean;
 
   // --- Jawatan ---
@@ -139,6 +140,66 @@ export type MemberSummary = Pick<
   Member,
   'id' | 'nombor_ahli' | 'generasi' | 'full_name' | 'email' | 'disekat'
 >;
+
+/**
+ * Baris direktori — hasil `list_members_directory()`.
+ *
+ * Sengaja BUKAN `Pick<Member, ...>`: bentuk ini ditentukan oleh fungsi SQL,
+ * bukan oleh table. Menjadikannya jenis berasingan bermakna menambah kolum pada
+ * `Member` tidak diam-diam mengisytiharkan kolum itu selamat untuk direktori.
+ */
+export type DirectoryMember = {
+  nombor_ahli: string | null;
+  full_name: string;
+  generasi: string | null;
+  email: string | null;
+  no_tel: string | null;
+  avatar_url: string | null;
+  status_pekerjaan: StatusPekerjaan | null;
+  status_perkahwinan: StatusPerkahwinan | null;
+};
+
+/**
+ * Label ringkas untuk direktori — lebih pendek daripada label borang, kerana
+ * ia dibaca sekilas pada kad dan bukan dipilih dari dropdown.
+ */
+const DIRECTORY_PEKERJAAN_LABEL: Record<StatusPekerjaan, string> = {
+  bekerja: 'Bekerja',
+  berniaga_usahawan: 'Berniaga',
+  suri_rumah: 'Suri Rumah',
+  belajar_sepenuh_masa: 'Belajar',
+  bekerja_dan_belajar: 'Bekerja & Belajar',
+  pesara: 'Pesara',
+  tidak_bekerja: 'Tidak Bekerja',
+};
+
+export function directoryPekerjaanLabel(value: StatusPekerjaan | null): string {
+  return value ? DIRECTORY_PEKERJAAN_LABEL[value] : '—';
+}
+
+/** Direktori tidak membezakan MBM / bukan MBM — itu butiran dalaman rekod. */
+export function directoryPerkahwinanLabel(value: StatusPerkahwinan | null): string {
+  if (!value) return '—';
+  return value === 'bujang' ? 'Bujang' : 'Berkahwin';
+}
+
+/** 'i07' → 7, supaya generasi disusun mengikut nombor dan bukan abjad. */
+export function generationOrder(code: string | null): number {
+  if (!code) return Number.MAX_SAFE_INTEGER;
+  const parsed = Number.parseInt(code.replace(/^i/i, ''), 10);
+  return Number.isFinite(parsed) ? parsed : Number.MAX_SAFE_INTEGER;
+}
+
+/** Inisial untuk avatar sandaran: 'SYAHMUN B. HJ. YAHAYA' → 'SY'. */
+export function memberInitials(fullName: string): string {
+  const words = fullName.trim().split(/\s+/).filter(Boolean);
+  if (!words.length) return '?';
+  const first = words[0] as string;
+  // Nama kedua selalunya bin/binti/b./hj. — bukan inisial yang bermakna.
+  const second = words.find((word, index) => index > 0 && !/^(bin|binti|bt|b|hj|hjh|haji|hajah)\.?$/i.test(word));
+  if (second) return (first.charAt(0) + second.charAt(0)).toUpperCase();
+  return first.slice(0, 2).toUpperCase();
+}
 
 /** Kolum yang hanya boleh diubah oleh admin — dikuatkuasakan oleh trigger di Supabase. */
 export const MEMBER_ADMIN_COLUMNS = ['nombor_ahli', 'generasi', 'email', 'disekat'] as const;
