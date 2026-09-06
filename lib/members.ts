@@ -71,6 +71,41 @@ export async function fetchMyMember(userId: string): Promise<Member | null> {
 }
 
 /**
+ * Kaitkan akaun yang sedang log masuk kepada rekod ahli yang emelnya sama.
+ *
+ * Rekod yang diimport dari Excel mempunyai `user_id` NULL — RLS menyembunyikan
+ * baris begitu daripada semua orang kecuali admin, jadi ahli tidak dapat
+ * membaca rekodnya sendiri sehingga pautan dibuat. Padanan emel disahkan di
+ * dalam pangkalan data (lihat `link_my_member_record` dalam
+ * `20260906000003_member_account_linking.sql`); app tidak menghantar emel dan
+ * tidak boleh memilih rekod mana yang dituntut.
+ *
+ * Memulangkan `id` rekod yang dipautkan, atau `null` bila tiada padanan tunggal.
+ */
+export async function linkMyMemberRecord(): Promise<string | null> {
+  const { data, error } = await supabase.rpc('link_my_member_record');
+  if (error) throw error;
+  return (data as string | null) ?? null;
+}
+
+/**
+ * Rekod ahli pengguna, dengan satu percubaan pautan bila belum dikaitkan.
+ *
+ * Digabungkan menjadi SATU fungsi supaya skrin Profil hanya mempunyai satu
+ * laluan kod: sama ada rekod wujud, atau tidak. Kegagalan pautan sengaja tidak
+ * ditelan — pemanggil melaporkannya seperti mana-mana ralat muat turun lain.
+ */
+export async function fetchMyMemberLinked(userId: string): Promise<Member | null> {
+  const existing = await fetchMyMember(userId);
+  if (existing) return existing;
+
+  const linkedId = await linkMyMemberRecord();
+  if (!linkedId) return null;
+
+  return fetchMyMember(userId);
+}
+
+/**
  * Kemas kini sebahagian medan. Pemanggil menghantar hanya medan yang berubah —
  * menghantar kolum khusus admin sebagai ahli biasa akan ditolak oleh trigger
  * `members_guard_admin_columns`, bukan diabaikan secara senyap.

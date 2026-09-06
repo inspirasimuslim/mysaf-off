@@ -13,7 +13,7 @@ import { Screen } from '@/components/ui/screen';
 import { Colors } from '@/constants/theme';
 import { displayName, useAuth } from '@/lib/auth-context';
 import { toMalayError } from '@/lib/errors';
-import { fetchGenerations, fetchMyMember, updateMember } from '@/lib/members';
+import { fetchGenerations, fetchMyMember, fetchMyMemberLinked, updateMember } from '@/lib/members';
 import { generationLabel, type Generation, type Member } from '@/types/database';
 
 type Banner = { tone: 'positive' | 'negative'; message: string } | null;
@@ -49,7 +49,7 @@ export default function ProfilScreen() {
     void (async () => {
       setLoading(true);
       try {
-        const [row, gens] = await Promise.all([fetchMyMember(userId), fetchGenerations()]);
+        const [row, gens] = await Promise.all([fetchMyMemberLinked(userId), fetchGenerations()]);
         if (!active) return;
         setMember(row);
         setGenerations(gens);
@@ -123,7 +123,7 @@ export default function ProfilScreen() {
           <EmptyState
             icon="link-outline"
             title="Profil belum dikaitkan"
-            description="Akaun ini belum dipadankan dengan mana-mana rekod ahli. Hubungi admin untuk mengaitkannya."
+            description="Emel akaun ini tidak sepadan dengan mana-mana rekod ahli yang belum dikaitkan. Hubungi admin untuk mengaitkannya."
           />
         </View>
       </Screen>
