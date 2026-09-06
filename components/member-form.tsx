@@ -22,16 +22,31 @@ import {
 /**
  * Borang penuh satu rekod ahli — dikongsi oleh panel Admin dan skrin Profil.
  *
- * Perbezaan antara kedua-dua penggunaan hanyalah `canEditAdminColumns`: nombor
- * ahli, generasi, emel dan status sekatan menjadi paparan sahaja untuk ahli
- * biasa. Sekatan yang sama dikuatkuasakan sekali lagi oleh trigger
- * `members_guard_admin_columns` di Supabase — borang ini bukan lapisan kawalan.
+ * DUA kebenaran berlainan mengawal borang ini, dan ia sengaja TIDAK digabung:
+ *
+ * - `readOnly` — kebenaran DEPARTMENT. Admin yang hanya mempunyai `can_view`
+ *   pada JABATAN DATA & SUMBER MANUSIA tidak boleh menyunting apa-apa, jadi
+ *   seluruh borang dikunci dan butang Simpan tidak wujud. Padanannya di
+ *   pangkalan data ialah policy `members_update`.
+ *
+ * - `canEditAdminColumns` — kebenaran KOLUM. Nombor ahli, generasi, emel dan
+ *   status sekatan menjadi paparan sahaja untuk ahli biasa yang menyunting
+ *   profilnya sendiri. Padanannya ialah trigger `members_guard_admin_columns`.
+ *
+ * Seorang ahli biasa mempunyai `readOnly = false` tetapi
+ * `canEditAdminColumns = false`: dia menyunting medannya sendiri, cuma bukan
+ * kolum yang menentukan identiti keahliannya. Menggabungkan kedua-dua konsep
+ * akan menghapuskan keupayaan itu.
+ *
+ * Borang ini bukan lapisan kawalan — RLS dan trigger tetap penentu muktamad.
  */
 
 type Props = {
   member: Member;
   generations: Generation[];
   canEditAdminColumns: boolean;
+  /** Kunci SELURUH borang: pengguna boleh melihat rekod tetapi bukan menyuntingnya. */
+  readOnly?: boolean;
   busy?: boolean;
   /** Hanya medan yang benar-benar berubah dihantar. */
   onSave: (patch: Partial<Member>) => void;
@@ -46,8 +61,20 @@ type TextFieldKey = {
   [K in keyof Member]: Member[K] extends string | null ? K : never;
 }[keyof Member];
 
-export function MemberForm({ member, generations, canEditAdminColumns, busy = false, onSave }: Props) {
+export function MemberForm({
+  member,
+  generations,
+  canEditAdminColumns,
+  readOnly = false,
+  busy = false,
+  onSave,
+}: Props) {
   const [draft, setDraft] = useState<Member>(member);
+
+  /* Satu kunci untuk setiap kawalan dalam borang. Menyimpan sedang berjalan
+     dan tiada kebenaran menyunting menghasilkan keadaan UI yang sama, jadi
+     kedua-duanya dikira sekali di sini dan bukan diulang pada setiap medan. */
+  const locked = busy || readOnly;
 
   const set = useCallback(<K extends keyof Member>(key: K, value: Member[K]) => {
     setDraft((current) => ({ ...current, [key]: value }));
@@ -104,7 +131,7 @@ export function MemberForm({ member, generations, canEditAdminColumns, busy = fa
       label={label}
       value={draft[key] ?? ''}
       onChangeText={setText(key)}
-      editable={!busy}
+      editable={!locked}
       autoCapitalize="sentences"
       autoCorrect={false}
       keyboardType={extra?.keyboardType}
@@ -116,7 +143,7 @@ export function MemberForm({ member, generations, canEditAdminColumns, busy = fa
       label={label}
       value={draft[key] === null ? '' : String(draft[key])}
       onChangeText={setNumber(key)}
-      editable={!busy}
+      editable={!locked}
       keyboardType="number-pad"
     />
   );
@@ -128,9 +155,11 @@ export function MemberForm({ member, generations, canEditAdminColumns, busy = fa
         <SectionTitle
           title="Maklumat Keahlian"
           caption={
-            canEditAdminColumns
-              ? 'Nombor ahli mesti unik dalam sistem.'
-              : 'Medan ini ditetapkan oleh admin dan tidak boleh diubah sendiri.'
+            readOnly
+              ? 'Paparan sahaja — anda tiada kebenaran menyunting rekod ini.'
+              : canEditAdminColumns
+                ? 'Nombor ahli mesti unik dalam sistem.'
+                : 'Medan ini ditetapkan oleh admin dan tidak boleh diubah sendiri.'
           }
         />
         <View className="gap-4">
@@ -140,7 +169,7 @@ export function MemberForm({ member, generations, canEditAdminColumns, busy = fa
                 label="Nombor ahli"
                 value={draft.nombor_ahli ?? ''}
                 onChangeText={setText('nombor_ahli')}
-                editable={!busy}
+                editable={!locked}
                 autoCapitalize="none"
                 autoCorrect={false}
               />
@@ -149,13 +178,13 @@ export function MemberForm({ member, generations, canEditAdminColumns, busy = fa
                 value={draft.generasi}
                 options={generationOptions}
                 onChange={(next) => set('generasi', next)}
-                disabled={busy}
+                disabled={locked}
               />
               <TextField
                 label="Emel"
                 value={draft.email ?? ''}
                 onChangeText={setText('email')}
-                editable={!busy}
+                editable={!locked}
                 autoCapitalize="none"
                 autoCorrect={false}
                 keyboardType="email-address"
@@ -177,7 +206,7 @@ export function MemberForm({ member, generations, canEditAdminColumns, busy = fa
               subtitle="Ahli yang disekat kekal dalam sistem tetapi ditanda tidak aktif."
               value={draft.disekat}
               onValueChange={(next) => set('disekat', next)}
-              disabled={busy}
+              disabled={locked}
             />
           ) : null}
         </View>
@@ -191,7 +220,7 @@ export function MemberForm({ member, generations, canEditAdminColumns, busy = fa
             label="Nama penuh"
             value={draft.full_name}
             onChangeText={(value) => set('full_name', value)}
-            editable={!busy}
+            editable={!locked}
             autoCapitalize="characters"
             autoCorrect={false}
           />
@@ -200,7 +229,7 @@ export function MemberForm({ member, generations, canEditAdminColumns, busy = fa
             value={draft.jantina}
             options={JANTINA_OPTIONS}
             onChange={(next) => set('jantina', next)}
-            disabled={busy}
+            disabled={locked}
           />
           {field('No. kad pengenalan', 'nric')}
           {field('No. telefon', 'no_tel', { keyboardType: 'phone-pad' })}
@@ -222,7 +251,7 @@ export function MemberForm({ member, generations, canEditAdminColumns, busy = fa
             value={draft.status_pengajian}
             options={STATUS_PENGAJIAN_OPTIONS}
             onChange={(next) => set('status_pengajian', next)}
-            disabled={busy}
+            disabled={locked}
           />
 
           {studying ? (
@@ -247,7 +276,7 @@ export function MemberForm({ member, generations, canEditAdminColumns, busy = fa
             value={draft.status_pekerjaan}
             options={STATUS_PEKERJAAN_OPTIONS}
             onChange={(next) => set('status_pekerjaan', next)}
-            disabled={busy}
+            disabled={locked}
           />
 
           {working ? (
@@ -273,7 +302,7 @@ export function MemberForm({ member, generations, canEditAdminColumns, busy = fa
               value={draft.anggaran_pendapatan_range}
               options={PENDAPATAN_RANGE_OPTIONS}
               onChange={(next) => set('anggaran_pendapatan_range', next)}
-              disabled={busy}
+              disabled={locked}
             />
           ) : null}
         </View>
@@ -288,7 +317,7 @@ export function MemberForm({ member, generations, canEditAdminColumns, busy = fa
             value={draft.status_perkahwinan}
             options={STATUS_PERKAHWINAN_OPTIONS}
             onChange={(next) => set('status_perkahwinan', next)}
-            disabled={busy}
+            disabled={locked}
           />
 
           {married ? (
@@ -304,7 +333,7 @@ export function MemberForm({ member, generations, canEditAdminColumns, busy = fa
             value={draft.anggaran_pendapatan_isi_rumah_range}
             options={PENDAPATAN_RANGE_OPTIONS}
             onChange={(next) => set('anggaran_pendapatan_isi_rumah_range', next)}
-            disabled={busy}
+            disabled={locked}
           />
           {numberField('Bilangan tanggungan selain keluarga', 'bil_tanggungan_selain_keluarga')}
           {field('Pekerjaan ibu', 'pekerjaan_ibu')}
@@ -327,14 +356,25 @@ export function MemberForm({ member, generations, canEditAdminColumns, busy = fa
         </View>
       </View>
 
-      {!draft.full_name.trim() ? <Notice tone="negative" message="Nama penuh tidak boleh dikosongkan." /> : null}
+      {/*
+        Tiada butang Simpan langsung bila borang dikunci — memaparkannya sebagai
+        "disabled" masih mengisyaratkan simpanan mungkin berjaya suatu ketika,
+        sedangkan kebenaran department tidak akan berubah di skrin ini.
+      */}
+      {readOnly ? null : (
+        <>
+          {!draft.full_name.trim() ? (
+            <Notice tone="negative" message="Nama penuh tidak boleh dikosongkan." />
+          ) : null}
 
-      <Button
-        label="Simpan Perubahan"
-        loading={busy}
-        disabled={busy || !dirty || !draft.full_name.trim()}
-        onPress={() => onSave(patch)}
-      />
+          <Button
+            label="Simpan Perubahan"
+            loading={busy}
+            disabled={busy || !dirty || !draft.full_name.trim()}
+            onPress={() => onSave(patch)}
+          />
+        </>
+      )}
     </View>
   );
 }

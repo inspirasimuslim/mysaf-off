@@ -127,7 +127,7 @@ export default function AhliDetailScreen() {
         {!canEdit ? (
           <Notice
             tone="info"
-            message="Anda hanya mempunyai kebenaran melihat. Sebarang perubahan akan ditolak oleh pangkalan data."
+            message="Anda hanya mempunyai akses Lihat untuk bahagian ini. Borang di bawah adalah paparan sahaja."
           />
         ) : null}
 
@@ -137,7 +137,10 @@ export default function AhliDetailScreen() {
           key={member.id + ':' + version}
           member={member}
           generations={generations}
-          canEditAdminColumns={canEdit}
+          /* Panel Admin sentiasa berurusan dengan kolum keahlian; yang
+             menentukan sama ada ia boleh disunting ialah `readOnly` di bawah. */
+          canEditAdminColumns
+          readOnly={!canEdit}
           busy={saving}
           onSave={(patch) => void save(patch)}
         />

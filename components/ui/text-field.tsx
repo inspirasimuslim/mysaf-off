@@ -17,13 +17,19 @@ export function TextField({ label, error, secure = false, ...rest }: Props) {
 
   const borderClass = error ? 'border-negative' : focused ? 'border-primary' : 'border-line';
 
+  /* `editable={false}` mesti KELIHATAN tidak boleh disunting, bukan sekadar
+     tidak bertindak balas — latar pudar yang sama seperti medan paparan sahaja
+     dalam `MemberForm`, supaya kedua-duanya dibaca sebagai benda yang sama. */
+  const readOnly = rest.editable === false;
+  const surfaceClass = readOnly ? 'bg-background' : 'bg-surface';
+
   return (
     <View className="gap-2">
       <Text className="text-sm font-medium text-ink-muted">{label}</Text>
 
-      <View className={`h-14 flex-row items-center rounded-field border bg-surface px-4 ${borderClass}`}>
+      <View className={`h-14 flex-row items-center rounded-field border px-4 ${surfaceClass} ${borderClass}`}>
         <TextInput
-          className="flex-1 text-base text-ink"
+          className={`flex-1 text-base ${readOnly ? 'text-ink-muted' : 'text-ink'}`}
           placeholderTextColor={Colors.inkFaint}
           secureTextEntry={secure && hidden}
           onFocus={() => setFocused(true)}
