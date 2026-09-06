@@ -1,16 +1,17 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Redirect, Tabs } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Screen } from '@/components/ui/screen';
+import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { LoadingScreen } from '@/components/ui/loading-screen';
 import { Colors } from '@/constants/theme';
 import { useAuth } from '@/lib/auth-context';
-import { signOutFromDevice } from '@/lib/session';
-import { SUSPENDED_MESSAGE, isSuspended, setAuthNotice } from '@/lib/suspension';
+import { signOutEverywhere } from '@/lib/session';
+import { SUSPENDED_MESSAGE, setAuthNotice, useAccountStatus } from '@/lib/suspension';
 
 type IconName = keyof typeof Ionicons.glyphMap;
 
@@ -34,11 +35,15 @@ function tabIcon(active: IconName, inactive: IconName) {
  * token akaun itu masih sah terhadap Supabase. Mesejnya diserahkan kepada skrin
  * log masuk melalui `setAuthNotice`, kerana komponen ini dilepaskan sebaik sesi
  * hilang dan tidak sempat memaparkan apa-apa.
+ *
+ * `signOutEverywhere` dan bukan `signOutFromDevice`: laluan peranti sengaja
+ * mengekalkan sesi pelayan hidup untuk log masuk biometrik, yang bermakna akaun
+ * yang disekat masih memegang pintasan masuk. Sekatan mesti membatalkannya.
  */
 function AccountSuspended() {
   useEffect(() => {
     setAuthNotice(SUSPENDED_MESSAGE);
-    void signOutFromDevice();
+    void signOutEverywhere();
   }, []);
 
   return (
@@ -51,32 +56,35 @@ function AccountSuspended() {
   );
 }
 
+/**
+ * Status akaun tidak dapat disahkan pada semakan pertama.
+ *
+ * App DITAHAN di sini dan bukan dibenarkan masuk. Tanpa jawapan, tiada bukti
+ * akaun ini dibenarkan — dan membenarkan masuk bermakna sekatan boleh dilangkau
+ * hanya dengan mematikan talian semasa app dibuka.
+ */
+function AccountCheckFailed({ onRetry }: { onRetry: () => void }) {
+  return (
+    <Screen>
+      <View className="gap-6 px-gutter pt-6">
+        <EmptyState
+          icon="cloud-offline-outline"
+          title="Status Akaun Tidak Disahkan"
+          description="Sambungan ke pelayan gagal, jadi status akaun anda tidak dapat disahkan. Semak talian internet anda dan cuba lagi."
+        />
+        <Button label="Cuba Lagi" onPress={onRetry} />
+        <Button label="Log Keluar" variant="ghost" onPress={() => void signOutEverywhere()} />
+      </View>
+    </Screen>
+  );
+}
+
 export default function AppLayout() {
   const { session, user, initialising } = useAuth();
   const insets = useSafeAreaInsets();
 
   const userId = user?.id ?? null;
-  /** `null` = belum disemak. Tab tidak dipasang sehingga jawapannya diketahui. */
-  const [suspended, setSuspended] = useState<boolean | null>(null);
-
-  useEffect(() => {
-    if (!userId) {
-      setSuspended(null);
-      return;
-    }
-
-    let active = true;
-    setSuspended(null);
-
-    void (async () => {
-      const blocked = await isSuspended(userId);
-      if (active) setSuspended(blocked);
-    })();
-
-    return () => {
-      active = false;
-    };
-  }, [userId]);
+  const { status, recheck } = useAccountStatus(userId);
 
   if (initialising) return <LoadingScreen />;
   if (!session) return <Redirect href="/(auth)/login" />;
@@ -84,9 +92,12 @@ export default function AppLayout() {
   /*
     Semakan sekatan berlaku SEBELUM `<Tabs>` dipasang, jadi skrin yang disekat
     tidak pernah wujud dalam pokok komponen — bukan sekadar tidak boleh dicapai.
+    Hanya `'active'` yang melepasi tiga baris di bawah; setiap keadaan lain
+    menahan app, termasuk keadaan "tidak diketahui".
   */
-  if (suspended === null) return <LoadingScreen />;
-  if (suspended) return <AccountSuspended />;
+  if (status === 'checking') return <LoadingScreen />;
+  if (status === 'suspended') return <AccountSuspended />;
+  if (status === 'unknown') return <AccountCheckFailed onRetry={recheck} />;
 
   return (
     <Tabs
