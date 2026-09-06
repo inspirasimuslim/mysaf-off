@@ -6,7 +6,7 @@ import { ActionRow } from '@/components/ui/action-row';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Screen } from '@/components/ui/screen';
 import { SectionTitle } from '@/components/ui/section-title';
-import { useMemberAccess } from '@/lib/department-access';
+import { useMemberAccess, useUsrahAccess } from '@/lib/department-access';
 import { useGoBack } from '@/lib/navigation';
 import { usePermissions } from '@/lib/permissions';
 
@@ -25,9 +25,10 @@ export default function AdminHubScreen() {
   const goBack = useGoBack();
   const { isSuperAdmin } = usePermissions();
   const memberAccess = useMemberAccess();
+  const usrahAccess = useUsrahAccess();
 
   const superAdmin = isSuperAdmin();
-  const nothingAvailable = !superAdmin && !memberAccess.canView;
+  const nothingAvailable = !superAdmin && !memberAccess.canView && !usrahAccess.canView;
 
   return (
     <Screen padTop={false}>
@@ -108,6 +109,33 @@ export default function AdminHubScreen() {
                   onPress={() => router.push('/(app)/admin/ahli-upload')}
                 />
               ) : null}
+            </View>
+          </View>
+        ) : null}
+
+        {/*
+          Modul usrah dimiliki oleh LAJNAH TARBIAH — department yang berbeza
+          daripada modul ahli di atas, jadi seorang admin boleh melihat satu
+          bahagian tanpa yang satu lagi.
+        */}
+        {usrahAccess.canView ? (
+          <View>
+            <SectionTitle title="Tarbiah" caption="Urus rekod kehadiran usrah." />
+            <View className="gap-4">
+              {usrahAccess.canEdit ? (
+                <ActionRow
+                  icon="cloud-upload-outline"
+                  title="Muat Naik Usrah"
+                  subtitle="Import kehadiran usrah bulanan dari fail Excel"
+                  onPress={() => router.push('/(app)/admin/usrah-upload')}
+                />
+              ) : (
+                <EmptyState
+                  icon="eye-outline"
+                  title="Paparan sahaja"
+                  description="Anda boleh melihat rekod usrah, tetapi memuat naik memerlukan kebenaran menyunting pada LAJNAH TARBIAH."
+                />
+              )}
             </View>
           </View>
         ) : null}

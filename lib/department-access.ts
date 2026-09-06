@@ -73,3 +73,17 @@ export function useDepartmentAccess(name: string): DepartmentAccess {
 export function useMemberAccess(): DepartmentAccess {
   return useDepartmentAccess(DATA_DEPARTMENT);
 }
+
+/**
+ * Department yang memiliki modul Usrah.
+ *
+ * Sama seperti `DATA_DEPARTMENT`, nama ini mesti sepadan dengan
+ * `can_view_usrah()` / `can_edit_usrah()` dalam
+ * `20260906000008_usrah_monthly_attendance.sql`.
+ */
+export const TARBIAH_DEPARTMENT = 'LAJNAH TARBIAH';
+
+/** Pintasan untuk modul Usrah. */
+export function useUsrahAccess(): DepartmentAccess {
+  return useDepartmentAccess(TARBIAH_DEPARTMENT);
+}

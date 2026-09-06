@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Text, View } from 'react-native';
 
 import { ScreenHeader } from '@/components/screen-header';
+import { UsrahStrip } from '@/components/usrah-strip';
 import { Card } from '@/components/ui/card';
 import { Notice } from '@/components/ui/notice';
 import { Screen } from '@/components/ui/screen';
@@ -52,6 +53,8 @@ export default function DashboardScreen() {
           <Text className="mt-2 text-stat-lg font-bold text-white/50">{DASH}</Text>
           <Text className="mt-2 text-sm text-white/70">Modul kehadiran belum disambung ke pangkalan data.</Text>
         </Card>
+
+        <UsrahStrip userId={user?.id ?? null} />
 
         <View>
           <SectionTitle title="Ringkasan" caption="Data akan dikemas kini secara automatik." />
