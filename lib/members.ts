@@ -127,8 +127,19 @@ export async function fetchMyMemberLinked(userId: string): Promise<Member | null
  * `members_guard_admin_columns`, bukan diabaikan secara senyap.
  */
 export async function updateMember(id: string, patch: Partial<Member>): Promise<void> {
-  const { error } = await supabase.from('members').update(patch).eq('id', id);
+  /*
+    `select('id')` bukan untuk membaca balik nilai — ia bukti bahawa tulisan
+    benar-benar mendarat. Tanpa ia PostgREST memulangkan 204 walaupun TIADA
+    baris dikemas kini, jadi permintaan yang ditapis oleh RLS kelihatan persis
+    sama seperti simpanan yang berjaya: skrin memapar "Perubahan telah
+    disimpan" sedangkan pangkalan data tidak berubah langsung.
+  */
+  const { data, error } = await supabase.from('members').update(patch).eq('id', id).select('id');
   if (error) throw error;
+
+  if (!data || data.length === 0) {
+    throw new Error('Perubahan tidak disimpan — rekod tidak dijumpai atau anda tiada kebenaran mengemas kininya.');
+  }
 }
 
 // --- Generasi (pengurusan Super Admin) ---------------------------------------
