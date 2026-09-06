@@ -6,9 +6,8 @@ import { memberInitials } from '@/types/database';
 /**
  * Avatar ahli, dengan inisial sebagai sandaran.
  *
- * `avatar_url` sentiasa NULL buat masa ini — muat naik gambar belum dibina —
- * jadi laluan inisial ialah yang sebenarnya dilihat. Ia dikekalkan supaya
- * bentuk komponen tidak perlu berubah apabila muat naik ditambah kelak.
+ * `avatar_url` adalah NULL sehingga seseorang memuat naik gambar, jadi laluan
+ * inisial ialah yang paling kerap dilihat.
  */
 
 /**

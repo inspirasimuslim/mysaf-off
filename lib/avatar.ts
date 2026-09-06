@@ -1,3 +1,4 @@
+import { File } from 'expo-file-system';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 
@@ -40,37 +41,72 @@ export async function pickAvatar(): Promise<string | null> {
 }
 
 /**
- * Kecilkan kepada sisi terpanjang 512px dan mampatkan sebagai JPEG.
+ * Kecilkan kepada sisi terpanjang 512px, mampatkan sebagai JPEG, dan pulangkan
+ * bait mentahnya.
  *
  * Dibuat sebelum muat naik, bukan selepas: fail 4MB dari kamera menjadi
  * puluhan kilobait, jadi kuota Storage percuma kekal memadai dan muat naik
  * selesai pada talian yang perlahan.
+ *
+ * Bait dibaca melalui `expo-file-system` dan BUKAN `fetch(uri).blob()`. Blob
+ * React Native bukan Blob pelayar: ia hanya sebuah pemegang (`_data` yang
+ * merujuk data di pihak native) tanpa bait di dalam JS. Lihat `uploadAvatar`
+ * untuk sebab perbezaan itu merosakkan muat naik.
  */
-async function compress(uri: string): Promise<Blob> {
+async function readJpegBytes(uri: string): Promise<Uint8Array> {
   const context = ImageManipulator.manipulate(uri).resize({ width: MAX_DIMENSION });
   const image = await context.renderAsync();
   const saved = await image.saveAsync({ compress: QUALITY, format: SaveFormat.JPEG });
 
-  const response = await fetch(saved.uri);
-  return await response.blob();
+  const bytes = await new File(saved.uri).bytes();
+
+  /*
+    Setiap JPEG bermula dengan penanda SOI `FF D8`. Semakan ini bukan sekadar
+    berjaga-jaga: versi terdahulu membaca fail melalui `fetch(uri).blob()`, dan
+    apabila rangkaian React Native tidak dapat membuka `file://` itu ia
+    memulangkan 200 dengan badan teks "File not found" — 14 bait yang dimuat
+    naik sebagai `<member_id>.jpg` tanpa satu pun ralat. Semakan panjang sahaja
+    terlepas kes itu, jadi bait pertama yang menentukan.
+  */
+  if (bytes.length < 2 || bytes[0] !== 0xff || bytes[1] !== 0xd8) {
+    throw new AvatarError('Gambar yang diproses tidak sah. Sila cuba gambar lain.');
+  }
+
+  return bytes;
 }
 
 /**
  * Muat naik avatar dan kemas kini `members.avatar_url`.
+ *
+ * Yang dihantar ialah `Uint8Array`, dan itu PENTING. `storage-js` memilih cara
+ * menghantar badan permintaan mengikut jenisnya:
+ *
+ *   - Blob → dibungkus dalam `FormData`, dan `contentType` DIABAIKAN.
+ *   - selain itu → bait mentah, dengan header `content-type` ditetapkan.
+ *
+ * Laluan Blob itu rosak di React Native. `FormData` React Native hanya tahu
+ * membina bahagian daripada rentetan atau objek `{ uri, name, type }`; Blob RN
+ * pula tiada `uri` — hanya `_data` yang merujuk data di pihak native. Bahagian
+ * itu dihantar KOSONG, jadi muat naik "berjaya" (status 200) tetapi objek yang
+ * tersimpan sifar bait, dan setiap skrin memaparkan gambar putih.
+ *
+ * Menghantar bait terus mengelakkan kedua-dua masalah sekali gus: badan
+ * permintaan benar-benar mengandungi JPEG itu, dan `image/jpeg` sampai sebagai
+ * header supaya Storage tidak menyimpannya sebagai `application/octet-stream`.
  *
  * Memulangkan URL awam yang sudah disertakan penanda masa — tanpa itu, pelayar
  * dan `expo-image` akan terus memaparkan gambar lama daripada cache kerana URL
  * bagi seorang ahli tidak pernah berubah.
  */
 export async function uploadAvatar(memberId: string, uri: string): Promise<string> {
-  const blob = await compress(uri);
+  const bytes = await readJpegBytes(uri);
   const path = memberId + '.jpg';
 
   // `upsert` menimpa fail sedia ada di path yang sama — itu yang menggantikan
   // avatar lama, jadi tiada padam berasingan diperlukan.
   const { error: uploadError } = await supabase.storage
     .from(BUCKET)
-    .upload(path, blob, { contentType: 'image/jpeg', upsert: true });
+    .upload(path, bytes, { contentType: 'image/jpeg', upsert: true });
 
   if (uploadError) throw new AvatarError(uploadError.message);
 
