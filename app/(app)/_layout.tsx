@@ -1,11 +1,16 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Redirect, Tabs } from 'expo-router';
-import { View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Screen } from '@/components/ui/screen';
+import { EmptyState } from '@/components/ui/empty-state';
 import { LoadingScreen } from '@/components/ui/loading-screen';
 import { Colors } from '@/constants/theme';
 import { useAuth } from '@/lib/auth-context';
+import { signOutFromDevice } from '@/lib/session';
+import { SUSPENDED_MESSAGE, isSuspended, setAuthNotice } from '@/lib/suspension';
 
 type IconName = keyof typeof Ionicons.glyphMap;
 
@@ -22,12 +27,66 @@ function tabIcon(active: IconName, inactive: IconName) {
   return ({ focused }: { focused: boolean }) => <TabIcon name={focused ? active : inactive} focused={focused} />;
 }
 
+/**
+ * Dipapar sebentar sementara sesi ditamatkan.
+ *
+ * Log keluar berlaku SERTA-MERTA dan bukan menunggu ketukan: selagi sesi hidup,
+ * token akaun itu masih sah terhadap Supabase. Mesejnya diserahkan kepada skrin
+ * log masuk melalui `setAuthNotice`, kerana komponen ini dilepaskan sebaik sesi
+ * hilang dan tidak sempat memaparkan apa-apa.
+ */
+function AccountSuspended() {
+  useEffect(() => {
+    setAuthNotice(SUSPENDED_MESSAGE);
+    void signOutFromDevice();
+  }, []);
+
+  return (
+    <Screen>
+      <View className="gap-6 px-gutter pt-6">
+        <EmptyState icon="ban-outline" title="Akaun Disekat" description={SUSPENDED_MESSAGE} />
+        <Text className="text-center text-sm text-ink-muted">Sedang log keluar...</Text>
+      </View>
+    </Screen>
+  );
+}
+
 export default function AppLayout() {
-  const { session, initialising } = useAuth();
+  const { session, user, initialising } = useAuth();
   const insets = useSafeAreaInsets();
+
+  const userId = user?.id ?? null;
+  /** `null` = belum disemak. Tab tidak dipasang sehingga jawapannya diketahui. */
+  const [suspended, setSuspended] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    if (!userId) {
+      setSuspended(null);
+      return;
+    }
+
+    let active = true;
+    setSuspended(null);
+
+    void (async () => {
+      const blocked = await isSuspended(userId);
+      if (active) setSuspended(blocked);
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [userId]);
 
   if (initialising) return <LoadingScreen />;
   if (!session) return <Redirect href="/(auth)/login" />;
+
+  /*
+    Semakan sekatan berlaku SEBELUM `<Tabs>` dipasang, jadi skrin yang disekat
+    tidak pernah wujud dalam pokok komponen — bukan sekadar tidak boleh dicapai.
+  */
+  if (suspended === null) return <LoadingScreen />;
+  if (suspended) return <AccountSuspended />;
 
   return (
     <Tabs

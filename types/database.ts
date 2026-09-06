@@ -239,6 +239,22 @@ export const PENDAPATAN_RANGE_OPTIONS: Option<PendapatanRange>[] = [
   { value: '10000+', label: 'RM10,000 ke atas' },
 ];
 
+/**
+ * Kawasan usrah disimpan sebagai kod pendek. Data import asalnya menulis nama
+ * penuh dengan kod dalam kurungan ('USRAH PANTAI TIMUR (UPT)'); migration
+ * `20260906000006` meringkaskannya kepada kod.
+ */
+export const KAWASAN_USRAH_OPTIONS: Option<string>[] = [
+  { value: 'US', label: 'Usrah Selatan' },
+  { value: 'ULK', label: 'Usrah Lembah Klang' },
+  { value: 'UU', label: 'Usrah Utara' },
+  { value: 'UPT', label: 'Usrah Pantai Timur' },
+  { value: 'UT', label: 'Usrah Terengganu' },
+  { value: 'UTS', label: 'Usrah Tengah Semenanjung' },
+  { value: 'UB', label: 'Usrah Borneo' },
+  { value: 'UA', label: 'Usrah Antarabangsa' },
+];
+
 export const JANTINA_OPTIONS: Option<string>[] = [
   { value: 'Muslimin', label: 'Muslimin' },
   { value: 'Muslimat', label: 'Muslimat' },

@@ -57,6 +57,13 @@ export default function AdminHubScreen() {
               />
 
               <ActionRow
+                icon="layers-outline"
+                title="Generasi"
+                subtitle="Tambah, aktif/nonaktif dan padam generasi"
+                onPress={() => router.push('/(app)/admin/generasi')}
+              />
+
+              <ActionRow
                 icon="shield-outline"
                 title="Lantik Admin"
                 subtitle="Lantik admin dan tetapkan kebenaran department"

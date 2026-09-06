@@ -131,6 +131,90 @@ export async function updateMember(id: string, patch: Partial<Member>): Promise<
   if (error) throw error;
 }
 
+// --- Generasi (pengurusan Super Admin) ---------------------------------------
+
+/** Termasuk generasi nonaktif — skrin pengurusan perlu melihat kesemuanya. */
+export async function createGeneration(code: string, label: string): Promise<void> {
+  const { error } = await supabase
+    .from('generations')
+    .insert({ code: code.trim().toLowerCase(), label: label.trim() });
+  if (error) throw error;
+}
+
+export async function setGenerationActive(id: string, isActive: boolean): Promise<void> {
+  const { error } = await supabase.from('generations').update({ is_active: isActive }).eq('id', id);
+  if (error) throw error;
+}
+
+/**
+ * `members.generasi` merujuk `generations.code` dengan `on delete restrict`,
+ * jadi pangkalan data sendiri yang menolak pemadaman generasi yang masih
+ * digunakan — skrin tidak perlu mengira ahli dahulu.
+ */
+export async function deleteGeneration(id: string): Promise<void> {
+  const { error } = await supabase.from('generations').delete().eq('id', id);
+  if (error) throw error;
+}
+
+// --- Akaun ahli (Edge Function) ----------------------------------------------
+
+export type CreatedMember = {
+  member_id: string;
+  nombor_ahli: string;
+  email: string;
+  full_name: string;
+  /** Dipulangkan sekali sahaja — jangan simpan atau log. */
+  password: string;
+};
+
+export type CreateMemberInput = {
+  full_name: string;
+  email: string;
+  generasi: string;
+  kawasan_usrah: string | null;
+};
+
+/**
+ * Cipta akaun log masuk + rekod ahli.
+ *
+ * Melalui Edge Function kerana mencipta akaun memerlukan `service_role`, dan
+ * kunci itu tidak boleh berada dalam app. Fungsi di pelayan mengesahkan semula
+ * kebenaran pemanggil daripada JWT — panggilan ini bukan lapisan kawalan.
+ */
+export async function createMemberAccount(input: CreateMemberInput): Promise<CreatedMember> {
+  const { data, error } = await supabase.functions.invoke('admin-create-member', { body: input });
+  if (error) throw new Error(await edgeMessage(error, 'Gagal mencipta akaun ahli.'));
+  if (data?.error) throw new Error(String(data.error));
+  return data as CreatedMember;
+}
+
+/** Padam rekod ahli DAN akaunnya. Kekal — pemanggil mesti mengesahkan niat dahulu. */
+export async function deleteMemberAccount(memberId: string): Promise<void> {
+  const { data, error } = await supabase.functions.invoke('admin-delete-member', {
+    body: { member_id: memberId },
+  });
+  if (error) throw new Error(await edgeMessage(error, 'Gagal memadam ahli.'));
+  if (data?.error) throw new Error(String(data.error));
+}
+
+/**
+ * Edge Function memulangkan sebab kegagalan dalam badan respons, tetapi
+ * `FunctionsHttpError` hanya membawa "non-2xx status code". Tanpa membaca
+ * badan itu, admin akan melihat mesej generik dan bukan sebab sebenar.
+ */
+async function edgeMessage(error: unknown, fallback: string): Promise<string> {
+  const context = (error as { context?: Response })?.context;
+  if (context && typeof context.json === 'function') {
+    try {
+      const body = await context.json();
+      if (body?.error) return String(body.error);
+    } catch {
+      // Badan bukan JSON — gunakan mesej sandaran.
+    }
+  }
+  return error instanceof Error && error.message ? fallback + ' (' + error.message + ')' : fallback;
+}
+
 // --- Import ------------------------------------------------------------------
 
 export type ImportProgress = { done: number; total: number };

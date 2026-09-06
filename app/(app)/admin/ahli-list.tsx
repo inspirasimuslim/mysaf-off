@@ -112,11 +112,14 @@ export default function AhliListScreen() {
         {error ? <Notice tone="negative" message={error} /> : null}
 
         {canEdit ? (
-          <Button
-            label="Muat Naik Fail Excel"
-            variant="secondary"
-            onPress={() => router.push('/(app)/admin/ahli-upload')}
-          />
+          <View className="gap-3">
+            <Button label="Tambah Ahli" onPress={() => router.push('/(app)/admin/ahli-tambah')} />
+            <Button
+              label="Muat Naik Fail Excel"
+              variant="secondary"
+              onPress={() => router.push('/(app)/admin/ahli-upload')}
+            />
+          </View>
         ) : null}
 
         <View className="gap-4">

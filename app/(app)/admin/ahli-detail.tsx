@@ -1,16 +1,20 @@
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import { MemberForm } from '@/components/member-form';
 import { ScreenHeader } from '@/components/screen-header';
+import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
+import { FormModal } from '@/components/ui/form-modal';
 import { LoadingScreen } from '@/components/ui/loading-screen';
 import { Notice } from '@/components/ui/notice';
 import { Screen } from '@/components/ui/screen';
+import { TextField } from '@/components/ui/text-field';
+import { pickAvatar, uploadAvatar } from '@/lib/avatar';
 import { useMemberAccess } from '@/lib/department-access';
 import { toMalayError } from '@/lib/errors';
-import { fetchGenerations, fetchMember, updateMember } from '@/lib/members';
+import { deleteMemberAccount, fetchGenerations, fetchMember, updateMember } from '@/lib/members';
 import { useGoBack } from '@/lib/navigation';
 import { generationLabel, type Generation, type Member } from '@/types/database';
 
@@ -41,7 +45,8 @@ export default function AhliDetailScreen() {
         setMember(row);
         setGenerations(gens);
       } catch (caught) {
-        if (active) setBanner({ tone: 'negative', message: toMalayError(caught, 'Gagal memuatkan rekod ahli.') });
+        if (active)
+          setBanner({ tone: 'negative', message: toMalayError(caught, 'Gagal memuatkan rekod ahli.') });
       } finally {
         if (active) setLoading(false);
       }
@@ -51,6 +56,29 @@ export default function AhliDetailScreen() {
       active = false;
     };
   }, [accessLoading, canView, id]);
+
+  // --- Avatar ---------------------------------------------------------------
+  const [avatarBusy, setAvatarBusy] = useState(false);
+
+  const changeAvatar = useCallback(async () => {
+    if (!member || avatarBusy) return;
+
+    setBanner(null);
+    setAvatarBusy(true);
+    try {
+      const uri = await pickAvatar();
+      // `null` bermakna pemilihan dibatalkan — bukan kegagalan, jadi senyap.
+      if (!uri) return;
+
+      const url = await uploadAvatar(member.id, uri);
+      setMember({ ...member, avatar_url: url });
+      setBanner({ tone: 'positive', message: 'Gambar profil telah dikemas kini.' });
+    } catch (caught) {
+      setBanner({ tone: 'negative', message: toMalayError(caught, 'Gagal memuat naik gambar.') });
+    } finally {
+      setAvatarBusy(false);
+    }
+  }, [avatarBusy, member]);
 
   const save = useCallback(
     async (patch: Partial<Member>) => {
@@ -74,6 +102,35 @@ export default function AhliDetailScreen() {
     },
     [member, saving],
   );
+
+  // --- Padam ahli (kekal) ---------------------------------------------------
+  const [deleteModal, setDeleteModal] = useState(false);
+  const [confirmText, setConfirmText] = useState('');
+  const [deleteBusy, setDeleteBusy] = useState(false);
+
+  const openDelete = useCallback(() => {
+    setBanner(null);
+    setConfirmText('');
+    setDeleteBusy(false);
+    setDeleteModal(true);
+  }, []);
+
+  const confirmDelete = useCallback(async () => {
+    if (!member || deleteBusy) return;
+
+    setDeleteBusy(true);
+    try {
+      await deleteMemberAccount(member.id);
+      setDeleteModal(false);
+      // Rekod sudah tiada — kekal di skrin ini akan memapar borang hantu.
+      goBack();
+    } catch (caught) {
+      setDeleteModal(false);
+      setBanner({ tone: 'negative', message: toMalayError(caught, 'Gagal memadam ahli.') });
+    } finally {
+      setDeleteBusy(false);
+    }
+  }, [deleteBusy, goBack, member]);
 
   if (accessLoading || loading) return <LoadingScreen />;
 
@@ -113,38 +170,90 @@ export default function AhliDetailScreen() {
   }
 
   return (
-    <Screen padTop={false}>
-      <ScreenHeader
-        eyebrow={(member.nombor_ahli ?? 'Tiada nombor') + ' · ' + generationLabel(member.generasi)}
-        title={member.full_name}
-        subtitle={member.email ?? 'Tiada emel'}
-        onBackPress={goBack}
-      />
-
-      <View className="gap-6 px-gutter pt-6">
-        {banner ? <Notice tone={banner.tone} message={banner.message} /> : null}
-
-        {!canEdit ? (
-          <Notice
-            tone="info"
-            message="Anda hanya mempunyai akses Lihat untuk bahagian ini. Borang di bawah adalah paparan sahaja."
-          />
-        ) : null}
-
-        <MemberForm
-          /* `key` memaksa borang dibina semula selepas simpan supaya draftnya
-             bermula daripada nilai terkini, bukan nilai sebelum simpan. */
-          key={member.id + ':' + version}
-          member={member}
-          generations={generations}
-          /* Panel Admin sentiasa berurusan dengan kolum keahlian; yang
-             menentukan sama ada ia boleh disunting ialah `readOnly` di bawah. */
-          canEditAdminColumns
-          readOnly={!canEdit}
-          busy={saving}
-          onSave={(patch) => void save(patch)}
+    <>
+      <Screen padTop={false}>
+        <ScreenHeader
+          eyebrow={(member.nombor_ahli ?? 'Tiada nombor') + ' · ' + generationLabel(member.generasi)}
+          title={member.full_name}
+          subtitle={member.email ?? 'Tiada emel'}
+          onBackPress={goBack}
         />
-      </View>
-    </Screen>
+
+        <View className="gap-6 px-gutter pt-6">
+          {banner ? <Notice tone={banner.tone} message={banner.message} /> : null}
+
+          {!canEdit ? (
+            <Notice
+              tone="info"
+              message="Anda hanya mempunyai akses Lihat untuk bahagian ini. Borang di bawah adalah paparan sahaja."
+            />
+          ) : null}
+
+          <MemberForm
+            /* `key` memaksa borang dibina semula selepas simpan supaya draftnya
+             bermula daripada nilai terkini, bukan nilai sebelum simpan. */
+            key={member.id + ':' + version}
+            member={member}
+            generations={generations}
+            /* Panel Admin sentiasa berurusan dengan kolum keahlian; yang
+             menentukan sama ada ia boleh disunting ialah `readOnly` di bawah. */
+            canEditAdminColumns
+            readOnly={!canEdit}
+            busy={saving}
+            onPickAvatar={() => void changeAvatar()}
+            avatarBusy={avatarBusy}
+            onSave={(patch) => void save(patch)}
+          />
+
+          {/*
+          Memadam ahli membuang rekod DAN akaun log masuknya, tanpa pemulihan.
+          Kerana itu ia terletak di hujung skrin, dipisahkan daripada borang,
+          dan memerlukan perkataan disahkan sebelum butang terakhir hidup.
+        */}
+          {canEdit ? (
+            <View className="gap-3 pb-8 pt-2">
+              <Button label="Padam Ahli" variant="danger" onPress={openDelete} />
+              <Text className="text-center text-sm text-ink-muted">
+                Rekod dan akaun log masuk ahli ini akan dipadam kekal.
+              </Text>
+            </View>
+          ) : null}
+        </View>
+      </Screen>
+
+      <FormModal
+        visible={deleteModal}
+        title="Padam ahli?"
+        description={
+          'Rekod ' +
+          (member.nombor_ahli ?? '') +
+          ' · ' +
+          member.full_name +
+          ' dan akaun log masuknya akan dipadam KEKAL. Tindakan ini tidak boleh dibatalkan.'
+        }
+        dismissable={!deleteBusy}
+        onClose={() => setDeleteModal(false)}
+      >
+        <Notice tone="warn" message="Taip PADAM di bawah untuk mengesahkan." />
+
+        <TextField
+          label="Taip PADAM"
+          placeholder="PADAM"
+          value={confirmText}
+          onChangeText={setConfirmText}
+          autoCapitalize="characters"
+          autoCorrect={false}
+          editable={!deleteBusy}
+        />
+
+        <Button
+          label="Padam Kekal"
+          variant="danger"
+          loading={deleteBusy}
+          disabled={deleteBusy || confirmText.trim().toUpperCase() !== 'PADAM'}
+          onPress={() => void confirmDelete()}
+        />
+      </FormModal>
+    </>
   );
 }

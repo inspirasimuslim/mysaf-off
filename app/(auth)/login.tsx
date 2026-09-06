@@ -10,12 +10,16 @@ import { TextField } from '@/components/ui/text-field';
 import { Colors } from '@/constants/theme';
 import { getBiometricSupport, getStoredRefreshToken, hasBiometricLogin, promptBiometric } from '@/lib/biometrics';
 import { toMalayError } from '@/lib/errors';
+import { takeAuthNotice } from '@/lib/suspension';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+  /* Sebab log keluar automatik (contoh: akaun disekat), diserahkan oleh
+     `app/(app)/_layout.tsx` yang tidak sempat memaparkannya sendiri. */
+  const [notice, setNotice] = useState<string | null>(() => takeAuthNotice());
   const [busy, setBusy] = useState(false);
   const [biometricBusy, setBiometricBusy] = useState(false);
   const [biometricLabel, setBiometricLabel] = useState<string | null>(null);
@@ -123,6 +127,7 @@ export default function LoginScreen() {
                 secure
               />
 
+              {notice ? <Notice tone="warn" message={notice} /> : null}
               {error ? <Notice tone="negative" message={error} /> : null}
 
               <Button label="Log Masuk" onPress={() => void signIn()} loading={busy} disabled={biometricBusy} />

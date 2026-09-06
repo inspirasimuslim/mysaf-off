@@ -12,6 +12,7 @@ import { LoadingScreen } from '@/components/ui/loading-screen';
 import { Notice } from '@/components/ui/notice';
 import { Screen } from '@/components/ui/screen';
 import { Colors } from '@/constants/theme';
+import { pickAvatar, uploadAvatar } from '@/lib/avatar';
 import { displayName, useAuth } from '@/lib/auth-context';
 import { toMalayError } from '@/lib/errors';
 import { fetchGenerations, fetchMyMember, fetchMyMemberLinked, updateMember } from '@/lib/members';
@@ -67,6 +68,30 @@ export default function ProfilScreen() {
       active = false;
     };
   }, [userId]);
+
+
+  // --- Avatar ---------------------------------------------------------------
+  const [avatarBusy, setAvatarBusy] = useState(false);
+
+  const changeAvatar = useCallback(async () => {
+    if (!member || avatarBusy) return;
+
+    setBanner(null);
+    setAvatarBusy(true);
+    try {
+      const uri = await pickAvatar();
+      // `null` bermakna pemilihan dibatalkan — bukan kegagalan, jadi senyap.
+      if (!uri) return;
+
+      const url = await uploadAvatar(member.id, uri);
+      setMember({ ...member, avatar_url: url });
+      setBanner({ tone: 'positive', message: 'Gambar profil telah dikemas kini.' });
+    } catch (caught) {
+      setBanner({ tone: 'negative', message: toMalayError(caught, 'Gagal memuat naik gambar.') });
+    } finally {
+      setAvatarBusy(false);
+    }
+  }, [avatarBusy, member]);
 
   const save = useCallback(
     async (patch: Partial<Member>) => {
@@ -165,6 +190,8 @@ export default function ProfilScreen() {
           generations={generations}
           canEditAdminColumns={false}
           busy={saving}
+          onPickAvatar={() => void changeAvatar()}
+          avatarBusy={avatarBusy}
           onSave={(patch) => void save(patch)}
         />
       </View>
