@@ -244,6 +244,7 @@ export default function AppLayout() {
       <Tabs.Screen name="admin" options={{ href: null }} />
       <Tabs.Screen name="tetapan" options={{ href: null }} />
       <Tabs.Screen name="ahli-view" options={{ href: null }} />
+      <Tabs.Screen name="yuran" options={{ href: null }} />
       <Tabs.Screen name="event-info" options={{ href: null }} />
       <Tabs.Screen name="announcement-info" options={{ href: null }} />
     </Tabs>

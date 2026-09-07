@@ -102,3 +102,16 @@ export const SETIAUSAHA_DEPARTMENT = 'JABATAN SETIAUSAHA';
 export function useProgramAccess(): DepartmentAccess {
   return useDepartmentAccess(SETIAUSAHA_DEPARTMENT);
 }
+
+/**
+ * Department yang memiliki modul Yuran.
+ *
+ * Sama seperti department lain, nama ini mesti sepadan dengan
+ * `can_view_yuran()` / `can_edit_yuran()` dalam `20260907000014_yuran.sql`.
+ */
+export const BENDAHARI_DEPARTMENT = 'BENDAHARI';
+
+/** Pintasan untuk modul Yuran. */
+export function useYuranAccess(): DepartmentAccess {
+  return useDepartmentAccess(BENDAHARI_DEPARTMENT);
+}

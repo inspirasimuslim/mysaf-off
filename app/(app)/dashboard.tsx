@@ -1,6 +1,7 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
 import { PosterCarousel, type PosterItem } from '@/components/poster-carousel';
 import { ScreenHeader } from '@/components/screen-header';
@@ -8,14 +9,13 @@ import { UsrahStrip } from '@/components/usrah-strip';
 import { Card } from '@/components/ui/card';
 import { Notice } from '@/components/ui/notice';
 import { Screen } from '@/components/ui/screen';
-import { displayName, useAuth } from '@/lib/auth-context';
 import { fetchVisibleAnnouncements } from '@/lib/announcements';
+import { displayName, useAuth } from '@/lib/auth-context';
+import { fetchMyMemberLinked } from '@/lib/members';
 import { usePermissions } from '@/lib/permissions';
 import { fetchUpcomingEvents } from '@/lib/usrah-events';
+import { fetchYuranSummary, ringgit, type YuranSummary } from '@/lib/yuran';
 import { shortDateRangeLabel, type Announcement, type UpcomingEvent } from '@/types/database';
-
-/** Em dash sebagai placeholder nilai yang belum ada. */
-const DASH = '—';
 
 type Banner = { tone: 'positive' | 'info' | 'negative'; message: string } | null;
 
@@ -28,15 +28,16 @@ export default function DashboardScreen() {
 
   const [events, setEvents] = useState<UpcomingEvent[]>([]);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [yuran, setYuran] = useState<YuranSummary | null>(null);
 
   /*
     Dibaca semula setiap kali skrin mendapat fokus, sama seperti `UsrahStrip`:
-    program dicipta dan pengumuman dihidupkan dari skrin lain dalam sesi yang
-    sama, jadi bacaan sekali semasa dipasang akan membekukan skrin Utama pada
-    keadaan lama sehingga app dimulakan semula.
+    program dicipta, pengumuman dihidupkan dan bayaran direkod dari skrin lain
+    dalam sesi yang sama, jadi bacaan sekali semasa dipasang akan membekukan
+    skrin Utama pada keadaan lama sehingga app dimulakan semula.
 
-    Kegagalan bacaan MENYEMBUNYIKAN seksyen dan bukan memaparkan ralat. Kedua-dua
-    carousel ialah maklumat tambahan; ralat merah di atas sapaan pengguna
+    Kegagalan bacaan MENYEMBUNYIKAN bahagiannya dan bukan memaparkan ralat.
+    Semuanya di sini maklumat tambahan; ralat merah di atas sapaan pengguna
     memberitahunya tentang masalah yang dia tidak boleh selesaikan.
   */
   useFocusEffect(
@@ -54,9 +55,6 @@ export default function DashboardScreen() {
 
       void (async () => {
         try {
-          // Penapisan tetingkap tarikh berlaku dalam pertanyaan, bukan di sini:
-          // menarik semua pengumuman untuk membuang kebanyakannya bermakna app
-          // memuat turun poster yang tidak akan dipapar.
           const rows = await fetchVisibleAnnouncements();
           if (active) setAnnouncements(rows);
         } catch {
@@ -64,10 +62,24 @@ export default function DashboardScreen() {
         }
       })();
 
+      void (async () => {
+        const userId = user?.id ?? null;
+        if (!userId) return;
+
+        try {
+          const member = await fetchMyMemberLinked(userId);
+          if (!active || !member) return;
+          const summary = await fetchYuranSummary(member.id);
+          if (active) setYuran(summary);
+        } catch {
+          if (active) setYuran(null);
+        }
+      })();
+
       return () => {
         active = false;
       };
-    }, []),
+    }, [user?.id]),
   );
 
   const eventItems: PosterItem[] = events.map((event) => ({
@@ -107,12 +119,16 @@ export default function DashboardScreen() {
       <View className="gap-8 px-gutter pt-6">
         {banner ? <Notice tone={banner.tone} message={banner.message} /> : null}
 
-        {/* Ringkasan utama - satu maklumat besar sahaja. */}
-        <Card tone="primary">
-          <Text className="text-sm text-white/70">Kehadiran bulan ini</Text>
-          <Text className="mt-2 text-stat-lg font-bold text-white/50">{DASH}</Text>
-          <Text className="mt-2 text-sm text-white/70">Modul kehadiran belum disambung ke pangkalan data.</Text>
-        </Card>
+        {/*
+          Dua kad separuh lebar. Yuran ialah satu-satunya perkara di skrin ini
+          yang menuntut tindakan daripada ahli, jadi ia mengambil tempat kiri —
+          di mana mata jatuh dahulu — dan Pip menunggu di sebelahnya sebagai
+          ruang yang sudah ditempah, supaya susun atur tidak beralih bila ia tiba.
+        */}
+        <View className="flex-row gap-4">
+          <YuranCard summary={yuran} onPress={() => router.push('/(app)/yuran')} />
+          <ComingSoonCard icon="ribbon-outline" title="Status Pip" />
+        </View>
 
         <UsrahStrip userId={user?.id ?? null} />
 
@@ -135,5 +151,72 @@ export default function DashboardScreen() {
         />
       </View>
     </Screen>
+  );
+}
+
+/**
+ * Status yuran — hijau bila tiada apa yang perlu dibuat, merah bila ada.
+ *
+ * Keadaan "belum dibaca" memaparkan em dash dan BUKAN sifar. Sifar bermakna
+ * "anda tidak berhutang", dan itu jawapan yang tidak boleh diberikan sebelum
+ * bacaan selesai.
+ */
+function YuranCard({ summary, onPress }: { summary: YuranSummary | null; onPress: () => void }) {
+  const settled = summary !== null && summary.tertunggak === 0;
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel="Status yuran"
+      onPress={onPress}
+      className="flex-1 active:opacity-70">
+      <Card tone={settled ? 'primary' : 'surface'} className="min-h-[132px]">
+        <View className="flex-row items-center gap-2">
+          <Ionicons
+            name="wallet-outline"
+            size={16}
+            color={settled ? 'rgba(255,255,255,0.7)' : '#6B7280'}
+          />
+          <Text className={`text-sm ${settled ? 'text-white/70' : 'text-ink-muted'}`}>Status Yuran</Text>
+        </View>
+
+        {summary === null ? (
+          <Text className="mt-3 text-stat font-bold text-ink-faint">—</Text>
+        ) : settled ? (
+          <>
+            <Text className="mt-3 text-stat font-bold text-white">Lunas</Text>
+            <Text className="mt-1 text-xs text-white/70">
+              {summary.kredit > 0 ? 'Kredit ' + ringgit(summary.kredit) : 'Tiada tunggakan'}
+            </Text>
+          </>
+        ) : (
+          <>
+            <Text className="mt-3 text-stat font-bold text-negative">{ringgit(summary.tertunggak)}</Text>
+            <Text className="mt-1 text-xs text-ink-muted">Tertunggak</Text>
+          </>
+        )}
+      </Card>
+    </Pressable>
+  );
+}
+
+/**
+ * Ruang yang sudah ditempah untuk modul yang belum ada.
+ *
+ * Sengaja tidak boleh diketuk dan sengaja pudar: kad yang kelihatan hidup
+ * tetapi tidak membuka apa-apa dibaca sebagai pepijat, bukan sebagai janji.
+ */
+function ComingSoonCard({ icon, title }: { icon: keyof typeof Ionicons.glyphMap; title: string }) {
+  return (
+    <View className="flex-1 opacity-60">
+      <Card className="min-h-[132px]">
+        <View className="flex-row items-center gap-2">
+          <Ionicons name={icon} size={16} color="#6B7280" />
+          <Text className="text-sm text-ink-muted">{title}</Text>
+        </View>
+        <Text className="mt-3 text-stat font-bold text-ink-faint">—</Text>
+        <Text className="mt-1 text-xs text-ink-muted">Akan Datang</Text>
+      </Card>
+    </View>
   );
 }

@@ -6,7 +6,7 @@ import { ActionRow } from '@/components/ui/action-row';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Screen } from '@/components/ui/screen';
 import { SectionTitle } from '@/components/ui/section-title';
-import { useMemberAccess, useProgramAccess, useUsrahAccess } from '@/lib/department-access';
+import { useMemberAccess, useProgramAccess, useUsrahAccess, useYuranAccess } from '@/lib/department-access';
 import { useGoBack } from '@/lib/navigation';
 import { usePermissions } from '@/lib/permissions';
 
@@ -27,10 +27,15 @@ export default function AdminHubScreen() {
   const memberAccess = useMemberAccess();
   const usrahAccess = useUsrahAccess();
   const programAccess = useProgramAccess();
+  const yuranAccess = useYuranAccess();
 
   const superAdmin = isSuperAdmin();
   const nothingAvailable =
-    !superAdmin && !memberAccess.canView && !usrahAccess.canView && !programAccess.canView;
+    !superAdmin &&
+    !memberAccess.canView &&
+    !usrahAccess.canView &&
+    !programAccess.canView &&
+    !yuranAccess.canView;
 
   return (
     <Screen padTop={false}>
@@ -190,6 +195,29 @@ export default function AdminHubScreen() {
                     : 'Semak pengumuman (paparan sahaja)'
                 }
                 onPress={() => router.push('/(app)/admin/announcements')}
+              />
+            </View>
+          </View>
+        ) : null}
+
+        {/*
+          Yuran dimiliki oleh BENDAHARI — department ketiga yang berasingan
+          daripada modul ahli dan usrah. Seorang admin boleh memegang satu
+          tanpa yang lain, jadi kadnya berdiri sendiri.
+        */}
+        {yuranAccess.canView ? (
+          <View>
+            <SectionTitle title="Bendahari" caption="Urus yuran keahlian." />
+            <View className="gap-4">
+              <ActionRow
+                icon="wallet-outline"
+                title="Yuran"
+                subtitle={
+                  yuranAccess.canEdit
+                    ? 'Semak baki, rekod bayaran, jana yuran tahunan dan eksport laporan'
+                    : 'Semak baki dan eksport laporan (paparan sahaja)'
+                }
+                onPress={() => router.push('/(app)/admin/yuran-list')}
               />
             </View>
           </View>
