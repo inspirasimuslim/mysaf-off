@@ -1,7 +1,9 @@
 import { File } from 'expo-file-system';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
+import { Platform } from 'react-native';
 
+import { updateMember } from './members';
 import { supabase } from './supabase';
 
 /**
@@ -41,6 +43,34 @@ export async function pickAvatar(): Promise<string | null> {
 }
 
 /**
+ * Baca bait fail hasil, ikut cara yang betul bagi platform.
+ *
+ * Dua platform, dua jenis URI, dan tiada satu pembaca yang memahami kedua-dua:
+ *
+ *   - Peranti: `file://`. `fetch()` React Native TIDAK membacanya — ia
+ *     memulangkan 200 dengan badan teks "File not found", yang pernah dimuat
+ *     naik sebagai avatar 14 bait. `expo-file-system` yang membaca fail
+ *     sebenar di sini.
+ *
+ *   - Web: `blob:`. Ia hanya wujud dalam ingatan pelayar, jadi tiada fail
+ *     untuk dibuka pada sistem fail — `expo-file-system` menolaknya terus.
+ *     `fetch()` pelayar pula membaca `blob:` dengan sempurna.
+ *
+ * Kedua-dua cabang memulangkan bait, bukan Blob: `storage-js` membungkus Blob
+ * dalam `FormData`, dan bahagian FormData React Native yang dibina daripada
+ * Blob dihantar KOSONG. Bait mentah mengelakkan laluan itu sekali gus
+ * membolehkan satu semakan integriti yang sama untuk kedua-dua platform.
+ */
+async function readBytes(uri: string): Promise<Uint8Array> {
+  if (Platform.OS === 'web') {
+    const response = await fetch(uri);
+    return new Uint8Array(await response.arrayBuffer());
+  }
+
+  return await new File(uri).bytes();
+}
+
+/**
  * Kecilkan kepada sisi terpanjang 512px, mampatkan sebagai JPEG, dan pulangkan
  * bait mentahnya.
  *
@@ -48,17 +78,15 @@ export async function pickAvatar(): Promise<string | null> {
  * puluhan kilobait, jadi kuota Storage percuma kekal memadai dan muat naik
  * selesai pada talian yang perlahan.
  *
- * Bait dibaca melalui `expo-file-system` dan BUKAN `fetch(uri).blob()`. Blob
- * React Native bukan Blob pelayar: ia hanya sebuah pemegang (`_data` yang
- * merujuk data di pihak native) tanpa bait di dalam JS. Lihat `uploadAvatar`
- * untuk sebab perbezaan itu merosakkan muat naik.
+ * Bait dibaca oleh `readBytes` di bawah, yang memilih pembaca mengikut
+ * platform — lihat komennya untuk sebab satu pembaca tidak mencukupi.
  */
 async function readJpegBytes(uri: string): Promise<Uint8Array> {
   const context = ImageManipulator.manipulate(uri).resize({ width: MAX_DIMENSION });
   const image = await context.renderAsync();
   const saved = await image.saveAsync({ compress: QUALITY, format: SaveFormat.JPEG });
 
-  const bytes = await new File(saved.uri).bytes();
+  const bytes = await readBytes(saved.uri);
 
   /*
     Setiap JPEG bermula dengan penanda SOI `FF D8`. Semakan ini bukan sekadar
@@ -113,8 +141,17 @@ export async function uploadAvatar(memberId: string, uri: string): Promise<strin
   const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
   const url = data.publicUrl + '?v=' + Date.now();
 
-  const { error: updateError } = await supabase.from('members').update({ avatar_url: url }).eq('id', memberId);
-  if (updateError) throw new AvatarError(updateError.message);
+  /*
+    Melalui `updateMember` dan bukan `.update()` terus: fungsi itu mengesahkan
+    baris benar-benar dikemas kini. Muat naik yang failnya tersimpan tetapi
+    URLnya tidak pernah mendarat ialah tepat keadaan yang memapar bulatan
+    kosong sambil melaporkan kejayaan.
+  */
+  try {
+    await updateMember(memberId, { avatar_url: url });
+  } catch (caught) {
+    throw new AvatarError(caught instanceof Error ? caught.message : 'Gagal menyimpan URL gambar.');
+  }
 
   return url;
 }

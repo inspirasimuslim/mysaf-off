@@ -165,10 +165,20 @@ export function MemberForm({
     return [...KAWASAN_USRAH_OPTIONS, { value: current, label: current + ' (tidak dikenali)' }];
   }, [draft.kawasan_usrah]);
 
-  /** Medan yang berubah sahaja — mengelak menulis semula kolum yang tidak disentuh. */
+  /**
+   * Medan yang berubah sahaja — mengelak menulis semula kolum yang tidak disentuh.
+   *
+   * `avatar_url` DIKECUALIKAN kerana borang ini tidak memilikinya: gambar
+   * dimuat naik oleh `uploadAvatar`, yang menulis kolum itu sendiri. Draf di
+   * sini dibekukan pada saat borang dipasang, jadi tanpa pengecualian ini
+   * setiap muat naik akan diikuti oleh satu `avatar_url: null` yang lapuk pada
+   * simpanan berikutnya — gambar yang baru dinaikkan lenyap semula, dan butang
+   * Simpan menyala walaupun pengguna belum menyunting apa-apa.
+   */
   const patch = useMemo(() => {
     const changed: Partial<Member> = {};
     (Object.keys(draft) as (keyof Member)[]).forEach((key) => {
+      if (key === 'avatar_url') return;
       if (draft[key] !== member[key]) changed[key] = draft[key] as never;
     });
     return changed;
@@ -222,7 +232,9 @@ export function MemberForm({
           disabled={!canPickAvatar || avatarBusy}
           onPress={onPickAvatar}
           className={canPickAvatar ? 'active:opacity-70' : ''}>
-          <MemberAvatar fullName={draft.full_name} avatarUrl={draft.avatar_url} size={AVATAR_SIZE} />
+          {/* Dari prop dan bukan draf: gambar bukan medan borang, jadi nilai
+              terkini datang daripada rekod, bukan daripada salinan beku draf. */}
+          <MemberAvatar fullName={draft.full_name} avatarUrl={member.avatar_url} size={AVATAR_SIZE} />
 
           {canPickAvatar ? (
             <View className="absolute bottom-0 right-0 h-9 w-9 items-center justify-center rounded-pill border-2 border-surface bg-primary">
