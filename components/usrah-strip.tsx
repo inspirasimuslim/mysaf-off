@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useFocusEffect } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { Text, View } from 'react-native';
 
 import { Colors } from '@/constants/theme';
@@ -36,28 +37,36 @@ export function UsrahStrip({ userId }: { userId: string | null }) {
   const year = new Date().getFullYear();
   const [state, setState] = useState<State>({ ready: false });
 
-  useEffect(() => {
-    if (!userId) return;
-    let active = true;
+  /*
+    `useFocusEffect` dan bukan `useEffect`: kehadiran ditambah dari skrin lain
+    (imbasan QR), jadi jalur ini perlu dibaca semula setiap kali Utama mendapat
+    fokus semula — bukan sekali sahaja semasa dipasang. Tanpa ini, bulan yang
+    baru direkodkan kekal kelabu sehingga app dimulakan semula.
+  */
+  useFocusEffect(
+    useCallback(() => {
+      if (!userId) return;
+      let active = true;
 
-    void (async () => {
-      try {
-        const member = await fetchMyMemberLinked(userId);
-        if (!active || !member) return;
+      void (async () => {
+        try {
+          const member = await fetchMyMemberLinked(userId);
+          if (!active || !member) return;
 
-        const months = await fetchUsrahYear(member.id, year);
-        if (active) setState({ months, ready: true });
-      } catch {
-        // Widget ringkas di skrin utama — kegagalan bacaan menyembunyikannya,
-        // bukan memaparkan ralat di atas sapaan pengguna.
-        if (active) setState({ ready: false });
-      }
-    })();
+          const months = await fetchUsrahYear(member.id, year);
+          if (active) setState({ months, ready: true });
+        } catch {
+          // Widget ringkas di skrin utama — kegagalan bacaan menyembunyikannya,
+          // bukan memaparkan ralat di atas sapaan pengguna.
+          if (active) setState({ ready: false });
+        }
+      })();
 
-    return () => {
-      active = false;
-    };
-  }, [userId, year]);
+      return () => {
+        active = false;
+      };
+    }, [userId, year]),
+  );
 
   if (!state.ready) return null;
 

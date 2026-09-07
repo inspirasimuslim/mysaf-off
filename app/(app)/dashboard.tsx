@@ -1,14 +1,17 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Text, View } from 'react-native';
 
 import { ScreenHeader } from '@/components/screen-header';
 import { UsrahStrip } from '@/components/usrah-strip';
+import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Notice } from '@/components/ui/notice';
 import { Screen } from '@/components/ui/screen';
 import { SectionTitle } from '@/components/ui/section-title';
 import { StatCard } from '@/components/ui/stat-card';
+import { Colors } from '@/constants/theme';
 import { displayName, useAuth } from '@/lib/auth-context';
 import { usePermissions } from '@/lib/permissions';
 
@@ -53,6 +56,21 @@ export default function DashboardScreen() {
           <Text className="mt-2 text-stat-lg font-bold text-white/50">{DASH}</Text>
           <Text className="mt-2 text-sm text-white/70">Modul kehadiran belum disambung ke pangkalan data.</Text>
         </Card>
+
+        {/*
+          Pintasan Pantas — satu tindakan sahaja buat masa ini, dan sengaja
+          begitu. Mengimbas kod QR ialah satu-satunya perkara yang setiap ahli
+          buat pada skrin ini secara berkala, jadi ia mendapat butang penuh
+          lebar dan bukan satu petak dalam grid ikon yang perlu dicari.
+        */}
+        <View>
+          <SectionTitle title="Pintasan Pantas" caption="Rekod kehadiran usrah dengan mengimbas kod QR program." />
+          <Button
+            label="Scan QR"
+            icon={<Ionicons name="qr-code-outline" size={20} color={Colors.white} />}
+            onPress={() => router.push('/(app)/usrah-scan')}
+          />
+        </View>
 
         <UsrahStrip userId={user?.id ?? null} />
 
