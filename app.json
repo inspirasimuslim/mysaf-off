@@ -50,6 +50,14 @@
         {
           "faceIDPermission": "Benarkan $(PRODUCT_NAME) menggunakan Face ID untuk log masuk."
         }
+      ],
+      "expo-sharing",
+      "@react-native-community/datetimepicker",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "mysaf-off menggunakan lokasi anda untuk mengesahkan kehadiran usrah di lokasi program."
+        }
       ]
     ],
     "experiments": {

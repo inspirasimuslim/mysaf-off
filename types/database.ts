@@ -272,3 +272,57 @@ export function generationLabel(code: string | null): string {
   const match = /^i(\d{2})$/.exec(code);
   return match ? 'Ikhwan ' + match[1] : code;
 }
+
+// --- Program usrah (kehadiran QR) --------------------------------------------
+
+/** Satu baris `usrah_events`. */
+export type UsrahEvent = {
+  id: string;
+  name: string;
+  poster_url: string | null;
+  /** 'YYYY-MM-DD'. */
+  event_date: string;
+  /** 'HH:MM:SS'. */
+  event_time: string;
+  location_text: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  geofence_radius_meters: number;
+  /** Kandungan kod QR — rahsia, jangan papar sebagai teks biasa. */
+  qr_token: string;
+  valid_until: string;
+  is_active: boolean;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+/**
+ * Keadaan program seperti dilihat oleh admin.
+ *
+ * `tamat` dan `nonaktif` sengaja berasingan: satu ialah masa yang berlalu, satu
+ * lagi ialah keputusan admin, dan keduanya perlu kelihatan berbeza pada senarai.
+ */
+export type UsrahEventStatus = 'aktif' | 'tamat' | 'nonaktif';
+
+export function usrahEventStatus(event: Pick<UsrahEvent, 'is_active' | 'valid_until'>): UsrahEventStatus {
+  if (!event.is_active) return 'nonaktif';
+  return Date.parse(event.valid_until) > Date.now() ? 'aktif' : 'tamat';
+}
+
+export const USRAH_EVENT_STATUS_LABEL: Record<UsrahEventStatus, string> = {
+  aktif: 'Aktif',
+  tamat: 'Tamat tempoh',
+  nonaktif: 'Dimatikan',
+};
+
+/** 'HH:MM:SS' atau 'HH:MM' → 'HH:MM'. */
+export function timeLabel(value: string): string {
+  return value.slice(0, 5);
+}
+
+/** 'YYYY-MM-DD' → 'DD/MM/YYYY'. */
+export function dateLabel(value: string): string {
+  const [year, month, day] = value.split('-');
+  return day && month && year ? day + '/' + month + '/' + year : value;
+}

@@ -122,6 +122,17 @@ export default function AdminHubScreen() {
           <View>
             <SectionTitle title="Tarbiah" caption="Urus rekod kehadiran usrah." />
             <View className="gap-4">
+              <ActionRow
+                icon="qr-code-outline"
+                title="Program Usrah"
+                subtitle={
+                  usrahAccess.canEdit
+                    ? 'Cipta program, jana kod QR dan muat turun laporan'
+                    : 'Semak program dan muat turun laporan (paparan sahaja)'
+                }
+                onPress={() => router.push('/(app)/admin/usrah-events')}
+              />
+
               {usrahAccess.canEdit ? (
                 <ActionRow
                   icon="cloud-upload-outline"
@@ -129,13 +140,7 @@ export default function AdminHubScreen() {
                   subtitle="Import kehadiran usrah bulanan dari fail Excel"
                   onPress={() => router.push('/(app)/admin/usrah-upload')}
                 />
-              ) : (
-                <EmptyState
-                  icon="eye-outline"
-                  title="Paparan sahaja"
-                  description="Anda boleh melihat rekod usrah, tetapi memuat naik memerlukan kebenaran menyunting pada LAJNAH TARBIAH."
-                />
-              )}
+              ) : null}
             </View>
           </View>
         ) : null}

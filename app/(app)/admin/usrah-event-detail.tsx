@@ -1,0 +1,318 @@
+import { Image } from 'expo-image';
+import { useLocalSearchParams } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
+import { Text, View } from 'react-native';
+import QRCode from 'react-native-qrcode-svg';
+
+import { ScreenHeader } from '@/components/screen-header';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { DateTimeField } from '@/components/ui/date-time-field';
+import { EmptyState } from '@/components/ui/empty-state';
+import { LoadingScreen } from '@/components/ui/loading-screen';
+import { Notice } from '@/components/ui/notice';
+import { Screen } from '@/components/ui/screen';
+import { SectionTitle } from '@/components/ui/section-title';
+import { TextField } from '@/components/ui/text-field';
+import { ToggleRow } from '@/components/ui/toggle-row';
+import { Colors } from '@/constants/theme';
+import { useUsrahAccess } from '@/lib/department-access';
+import { toMalayError } from '@/lib/errors';
+import { pickImage } from '@/lib/image-upload';
+import { useGoBack } from '@/lib/navigation';
+import { fetchUsrahEvent, updateUsrahEvent, uploadEventPoster } from '@/lib/usrah-events';
+import { USRAH_EVENT_STATUS_LABEL, dateLabel, timeLabel, usrahEventStatus, type UsrahEvent } from '@/types/database';
+
+const QR_SIZE = 220;
+
+type Banner = { tone: 'positive' | 'info' | 'negative'; message: string } | null;
+
+const STATUS_TONE = { aktif: 'positive', tamat: 'neutral', nonaktif: 'warn' } as const;
+
+export default function UsrahEventDetailScreen() {
+  const goBack = useGoBack();
+  const { id } = useLocalSearchParams<{ id?: string }>();
+  const { loading: accessLoading, canView, canEdit } = useUsrahAccess();
+
+  const [event, setEvent] = useState<UsrahEvent | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [banner, setBanner] = useState<Banner>(null);
+  const [busy, setBusy] = useState(false);
+
+  // --- Suntingan asas ---------------------------------------------------------
+  const [name, setName] = useState('');
+  const [eventDate, setEventDate] = useState('');
+  const [eventTime, setEventTime] = useState('');
+  const [locationText, setLocationText] = useState('');
+
+  const hydrate = useCallback((row: UsrahEvent) => {
+    setEvent(row);
+    setName(row.name);
+    setEventDate(row.event_date);
+    setEventTime(timeLabel(row.event_time));
+    setLocationText(row.location_text ?? '');
+  }, []);
+
+  useEffect(() => {
+    if (accessLoading || !canView || !id) return;
+    let active = true;
+
+    void (async () => {
+      setLoading(true);
+      try {
+        const row = await fetchUsrahEvent(id);
+        if (active && row) hydrate(row);
+        else if (active) setEvent(null);
+      } catch (caught) {
+        if (active) setBanner({ tone: 'negative', message: toMalayError(caught, 'Gagal memuatkan program.') });
+      } finally {
+        if (active) setLoading(false);
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [accessLoading, canView, hydrate, id]);
+
+  const save = useCallback(async () => {
+    if (!event || busy) return;
+
+    setBanner(null);
+    setBusy(true);
+    try {
+      hydrate(
+        await updateUsrahEvent(event.id, {
+          name: name.trim(),
+          event_date: eventDate,
+          event_time: eventTime,
+          location_text: locationText.trim() || null,
+        }),
+      );
+      setBanner({ tone: 'positive', message: 'Perubahan telah disimpan.' });
+    } catch (caught) {
+      setBanner({ tone: 'negative', message: toMalayError(caught, 'Gagal menyimpan perubahan.') });
+    } finally {
+      setBusy(false);
+    }
+  }, [busy, event, eventDate, eventTime, hydrate, locationText, name]);
+
+  const toggleActive = useCallback(
+    async (next: boolean) => {
+      if (!event || busy) return;
+
+      setBanner(null);
+      setBusy(true);
+      try {
+        hydrate(await updateUsrahEvent(event.id, { is_active: next }));
+      } catch (caught) {
+        setBanner({ tone: 'negative', message: toMalayError(caught, 'Gagal menukar status program.') });
+      } finally {
+        setBusy(false);
+      }
+    },
+    [busy, event, hydrate],
+  );
+
+  const changePoster = useCallback(async () => {
+    if (!event || busy) return;
+
+    setBanner(null);
+    setBusy(true);
+    try {
+      const uri = await pickImage();
+      if (!uri) return;
+
+      const url = await uploadEventPoster(event.id, uri);
+      setEvent({ ...event, poster_url: url });
+      setBanner({ tone: 'positive', message: 'Poster telah dikemas kini.' });
+    } catch (caught) {
+      setBanner({ tone: 'negative', message: toMalayError(caught, 'Gagal memuat naik poster.') });
+    } finally {
+      setBusy(false);
+    }
+  }, [busy, event]);
+
+  if (accessLoading || loading) return <LoadingScreen />;
+
+  if (!canView) {
+    return (
+      <Screen padTop={false}>
+        <ScreenHeader title="Butiran Program" onBackPress={goBack} />
+        <View className="px-gutter">
+          <EmptyState
+            icon="lock-closed-outline"
+            title="Tiada akses"
+            description="Butiran program memerlukan kebenaran melihat pada department LAJNAH TARBIAH."
+          />
+        </View>
+      </Screen>
+    );
+  }
+
+  if (!event) {
+    return (
+      <Screen padTop={false}>
+        <ScreenHeader title="Butiran Program" onBackPress={goBack} />
+        <View className="px-gutter">
+          <EmptyState
+            icon="alert-circle-outline"
+            title="Program tidak dijumpai"
+            description="Program ini mungkin telah dipadam. Kembali ke senarai dan cuba lagi."
+          />
+        </View>
+      </Screen>
+    );
+  }
+
+  const status = usrahEventStatus(event);
+
+  return (
+    <Screen padTop={false}>
+      <ScreenHeader
+        eyebrow="Panel Admin"
+        title={event.name}
+        subtitle={dateLabel(event.event_date) + ' · ' + timeLabel(event.event_time)}
+        onBackPress={goBack}
+      />
+
+      <View className="gap-6 px-gutter pt-6">
+        {banner ? <Notice tone={banner.tone} message={banner.message} /> : null}
+
+        {/* --- Kod QR -------------------------------------------------------- */}
+        <View>
+          <SectionTitle
+            title="Kod QR Kehadiran"
+            caption="Cetak atau kongsi tangkapan skrin kod ini. Ahli mengimbasnya untuk merekod kehadiran."
+          />
+          <Card>
+            <View className="items-center gap-3">
+              <View className="rounded-card bg-white p-4">
+                <QRCode value={event.qr_token} size={QR_SIZE} color={Colors.ink} backgroundColor={Colors.white} />
+              </View>
+
+              <Badge label={USRAH_EVENT_STATUS_LABEL[status]} tone={STATUS_TONE[status]} />
+
+              <Text className="text-center text-xs text-ink-muted">
+                Sah sehingga {new Date(event.valid_until).toLocaleString('ms-MY')}
+              </Text>
+              {status !== 'aktif' ? (
+                <Notice
+                  tone="warn"
+                  message="Kod ini tidak lagi menerima kehadiran kerana program sudah tamat tempoh atau dimatikan."
+                />
+              ) : null}
+            </View>
+          </Card>
+        </View>
+
+        {/* --- Poster -------------------------------------------------------- */}
+        <View>
+          <SectionTitle title="Poster" />
+          {event.poster_url ? (
+            <Image
+              source={{ uri: event.poster_url }}
+              style={{ width: '100%', height: 200, borderRadius: 12 }}
+              contentFit="cover"
+              transition={150}
+              accessibilityLabel={'Poster ' + event.name}
+            />
+          ) : (
+            <Text className="text-sm text-ink-muted">Tiada poster dimuat naik.</Text>
+          )}
+
+          {canEdit ? (
+            <View className="pt-3">
+              <Button
+                label={event.poster_url ? 'Tukar Poster' : 'Muat Naik Poster'}
+                variant="secondary"
+                loading={busy}
+                disabled={busy}
+                onPress={() => void changePoster()}
+              />
+            </View>
+          ) : null}
+        </View>
+
+        {/* --- Lokasi -------------------------------------------------------- */}
+        <View>
+          <SectionTitle title="Lokasi & Geofence" />
+          <Card>
+            <View className="gap-2">
+              <Line label="Lokasi" value={event.location_text ?? 'Tiada'} />
+              <Line
+                label="Koordinat"
+                value={
+                  event.latitude !== null && event.longitude !== null
+                    ? Number(event.latitude).toFixed(6) + ', ' + Number(event.longitude).toFixed(6)
+                    : 'Tiada pin'
+                }
+              />
+              <Line label="Radius" value={event.geofence_radius_meters + ' meter'} />
+            </View>
+          </Card>
+        </View>
+
+        {/* --- Suntingan ----------------------------------------------------- */}
+        {canEdit ? (
+          <>
+            <View>
+              <SectionTitle
+                title="Status"
+                caption="Mematikan program menghentikan kehadiran serta-merta, tanpa menunggu tetingkap masa tamat."
+              />
+              <ToggleRow
+                icon="power-outline"
+                title="Program aktif"
+                subtitle="Matikan untuk menutup kehadiran lebih awal."
+                value={event.is_active}
+                onValueChange={(next) => void toggleActive(next)}
+                disabled={busy}
+              />
+            </View>
+
+            <View className="pb-8">
+              <SectionTitle title="Sunting Maklumat" caption="Menukar tarikh atau masa mengira semula tetingkap sah." />
+              <View className="gap-4">
+                <TextField
+                  label="Nama program"
+                  value={name}
+                  onChangeText={setName}
+                  editable={!busy}
+                  autoCapitalize="sentences"
+                  autoCorrect={false}
+                />
+                <DateTimeField label="Tarikh" mode="date" value={eventDate} onChange={setEventDate} disabled={busy} />
+                <DateTimeField label="Masa" mode="time" value={eventTime} onChange={setEventTime} disabled={busy} />
+                <TextField
+                  label="Lokasi"
+                  value={locationText}
+                  onChangeText={setLocationText}
+                  editable={!busy}
+                  autoCapitalize="sentences"
+                  autoCorrect={false}
+                />
+                <Button
+                  label="Simpan Perubahan"
+                  loading={busy}
+                  disabled={busy || !name.trim()}
+                  onPress={() => void save()}
+                />
+              </View>
+            </View>
+          </>
+        ) : null}
+      </View>
+    </Screen>
+  );
+}
+
+function Line({ label, value }: { label: string; value: string }) {
+  return (
+    <View className="flex-row items-center justify-between gap-4">
+      <Text className="flex-1 text-sm text-ink-muted">{label}</Text>
+      <Text className="text-base font-semibold text-ink">{value}</Text>
+    </View>
+  );
+}
