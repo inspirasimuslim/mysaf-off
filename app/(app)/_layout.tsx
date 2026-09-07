@@ -29,6 +29,29 @@ function tabIcon(active: IconName, inactive: IconName) {
 }
 
 /**
+ * Tab Scan — bulatan hijau pekat, ikon putih, lebih besar daripada yang lain.
+ *
+ * Sengaja tidak mengikut gaya lima tab yang lain. Mengimbas kod QR ialah
+ * satu-satunya tindakan pada bar ini yang seorang ahli datang ke app untuk
+ * MELAKUKAN dan bukan untuk MELIHAT, jadi ia kelihatan seperti butang dan bukan
+ * seperti destinasi.
+ *
+ * `marginTop` negatif mengangkatnya keluar dari barisan; tanpa itu bulatan yang
+ * lebih besar hanya menolak label tab ke bawah dan merosakkan penjajaran.
+ */
+function ScanTabIcon({ focused }: { focused: boolean }) {
+  return (
+    <View
+      style={{ marginTop: -10 }}
+      className={`h-14 w-14 items-center justify-center rounded-pill ${
+        focused ? 'bg-primary-dark' : 'bg-primary'
+      }`}>
+      <Ionicons name="qr-code" size={26} color={Colors.white} />
+    </View>
+  );
+}
+
+/**
  * Dipapar sebentar sementara sesi ditamatkan.
  *
  * Log keluar berlaku SERTA-MERTA dan bukan menunggu ketukan: selagi sesi hidup,
@@ -124,9 +147,15 @@ export default function AppLayout() {
         name="kehadiran"
         options={{ title: 'Kehadiran', tabBarIcon: tabIcon('checkmark-done', 'checkmark-done-outline') }}
       />
+      {/*
+        Skrin imbasan ialah sebuah TAB dan bukan skrin dalam. Sebelum ini ia
+        dicapai melalui butang di Utama; menjadikannya tab bermakna ia sentiasa
+        satu ketukan jauh, dari mana-mana skrin — yang penting apabila seseorang
+        sedang berdiri di hadapan kod QR.
+      */}
       <Tabs.Screen
-        name="aktiviti"
-        options={{ title: 'Aktiviti', tabBarIcon: tabIcon('calendar', 'calendar-outline') }}
+        name="usrah-scan"
+        options={{ title: 'Scan', tabBarIcon: ScanTabIcon, tabBarLabelStyle: { fontSize: 11, fontWeight: '600' } }}
       />
       <Tabs.Screen
         name="ahli"
@@ -144,7 +173,8 @@ export default function AppLayout() {
       <Tabs.Screen name="admin" options={{ href: null }} />
       <Tabs.Screen name="tetapan" options={{ href: null }} />
       <Tabs.Screen name="ahli-view" options={{ href: null }} />
-      <Tabs.Screen name="usrah-scan" options={{ href: null }} />
+      <Tabs.Screen name="event-info" options={{ href: null }} />
+      <Tabs.Screen name="announcement-info" options={{ href: null }} />
     </Tabs>
   );
 }

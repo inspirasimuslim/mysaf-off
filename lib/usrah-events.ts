@@ -1,6 +1,6 @@
 import * as Crypto from 'expo-crypto';
 
-import type { EventType, UsrahEvent } from '@/types/database';
+import type { EventType, UpcomingEvent, UsrahEvent } from '@/types/database';
 
 import { uploadImage } from './image-upload';
 import { supabase } from './supabase';
@@ -124,4 +124,19 @@ export async function uploadEventPoster(eventId: string, uri: string): Promise<s
   const url = await uploadImage(POSTER_BUCKET, eventId + '.jpg', uri, POSTER_MAX_WIDTH);
   await updateUsrahEvent(eventId, { poster_url: url });
   return url;
+}
+
+/**
+ * Acara akan datang seperti dilihat oleh AHLI.
+ *
+ * Melalui `event_upcoming_directory()` dan bukan `.from('usrah_events')`: RLS
+ * table itu kekal tertutup kepada ahli, dan atas sebab yang baik — barisnya
+ * memegang `qr_token`, yang membolehkan sesiapa yang memilikinya mendakwa
+ * hadir. Fungsi `security definer` itu mendedahkan sembilan kolum paparan
+ * sahaja.
+ */
+export async function fetchUpcomingEvents(): Promise<UpcomingEvent[]> {
+  const { data, error } = await supabase.rpc('event_upcoming_directory');
+  if (error) throw error;
+  return (data as UpcomingEvent[] | null) ?? [];
 }

@@ -373,6 +373,33 @@ export function dateRangeLabel(start: string, end: string): string {
   return start === end ? dateLabel(start) : dateLabel(start) + ' – ' + dateLabel(end);
 }
 
+/** 'Januari' → 'Jan'. Tiga huruf pertama betul untuk kesemua dua belas. */
+function shortMonth(month: number): string {
+  return MONTH_NAMES[month - 1]?.slice(0, 3) ?? '';
+}
+
+/**
+ * Julat tarikh sependek yang masih tepat — untuk kad carousel.
+ *
+ * Bahagian yang dikongsi dua tarikh disebut sekali sahaja: '7 – 9 Sep' dan
+ * bukan '7 Sep – 9 Sep'. Tahun hanya muncul apabila ia berbeza daripada tahun
+ * semasa, kerana ia hampir selalu sama dan menambah lebar tanpa menambah makna.
+ */
+export function shortDateRangeLabel(start: string, end: string): string {
+  const [sy, sm, sd] = start.split('-').map(Number);
+  const [ey, em, ed] = end.split('-').map(Number);
+  if (!sy || !sm || !sd || !ey || !em || !ed) return dateRangeLabel(start, end);
+
+  const thisYear = new Date().getFullYear();
+  const yearSuffix = sy === thisYear && ey === thisYear ? '' : ' ' + ey;
+
+  if (start === end) return sd + ' ' + shortMonth(sm) + (sy === thisYear ? '' : ' ' + sy);
+  if (sy === ey && sm === em) return sd + ' – ' + ed + ' ' + shortMonth(sm) + yearSuffix;
+  if (sy === ey) return sd + ' ' + shortMonth(sm) + ' – ' + ed + ' ' + shortMonth(em) + yearSuffix;
+
+  return sd + ' ' + shortMonth(sm) + ' ' + sy + ' – ' + ed + ' ' + shortMonth(em) + ' ' + ey;
+}
+
 /**
  * 'HH:MM[:SS]' → '8:00 PM'.
  *
@@ -440,3 +467,37 @@ export function usrahEventName(kawasan: string | null, month: number | null, yea
   const monthLabel = month && month >= 1 && month <= 12 ? MONTH_NAMES[month - 1] : '';
   return [kawasanLabel, [monthLabel, year].filter(Boolean).join(' ')].filter(Boolean).join(' - ');
 }
+
+// --- Direktori acara & pengumuman (skrin Utama) ------------------------------
+
+/**
+ * Acara seperti dilihat oleh AHLI, melalui `event_upcoming_directory()`.
+ *
+ * Sengaja bukan `Pick<UsrahEvent, ...>`: bentuk ini ditakrifkan oleh senarai
+ * kolum dalam fungsi `security definer` itu, dan menyambungkannya kepada baris
+ * penuh akan menjadikan penambahan kolum sensitif pada `usrah_events` kelihatan
+ * seolah-olah ia turut terdedah di sini.
+ */
+export type UpcomingEvent = {
+  id: string;
+  event_type: EventType;
+  name: string;
+  poster_url: string | null;
+  start_date: string;
+  end_date: string;
+  start_time: string;
+  end_time: string;
+  location_text: string | null;
+};
+
+/** Satu baris `announcements`. */
+export type Announcement = {
+  id: string;
+  title: string;
+  description: string | null;
+  poster_url: string;
+  is_active: boolean;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+};

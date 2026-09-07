@@ -167,6 +167,17 @@ export default function AdminHubScreen() {
                 }
                 onPress={() => router.push('/(app)/admin/program-events')}
               />
+
+              <ActionRow
+                icon="megaphone-outline"
+                title="Pengumuman"
+                subtitle={
+                  programAccess.canEdit
+                    ? 'Cipta dan urus pengumuman yang dipapar di skrin Utama ahli'
+                    : 'Semak pengumuman (paparan sahaja)'
+                }
+                onPress={() => router.push('/(app)/admin/announcements')}
+              />
             </View>
           </View>
         ) : null}

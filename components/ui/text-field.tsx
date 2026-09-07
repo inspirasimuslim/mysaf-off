@@ -23,15 +23,24 @@ export function TextField({ label, error, secure = false, ...rest }: Props) {
   const readOnly = rest.editable === false;
   const surfaceClass = readOnly ? 'bg-background' : 'bg-surface';
 
+  /* Medan berbilang baris perlu TUMBUH, jadi tinggi tetap ditukar kepada tinggi
+     minimum dan teks dijajarkan ke atas. Tanpa itu, penerangan yang panjang
+     ditaip ke dalam kotak setinggi satu baris yang menyembunyikan apa yang
+     sudah ditulis. */
+  const boxClass = rest.multiline
+    ? 'min-h-[140px] flex-row items-start rounded-field border px-4 py-3'
+    : 'h-14 flex-row items-center rounded-field border px-4';
+
   return (
     <View className="gap-2">
       <Text className="text-sm font-medium text-ink-muted">{label}</Text>
 
-      <View className={`h-14 flex-row items-center rounded-field border px-4 ${surfaceClass} ${borderClass}`}>
+      <View className={`${boxClass} ${surfaceClass} ${borderClass}`}>
         <TextInput
           className={`flex-1 text-base ${readOnly ? 'text-ink-muted' : 'text-ink'}`}
           placeholderTextColor={Colors.inkFaint}
           secureTextEntry={secure && hidden}
+          textAlignVertical={rest.multiline ? 'top' : undefined}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
           {...rest}

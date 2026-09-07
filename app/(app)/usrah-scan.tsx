@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { CameraView, scanFromURLAsync, useCameraPermissions } from 'expo-camera';
+import { useRouter } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
 import { Platform, Text, View } from 'react-native';
 
@@ -10,7 +11,6 @@ import { Notice } from '@/components/ui/notice';
 import { Screen } from '@/components/ui/screen';
 import { Colors } from '@/constants/theme';
 import { pickImage } from '@/lib/image-upload';
-import { useGoBack } from '@/lib/navigation';
 import {
   ALREADY_RECORDED,
   ScanError,
@@ -45,8 +45,15 @@ type Phase =
   | { step: 'gagal'; message: string; tone: 'negative' | 'warn' };
 
 export default function UsrahScanScreen() {
-  const goBack = useGoBack();
+  const router = useRouter();
   const [permission, requestPermission] = useCameraPermissions();
+
+  /*
+    Skrin ini ialah akar sebuah tab, jadi tiada anak panah kembali dan tiada
+    `useGoBack()`: tiada skrin sebelumnya untuk dipulangkan. "Kembali ke Utama"
+    bertukar tab, dan itu perbuatan yang berbeza daripada berundur.
+  */
+  const goHome = useCallback(() => router.navigate('/(app)/dashboard'), [router]);
 
   const [phase, setPhase] = useState<Phase>({ step: 'imbas' });
   const [picking, setPicking] = useState(false);
@@ -72,7 +79,7 @@ export default function UsrahScanScreen() {
         setPhase({
           step: 'gagal',
           tone: 'negative',
-          message: 'Kod QR ini bukan kod kehadiran usrah yang sah.',
+          message: 'Kod QR ini bukan kod kehadiran yang sah.',
         });
         return;
       }
@@ -156,10 +163,9 @@ export default function UsrahScanScreen() {
   return (
     <Screen padTop={false}>
       <ScreenHeader
-        eyebrow="Kehadiran Usrah"
+        eyebrow="Kehadiran"
         title="Scan QR"
-        subtitle="Imbas kod QR program untuk merekod kehadiran"
-        onBackPress={goBack}
+        subtitle="Imbas kod QR program atau usrah untuk merekod kehadiran"
       />
 
       <View className="gap-6 px-gutter pt-6">
@@ -259,7 +265,7 @@ export default function UsrahScanScreen() {
               </View>
             </Card>
 
-            <Button label="Kembali ke Utama" onPress={goBack} />
+            <Button label="Kembali ke Utama" onPress={goHome} />
             <Button label="Imbas Lagi" variant="secondary" onPress={scanAgain} />
           </>
         ) : null}
@@ -268,7 +274,7 @@ export default function UsrahScanScreen() {
           <>
             <Notice tone={phase.tone} message={phase.message} />
             <Button label="Cuba Lagi" onPress={scanAgain} />
-            <Button label="Kembali ke Utama" variant="secondary" onPress={goBack} />
+            <Button label="Kembali ke Utama" variant="secondary" onPress={goHome} />
           </>
         ) : null}
 
