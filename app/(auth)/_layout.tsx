@@ -1,13 +1,26 @@
-import { Redirect, Stack } from 'expo-router';
+import { Redirect, Stack, useSegments } from 'expo-router';
 
 import { LoadingScreen } from '@/components/ui/loading-screen';
 import { useAuth } from '@/lib/auth-context';
 
+/**
+ * Satu-satunya skrin di sini yang berjalan DENGAN sesi.
+ *
+ * Pautan pemulihan kata laluan menukar dirinya menjadi sesi sebelum skrin
+ * dipapar — itulah cara Supabase membuktikan pemegang pautan memiliki emel
+ * tersebut. Tanpa pengecualian ini, pengalihan di bawah akan membawa pengguna
+ * terus ke Dashboard dan borang kata laluan baharu tidak pernah kelihatan.
+ */
+const SESSION_ALLOWED = 'reset-password';
+
 export default function AuthLayout() {
   const { session, initialising } = useAuth();
+  const segments = useSegments();
 
   if (initialising) return <LoadingScreen />;
-  if (session) return <Redirect href="/(app)/dashboard" />;
+
+  const onRecovery = segments[segments.length - 1] === SESSION_ALLOWED;
+  if (session && !onRecovery) return <Redirect href="/(app)/dashboard" />;
 
   return <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#FAFAFA' } }} />;
 }

@@ -74,7 +74,59 @@ export async function completePasswordChange(): Promise<void> {
 */
 const RESET_CODES = new Set(['MS001', 'MS002']);
 
-/** Buka semula tetingkap tiga hari bagi seorang ahli — Super Admin sahaja. */
+export type PasswordResetResult = {
+  member_id: string;
+  full_name: string;
+  email: string | null;
+  /** Kata laluan sementara — sama untuk semua, jadi ia dipapar untuk disampaikan. */
+  password: string;
+  expires_at: string;
+};
+
+/**
+ * Tetapkan semula kata laluan seorang ahli kepada kata laluan sementara —
+ * Super Admin sahaja.
+ *
+ * Menggantikan `resetMemberLoginWindow()` sebagai laluan bantuan admin. Bendera
+ * sahaja hanya membantu ahli yang MASIH INGAT kata laluannya; orang yang
+ * meminta bantuan admin biasanya meminta kerana dia tidak ingat.
+ */
+export async function resetMemberPassword(memberId: string): Promise<PasswordResetResult> {
+  const { data, error } = await supabase.functions.invoke('admin-reset-member-password', {
+    body: { member_id: memberId },
+  });
+
+  if (error) {
+    /*
+      Edge Function memulangkan sebab kegagalan dalam badan respons, tetapi
+      `FunctionsHttpError` hanya membawa "non-2xx status code". Tanpa membaca
+      badan itu, admin akan melihat mesej generik dan bukan sebab sebenar —
+      termasuk amaran keadaan tidak konsisten, yang mesti sampai.
+    */
+    const context = (error as { context?: Response })?.context;
+    if (context && typeof context.json === 'function') {
+      try {
+        const body = await context.json();
+        if (body?.error) throw new Error(String(body.error));
+      } catch (parsed) {
+        if (parsed instanceof Error && parsed.message) throw parsed;
+      }
+    }
+    throw new Error('Gagal menetapkan semula kata laluan ahli.');
+  }
+
+  if (data?.error) throw new Error(String(data.error));
+  return data as PasswordResetResult;
+}
+
+/**
+ * Buka semula tetingkap tiga hari TANPA menyentuh kata laluan — Super Admin
+ * sahaja.
+ *
+ * Dikekalkan untuk keserasian; app tidak lagi memanggilnya. Ia masih berguna
+ * bagi kes yang berbeza daripada "lupa kata laluan": ahli yang tahu kata
+ * laluannya tetapi tetingkap sementaranya sudah luput.
+ */
 export async function resetMemberLoginWindow(memberId: string): Promise<string> {
   const { data, error } = await supabase.rpc('reset_member_login_window', { p_member_id: memberId });
 

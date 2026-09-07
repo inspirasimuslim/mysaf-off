@@ -18,7 +18,7 @@ import { toMalayError } from '@/lib/errors';
 import { deleteMemberAccount, fetchGenerations, fetchMember, updateMember } from '@/lib/members';
 import { useGoBack } from '@/lib/navigation';
 import { usePermissions } from '@/lib/permissions';
-import { resetMemberLoginWindow } from '@/lib/temp-password';
+import { TEMP_PASSWORD, resetMemberPassword } from '@/lib/temp-password';
 import { generationLabel, type Generation, type Member } from '@/types/database';
 
 type Banner = { tone: 'positive' | 'negative'; message: string } | null;
@@ -117,14 +117,18 @@ export default function AhliDetailScreen() {
     setBanner(null);
     setResetBusy(true);
     try {
-      const expires = await resetMemberLoginWindow(member.id);
+      const result = await resetMemberPassword(member.id);
       setResetDialog(false);
       setBanner({
         tone: 'positive',
         message:
-          'Tempoh log masuk dibuka semula sehingga ' +
-          new Date(expires).toLocaleString('ms-MY') +
-          '. Ahli boleh log masuk dengan kata laluan sementara dan akan dipaksa menetapkan kata laluan baharu.',
+          'Kata laluan ' +
+          result.full_name +
+          ' ditetapkan semula kepada "' +
+          result.password +
+          '", sah sehingga ' +
+          new Date(result.expires_at).toLocaleString('ms-MY') +
+          '. Ahli akan dipaksa menetapkan kata laluan baharu semasa log masuk seterusnya.',
       });
     } catch (caught) {
       setResetDialog(false);
@@ -133,7 +137,7 @@ export default function AhliDetailScreen() {
         menangkap kegagalan rangkaian dan sesi tamat dengan ayatnya sendiri;
         selebihnya jatuh kepada sebab sebenar yang dilontar oleh RPC.
       */
-      const fallback = caught instanceof Error && caught.message ? caught.message : 'Gagal menetapkan semula tempoh log masuk.';
+      const fallback = caught instanceof Error && caught.message ? caught.message : 'Gagal menetapkan semula kata laluan ahli.';
       setBanner({ tone: 'negative', message: toMalayError(caught, fallback) });
     } finally {
       setResetBusy(false);
@@ -252,14 +256,14 @@ export default function AhliDetailScreen() {
           {isSuperAdmin() ? (
             <View className="gap-3 pt-2">
               <Button
-                label="Reset Tempoh Log Masuk"
+                label="Reset Kata Laluan Ahli"
                 variant="secondary"
                 loading={resetBusy}
                 disabled={resetBusy}
                 onPress={() => setResetDialog(true)}
               />
               <Text className="text-center text-sm text-ink-muted">
-                Membuka semula tiga hari untuk ahli ini log masuk dengan kata laluan sementara.
+                Menetapkan semula kata laluan kepada kata laluan sementara dan memaksa ahli menukarnya.
               </Text>
             </View>
           ) : null}
@@ -282,10 +286,12 @@ export default function AhliDetailScreen() {
 
       <ConfirmDialog
         visible={resetDialog}
-        title="Reset tempoh log masuk?"
+        title="Reset kata laluan ahli?"
         message={
           member.full_name +
-          ' akan boleh log masuk dengan kata laluan sementara "ikhwandihati" selama tiga hari, dan dipaksa menetapkan kata laluan baharu selepas masuk. Kata laluan sedia ada (jika ada) TIDAK ditukar.'
+          ' akan kehilangan kata laluan semasanya. Ini akan menetapkan semula kata laluan ahli ini kepada "' +
+          TEMP_PASSWORD +
+          '" dan meminta dia tukar kata laluan baharu semasa log masuk seterusnya. Tetingkap sementara sah selama tiga hari.'
         }
         confirmLabel="Reset"
         busy={resetBusy}

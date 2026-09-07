@@ -1,8 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useEffect, useState } from 'react';
-import { KeyboardAvoidingView, Platform, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, Text, View } from 'react-native';
 
 import { ContactAdminLink } from '@/components/contact-admin';
+import { ForgotPasswordSheet } from '@/components/forgot-password';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Notice } from '@/components/ui/notice';
@@ -24,6 +25,7 @@ export default function LoginScreen() {
   const [busy, setBusy] = useState(false);
   const [biometricBusy, setBiometricBusy] = useState(false);
   const [biometricLabel, setBiometricLabel] = useState<string | null>(null);
+  const [forgotOpen, setForgotOpen] = useState(false);
 
   // Papar butang biometrik hanya bila peranti menyokong DAN pengguna pernah aktifkan.
   useEffect(() => {
@@ -128,6 +130,19 @@ export default function LoginScreen() {
                 secure
               />
 
+              {/*
+                Diletakkan terus di bawah medan kata laluan: itulah tempat mata
+                berada apabila seseorang sedar dia tidak ingat kata laluannya.
+              */}
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Lupa kata laluan"
+                hitSlop={8}
+                onPress={() => setForgotOpen(true)}
+                className="self-end active:opacity-70">
+                <Text className="text-sm font-semibold text-primary">Lupa Kata Laluan?</Text>
+              </Pressable>
+
               {notice ? <Notice tone="warn" message={notice} /> : null}
               {error ? <Notice tone="negative" message={error} /> : null}
 
@@ -167,6 +182,8 @@ export default function LoginScreen() {
           ) : null}
         </View>
       </Screen>
+
+      <ForgotPasswordSheet visible={forgotOpen} initialEmail={email} onClose={() => setForgotOpen(false)} />
     </KeyboardAvoidingView>
   );
 }
