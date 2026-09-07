@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { useCallback, useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, Text, View } from 'react-native';
 
@@ -14,6 +15,10 @@ import { getBiometricSupport, getStoredRefreshToken, hasBiometricLogin, promptBi
 import { toMalayError } from '@/lib/errors';
 import { takeAuthNotice } from '@/lib/suspension';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
+
+/* Nisbah asal fail logo (1090x367) — tinggi dikira daripada lebar supaya imej
+   tidak pernah diregangkan pada mana-mana saiz skrin. */
+const LOGO_ASPECT_RATIO = 1090 / 367;
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -92,13 +97,17 @@ export default function LoginScreen() {
     <KeyboardAvoidingView className="flex-1 bg-background" behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <Screen>
         <View className="px-gutter">
-          {/* Logo placeholder + tajuk */}
+          {/*
+            Logo sudah membawa nama dan tagline sendiri, jadi tiada tajuk atau
+            subtajuk teks di sini — satu suara sahaja di kepala skrin.
+          */}
           <View className="items-center pb-10 pt-12">
-            <View className="h-20 w-20 items-center justify-center rounded-[24px] bg-primary">
-              <Ionicons name="moon" size={34} color={Colors.white} />
-            </View>
-            <Text className="mt-5 text-2xl font-bold text-ink">mysaf-off</Text>
-            <Text className="mt-1.5 text-sm text-ink-muted">Sistem pengurusan saf & kehadiran</Text>
+            <Image
+              source={require('@/assets/images/mysaff-logo-wide.png')}
+              style={{ width: '78%', maxWidth: 320, aspectRatio: LOGO_ASPECT_RATIO }}
+              contentFit="contain"
+              accessibilityLabel="MySAFF — Melangkah Bersama"
+            />
           </View>
 
           <Card>
