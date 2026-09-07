@@ -6,7 +6,7 @@ import { ActionRow } from '@/components/ui/action-row';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Screen } from '@/components/ui/screen';
 import { SectionTitle } from '@/components/ui/section-title';
-import { useMemberAccess, useUsrahAccess } from '@/lib/department-access';
+import { useMemberAccess, useProgramAccess, useUsrahAccess } from '@/lib/department-access';
 import { useGoBack } from '@/lib/navigation';
 import { usePermissions } from '@/lib/permissions';
 
@@ -26,9 +26,11 @@ export default function AdminHubScreen() {
   const { isSuperAdmin } = usePermissions();
   const memberAccess = useMemberAccess();
   const usrahAccess = useUsrahAccess();
+  const programAccess = useProgramAccess();
 
   const superAdmin = isSuperAdmin();
-  const nothingAvailable = !superAdmin && !memberAccess.canView && !usrahAccess.canView;
+  const nothingAvailable =
+    !superAdmin && !memberAccess.canView && !usrahAccess.canView && !programAccess.canView;
 
   return (
     <Screen padTop={false}>
@@ -127,8 +129,8 @@ export default function AdminHubScreen() {
                 title="Program Usrah"
                 subtitle={
                   usrahAccess.canEdit
-                    ? 'Cipta program, jana kod QR dan muat turun laporan'
-                    : 'Semak program dan muat turun laporan (paparan sahaja)'
+                    ? 'Cipta sesi usrah, jana kod QR dan muat turun laporan tahunan'
+                    : 'Semak sesi usrah dan muat turun laporan (paparan sahaja)'
                 }
                 onPress={() => router.push('/(app)/admin/usrah-events')}
               />
@@ -141,6 +143,30 @@ export default function AdminHubScreen() {
                   onPress={() => router.push('/(app)/admin/usrah-upload')}
                 />
               ) : null}
+            </View>
+          </View>
+        ) : null}
+
+        {/*
+          Program am berkongsi table dan kod QR dengan usrah, tetapi bukan
+          pemiliknya: ia milik JABATAN SETIAUSAHA, dan kehadirannya TIDAK masuk
+          ke grid dua belas bulan Lajnah Tarbiah. Kad berasingan kerana kedua-dua
+          modul boleh dipegang secara berasingan.
+        */}
+        {programAccess.canView ? (
+          <View>
+            <SectionTitle title="Setiausaha" caption="Urus program dan kehadirannya." />
+            <View className="gap-4">
+              <ActionRow
+                icon="calendar-outline"
+                title="Program"
+                subtitle={
+                  programAccess.canEdit
+                    ? 'Cipta program, jana kod QR dan eksport kehadiran setiap program'
+                    : 'Semak program dan eksport kehadiran (paparan sahaja)'
+                }
+                onPress={() => router.push('/(app)/admin/program-events')}
+              />
             </View>
           </View>
         ) : null}

@@ -1,6 +1,6 @@
 import * as Crypto from 'expo-crypto';
 
-import type { UsrahEvent } from '@/types/database';
+import type { EventType, UsrahEvent } from '@/types/database';
 
 import { uploadImage } from './image-upload';
 import { supabase } from './supabase';
@@ -20,8 +20,15 @@ const POSTER_MAX_WIDTH = 1080;
 
 export type CreateUsrahEventInput = {
   name: string;
-  event_date: string;
-  event_time: string;
+  event_type: EventType;
+  /** Usrah sahaja; kekangan pangkalan data menolak nilai ini pada baris 'program'. */
+  kawasan_usrah: string | null;
+  year: number | null;
+  month: number | null;
+  start_date: string;
+  end_date: string;
+  start_time: string;
+  end_time: string;
   location_text: string | null;
   latitude: number | null;
   longitude: number | null;
@@ -41,12 +48,21 @@ function newQrToken(): string {
   return Crypto.randomUUID();
 }
 
-export async function fetchUsrahEvents(): Promise<UsrahEvent[]> {
+/**
+ * Acara satu jenis sahaja.
+ *
+ * Penapis `event_type` di sini ialah kemudahan, bukan sempadan keselamatan:
+ * RLS sudah menyembunyikan jenis yang admin ini tiada kebenaran melihatnya.
+ * Ia wujud supaya admin yang memegang KEDUA-DUA department masih melihat dua
+ * senarai berasingan dan bukan satu senarai bercampur.
+ */
+export async function fetchUsrahEvents(eventType: EventType): Promise<UsrahEvent[]> {
   const { data, error } = await supabase
     .from('usrah_events')
     .select('*')
-    .order('event_date', { ascending: false })
-    .order('event_time', { ascending: false });
+    .eq('event_type', eventType)
+    .order('start_date', { ascending: false })
+    .order('start_time', { ascending: false });
 
   if (error) throw error;
   return (data as UsrahEvent[] | null) ?? [];
@@ -59,11 +75,11 @@ export async function fetchUsrahEvent(id: string): Promise<UsrahEvent | null> {
 }
 
 /**
- * Cipta program dan pulangkan baris yang tersimpan.
+ * Cipta acara dan pulangkan baris yang tersimpan.
  *
  * `valid_until` TIDAK dihantar dari sini — trigger pangkalan data yang
- * mengiranya (tiga jam selepas program bermula, waktu Malaysia). Jam peranti
- * boleh silap atau diubah, dan tetingkap kehadiran bukan perkara yang patut
+ * mengiranya (tiga jam selepas acara TAMAT, waktu Malaysia). Jam peranti boleh
+ * silap atau diubah, dan tetingkap kehadiran bukan perkara yang patut
  * bergantung pada jam pengguna.
  */
 export async function createUsrahEvent(input: CreateUsrahEventInput): Promise<UsrahEvent> {

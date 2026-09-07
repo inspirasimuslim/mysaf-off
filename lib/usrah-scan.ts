@@ -1,5 +1,7 @@
 import * as Location from 'expo-location';
 
+import type { EventType } from '@/types/database';
+
 import { toMalayError } from './errors';
 import { supabase } from './supabase';
 
@@ -20,23 +22,29 @@ export type ScanMethod = 'scan' | 'upload';
 export type ScannedEvent = {
   id: string;
   name: string;
-  /** 'YYYY-MM-DD'. */
-  event_date: string;
+  event_type: EventType;
+  /** 'YYYY-MM-DD'. Acara satu hari mempunyai tarikh mula dan tamat yang sama. */
+  start_date: string;
+  end_date: string;
   /** 'HH:MM:SS'. */
-  event_time: string;
+  start_time: string;
+  end_time: string;
   location_text: string | null;
   geofence_radius_meters: number;
   valid_until: string;
   is_active: boolean;
-  /** Program tanpa pin tidak boleh disemak jaraknya — kehadirannya diterima tanpa GPS. */
+  /** Acara tanpa pin tidak boleh disemak jaraknya — kehadirannya diterima tanpa GPS. */
   has_pin: boolean;
 };
 
 export type AttendanceResult = {
   event_name: string;
-  event_date: string;
-  event_time: string;
-  /** `null` bagi program tanpa pin lokasi. */
+  event_type: EventType;
+  start_date: string;
+  end_date: string;
+  start_time: string;
+  end_time: string;
+  /** `null` bagi acara tanpa pin lokasi. */
   distance_meters: number | null;
 };
 
@@ -81,11 +89,16 @@ function toScanError(error: unknown, fallback: string): ScanError {
 }
 
 /**
- * Program yang dimiliki oleh kod QR ini, atau `null` bila token tidak dikenali.
+ * Acara yang dimiliki oleh kod QR ini, atau `null` bila token tidak dikenali.
  *
- * Program yang tamat tempoh atau dimatikan TETAP dipulangkan. Skrin perlu tahu
- * program apa yang baru diimbas untuk memberi mesej yang bermakna, dan
- * keputusan menerima atau menolak dibuat oleh `recordAttendance()`.
+ * Acara yang tamat tempoh atau dimatikan TETAP dipulangkan. Skrin perlu tahu
+ * acara apa yang baru diimbas untuk memberi mesej yang bermakna, dan keputusan
+ * menerima atau menolak dibuat oleh `recordAttendance()`.
+ *
+ * Kedua-dua jenis acara — usrah bulanan dan program am — melalui laluan yang
+ * SAMA. Dari sudut pandangan ahli tiada perbezaan langsung: dia mengimbas kod
+ * dan mendapat pengesahan. Yang berbeza berlaku di pelayan, di mana hanya
+ * kehadiran usrah mengalir ke grid dua belas bulan.
  */
 export async function findEventByQrToken(qrToken: string): Promise<ScannedEvent | null> {
   const { data, error } = await supabase.rpc('usrah_event_by_qr_token', { p_qr_token: qrToken });

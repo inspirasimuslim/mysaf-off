@@ -17,7 +17,13 @@ import { toMalayError } from '@/lib/errors';
 import { useGoBack } from '@/lib/navigation';
 import { fetchUsrahEvents } from '@/lib/usrah-events';
 import { downloadUsrahReport } from '@/lib/usrah-report';
-import { USRAH_EVENT_STATUS_LABEL, dateLabel, timeLabel, usrahEventStatus, type UsrahEvent } from '@/types/database';
+import {
+  USRAH_EVENT_STATUS_LABEL,
+  dateRangeLabel,
+  timeRangeLabel,
+  usrahEventStatus,
+  type UsrahEvent,
+} from '@/types/database';
 
 type Banner = { tone: 'positive' | 'info' | 'negative'; message: string } | null;
 
@@ -42,7 +48,7 @@ export default function UsrahEventsScreen() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      setEvents(await fetchUsrahEvents());
+      setEvents(await fetchUsrahEvents('usrah'));
     } catch (caught) {
       setBanner({ tone: 'negative', message: toMalayError(caught, 'Gagal memuatkan senarai program.') });
     } finally {
@@ -101,7 +107,7 @@ export default function UsrahEventsScreen() {
       <ScreenHeader
         eyebrow="Panel Admin"
         title="Program Usrah"
-        subtitle="Cipta program, jana kod QR dan muat turun laporan"
+        subtitle="Cipta sesi usrah, jana kod QR dan muat turun laporan tahunan"
         onBackPress={goBack}
       />
 
@@ -109,22 +115,25 @@ export default function UsrahEventsScreen() {
         {banner ? <Notice tone={banner.tone} message={banner.message} /> : null}
 
         {canEdit ? (
-          <Button label="+ Cipta Program" onPress={() => router.push('/(app)/admin/usrah-event-create')} />
+          <Button
+            label="+ Cipta Usrah"
+            onPress={() => router.push({ pathname: '/(app)/admin/usrah-event-create', params: { type: 'usrah' } })}
+          />
         ) : (
           <Notice tone="info" message="Anda hanya mempunyai akses Lihat. Program di bawah adalah paparan sahaja." />
         )}
 
         <View>
           <SectionTitle
-            title={'Senarai Program (' + events.length + ')'}
-            caption="Status dikira daripada tetingkap sah tiga jam selepas program bermula."
+            title={'Senarai Sesi (' + events.length + ')'}
+            caption="Status dikira daripada tetingkap sah tiga jam selepas sesi tamat."
           />
 
           {events.length === 0 ? (
             <EmptyState
               icon="calendar-outline"
-              title="Belum ada program"
-              description="Program yang dicipta akan muncul di sini bersama kod QR kehadirannya."
+              title="Belum ada sesi usrah"
+              description="Sesi yang dicipta akan muncul di sini bersama kod QR kehadirannya."
             />
           ) : (
             <View className="gap-2">
@@ -143,7 +152,8 @@ export default function UsrahEventsScreen() {
                         {event.name}
                       </Text>
                       <Text className="mt-0.5 text-xs text-ink-muted">
-                        {dateLabel(event.event_date)} · {timeLabel(event.event_time)}
+                        {dateRangeLabel(event.start_date, event.end_date)} ·{' '}
+                        {timeRangeLabel(event.start_time, event.end_time)}
                         {event.location_text ? ' · ' + event.location_text : ''}
                       </Text>
                     </View>

@@ -20,7 +20,7 @@ import {
   type AttendanceResult,
   type ScanMethod,
 } from '@/lib/usrah-scan';
-import { dateLabel, timeLabel } from '@/types/database';
+import { EVENT_TYPE_LABEL, dateRangeLabel, timeRangeLabel } from '@/types/database';
 
 /**
  * Rekod kehadiran usrah dengan mengimbas kod QR program.
@@ -245,7 +245,11 @@ export default function UsrahScanScreen() {
                 <Text className="text-lg font-bold text-white">Kehadiran Direkodkan</Text>
                 <Text className="text-center text-base text-white/90">{phase.result.event_name}</Text>
                 <Text className="text-sm text-white/70">
-                  {dateLabel(phase.result.event_date) + ' · ' + timeLabel(phase.result.event_time)}
+                  {EVENT_TYPE_LABEL[phase.result.event_type] +
+                    ' · ' +
+                    dateRangeLabel(phase.result.start_date, phase.result.end_date) +
+                    ' · ' +
+                    timeRangeLabel(phase.result.start_time, phase.result.end_time)}
                 </Text>
                 {phase.result.distance_meters !== null ? (
                   <Text className="text-sm text-white/70">

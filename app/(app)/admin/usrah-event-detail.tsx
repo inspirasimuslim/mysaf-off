@@ -17,12 +17,20 @@ import { SectionTitle } from '@/components/ui/section-title';
 import { TextField } from '@/components/ui/text-field';
 import { ToggleRow } from '@/components/ui/toggle-row';
 import { Colors } from '@/constants/theme';
-import { useUsrahAccess } from '@/lib/department-access';
+import { useProgramAccess, useUsrahAccess } from '@/lib/department-access';
 import { toMalayError } from '@/lib/errors';
 import { pickImage } from '@/lib/image-upload';
 import { useGoBack } from '@/lib/navigation';
 import { fetchUsrahEvent, updateUsrahEvent, uploadEventPoster } from '@/lib/usrah-events';
-import { USRAH_EVENT_STATUS_LABEL, dateLabel, timeLabel, usrahEventStatus, type UsrahEvent } from '@/types/database';
+import {
+  EVENT_TYPE_LABEL,
+  USRAH_EVENT_STATUS_LABEL,
+  dateRangeLabel,
+  timeLabel,
+  timeRangeLabel,
+  usrahEventStatus,
+  type UsrahEvent,
+} from '@/types/database';
 
 const QR_SIZE = 220;
 
@@ -33,7 +41,16 @@ const STATUS_TONE = { aktif: 'positive', tamat: 'neutral', nonaktif: 'warn' } as
 export default function UsrahEventDetailScreen() {
   const goBack = useGoBack();
   const { id } = useLocalSearchParams<{ id?: string }>();
-  const { loading: accessLoading, canView, canEdit } = useUsrahAccess();
+  /*
+    Kebenaran diambil daripada KEDUA-DUA department kerana skrin ini melayan
+    kedua-dua jenis acara, dan baris yang dimuatkan sendiri yang menentukan yang
+    mana terpakai. RLS sudah menghalang bacaan silang jenis, jadi semakan di sini
+    hanya menentukan sama ada butang sunting dipapar.
+  */
+  const usrahAccess = useUsrahAccess();
+  const programAccess = useProgramAccess();
+  const accessLoading = usrahAccess.loading || programAccess.loading;
+  const canView = usrahAccess.canView || programAccess.canView;
 
   const [event, setEvent] = useState<UsrahEvent | null>(null);
   const [loading, setLoading] = useState(true);
@@ -42,15 +59,19 @@ export default function UsrahEventDetailScreen() {
 
   // --- Suntingan asas ---------------------------------------------------------
   const [name, setName] = useState('');
-  const [eventDate, setEventDate] = useState('');
-  const [eventTime, setEventTime] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [startTime, setStartTime] = useState('');
+  const [endTime, setEndTime] = useState('');
   const [locationText, setLocationText] = useState('');
 
   const hydrate = useCallback((row: UsrahEvent) => {
     setEvent(row);
     setName(row.name);
-    setEventDate(row.event_date);
-    setEventTime(timeLabel(row.event_time));
+    setStartDate(row.start_date);
+    setEndDate(row.end_date);
+    setStartTime(timeLabel(row.start_time));
+    setEndTime(timeLabel(row.end_time));
     setLocationText(row.location_text ?? '');
   }, []);
 
@@ -85,8 +106,10 @@ export default function UsrahEventDetailScreen() {
       hydrate(
         await updateUsrahEvent(event.id, {
           name: name.trim(),
-          event_date: eventDate,
-          event_time: eventTime,
+          start_date: startDate,
+          end_date: endDate,
+          start_time: startTime,
+          end_time: endTime,
           location_text: locationText.trim() || null,
         }),
       );
@@ -96,7 +119,7 @@ export default function UsrahEventDetailScreen() {
     } finally {
       setBusy(false);
     }
-  }, [busy, event, eventDate, eventTime, hydrate, locationText, name]);
+  }, [busy, endDate, endTime, event, hydrate, locationText, name, startDate, startTime]);
 
   const toggleActive = useCallback(
     async (next: boolean) => {
@@ -144,7 +167,7 @@ export default function UsrahEventDetailScreen() {
           <EmptyState
             icon="lock-closed-outline"
             title="Tiada akses"
-            description="Butiran program memerlukan kebenaran melihat pada department LAJNAH TARBIAH."
+            description="Butiran acara memerlukan kebenaran melihat pada LAJNAH TARBIAH (usrah) atau JABATAN SETIAUSAHA (program)."
           />
         </View>
       </Screen>
@@ -168,12 +191,22 @@ export default function UsrahEventDetailScreen() {
 
   const status = usrahEventStatus(event);
 
+  // Jenis baris yang dimuatkan yang menentukan department mana berkuasa ke
+  // atasnya — bukan kebenaran yang admin ini kebetulan pegang paling banyak.
+  const canEdit = event.event_type === 'usrah' ? usrahAccess.canEdit : programAccess.canEdit;
+
   return (
     <Screen padTop={false}>
       <ScreenHeader
         eyebrow="Panel Admin"
         title={event.name}
-        subtitle={dateLabel(event.event_date) + ' · ' + timeLabel(event.event_time)}
+        subtitle={
+          EVENT_TYPE_LABEL[event.event_type] +
+          ' · ' +
+          dateRangeLabel(event.start_date, event.end_date) +
+          ' · ' +
+          timeRangeLabel(event.start_time, event.end_time)
+        }
         onBackPress={goBack}
       />
 
@@ -273,18 +306,47 @@ export default function UsrahEventDetailScreen() {
             </View>
 
             <View className="pb-8">
-              <SectionTitle title="Sunting Maklumat" caption="Menukar tarikh atau masa mengira semula tetingkap sah." />
+              <SectionTitle
+                title="Sunting Maklumat"
+                caption="Menukar tarikh atau masa TAMAT mengira semula tetingkap sah."
+              />
               <View className="gap-4">
                 <TextField
-                  label="Nama program"
+                  label={event.event_type === 'usrah' ? 'Nama sesi' : 'Nama program'}
                   value={name}
                   onChangeText={setName}
                   editable={!busy}
                   autoCapitalize="sentences"
                   autoCorrect={false}
                 />
-                <DateTimeField label="Tarikh" mode="date" value={eventDate} onChange={setEventDate} disabled={busy} />
-                <DateTimeField label="Masa" mode="time" value={eventTime} onChange={setEventTime} disabled={busy} />
+                <DateTimeField
+                  label="Tarikh mula"
+                  mode="date"
+                  value={startDate}
+                  onChange={setStartDate}
+                  disabled={busy}
+                />
+                <DateTimeField
+                  label="Tarikh tamat"
+                  mode="date"
+                  value={endDate}
+                  onChange={setEndDate}
+                  disabled={busy}
+                />
+                <DateTimeField
+                  label="Masa mula"
+                  mode="time"
+                  value={startTime}
+                  onChange={setStartTime}
+                  disabled={busy}
+                />
+                <DateTimeField
+                  label="Masa tamat"
+                  mode="time"
+                  value={endTime}
+                  onChange={setEndTime}
+                  disabled={busy}
+                />
                 <TextField
                   label="Lokasi"
                   value={locationText}

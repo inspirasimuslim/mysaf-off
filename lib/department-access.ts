@@ -87,3 +87,18 @@ export const TARBIAH_DEPARTMENT = 'LAJNAH TARBIAH';
 export function useUsrahAccess(): DepartmentAccess {
   return useDepartmentAccess(TARBIAH_DEPARTMENT);
 }
+
+/**
+ * Department yang memiliki modul Program am.
+ *
+ * Mesti sepadan dengan `event_department('program')` dalam
+ * `20260907000011_event_types.sql`. Usrah dan Program berkongsi satu table
+ * tetapi bukan satu pemilik — seorang admin boleh memegang satu tanpa yang
+ * satu lagi.
+ */
+export const SETIAUSAHA_DEPARTMENT = 'JABATAN SETIAUSAHA';
+
+/** Pintasan untuk modul Program am. */
+export function useProgramAccess(): DepartmentAccess {
+  return useDepartmentAccess(SETIAUSAHA_DEPARTMENT);
+}

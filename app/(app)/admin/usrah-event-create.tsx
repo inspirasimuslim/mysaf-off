@@ -1,24 +1,36 @@
-import { useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
-import { View } from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback, useMemo, useState } from 'react';
+import { Text, View } from 'react-native';
 
 import { LocationPicker } from '@/components/location-picker';
 import { ScreenHeader } from '@/components/screen-header';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import { DateTimeField } from '@/components/ui/date-time-field';
 import { EmptyState } from '@/components/ui/empty-state';
 import { LoadingScreen } from '@/components/ui/loading-screen';
 import { Notice } from '@/components/ui/notice';
+import { PickerField } from '@/components/ui/picker-field';
 import { Screen } from '@/components/ui/screen';
 import { SectionTitle } from '@/components/ui/section-title';
+import { Segmented } from '@/components/ui/segmented';
+import { StepperField } from '@/components/ui/stepper-field';
 import { TextField } from '@/components/ui/text-field';
-import { useUsrahAccess } from '@/lib/department-access';
+import { useProgramAccess, useUsrahAccess } from '@/lib/department-access';
 import { toMalayError } from '@/lib/errors';
 import { pickImage } from '@/lib/image-upload';
 import { useGoBack } from '@/lib/navigation';
 import { createUsrahEvent, uploadEventPoster } from '@/lib/usrah-events';
+import {
+  EVENT_TYPE_OPTIONS,
+  KAWASAN_USRAH_OPTIONS,
+  MONTH_OPTIONS,
+  usrahEventName,
+  type EventType,
+} from '@/types/database';
 
 const DEFAULT_RADIUS = 100;
+const RADIUS_STEP = 10;
 const MIN_RADIUS = 10;
 const MAX_RADIUS = 5000;
 
@@ -33,29 +45,77 @@ function today(): string {
   );
 }
 
+/**
+ * Cipta acara berkod QR — usrah bulanan atau program am.
+ *
+ * Satu skrin dan bukan dua kerana segala-galanya selepas bahagian pertama
+ * adalah sama: poster, lokasi, julat tarikh dan masa, geofence. Yang berbeza
+ * hanyalah bagaimana acara itu DINAMAKAN, dan itu satu bahagian borang, bukan
+ * satu skrin.
+ *
+ * Kebenaran diambil daripada KEDUA-DUA department, kerana jenis yang dipilih
+ * menentukan yang mana berkuasa. Admin yang hanya memegang satu daripadanya
+ * mendapat toggle yang terkunci pada jenis miliknya.
+ */
 export default function UsrahEventCreateScreen() {
   const router = useRouter();
   const goBack = useGoBack();
-  const { loading: accessLoading, canEdit } = useUsrahAccess();
 
-  const [name, setName] = useState('');
-  const [eventDate, setEventDate] = useState(today());
-  const [eventTime, setEventTime] = useState('20:00');
+  /** `?type=program` daripada senarai Program; usrah bila tiada. */
+  const params = useLocalSearchParams<{ type?: string }>();
+
+  const usrahAccess = useUsrahAccess();
+  const programAccess = useProgramAccess();
+  const accessLoading = usrahAccess.loading || programAccess.loading;
+
+  const [eventType, setEventType] = useState<EventType>(params.type === 'program' ? 'program' : 'usrah');
+
+  // --- Nama -----------------------------------------------------------------
+  const [programName, setProgramName] = useState('');
+  const [kawasan, setKawasan] = useState<string | null>(null);
+  const [year, setYear] = useState(String(new Date().getFullYear()));
+  const [month, setMonth] = useState<string | null>(String(new Date().getMonth() + 1));
+
+  // --- Sama untuk kedua-dua jenis -------------------------------------------
+  const [startDate, setStartDate] = useState(today());
+  const [endDate, setEndDate] = useState(today());
+  const [startTime, setStartTime] = useState('20:00');
+  const [endTime, setEndTime] = useState('22:00');
   const [locationText, setLocationText] = useState('');
   const [coords, setCoords] = useState<{ latitude: number; longitude: number } | null>(null);
-  const [radius, setRadius] = useState(String(DEFAULT_RADIUS));
+  const [radius, setRadius] = useState(DEFAULT_RADIUS);
 
-  /** URI tempatan; poster hanya dimuat naik SELEPAS program wujud. */
+  /** URI tempatan; poster hanya dimuat naik SELEPAS acara wujud. */
   const [posterUri, setPosterUri] = useState<string | null>(null);
 
-  const [banner, setBanner] = useState<{ tone: 'negative' | 'info'; message: string } | null>(null);
+  const [banner, setBanner] = useState<{ tone: 'negative' | 'info' } & { message: string } | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const parsedRadius = Number.parseInt(radius, 10);
-  const radiusValid = Number.isFinite(parsedRadius) && parsedRadius >= MIN_RADIUS && parsedRadius <= MAX_RADIUS;
-  const dateValid = /^\d{4}-\d{2}-\d{2}$/.test(eventDate);
-  const timeValid = /^\d{2}:\d{2}$/.test(eventTime);
-  const ready = name.trim().length > 0 && dateValid && timeValid && radiusValid;
+  const canEdit = eventType === 'usrah' ? usrahAccess.canEdit : programAccess.canEdit;
+
+  /*
+    Toggle disembunyikan apabila admin hanya memegang satu department: menawarkan
+    pilihan yang pasti ditolak oleh RLS hanya menghasilkan kegagalan selepas
+    borang siap diisi.
+  */
+  const typeOptions = useMemo(
+    () => EVENT_TYPE_OPTIONS.filter((option) => (option.value === 'usrah' ? usrahAccess.canEdit : programAccess.canEdit)),
+    [programAccess.canEdit, usrahAccess.canEdit],
+  );
+
+  const parsedYear = Number.parseInt(year, 10);
+  const parsedMonth = month ? Number.parseInt(month, 10) : null;
+  const yearValid = Number.isFinite(parsedYear) && parsedYear >= 2000 && parsedYear <= 2100;
+
+  const generatedName = usrahEventName(kawasan, parsedMonth, yearValid ? parsedYear : null);
+  const name = eventType === 'usrah' ? generatedName : programName.trim();
+
+  const dateValid = /^\d{4}-\d{2}-\d{2}$/.test(startDate) && /^\d{4}-\d{2}-\d{2}$/.test(endDate);
+  const rangeValid = dateValid && endDate >= startDate;
+  const timeValid = /^\d{2}:\d{2}$/.test(startTime) && /^\d{2}:\d{2}$/.test(endTime);
+
+  const nameValid = eventType === 'usrah' ? Boolean(kawasan) && yearValid && parsedMonth !== null : name.length > 0;
+  const ready = nameValid && rangeValid && timeValid;
 
   const choosePoster = useCallback(async () => {
     setBanner(null);
@@ -74,20 +134,28 @@ export default function UsrahEventCreateScreen() {
     setSaving(true);
     try {
       const event = await createUsrahEvent({
-        name: name.trim(),
-        event_date: eventDate,
-        event_time: eventTime,
+        name,
+        event_type: eventType,
+        // Kawasan, tahun dan bulan ialah bahasa usrah sahaja; kekangan
+        // pangkalan data menolak baris 'program' yang membawanya.
+        kawasan_usrah: eventType === 'usrah' ? kawasan : null,
+        year: eventType === 'usrah' ? parsedYear : null,
+        month: eventType === 'usrah' ? parsedMonth : null,
+        start_date: startDate,
+        end_date: endDate,
+        start_time: startTime,
+        end_time: endTime,
         location_text: locationText.trim() || null,
         latitude: coords?.latitude ?? null,
         longitude: coords?.longitude ?? null,
-        geofence_radius_meters: parsedRadius,
+        geofence_radius_meters: radius,
       });
 
       /*
-        Poster dimuat naik selepas program wujud kerana nama objeknya ialah
-        '<event_id>.jpg'. Kegagalan muat naik TIDAK membatalkan program yang
-        sudah tercipta — admin dibawa ke skrin butiran dan boleh mencuba
-        posternya semula di sana.
+        Poster dimuat naik selepas acara wujud kerana nama objeknya ialah
+        '<event_id>.jpg'. Kegagalan muat naik TIDAK membatalkan acara yang sudah
+        tercipta — admin dibawa ke skrin butiran dan boleh mencuba posternya
+        semula di sana.
       */
       if (posterUri) {
         try {
@@ -95,30 +163,47 @@ export default function UsrahEventCreateScreen() {
         } catch (caught) {
           setBanner({
             tone: 'info',
-            message: toMalayError(caught, 'Program dicipta, tetapi poster gagal dimuat naik.'),
+            message: toMalayError(caught, 'Acara dicipta, tetapi poster gagal dimuat naik.'),
           });
         }
       }
 
       router.replace({ pathname: '/(app)/admin/usrah-event-detail', params: { id: event.id } });
     } catch (caught) {
-      setBanner({ tone: 'negative', message: toMalayError(caught, 'Gagal mencipta program.') });
+      setBanner({ tone: 'negative', message: toMalayError(caught, 'Gagal mencipta acara.') });
     } finally {
       setSaving(false);
     }
-  }, [coords, eventDate, eventTime, locationText, name, parsedRadius, posterUri, ready, router, saving]);
+  }, [
+    coords,
+    endDate,
+    endTime,
+    eventType,
+    kawasan,
+    locationText,
+    name,
+    parsedMonth,
+    parsedYear,
+    posterUri,
+    radius,
+    ready,
+    router,
+    saving,
+    startDate,
+    startTime,
+  ]);
 
   if (accessLoading) return <LoadingScreen />;
 
-  if (!canEdit) {
+  if (typeOptions.length === 0) {
     return (
       <Screen padTop={false}>
-        <ScreenHeader title="Cipta Program" onBackPress={goBack} />
+        <ScreenHeader title="Cipta Acara" onBackPress={goBack} />
         <View className="px-gutter">
           <EmptyState
             icon="lock-closed-outline"
             title="Tiada akses"
-            description="Mencipta program memerlukan kebenaran menyunting pada department LAJNAH TARBIAH."
+            description="Mencipta acara memerlukan kebenaran menyunting pada LAJNAH TARBIAH (usrah) atau JABATAN SETIAUSAHA (program)."
           />
         </View>
       </Screen>
@@ -129,8 +214,8 @@ export default function UsrahEventCreateScreen() {
     <Screen padTop={false}>
       <ScreenHeader
         eyebrow="Panel Admin"
-        title="Cipta Program"
-        subtitle="Kod QR dijana automatik selepas program disimpan"
+        title={eventType === 'usrah' ? 'Cipta Usrah' : 'Cipta Program'}
+        subtitle="Kod QR dijana automatik selepas acara disimpan"
         onBackPress={goBack}
       />
 
@@ -138,26 +223,76 @@ export default function UsrahEventCreateScreen() {
         {banner ? <Notice tone={banner.tone} message={banner.message} /> : null}
 
         <View>
-          <SectionTitle title="Maklumat Program" />
+          <SectionTitle title="Jenis Acara" caption="Usrah masuk ke grid dua belas bulan; program tidak." />
+          {typeOptions.length > 1 ? (
+            <Segmented value={eventType} options={typeOptions} onChange={setEventType} disabled={saving} />
+          ) : (
+            <Notice
+              tone="info"
+              message={
+                'Kebenaran anda membolehkan jenis "' +
+                (typeOptions[0]?.label ?? '') +
+                '" sahaja, jadi jenis itu dipilih secara automatik.'
+              }
+            />
+          )}
+        </View>
+
+        {/* --- Nama: dijana untuk usrah, ditaip untuk program ------------------ */}
+        <View>
+          <SectionTitle title={eventType === 'usrah' ? 'Sesi Usrah' : 'Maklumat Program'} />
           <View className="gap-4">
-            <TextField
-              label="Nama program"
-              value={name}
-              onChangeText={setName}
-              editable={!saving}
-              autoCapitalize="sentences"
-              autoCorrect={false}
-            />
-            <DateTimeField label="Tarikh" mode="date" value={eventDate} onChange={setEventDate} disabled={saving} />
-            <DateTimeField label="Masa" mode="time" value={eventTime} onChange={setEventTime} disabled={saving} />
-            <TextField
-              label="Lokasi"
-              value={locationText}
-              onChangeText={setLocationText}
-              editable={!saving}
-              autoCapitalize="sentences"
-              autoCorrect={false}
-            />
+            {eventType === 'usrah' ? (
+              <>
+                <PickerField
+                  label="Kawasan usrah"
+                  value={kawasan}
+                  options={KAWASAN_USRAH_OPTIONS}
+                  onChange={setKawasan}
+                  disabled={saving}
+                  clearable={false}
+                />
+                <TextField
+                  label="Tahun"
+                  value={year}
+                  onChangeText={(value) => setYear(value.replace(/[^\d]/g, '').slice(0, 4))}
+                  editable={!saving}
+                  keyboardType="number-pad"
+                  error={year.length > 0 && !yearValid ? 'Tahun antara 2000 dan 2100.' : null}
+                />
+                <PickerField
+                  label="Bulan"
+                  value={month}
+                  options={MONTH_OPTIONS}
+                  onChange={setMonth}
+                  disabled={saving}
+                  clearable={false}
+                />
+
+                {/*
+                  Nama dipapar dan bukan disunting: ia dijana daripada tiga medan
+                  di atas, jadi membenarkannya ditaip bermakna nama dan kolum
+                  boleh bercanggah — dan nama itulah yang dilihat ahli.
+                */}
+                <View className="gap-2">
+                  <Text className="text-sm font-medium text-ink-muted">Nama sesi (dijana automatik)</Text>
+                  <Card>
+                    <Text className="text-base font-semibold text-ink">
+                      {nameValid ? generatedName : 'Pilih kawasan, tahun dan bulan'}
+                    </Text>
+                  </Card>
+                </View>
+              </>
+            ) : (
+              <TextField
+                label="Nama program"
+                value={programName}
+                onChangeText={setProgramName}
+                editable={!saving}
+                autoCapitalize="sentences"
+                autoCorrect={false}
+              />
+            )}
           </View>
         </View>
 
@@ -172,6 +307,18 @@ export default function UsrahEventCreateScreen() {
         </View>
 
         <View>
+          <SectionTitle title="Lokasi" />
+          <TextField
+            label="Lokasi"
+            value={locationText}
+            onChangeText={setLocationText}
+            editable={!saving}
+            autoCapitalize="sentences"
+            autoCorrect={false}
+          />
+        </View>
+
+        <View>
           <SectionTitle
             title="Lokasi Peta"
             caption="Pin menentukan pusat geofence yang menyemak jarak semasa ahli mengimbas QR."
@@ -179,34 +326,76 @@ export default function UsrahEventCreateScreen() {
           <LocationPicker
             latitude={coords?.latitude ?? null}
             longitude={coords?.longitude ?? null}
-            radiusMeters={radiusValid ? parsedRadius : DEFAULT_RADIUS}
+            radiusMeters={radius}
             onChange={setCoords}
             disabled={saving}
           />
         </View>
 
+        {/* --- Julat tarikh & masa -------------------------------------------- */}
+        <View>
+          <SectionTitle
+            title="Tarikh & Masa"
+            caption="Acara satu hari: tetapkan tarikh mula dan tamat kepada hari yang sama."
+          />
+          <View className="gap-4">
+            <DateTimeField label="Tarikh mula" mode="date" value={startDate} onChange={setStartDate} disabled={saving} />
+            <DateTimeField label="Tarikh tamat" mode="date" value={endDate} onChange={setEndDate} disabled={saving} />
+            <DateTimeField label="Masa mula" mode="time" value={startTime} onChange={setStartTime} disabled={saving} />
+            <DateTimeField label="Masa tamat" mode="time" value={endTime} onChange={setEndTime} disabled={saving} />
+
+            {dateValid && !rangeValid ? (
+              <Notice tone="negative" message="Tarikh tamat tidak boleh lebih awal daripada tarikh mula." />
+            ) : null}
+          </View>
+        </View>
+
         <View>
           <SectionTitle title="Radius Geofence" />
-          <TextField
-            label={'Radius (meter, ' + MIN_RADIUS + '–' + MAX_RADIUS + ')'}
+          <StepperField
+            label={'Radius (' + MIN_RADIUS + '–' + MAX_RADIUS + ' meter)'}
             value={radius}
-            onChangeText={(value) => setRadius(value.replace(/[^\d]/g, '').slice(0, 4))}
-            editable={!saving}
-            keyboardType="number-pad"
+            onChange={setRadius}
+            step={RADIUS_STEP}
+            min={MIN_RADIUS}
+            max={MAX_RADIUS}
+            suffix="m"
+            disabled={saving}
+            caption="Kehadiran ditolak di luar bulatan ini. Longgarkan untuk dewan besar atau kawasan liputan GPS lemah."
           />
         </View>
 
         <View className="pb-8">
-          {!ready ? (
+          {!canEdit ? (
             <View className="pb-3">
               <Notice
                 tone="negative"
-                message="Nama, tarikh (YYYY-MM-DD), masa (HH:MM) dan radius yang sah diperlukan sebelum program boleh dicipta."
+                message={
+                  eventType === 'usrah'
+                    ? 'Mencipta usrah memerlukan kebenaran menyunting pada LAJNAH TARBIAH.'
+                    : 'Mencipta program memerlukan kebenaran menyunting pada JABATAN SETIAUSAHA.'
+                }
+              />
+            </View>
+          ) : !ready ? (
+            <View className="pb-3">
+              <Notice
+                tone="negative"
+                message={
+                  eventType === 'usrah'
+                    ? 'Kawasan, tahun, bulan, julat tarikh dan masa yang sah diperlukan sebelum sesi boleh dicipta.'
+                    : 'Nama program, julat tarikh dan masa yang sah diperlukan sebelum program boleh dicipta.'
+                }
               />
             </View>
           ) : null}
 
-          <Button label="Cipta Program" loading={saving} disabled={saving || !ready} onPress={() => void create()} />
+          <Button
+            label={eventType === 'usrah' ? 'Cipta Usrah' : 'Cipta Program'}
+            loading={saving}
+            disabled={saving || !ready || !canEdit}
+            onPress={() => void create()}
+          />
         </View>
       </View>
     </Screen>

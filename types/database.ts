@@ -273,17 +273,58 @@ export function generationLabel(code: string | null): string {
   return match ? 'Ikhwan ' + match[1] : code;
 }
 
-// --- Program usrah (kehadiran QR) --------------------------------------------
+// --- Acara berkod QR (usrah bulanan + program am) ----------------------------
+
+/**
+ * Jenis acara.
+ *
+ * Bukan sekadar label: ia menentukan department mana yang memiliki acara itu
+ * (LAJNAH TARBIAH atau JABATAN SETIAUSAHA) dan sama ada kehadirannya masuk ke
+ * grid dua belas bulan. Lihat `20260907000011_event_types.sql`.
+ */
+export type EventType = 'usrah' | 'program';
+
+export const EVENT_TYPE_OPTIONS: Option<EventType>[] = [
+  { value: 'usrah', label: 'Usrah' },
+  { value: 'program', label: 'Program' },
+];
+
+export const EVENT_TYPE_LABEL: Record<EventType, string> = {
+  usrah: 'Usrah',
+  program: 'Program',
+};
+
+/** Nama bulan penuh, Januari → Disember. Indeks 0 = Januari. */
+export const MONTH_NAMES = [
+  'Januari', 'Februari', 'Mac', 'April', 'Mei', 'Jun',
+  'Julai', 'Ogos', 'September', 'Oktober', 'November', 'Disember',
+] as const;
+
+export const MONTH_OPTIONS: Option<string>[] = MONTH_NAMES.map((label, index) => ({
+  value: String(index + 1),
+  label,
+}));
 
 /** Satu baris `usrah_events`. */
 export type UsrahEvent = {
   id: string;
   name: string;
+  event_type: EventType;
   poster_url: string | null;
-  /** 'YYYY-MM-DD'. */
-  event_date: string;
+
+  /** Kod kawasan (lihat `KAWASAN_USRAH_OPTIONS`) — usrah sahaja. */
+  kawasan_usrah: string | null;
+  /** Tahun dan bulan yang DIWAKILI oleh sesi usrah — usrah sahaja. */
+  year: number | null;
+  month: number | null;
+
+  /** 'YYYY-MM-DD'. Acara satu hari mempunyai tarikh mula dan tamat yang sama. */
+  start_date: string;
+  end_date: string;
   /** 'HH:MM:SS'. */
-  event_time: string;
+  start_time: string;
+  end_time: string;
+
   location_text: string | null;
   latitude: number | null;
   longitude: number | null;
@@ -325,4 +366,77 @@ export function timeLabel(value: string): string {
 export function dateLabel(value: string): string {
   const [year, month, day] = value.split('-');
   return day && month && year ? day + '/' + month + '/' + year : value;
+}
+
+/** Julat tarikh; acara satu hari dipapar sebagai satu tarikh, bukan 'X – X'. */
+export function dateRangeLabel(start: string, end: string): string {
+  return start === end ? dateLabel(start) : dateLabel(start) + ' – ' + dateLabel(end);
+}
+
+/**
+ * 'HH:MM[:SS]' → '8:00 PM'.
+ *
+ * Nilai disimpan dalam bentuk 24 jam kerana itu yang difahami Postgres; jam 12
+ * dengan AM/PM ialah cara ia DIBACA di Malaysia, jadi penukaran itu tinggal di
+ * lapisan paparan dan tidak pernah menyentuh apa yang dihantar ke pangkalan
+ * data.
+ */
+export function timeLabel12(value: string): string {
+  const [rawHour, rawMinute] = value.split(':');
+  const hour = Number(rawHour);
+  if (!Number.isFinite(hour)) return value;
+
+  const suffix = hour < 12 ? 'AM' : 'PM';
+  const display = hour % 12 === 0 ? 12 : hour % 12;
+  return display + ':' + (rawMinute ?? '00').slice(0, 2) + ' ' + suffix;
+}
+
+/** Julat masa dalam bentuk 12 jam; masa yang sama dipapar sekali sahaja. */
+export function timeRangeLabel(start: string, end: string): string {
+  const from = timeLabel12(start);
+  const to = timeLabel12(end);
+  return from === to ? from : from + ' – ' + to;
+}
+
+/**
+ * '8:00 PM' / '8 pm' / '20:00' → 'HH:MM', atau `null` bila tidak difahami.
+ *
+ * Cabang web sahaja yang memerlukannya (peranti menggunakan pemilih sistem),
+ * tetapi ia longgar dengan sengaja: seseorang yang menaip masa dalam borang
+ * tidak patut ditolak kerana meninggalkan satu sifar di hadapan.
+ */
+export function parseTime12(input: string): string | null {
+  const match = /^\s*(\d{1,2})\s*[:.]?\s*(\d{2})?\s*([AaPp])?\.?[Mm]?\.?\s*$/.exec(input);
+  if (!match) return null;
+
+  let hour = Number(match[1]);
+  const minute = Number(match[2] ?? '0');
+  const meridiem = match[3]?.toLowerCase();
+
+  if (!Number.isFinite(hour) || !Number.isFinite(minute) || minute > 59) return null;
+
+  if (meridiem === 'a') {
+    if (hour < 1 || hour > 12) return null;
+    hour = hour === 12 ? 0 : hour;
+  } else if (meridiem === 'p') {
+    if (hour < 1 || hour > 12) return null;
+    hour = hour === 12 ? 12 : hour + 12;
+  } else if (hour > 23) {
+    return null;
+  }
+
+  return String(hour).padStart(2, '0') + ':' + String(minute).padStart(2, '0');
+}
+
+/**
+ * Nama sesi usrah bulanan — dijana, bukan ditaip.
+ *
+ * Nama usrah ialah gabungan kawasan, bulan dan tahun, dan ketiga-tiganya sudah
+ * disimpan sebagai kolum tersendiri. Membiarkan admin menaipnya bermakna nama
+ * dan kolum boleh bercanggah, dan nama itulah yang dilihat ahli.
+ */
+export function usrahEventName(kawasan: string | null, month: number | null, year: number | null): string {
+  const kawasanLabel = kawasan ? optionLabel(KAWASAN_USRAH_OPTIONS, kawasan) : 'Usrah';
+  const monthLabel = month && month >= 1 && month <= 12 ? MONTH_NAMES[month - 1] : '';
+  return [kawasanLabel, [monthLabel, year].filter(Boolean).join(' ')].filter(Boolean).join(' - ');
 }

@@ -1,9 +1,9 @@
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Platform, Pressable, Text, View } from 'react-native';
 
 import { TextField } from '@/components/ui/text-field';
-import { dateLabel } from '@/types/database';
+import { dateLabel, parseTime12, timeLabel12 } from '@/types/database';
 
 /**
  * Medan tarikh atau masa.
@@ -16,6 +16,11 @@ import { dateLabel } from '@/types/database';
  * Nilai disimpan sebagai rentetan dalam bentuk yang diterima Postgres —
  * 'YYYY-MM-DD' dan 'HH:MM' — supaya tiada penukaran zon masa berlaku antara
  * borang dan pangkalan data.
+ *
+ * Masa DIPAPAR dalam bentuk 12 jam ('8:00 PM') pada ketiga-tiga platform,
+ * kerana itu cara ia dibaca dan ditulis di Malaysia. Penukaran itu tinggal
+ * sepenuhnya di lapisan paparan: apa yang keluar melalui `onChange` sentiasa
+ * 'HH:MM' 24 jam.
  */
 
 type Props = {
@@ -54,15 +59,44 @@ function fromDate(mode: 'date' | 'time', date: Date): string {
 export function DateTimeField({ label, mode, value, onChange, disabled = false }: Props) {
   const [open, setOpen] = useState(false);
 
+  /*
+    Web menyimpan teks yang SEDANG DITAIP secara berasingan daripada nilai yang
+    diluluskan ke atas. '8:0' tidak boleh ditukar kepada masa yang sah, tetapi
+    ia keadaan yang mesti dilalui untuk sampai ke '8:00' — jadi taipan disimpan
+    apa adanya dan hanya dihantar ke atas apabila ia benar-benar terbaca.
+  */
+  const [draft, setDraft] = useState(() => (mode === 'time' ? timeLabel12(value) : value));
+
+  // Nilai boleh berubah dari luar (borang dimuatkan, jenis acara ditukar);
+  // deraf mengekori nilai itu apabila ia bukan lagi bentuk lain bagi teks sama.
+  useEffect(() => {
+    if (mode !== 'time') {
+      setDraft(value);
+      return;
+    }
+    setDraft((current) => (parseTime12(current) === value ? current : timeLabel12(value)));
+  }, [mode, value]);
+
   if (Platform.OS === 'web') {
+    const invalid = mode === 'time' && draft.trim().length > 0 && parseTime12(draft) === null;
+
     return (
       <TextField
-        label={label + (mode === 'date' ? ' (YYYY-MM-DD)' : ' (HH:MM)')}
-        value={value}
-        onChangeText={onChange}
+        label={label + (mode === 'date' ? ' (YYYY-MM-DD)' : ' (cth 8:00 PM)')}
+        value={mode === 'time' ? draft : value}
+        onChangeText={(next) => {
+          if (mode !== 'time') {
+            onChange(next);
+            return;
+          }
+          setDraft(next);
+          const parsed = parseTime12(next);
+          if (parsed) onChange(parsed);
+        }}
         editable={!disabled}
-        autoCapitalize="none"
+        autoCapitalize="characters"
         autoCorrect={false}
+        error={invalid ? 'Masa tidak difahami. Guna bentuk 8:00 PM atau 20:00.' : null}
       />
     );
   }
@@ -80,7 +114,7 @@ export function DateTimeField({ label, mode, value, onChange, disabled = false }
           disabled ? 'opacity-60' : 'active:opacity-70'
         }`}>
         <Text className={`flex-1 text-base ${value ? 'text-ink' : 'text-ink-faint'}`}>
-          {value ? (mode === 'date' ? dateLabel(value) : value) : 'Pilih'}
+          {value ? (mode === 'date' ? dateLabel(value) : timeLabel12(value)) : 'Pilih'}
         </Text>
       </Pressable>
 
@@ -88,7 +122,7 @@ export function DateTimeField({ label, mode, value, onChange, disabled = false }
         <DateTimePicker
           value={toDate(mode, value)}
           mode={mode}
-          is24Hour
+          is24Hour={false}
           onChange={(event, selected) => {
             // Android menutup dialognya sendiri; iOS kekal terbuka sehingga ditutup.
             if (Platform.OS === 'android') setOpen(false);
