@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { FormModal } from '@/components/ui/form-modal';
 import { LoadingScreen } from '@/components/ui/loading-screen';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Notice } from '@/components/ui/notice';
 import { Screen } from '@/components/ui/screen';
 import { TextField } from '@/components/ui/text-field';
@@ -16,6 +17,8 @@ import { useMemberAccess } from '@/lib/department-access';
 import { toMalayError } from '@/lib/errors';
 import { deleteMemberAccount, fetchGenerations, fetchMember, updateMember } from '@/lib/members';
 import { useGoBack } from '@/lib/navigation';
+import { usePermissions } from '@/lib/permissions';
+import { resetMemberLoginWindow } from '@/lib/temp-password';
 import { generationLabel, type Generation, type Member } from '@/types/database';
 
 type Banner = { tone: 'positive' | 'negative'; message: string } | null;
@@ -24,6 +27,7 @@ export default function AhliDetailScreen() {
   const goBack = useGoBack();
   const { id } = useLocalSearchParams<{ id?: string }>();
   const { loading: accessLoading, canView, canEdit } = useMemberAccess();
+  const { isSuperAdmin } = usePermissions();
 
   const [member, setMember] = useState<Member | null>(null);
   const [generations, setGenerations] = useState<Generation[]>([]);
@@ -102,6 +106,39 @@ export default function AhliDetailScreen() {
     },
     [member, saving],
   );
+
+  // --- Tempoh log masuk sementara -------------------------------------------
+  const [resetDialog, setResetDialog] = useState(false);
+  const [resetBusy, setResetBusy] = useState(false);
+
+  const confirmReset = useCallback(async () => {
+    if (!member || resetBusy) return;
+
+    setBanner(null);
+    setResetBusy(true);
+    try {
+      const expires = await resetMemberLoginWindow(member.id);
+      setResetDialog(false);
+      setBanner({
+        tone: 'positive',
+        message:
+          'Tempoh log masuk dibuka semula sehingga ' +
+          new Date(expires).toLocaleString('ms-MY') +
+          '. Ahli boleh log masuk dengan kata laluan sementara dan akan dipaksa menetapkan kata laluan baharu.',
+      });
+    } catch (caught) {
+      setResetDialog(false);
+      /*
+        Mesej pelayan dijadikan SANDARAN, bukan diganti. `toMalayError` masih
+        menangkap kegagalan rangkaian dan sesi tamat dengan ayatnya sendiri;
+        selebihnya jatuh kepada sebab sebenar yang dilontar oleh RPC.
+      */
+      const fallback = caught instanceof Error && caught.message ? caught.message : 'Gagal menetapkan semula tempoh log masuk.';
+      setBanner({ tone: 'negative', message: toMalayError(caught, fallback) });
+    } finally {
+      setResetBusy(false);
+    }
+  }, [member, resetBusy]);
 
   // --- Padam ahli (kekal) ---------------------------------------------------
   const [deleteModal, setDeleteModal] = useState(false);
@@ -206,6 +243,28 @@ export default function AhliDetailScreen() {
           />
 
           {/*
+            `isSuperAdmin()` dan BUKAN `canEdit`, dengan sengaja — sepadan dengan
+            semakan dalam `reset_member_login_window()` itu sendiri. Kebenaran
+            department membenarkan seseorang menyunting rekod; butang ini pula
+            memberi seseorang tiga hari untuk log masuk dengan kata laluan yang
+            diketahui umum. Itu perbezaan jenis, bukan darjah.
+          */}
+          {isSuperAdmin() ? (
+            <View className="gap-3 pt-2">
+              <Button
+                label="Reset Tempoh Log Masuk"
+                variant="secondary"
+                loading={resetBusy}
+                disabled={resetBusy}
+                onPress={() => setResetDialog(true)}
+              />
+              <Text className="text-center text-sm text-ink-muted">
+                Membuka semula tiga hari untuk ahli ini log masuk dengan kata laluan sementara.
+              </Text>
+            </View>
+          ) : null}
+
+          {/*
           Memadam ahli membuang rekod DAN akaun log masuknya, tanpa pemulihan.
           Kerana itu ia terletak di hujung skrin, dipisahkan daripada borang,
           dan memerlukan perkataan disahkan sebelum butang terakhir hidup.
@@ -220,6 +279,19 @@ export default function AhliDetailScreen() {
           ) : null}
         </View>
       </Screen>
+
+      <ConfirmDialog
+        visible={resetDialog}
+        title="Reset tempoh log masuk?"
+        message={
+          member.full_name +
+          ' akan boleh log masuk dengan kata laluan sementara "ikhwandihati" selama tiga hari, dan dipaksa menetapkan kata laluan baharu selepas masuk. Kata laluan sedia ada (jika ada) TIDAK ditukar.'
+        }
+        confirmLabel="Reset"
+        busy={resetBusy}
+        onConfirm={() => void confirmReset()}
+        onCancel={() => setResetDialog(false)}
+      />
 
       <FormModal
         visible={deleteModal}

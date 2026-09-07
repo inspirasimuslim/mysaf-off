@@ -9,6 +9,7 @@ import { Screen } from '@/components/ui/screen';
 import { SectionTitle } from '@/components/ui/section-title';
 import { Colors } from '@/constants/theme';
 import { useGoBack } from '@/lib/navigation';
+import { toWhatsAppNumber } from '@/lib/phone';
 import {
   directoryPekerjaanLabel,
   directoryPerkahwinanLabel,
@@ -100,24 +101,6 @@ export default function AhliViewScreen() {
       </View>
     </Screen>
   );
-}
-
-/**
- * Nombor Malaysia untuk pautan wa.me: buang ruang, sempang dan tanda tambah,
- * kemudian tukar '0' di hadapan kepada kod negara '60'.
- *
- * Memulangkan `null` bila tiada digit yang tinggal, supaya pemanggil boleh
- * meninggalkan butang WhatsApp daripada memaparkan pautan yang pasti gagal.
- */
-export function toWhatsAppNumber(raw: string | null): string | null {
-  if (!raw) return null;
-
-  const digits = raw.replace(/[^\d]/g, '');
-  if (!digits) return null;
-
-  if (digits.startsWith('60')) return digits;
-  if (digits.startsWith('0')) return '60' + digits.slice(1);
-  return digits;
 }
 
 function InfoRow({

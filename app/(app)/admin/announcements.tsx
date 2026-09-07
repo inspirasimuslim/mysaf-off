@@ -10,6 +10,7 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { EmptyState } from '@/components/ui/empty-state';
 import { LoadingScreen } from '@/components/ui/loading-screen';
 import { Notice } from '@/components/ui/notice';
+import { OptionalDateField } from '@/components/ui/optional-date-field';
 import { Screen } from '@/components/ui/screen';
 import { SectionTitle } from '@/components/ui/section-title';
 import { TextField } from '@/components/ui/text-field';
@@ -23,7 +24,7 @@ import { useProgramAccess } from '@/lib/department-access';
 import { toMalayError } from '@/lib/errors';
 import { pickImage } from '@/lib/image-upload';
 import { useGoBack } from '@/lib/navigation';
-import type { Announcement } from '@/types/database';
+import { dateLabel, dateRangeLabel, type Announcement } from '@/types/database';
 
 type Banner = { tone: 'positive' | 'info' | 'negative'; message: string } | null;
 
@@ -54,6 +55,8 @@ export default function AnnouncementsScreen() {
   const [editing, setEditing] = useState<Announcement | null>(null);
   const [draftTitle, setDraftTitle] = useState('');
   const [draftDescription, setDraftDescription] = useState('');
+  const [draftStart, setDraftStart] = useState('');
+  const [draftEnd, setDraftEnd] = useState('');
   const [pendingDelete, setPendingDelete] = useState<Announcement | null>(null);
 
   const load = useCallback(async () => {
@@ -138,17 +141,24 @@ export default function AnnouncementsScreen() {
     setEditing(row);
     setDraftTitle(row.title);
     setDraftDescription(row.description ?? '');
+    setDraftStart(row.start_date ?? '');
+    setDraftEnd(row.end_date ?? '');
   }, []);
 
   const saveEdit = useCallback(async () => {
     if (!editing || !draftTitle.trim()) return;
     await patch(
       editing,
-      { title: draftTitle.trim(), description: draftDescription.trim() || null },
+      {
+        title: draftTitle.trim(),
+        description: draftDescription.trim() || null,
+        start_date: draftStart || null,
+        end_date: draftEnd || null,
+      },
       'Pengumuman telah dikemas kini.',
     );
     setEditing(null);
-  }, [draftDescription, draftTitle, editing, patch]);
+  }, [draftDescription, draftEnd, draftStart, draftTitle, editing, patch]);
 
   if (accessLoading || loading) return <LoadingScreen />;
 
@@ -191,7 +201,7 @@ export default function AnnouncementsScreen() {
         <View className="pb-8">
           <SectionTitle
             title={'Senarai Pengumuman (' + rows.length + ')'}
-            caption="Hanya pengumuman aktif dipapar kepada ahli."
+            caption="Ahli melihat pengumuman yang aktif DAN berada dalam tempoh paparannya."
           />
 
           {rows.length === 0 ? (
@@ -218,9 +228,7 @@ export default function AnnouncementsScreen() {
                         <Text className="text-sm font-semibold text-ink" numberOfLines={2}>
                           {row.title}
                         </Text>
-                        <Text className="mt-0.5 text-xs text-ink-muted">
-                          {new Date(row.created_at).toLocaleDateString('ms-MY')}
-                        </Text>
+                        <Text className="mt-0.5 text-xs text-ink-muted">{windowLabel(row)}</Text>
                       </View>
                       <Badge label={row.is_active ? 'Aktif' : 'Tidak aktif'} tone={row.is_active ? 'positive' : 'neutral'} />
                     </View>
@@ -262,6 +270,18 @@ export default function AnnouncementsScreen() {
                           multiline
                           numberOfLines={5}
                         />
+                        <OptionalDateField
+                          label="Tarikh mula"
+                          value={draftStart}
+                          onChange={setDraftStart}
+                          disabled={busy}
+                        />
+                        <OptionalDateField
+                          label="Tarikh tamat"
+                          value={draftEnd}
+                          onChange={setDraftEnd}
+                          disabled={busy}
+                        />
                         <Button
                           label="Simpan"
                           loading={busy}
@@ -295,6 +315,22 @@ export default function AnnouncementsScreen() {
       />
     </Screen>
   );
+}
+
+/**
+ * Tempoh paparan dalam satu baris.
+ *
+ * Kedua-dua hujung boleh tiada, jadi empat kombinasi — dan setiap satu diberi
+ * ayatnya sendiri. "— – 30/09/2026" boleh dibaca, tetapi hanya oleh seseorang
+ * yang sudah tahu apa maksudnya.
+ */
+function windowLabel(row: Announcement): string {
+  if (!row.start_date && !row.end_date) return 'Tiada had tempoh';
+  if (row.start_date && row.end_date) {
+    return dateRangeLabel(row.start_date, row.end_date);
+  }
+  if (row.start_date) return 'Dari ' + dateLabel(row.start_date);
+  return 'Sehingga ' + dateLabel(row.end_date as string);
 }
 
 function ActionChip({

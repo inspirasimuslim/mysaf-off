@@ -79,6 +79,19 @@ export default function AdminHubScreen() {
                 subtitle="Lantik atau turunkan pangkat Super Admin"
                 onPress={() => router.push('/(app)/admin/super-admins')}
               />
+
+              {/*
+                Bukan di bawah "Data & Sumber Manusia" walaupun ia menyentuh
+                rekod ahli: operasi ini mencipta AKAUN secara pukal dengan kata
+                laluan yang diketahui umum, dan itu keputusan peringkat
+                organisasi, bukan kerja penyelenggaraan rekod.
+              */}
+              <ActionRow
+                icon="key-outline"
+                title="Provision Akaun Ahli"
+                subtitle="Cipta akaun log masuk untuk ahli yang belum ada akaun"
+                onPress={() => router.push('/(app)/admin/provision-accounts')}
+              />
             </View>
           </View>
         ) : null}

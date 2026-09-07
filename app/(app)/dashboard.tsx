@@ -9,7 +9,7 @@ import { Card } from '@/components/ui/card';
 import { Notice } from '@/components/ui/notice';
 import { Screen } from '@/components/ui/screen';
 import { displayName, useAuth } from '@/lib/auth-context';
-import { fetchAnnouncements } from '@/lib/announcements';
+import { fetchVisibleAnnouncements } from '@/lib/announcements';
 import { usePermissions } from '@/lib/permissions';
 import { fetchUpcomingEvents } from '@/lib/usrah-events';
 import { shortDateRangeLabel, type Announcement, type UpcomingEvent } from '@/types/database';
@@ -54,8 +54,11 @@ export default function DashboardScreen() {
 
       void (async () => {
         try {
-          const rows = await fetchAnnouncements();
-          if (active) setAnnouncements(rows.filter((row) => row.is_active));
+          // Penapisan tetingkap tarikh berlaku dalam pertanyaan, bukan di sini:
+          // menarik semua pengumuman untuk membuang kebanyakannya bermakna app
+          // memuat turun poster yang tidak akan dipapar.
+          const rows = await fetchVisibleAnnouncements();
+          if (active) setAnnouncements(rows);
         } catch {
           if (active) setAnnouncements([]);
         }

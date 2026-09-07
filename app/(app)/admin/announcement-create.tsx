@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { LoadingScreen } from '@/components/ui/loading-screen';
 import { Notice } from '@/components/ui/notice';
+import { OptionalDateField } from '@/components/ui/optional-date-field';
 import { Screen } from '@/components/ui/screen';
 import { SectionTitle } from '@/components/ui/section-title';
 import { TextField } from '@/components/ui/text-field';
@@ -35,10 +36,24 @@ export default function AnnouncementCreateScreen() {
   const [isActive, setIsActive] = useState(true);
   const [posterUri, setPosterUri] = useState<string | null>(null);
 
+  /*
+    Kosong bermakna "tiada had", dan itu default bagi kedua-duanya. Kebanyakan
+    pengumuman hidup sehingga dimatikan; memaksa admin memilih dua tarikh untuk
+    kes yang paling lazim menjadikan borang lebih panjang tanpa menjadikannya
+    lebih berguna.
+  */
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+
   const [banner, setBanner] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const ready = title.trim().length > 0 && posterUri !== null;
+  const datePattern = /^\d{4}-\d{2}-\d{2}$/;
+  const startValid = startDate === '' || datePattern.test(startDate);
+  const endValid = endDate === '' || datePattern.test(endDate);
+  const rangeValid = !startValid || !endValid || startDate === '' || endDate === '' || endDate >= startDate;
+
+  const ready = title.trim().length > 0 && posterUri !== null && startValid && endValid && rangeValid;
 
   const choosePoster = useCallback(async () => {
     setBanner(null);
@@ -68,6 +83,8 @@ export default function AnnouncementCreateScreen() {
         description: description.trim() || null,
         poster_url: posterUrl,
         is_active: isActive,
+        start_date: startDate || null,
+        end_date: endDate || null,
       });
 
       router.replace('/(app)/admin/announcements');
@@ -76,7 +93,7 @@ export default function AnnouncementCreateScreen() {
     } finally {
       setSaving(false);
     }
-  }, [description, isActive, posterUri, ready, router, saving, title]);
+  }, [description, endDate, isActive, posterUri, ready, router, saving, startDate, title]);
 
   if (accessLoading) return <LoadingScreen />;
 
@@ -147,6 +164,26 @@ export default function AnnouncementCreateScreen() {
               multiline
               numberOfLines={6}
             />
+          </View>
+        </View>
+
+        <View>
+          <SectionTitle
+            title="Tempoh Paparan"
+            caption="Kedua-duanya pilihan. Kosongkan tarikh mula untuk papar serta-merta, dan tarikh tamat untuk kekal sehingga dimatikan."
+          />
+          <View className="gap-4">
+            <OptionalDateField
+              label="Tarikh mula"
+              value={startDate}
+              onChange={setStartDate}
+              disabled={saving}
+            />
+            <OptionalDateField label="Tarikh tamat" value={endDate} onChange={setEndDate} disabled={saving} />
+
+            {!rangeValid ? (
+              <Notice tone="negative" message="Tarikh tamat tidak boleh lebih awal daripada tarikh mula." />
+            ) : null}
           </View>
         </View>
 

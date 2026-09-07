@@ -497,6 +497,18 @@ export type Announcement = {
   description: string | null;
   poster_url: string;
   is_active: boolean;
+
+  /**
+   * Tetingkap paparan, 'YYYY-MM-DD'. Tarikh sahaja, tanpa masa — pengumuman
+   * ialah perkara sepanjang hari, dan menambah jam bermakna admin perlu
+   * memutuskan sesuatu yang dia tidak pernah fikirkan.
+   *
+   * `null` bermakna tiada had pada hujung itu: mula NULL = papar serta-merta,
+   * tamat NULL = tiada tarikh tamat.
+   */
+  start_date: string | null;
+  end_date: string | null;
+
   created_by: string | null;
   created_at: string;
   updated_at: string;

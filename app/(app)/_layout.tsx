@@ -1,9 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Redirect, Tabs } from 'expo-router';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { ContactAdminLink } from '@/components/contact-admin';
+import { ForcePasswordChange } from '@/components/force-password-change';
 import { Screen } from '@/components/ui/screen';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -12,6 +14,7 @@ import { Colors } from '@/constants/theme';
 import { useAuth } from '@/lib/auth-context';
 import { signOutEverywhere } from '@/lib/session';
 import { SUSPENDED_MESSAGE, setAuthNotice, useAccountStatus } from '@/lib/suspension';
+import { EXPIRED_MESSAGE, fetchPasswordStatus, type PasswordStatus } from '@/lib/temp-password';
 
 type IconName = keyof typeof Ionicons.glyphMap;
 
@@ -102,12 +105,60 @@ function AccountCheckFailed({ onRetry }: { onRetry: () => void }) {
   );
 }
 
+/**
+ * Tetingkap log masuk sementara sudah berlalu.
+ *
+ * Bentuknya sama seperti `AccountSuspended` — log keluar serta-merta, mesej
+ * diserahkan kepada skrin log masuk — kerana kesannya sama: akaun ini tidak
+ * boleh masuk lagi. Yang berbeza ialah SEBABnya dan jalan keluarnya, dan jalan
+ * keluar itu memerlukan seorang manusia, jadi nombornya diberikan di sini
+ * dan bukan sekadar disebut.
+ */
+function LoginWindowExpired() {
+  useEffect(() => {
+    setAuthNotice(EXPIRED_MESSAGE);
+    void signOutEverywhere();
+  }, []);
+
+  return (
+    <Screen>
+      <View className="gap-6 px-gutter pt-6">
+        <EmptyState icon="time-outline" title="Tempoh Log Masuk Tamat" description={EXPIRED_MESSAGE} />
+        <ContactAdminLink label="Hubungi Super Admin" />
+        <Text className="text-center text-sm text-ink-muted">Sedang log keluar...</Text>
+      </View>
+    </Screen>
+  );
+}
+
 export default function AppLayout() {
   const { session, user, initialising } = useAuth();
   const insets = useSafeAreaInsets();
 
   const userId = user?.id ?? null;
   const { status, recheck } = useAccountStatus(userId);
+
+  /*
+    Keadaan kata laluan disemak SELEPAS sekatan dan hanya apabila sekatan lulus.
+    Akaun yang disekat tidak patut ditawarkan borang tukar kata laluan — ia patut
+    dikeluarkan, dan menyemak kedua-duanya serentak bermakna satu permintaan
+    tambahan bagi setiap akaun yang akan dilog keluar juga.
+  */
+  const [password, setPassword] = useState<PasswordStatus>({ state: 'checking' });
+
+  useEffect(() => {
+    if (!userId || status !== 'active') return;
+    let active = true;
+
+    void (async () => {
+      const next = await fetchPasswordStatus();
+      if (active) setPassword(next);
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [userId, status]);
 
   if (initialising) return <LoadingScreen />;
   if (!session) return <Redirect href="/(auth)/login" />;
@@ -121,6 +172,21 @@ export default function AppLayout() {
   if (status === 'checking') return <LoadingScreen />;
   if (status === 'suspended') return <AccountSuspended />;
   if (status === 'unknown') return <AccountCheckFailed onRetry={recheck} />;
+
+  /*
+    Semakan kata laluan sementara, SELEPAS sekatan lulus.
+
+    Ia gagal-TERBUKA di mana sekatan gagal-tertutup: `'unknown'` melepasi
+    dan `'checking'` menahan hanya seketika. Memaksa tukar kata laluan ialah
+    kemudahan, bukan sempadan keselamatan — kata laluan sementara sudah
+    diketahui umum, jadi menahan seseorang di luar app kerana talian tergendala
+    merugikan tanpa melindungi apa-apa.
+  */
+  if (password.state === 'checking') return <LoadingScreen />;
+  if (password.state === 'expired') return <LoginWindowExpired />;
+  if (password.state === 'must-change') {
+    return <ForcePasswordChange onDone={() => setPassword({ state: 'ok' })} />;
+  }
 
   return (
     <Tabs
@@ -155,7 +221,12 @@ export default function AppLayout() {
       */}
       <Tabs.Screen
         name="usrah-scan"
-        options={{ title: 'Scan', tabBarIcon: ScanTabIcon, tabBarLabelStyle: { fontSize: 11, fontWeight: '600' } }}
+        /*
+          Tiada label di bawah ikon ini, tidak seperti empat tab yang lain.
+          Bulatan hijau dengan ikon QR sudah menamakan dirinya sendiri, dan teks
+          di bawahnya hanya menolak bulatan itu keluar dari penjajaran.
+        */
+        options={{ title: 'Scan', tabBarIcon: ScanTabIcon, tabBarLabel: () => null }}
       />
       <Tabs.Screen
         name="ahli"

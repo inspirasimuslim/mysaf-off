@@ -22,7 +22,49 @@ export type CreateAnnouncementInput = {
   description: string | null;
   poster_url: string;
   is_active: boolean;
+  /** 'YYYY-MM-DD' atau `null` untuk "tiada had pada hujung itu". */
+  start_date: string | null;
+  end_date: string | null;
 };
+
+/** Hari ini sebagai 'YYYY-MM-DD' waktu tempatan. */
+function today(): string {
+  const now = new Date();
+  return (
+    now.getFullYear() +
+    '-' +
+    String(now.getMonth() + 1).padStart(2, '0') +
+    '-' +
+    String(now.getDate()).padStart(2, '0')
+  );
+}
+
+/**
+ * Pengumuman yang patut dipapar kepada ahli HARI INI.
+ *
+ * Tetingkap ditapis di sini dan bukan dalam RLS: policy `announcements_select`
+ * menjaga SIAPA yang boleh membaca, manakala tarikh menjawab BILA ia patut
+ * kelihatan — dan pengurus mesti terus melihat pengumuman di luar tetingkapnya
+ * untuk mengurusnya. Dua soalan berbeza, dua lapisan berbeza.
+ *
+ * Perbandingan dibuat terhadap tarikh peranti. Itu boleh diubah, tetapi kesan
+ * terburuknya ialah seseorang melihat poster beberapa jam lebih awal — bukan
+ * perkara yang berbaloi dilindungi dengan panggilan tambahan ke pelayan.
+ */
+export async function fetchVisibleAnnouncements(): Promise<Announcement[]> {
+  const now = today();
+
+  const { data, error } = await supabase
+    .from('announcements')
+    .select('*')
+    .eq('is_active', true)
+    .or('start_date.is.null,start_date.lte.' + now)
+    .or('end_date.is.null,end_date.gte.' + now)
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+  return (data as Announcement[] | null) ?? [];
+}
 
 /**
  * Semua pengumuman yang boleh dilihat pemanggil.

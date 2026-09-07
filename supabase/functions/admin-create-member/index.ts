@@ -1,11 +1,12 @@
 import {
   CORS_HEADERS,
   RequestError,
+  TEMP_PASSWORD,
   adminClient,
-  generatePassword,
   json,
   readJson,
   requireMemberEditor,
+  tempPasswordExpiry,
   text,
 } from '../_shared/admin.ts';
 
@@ -14,8 +15,12 @@ import {
  *
  * `email_confirm: true` menjadikan akaun terus boleh log masuk tanpa menunggu
  * emel pengesahan — admin menyerahkan kata laluan sementara secara terus.
- * Kata laluan itu dipulangkan SEKALI dalam respons dan tidak disimpan atau
- * dilog di mana-mana.
+ *
+ * Kata laluan itu kini `TEMP_PASSWORD`, sama untuk setiap ahli baharu, dan
+ * bukan lagi 16 aksara rawak. Ia masih dipulangkan dalam respons supaya modal
+ * yang memaparkannya tidak perlu tahu nilainya sendiri — tetapi ia bukan lagi
+ * rahsia, dan yang menjaga akaun ialah `must_change_password` bersama tarikh
+ * luputnya.
  */
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -74,7 +79,7 @@ Deno.serve(async (request) => {
       throw new RequestError('Emel ini sudah digunakan oleh ahli ' + clash[0].nombor_ahli + '.');
     }
 
-    const password = generatePassword();
+    const password = TEMP_PASSWORD;
 
     const { data: created, error: createError } = await admin.auth.admin.createUser({
       email,
@@ -115,6 +120,11 @@ Deno.serve(async (request) => {
             generasi,
             kawasan_usrah: kawasanUsrah,
             user_id: userId,
+            // Ditetapkan dalam INSERT yang sama dan bukan sebagai kemas kini
+            // berasingan: akaun yang tercipta tanpa tanda ini akan memegang
+            // kata laluan yang diketahui umum, selama-lamanya.
+            must_change_password: true,
+            temp_password_expires_at: tempPasswordExpiry(),
           })
           .select('id')
           .single();

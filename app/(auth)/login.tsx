@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Text, View } from 'react-native';
 
+import { ContactAdminLink } from '@/components/contact-admin';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Notice } from '@/components/ui/notice';
@@ -146,6 +147,15 @@ export default function LoginScreen() {
               />
             </View>
           ) : null}
+
+          {/*
+            Diletakkan di bawah borang dan bukan disembunyikan dalam menu:
+            orang yang paling memerlukan nombor ini ialah orang yang baru sahaja
+            gagal log masuk, dan dia sedang memandang tepat ke bahagian ini.
+          */}
+          <View className="mt-2">
+            <ContactAdminLink />
+          </View>
 
           {!isSupabaseConfigured ? (
             <View className="mt-5">

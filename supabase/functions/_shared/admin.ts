@@ -78,28 +78,61 @@ export async function requireMemberEditor(request: Request): Promise<string> {
 }
 
 /**
- * Kata laluan sementara: 16 aksara daripada abjad tanpa aksara yang mudah
- * dikelirukan (0/O, 1/l/I), kerana ia akan disalin dan ditaip semula oleh
- * manusia. `crypto.getRandomValues` digunakan, bukan `Math.random`.
+ * Sahkan pemanggil ialah Super Admin.
  *
- * Julat 256 dibahagi tepat oleh saiz abjad (64), jadi tiada bias modulo.
+ * Lebih ketat daripada `requireMemberEditor()` dengan sengaja: mencipta akaun
+ * secara PUKAL, dengan kata laluan yang diketahui umum, bukan perkara yang
+ * patut dibuka kepada kebenaran department.
  */
-const PASSWORD_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789@#%+=?';
-
-export function generatePassword(length = 16): string {
-  const alphabet = PASSWORD_ALPHABET;
-  const bytes = new Uint8Array(length * 2);
-  crypto.getRandomValues(bytes);
-
-  let out = '';
-  for (let index = 0; out.length < length && index < bytes.length; index += 1) {
-    const byte = bytes[index] as number;
-    // Buang nilai dalam ekor yang tidak lengkap supaya taburan kekal seragam.
-    if (byte >= Math.floor(256 / alphabet.length) * alphabet.length) continue;
-    out += alphabet.charAt(byte % alphabet.length);
+export async function requireSuperAdmin(request: Request): Promise<string> {
+  const authorization = request.headers.get('Authorization') ?? '';
+  if (!authorization.startsWith('Bearer ')) {
+    throw new RequestError('Token akses tiada. Sila log masuk semula.', 401);
   }
 
-  return out;
+  const caller = createClient(
+    Deno.env.get('SUPABASE_URL') ?? '',
+    Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+    { global: { headers: { Authorization: authorization } }, auth: { persistSession: false } },
+  );
+
+  const { data: userData, error: userError } = await caller.auth.getUser();
+  if (userError || !userData.user) {
+    throw new RequestError('Sesi tidak sah. Sila log masuk semula.', 401);
+  }
+
+  const { data: allowed, error: permissionError } = await caller.rpc('is_super_admin');
+  if (permissionError) {
+    throw new RequestError('Gagal mengesahkan kebenaran akaun.', 500);
+  }
+  if (allowed !== true) {
+    throw new RequestError('Tindakan ini khusus untuk Super Admin.', 403);
+  }
+
+  return userData.user.id;
+}
+
+/**
+ * Kata laluan sementara — SATU nilai yang sama untuk setiap akaun baharu.
+ *
+ * Sebelum ini setiap ahli menerima 16 aksara rawak, yang bermakna admin perlu
+ * menyampaikan rahsia yang berbeza kepada setiap orang secara individu. Itu
+ * tidak boleh diskalakan kepada ratusan ahli: rahsia itu berakhir dalam satu
+ * senarai WhatsApp, dan senarai sebegitu lebih teruk daripada tiada rahsia
+ * langsung kerana ia kelihatan seperti rahsia.
+ *
+ * Jadi nilainya diketahui umum dengan sengaja, dan perlindungannya dipindahkan
+ * ke tempat lain: akaun ditandakan `must_change_password` dan tetingkapnya TAMAT
+ * dalam tiga hari. Selepas itu ia tidak lagi membuka apa-apa, dan hanya Super
+ * Admin boleh membukanya semula.
+ */
+export const TEMP_PASSWORD = 'ikhwandihati';
+
+/** Tempoh kata laluan sementara sah — sama untuk cipta seorang dan cipta pukal. */
+export const TEMP_PASSWORD_DAYS = 3;
+
+export function tempPasswordExpiry(): string {
+  return new Date(Date.now() + TEMP_PASSWORD_DAYS * 24 * 60 * 60 * 1000).toISOString();
 }
 
 /** Baca badan JSON, dengan mesej BM bila bentuknya salah. */
