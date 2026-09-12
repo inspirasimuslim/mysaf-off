@@ -215,7 +215,7 @@ export default function AdminHubScreen() {
         */}
         {yuranAccess.canView ? (
           <View>
-            <SectionTitle title="Bendahari" caption="Urus yuran keahlian." />
+            <SectionTitle title="Bendahari" caption="Urus yuran keahlian dan pembayaran lain." />
             <View className="gap-4">
               <ActionRow
                 icon="wallet-outline"
@@ -226,6 +226,23 @@ export default function AdminHubScreen() {
                     : 'Semak baki dan eksport laporan (paparan sahaja)'
                 }
                 onPress={() => router.push('/(app)/admin/yuran-list')}
+              />
+
+              {/*
+                Pembayaran adhoc berkongsi department dengan Yuran tetapi bukan
+                bentuknya: ia papan notis tanpa lejar — tiada baki, tiada siapa
+                yang direkod sebagai sudah membayar. Kad berasingan supaya
+                perbezaan itu tidak hilang di bawah satu nama.
+              */}
+              <ActionRow
+                icon="qr-code-outline"
+                title="Pembayaran Adhoc"
+                subtitle={
+                  yuranAccess.canEdit
+                    ? 'Cipta tabung/infaq, muat naik kod QR DuitNow dan urus paparannya'
+                    : 'Semak senarai tabung dan infaq (paparan sahaja)'
+                }
+                onPress={() => router.push('/(app)/admin/adhoc-payment-list')}
               />
             </View>
           </View>

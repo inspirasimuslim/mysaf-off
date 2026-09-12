@@ -513,3 +513,31 @@ export type Announcement = {
   created_at: string;
   updated_at: string;
 };
+
+/**
+ * Satu jenis pembayaran/infaq di luar yuran dan PIPIS.
+ *
+ * TIADA amaun dan TIADA lejar. Wang masuk terus ke akaun bank melalui kod QR
+ * DuitNow, dan aplikasi ini tidak pernah melihat transaksinya — jadi merekod
+ * "siapa sudah bayar" di sini bermakna mencipta senarai yang tiada sesiapa
+ * boleh pastikan ketepatannya.
+ */
+export type AdhocPaymentType = {
+  id: string;
+  title: string;
+  description: string | null;
+
+  /**
+   * Kod QR DuitNow, atau `null` selagi belum disediakan.
+   *
+   * Boleh kosong tidak seperti `poster_url` pengumuman: bendahari selalunya
+   * mengumumkan tabung dahulu dan menyediakan kod QR beberapa hari kemudian.
+   */
+  qr_image_url: string | null;
+
+  is_active: boolean;
+
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+};

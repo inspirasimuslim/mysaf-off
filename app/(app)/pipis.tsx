@@ -17,6 +17,7 @@ import { useGoBack } from '@/lib/navigation';
 import {
   fetchPipisHistory,
   fetchPipisSummary,
+  methodLabel,
   peratusLabel,
   ringgitPipis,
   type PipisContribution,
@@ -185,7 +186,7 @@ export default function PipisScreen() {
                     <Text className="text-base font-bold text-ink">{ringgitPipis(row.amount)}</Text>
                     <View className="flex-1" />
                     <Badge
-                      label={row.method === 'import' ? 'Rekod lejar' : 'Pelarasan'}
+                      label={methodLabel(row.method)}
                       tone={row.amount < 0 ? 'warn' : 'info'}
                     />
                   </View>

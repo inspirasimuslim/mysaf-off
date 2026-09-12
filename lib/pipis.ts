@@ -27,7 +27,8 @@ export type PipisContribution = {
   id: string;
   member_id: string;
   amount: number;
-  method: 'import' | 'manual_adjustment';
+  /** 'gateway' disediakan untuk ToyyibPay; tiada baris begitu wujud lagi. */
+  method: 'import' | 'manual_adjustment' | 'gateway';
   note: string | null;
   created_at: string;
 };
@@ -154,6 +155,29 @@ export function ringgitPipis(amount: number): string {
     .toFixed(2)
     .replace(/\B(?=(\d{3})+(?!\d))/g, ',');
   return (negative ? '-RM' : 'RM') + body;
+}
+
+/**
+ * 'RM3,400' — ringgit penuh tanpa sen.
+ *
+ * Untuk kad sempit di mana amaun berkongsi baris dengan maklumat lain. Sen
+ * tidak pernah mengubah jawapan kepada "sejauh mana sumbangan saya", tetapi
+ * tiga aksara tambahan itu yang menolak peratus keluar dari kad selebar
+ * separuh skrin.
+ */
+export function ringgitBulat(amount: number): string {
+  const negative = amount < 0;
+  const body = Math.round(Math.abs(amount))
+    .toString()
+    .replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  return (negative ? '-RM' : 'RM') + body;
+}
+
+/** Nama method untuk dipapar — satu tempat, supaya dua skrin tidak berbeza. */
+export function methodLabel(method: PipisContribution['method']): string {
+  if (method === 'import') return 'Rekod lejar';
+  if (method === 'gateway') return 'Bayaran online';
+  return 'Pelarasan';
 }
 
 /** '68%' — satu tempat perpuluhan hanya bila ia membawa maklumat. */

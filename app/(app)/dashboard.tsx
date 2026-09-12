@@ -12,7 +12,7 @@ import { Screen } from '@/components/ui/screen';
 import { fetchVisibleAnnouncements } from '@/lib/announcements';
 import { displayName, useAuth } from '@/lib/auth-context';
 import { fetchMyMemberLinked } from '@/lib/members';
-import { fetchPipisSummary, peratusLabel, type PipisSummary } from '@/lib/pipis';
+import { fetchPipisSummary, peratusLabel, ringgitBulat, type PipisSummary } from '@/lib/pipis';
 import { usePermissions } from '@/lib/permissions';
 import { fetchUpcomingEvents } from '@/lib/usrah-events';
 import { fetchYuranSummary, ringgit, type YuranSummary } from '@/lib/yuran';
@@ -253,15 +253,30 @@ function PipisCard({ summary, onPress }: { summary: PipisSummary | null; onPress
           <Text className="mt-3 text-stat font-bold text-ink-faint">—</Text>
         ) : (
           <>
-            <Text className={`mt-3 text-stat font-bold ${reached ? 'text-white' : 'text-warn'}`}>
-              {peratusLabel(summary.peratus)}
+            {/*
+              Amaun mendapat saiz `stat`, peratus berada pada baris kecil di
+              bawahnya. Peratus sahaja menjawab "sejauh mana" tetapi bukan
+              "berapa" — dan ahli yang membuka kad ini selalunya mahu angka
+              ringgit yang boleh dibandingkan dengan resit banknya.
+
+              Sen dibuang: tiga aksara itu yang menolak peratus keluar dari
+              kad selebar separuh skrin, dan ia tidak pernah mengubah jawapan.
+            */}
+            <Text
+              className={`mt-3 text-stat font-bold ${reached ? 'text-white' : 'text-warn'}`}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.6}>
+              {ringgitBulat(summary.jumlah)}
             </Text>
             <Text className={`mt-1 text-xs ${reached ? 'text-white/70' : 'text-ink-muted'}`}>
-              {summary.jumlah > summary.sasaran
-                ? 'Lebih RM5,000'
-                : reached
-                  ? 'Cukup RM5,000'
-                  : 'dari RM5,000'}
+              {peratusLabel(summary.peratus) +
+                ' · ' +
+                (summary.jumlah > summary.sasaran
+                  ? 'Lebih RM5,000'
+                  : reached
+                    ? 'Cukup RM5,000'
+                    : 'dari RM5,000')}
             </Text>
           </>
         )}

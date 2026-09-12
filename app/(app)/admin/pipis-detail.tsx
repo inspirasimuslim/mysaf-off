@@ -20,6 +20,7 @@ import {
   addPipisAdjustment,
   fetchPipisHistory,
   fetchPipisSummary,
+  methodLabel,
   peratusLabel,
   ringgitPipis,
   type PipisContribution,
@@ -187,7 +188,7 @@ export default function PipisDetailScreen() {
                     </Text>
                     <View className="flex-1" />
                     <Badge
-                      label={row.method === 'import' ? 'Import' : 'Pelarasan'}
+                      label={methodLabel(row.method)}
                       tone={row.method === 'import' ? 'info' : 'warn'}
                     />
                   </View>

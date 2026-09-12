@@ -209,9 +209,14 @@ export default function AppLayout() {
         name="dashboard"
         options={{ title: 'Utama', tabBarIcon: tabIcon('home', 'home-outline') }}
       />
+      {/*
+        Menggantikan tab Kehadiran yang tidak pernah dibina. Kehadiran sudah
+        dijawab di tempat lain — jalur usrah di skrin Utama dan kod QR di tab
+        Scan — manakala wang bertaburan sehingga skrin ini mengumpulnya.
+      */}
       <Tabs.Screen
-        name="kehadiran"
-        options={{ title: 'Kehadiran', tabBarIcon: tabIcon('checkmark-done', 'checkmark-done-outline') }}
+        name="pembayaran"
+        options={{ title: 'Pembayaran', tabBarIcon: tabIcon('card', 'card-outline') }}
       />
       {/*
         Skrin imbasan ialah sebuah TAB dan bukan skrin dalam. Sebelum ini ia
@@ -246,6 +251,7 @@ export default function AppLayout() {
       <Tabs.Screen name="ahli-view" options={{ href: null }} />
       <Tabs.Screen name="yuran" options={{ href: null }} />
       <Tabs.Screen name="pipis" options={{ href: null }} />
+      <Tabs.Screen name="adhoc-payment-info" options={{ href: null }} />
       <Tabs.Screen name="event-info" options={{ href: null }} />
       <Tabs.Screen name="announcement-info" options={{ href: null }} />
     </Tabs>
