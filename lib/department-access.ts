@@ -115,3 +115,17 @@ export const BENDAHARI_DEPARTMENT = 'BENDAHARI';
 export function useYuranAccess(): DepartmentAccess {
   return useDepartmentAccess(BENDAHARI_DEPARTMENT);
 }
+
+/**
+ * Department yang memiliki modul Sumbangan PIPIS ASET.
+ *
+ * Bukan BENDAHARI walaupun kedua-duanya menyentuh wang: yuran ialah hutang
+ * keahlian, PIPIS ialah dana aset. Nama ini mesti sepadan dengan
+ * `can_view_pipis()` / `can_edit_pipis()` dalam `20260912000015_pipis.sql`.
+ */
+export const EKONOMI_DEPARTMENT = 'LAJNAH EKONOMI DAN ASET';
+
+/** Pintasan untuk modul PIPIS ASET. */
+export function usePipisAccess(): DepartmentAccess {
+  return useDepartmentAccess(EKONOMI_DEPARTMENT);
+}

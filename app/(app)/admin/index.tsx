@@ -6,7 +6,13 @@ import { ActionRow } from '@/components/ui/action-row';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Screen } from '@/components/ui/screen';
 import { SectionTitle } from '@/components/ui/section-title';
-import { useMemberAccess, useProgramAccess, useUsrahAccess, useYuranAccess } from '@/lib/department-access';
+import {
+  useMemberAccess,
+  usePipisAccess,
+  useProgramAccess,
+  useUsrahAccess,
+  useYuranAccess,
+} from '@/lib/department-access';
 import { useGoBack } from '@/lib/navigation';
 import { usePermissions } from '@/lib/permissions';
 
@@ -28,6 +34,7 @@ export default function AdminHubScreen() {
   const usrahAccess = useUsrahAccess();
   const programAccess = useProgramAccess();
   const yuranAccess = useYuranAccess();
+  const pipisAccess = usePipisAccess();
 
   const superAdmin = isSuperAdmin();
   const nothingAvailable =
@@ -35,7 +42,8 @@ export default function AdminHubScreen() {
     !memberAccess.canView &&
     !usrahAccess.canView &&
     !programAccess.canView &&
-    !yuranAccess.canView;
+    !yuranAccess.canView &&
+    !pipisAccess.canView;
 
   return (
     <Screen padTop={false}>
@@ -218,6 +226,29 @@ export default function AdminHubScreen() {
                     : 'Semak baki dan eksport laporan (paparan sahaja)'
                 }
                 onPress={() => router.push('/(app)/admin/yuran-list')}
+              />
+            </View>
+          </View>
+        ) : null}
+
+        {/*
+          PIPIS ASET dimiliki oleh LAJNAH EKONOMI DAN ASET dan bukan oleh
+          BENDAHARI, walaupun kedua-duanya menyentuh wang: yuran ialah hutang
+          keahlian, PIPIS ialah dana aset. Dua department, dua kad.
+        */}
+        {pipisAccess.canView ? (
+          <View>
+            <SectionTitle title="Ekonomi & Aset" caption="Urus sumbangan PIPIS ASET." />
+            <View className="gap-4">
+              <ActionRow
+                icon="business-outline"
+                title="PIPIS ASET"
+                subtitle={
+                  pipisAccess.canEdit
+                    ? 'Semak sumbangan, rekod pelarasan, import fail dan eksport laporan'
+                    : 'Semak sumbangan dan eksport laporan (paparan sahaja)'
+                }
+                onPress={() => router.push('/(app)/admin/pipis-list')}
               />
             </View>
           </View>

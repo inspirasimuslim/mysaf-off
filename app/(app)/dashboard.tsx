@@ -12,6 +12,7 @@ import { Screen } from '@/components/ui/screen';
 import { fetchVisibleAnnouncements } from '@/lib/announcements';
 import { displayName, useAuth } from '@/lib/auth-context';
 import { fetchMyMemberLinked } from '@/lib/members';
+import { fetchPipisSummary, peratusLabel, type PipisSummary } from '@/lib/pipis';
 import { usePermissions } from '@/lib/permissions';
 import { fetchUpcomingEvents } from '@/lib/usrah-events';
 import { fetchYuranSummary, ringgit, type YuranSummary } from '@/lib/yuran';
@@ -29,6 +30,7 @@ export default function DashboardScreen() {
   const [events, setEvents] = useState<UpcomingEvent[]>([]);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [yuran, setYuran] = useState<YuranSummary | null>(null);
+  const [pipis, setPipis] = useState<PipisSummary | null>(null);
 
   /*
     Dibaca semula setiap kali skrin mendapat fokus, sama seperti `UsrahStrip`:
@@ -62,6 +64,11 @@ export default function DashboardScreen() {
         }
       })();
 
+      /*
+        Satu bacaan rekod ahli untuk dua kad. Yuran dan PIPIS dikunci pada
+        `members.id` yang sama, jadi mencarinya dua kali hanya menambah satu
+        perjalanan rangkaian untuk jawapan yang sudah ada.
+      */
       void (async () => {
         const userId = user?.id ?? null;
         if (!userId) return;
@@ -69,10 +76,21 @@ export default function DashboardScreen() {
         try {
           const member = await fetchMyMemberLinked(userId);
           if (!active || !member) return;
-          const summary = await fetchYuranSummary(member.id);
-          if (active) setYuran(summary);
+
+          const [yuranSummary, pipisSummary] = await Promise.all([
+            fetchYuranSummary(member.id),
+            fetchPipisSummary(member.id),
+          ]);
+
+          if (active) {
+            setYuran(yuranSummary);
+            setPipis(pipisSummary);
+          }
         } catch {
-          if (active) setYuran(null);
+          if (active) {
+            setYuran(null);
+            setPipis(null);
+          }
         }
       })();
 
@@ -122,12 +140,12 @@ export default function DashboardScreen() {
         {/*
           Dua kad separuh lebar. Yuran ialah satu-satunya perkara di skrin ini
           yang menuntut tindakan daripada ahli, jadi ia mengambil tempat kiri —
-          di mana mata jatuh dahulu — dan Pip menunggu di sebelahnya sebagai
-          ruang yang sudah ditempah, supaya susun atur tidak beralih bila ia tiba.
+          di mana mata jatuh dahulu — dan PIPIS di sebelahnya melaporkan
+          sumbangan yang sudah dibuat, bukan sesuatu yang perlu dilangsaikan.
         */}
         <View className="flex-row gap-4">
           <YuranCard summary={yuran} onPress={() => router.push('/(app)/yuran')} />
-          <ComingSoonCard icon="ribbon-outline" title="Status Pip" />
+          <PipisCard summary={pipis} onPress={() => router.push('/(app)/pipis')} />
         </View>
 
         <UsrahStrip userId={user?.id ?? null} />
@@ -201,22 +219,53 @@ function YuranCard({ summary, onPress }: { summary: YuranSummary | null; onPress
 }
 
 /**
- * Ruang yang sudah ditempah untuk modul yang belum ada.
+ * Sumbangan PIPIS ASET — peratus daripada sasaran RM5,000.
  *
- * Sengaja tidak boleh diketuk dan sengaja pudar: kad yang kelihatan hidup
- * tetapi tidak membuka apa-apa dibaca sebagai pepijat, bukan sebagai janji.
+ * Struktur kad sengaja SAMA seperti `YuranCard` di sebelahnya: ikon dan label
+ * kecil di atas, satu angka besar, satu baris keterangan. Dua kad bersebelahan
+ * yang membaca dengan cara berbeza menjadikan barisan itu kelihatan seperti dua
+ * skrin yang bertindih.
+ *
+ * Keadaan "belum dibaca" memaparkan em dash dan BUKAN 0%. Sifar bermakna
+ * "anda belum menyumbang", dan itu jawapan yang tidak boleh diberikan sebelum
+ * bacaan selesai.
  */
-function ComingSoonCard({ icon, title }: { icon: keyof typeof Ionicons.glyphMap; title: string }) {
+function PipisCard({ summary, onPress }: { summary: PipisSummary | null; onPress: () => void }) {
+  const reached = summary !== null && summary.jumlah >= summary.sasaran;
+
   return (
-    <View className="flex-1 opacity-60">
-      <Card className="min-h-[132px]">
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel="Sumbangan PIPIS ASET"
+      onPress={onPress}
+      className="flex-1 active:opacity-70">
+      <Card tone={reached ? 'primary' : 'surface'} className="min-h-[132px]">
         <View className="flex-row items-center gap-2">
-          <Ionicons name={icon} size={16} color="#6B7280" />
-          <Text className="text-sm text-ink-muted">{title}</Text>
+          <Ionicons
+            name="business-outline"
+            size={16}
+            color={reached ? 'rgba(255,255,255,0.7)' : '#6B7280'}
+          />
+          <Text className={`text-sm ${reached ? 'text-white/70' : 'text-ink-muted'}`}>PIPIS ASET</Text>
         </View>
-        <Text className="mt-3 text-stat font-bold text-ink-faint">—</Text>
-        <Text className="mt-1 text-xs text-ink-muted">Akan Datang</Text>
+
+        {summary === null ? (
+          <Text className="mt-3 text-stat font-bold text-ink-faint">—</Text>
+        ) : (
+          <>
+            <Text className={`mt-3 text-stat font-bold ${reached ? 'text-white' : 'text-warn'}`}>
+              {peratusLabel(summary.peratus)}
+            </Text>
+            <Text className={`mt-1 text-xs ${reached ? 'text-white/70' : 'text-ink-muted'}`}>
+              {summary.jumlah > summary.sasaran
+                ? 'Lebih RM5,000'
+                : reached
+                  ? 'Cukup RM5,000'
+                  : 'dari RM5,000'}
+            </Text>
+          </>
+        )}
       </Card>
-    </View>
+    </Pressable>
   );
 }
