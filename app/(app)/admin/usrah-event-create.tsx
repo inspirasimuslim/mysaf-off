@@ -1,3 +1,4 @@
+import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import { Text, View } from 'react-native';
@@ -308,12 +309,32 @@ export default function UsrahEventCreateScreen() {
 
         <View>
           <SectionTitle title="Poster" caption="Pilihan. Dikecilkan kepada 1080px sebelum dimuat naik." />
-          <Button
-            label={posterUri ? 'Tukar Poster' : 'Pilih Poster'}
-            variant="secondary"
-            disabled={saving}
-            onPress={() => void choosePoster()}
-          />
+          <View className="gap-3">
+            {/*
+              Pratonton gambar yang BENAR-BENAR akan dimuat naik, sebelum acara
+              dicipta. `contain` dan bukan `cover`: poster mesti kelihatan penuh
+              supaya admin nampak jika tersilap pilih gambar atau terpotong.
+              Kotak tinggi tetap supaya poster potret yang panjang tidak menolak
+              baki borang jauh ke bawah.
+            */}
+            {posterUri ? (
+              <View className="overflow-hidden rounded-card border border-line bg-surface">
+                <Image
+                  source={{ uri: posterUri }}
+                  style={{ width: '100%', height: 320 }}
+                  contentFit="contain"
+                  transition={150}
+                  accessibilityLabel="Pratonton poster"
+                />
+              </View>
+            ) : null}
+            <Button
+              label={posterUri ? 'Tukar Poster' : 'Pilih Poster'}
+              variant="secondary"
+              disabled={saving}
+              onPress={() => void choosePoster()}
+            />
+          </View>
         </View>
 
         {/*
