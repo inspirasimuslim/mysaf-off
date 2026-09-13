@@ -14,11 +14,17 @@ type Props = {
   onClose: () => void;
   /** `false` mengunci helaian semasa penghantaran berjalan supaya borang tidak hilang separuh jalan. */
   dismissable?: boolean;
+  /**
+   * Dipaparkan di bawah kandungan yang ditatal, bukan di dalamnya — untuk
+   * butang hantar yang mesti sentiasa kelihatan walaupun senarai di atasnya
+   * lebih panjang daripada skrin.
+   */
+  footer?: ReactNode;
   children: ReactNode;
 };
 
 /** Helaian ringkas untuk borang pendek (tukar emel / kata laluan). */
-export function FormModal({ visible, title, description, onClose, dismissable = true, children }: Props) {
+export function FormModal({ visible, title, description, onClose, dismissable = true, footer, children }: Props) {
   const insets = useSafeAreaInsets();
 
   const close = () => {
@@ -41,9 +47,15 @@ export function FormModal({ visible, title, description, onClose, dismissable = 
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={{ maxHeight: '90%' }}>
+          {/*
+            flexShrink WAJIB di sini. Tanpanya helaian mengambil tinggi penuh
+            kandungannya dan melimpah keluar dari had 90% di atas — bahagian
+            bawahnya (butang hantar dan padding inset) jatuh di bawah bar
+            navigasi sistem, dan ScrollView di dalam tidak pernah mengecil.
+          */}
           <View
             className="w-full self-center rounded-t-[28px] bg-background px-gutter pt-6"
-            style={{ maxWidth: MAX_SHEET_WIDTH, paddingBottom: insets.bottom + 24 }}>
+            style={{ maxWidth: MAX_SHEET_WIDTH, flexShrink: 1, paddingBottom: insets.bottom + 24 }}>
             <View className="mb-5 flex-row items-start gap-4">
               <View className="flex-1">
                 <Text className="text-xl font-bold text-ink">{title}</Text>
@@ -71,6 +83,8 @@ export function FormModal({ visible, title, description, onClose, dismissable = 
               showsVerticalScrollIndicator={false}>
               <View className="gap-4 pb-1">{children}</View>
             </ScrollView>
+
+            {footer ? <View className="pt-4">{footer}</View> : null}
           </View>
         </KeyboardAvoidingView>
       </View>

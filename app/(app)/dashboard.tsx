@@ -110,7 +110,6 @@ export default function DashboardScreen() {
   const announcementItems: PosterItem[] = announcements.map((row) => ({
     id: row.id,
     title: row.title,
-    caption: new Date(row.created_at).toLocaleDateString('ms-MY'),
     posterUrl: row.poster_url,
   }));
 
@@ -131,7 +130,6 @@ export default function DashboardScreen() {
             ? { icon: 'shield-half-outline', label: 'Hub Admin', onPress: () => router.push('/(app)/admin') }
             : undefined
         }
-        onBellPress={() => setBanner({ tone: 'info', message: 'Tiada notifikasi baharu buat masa ini.' })}
       />
 
       <View className="gap-8 px-gutter pt-6">
@@ -157,7 +155,6 @@ export default function DashboardScreen() {
         */}
         <PosterCarousel
           title="Program & Usrah"
-          caption="Ketuk poster untuk melihat butiran penuh."
           items={eventItems}
           onPress={(id) => router.push({ pathname: '/(app)/event-info', params: { id } })}
         />

@@ -334,7 +334,21 @@ export default function AdminsScreen() {
             : 'Pilih department yang dikendalikan dan tetapkan kebenaran setiap satu. Tanpa sebarang department, peranan akan kembali kepada Ahli.'
         }
         dismissable={!saveBusy}
-        onClose={() => setEditor(null)}>
+        onClose={() => setEditor(null)}
+        /*
+          Butang di footer dan bukan di hujung senarai: dengan banyak department
+          dan suis kebenaran, hujung senarai boleh jauh di bawah skrin.
+        */
+        footer={
+          editor && !editor.picking ? (
+            <Button
+              label="Simpan Lantikan"
+              loading={saveBusy}
+              disabled={saveBusy}
+              onPress={() => void submitEditor()}
+            />
+          ) : undefined
+        }>
         {editorNotice ? <Notice tone="negative" message={editorNotice} /> : null}
 
         {editor?.picking ? (
@@ -404,13 +418,6 @@ export default function AdminsScreen() {
                 })}
               </View>
             )}
-
-            <Button
-              label="Simpan Lantikan"
-              loading={saveBusy}
-              disabled={saveBusy}
-              onPress={() => void submitEditor()}
-            />
           </>
         )}
       </FormModal>

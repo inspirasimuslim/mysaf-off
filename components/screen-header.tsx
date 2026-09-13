@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Colors } from '@/constants/theme';
 
-/** Ikon tindakan tambahan di kanan kepala skrin, di sebelah kiri loceng. */
+/** Ikon tindakan tambahan di kanan kepala skrin. */
 export type HeaderAction = {
   icon: keyof typeof Ionicons.glyphMap;
   /** Label pembaca skrin — ikon sahaja tidak mencukupi. */
@@ -23,14 +23,12 @@ type Props = {
    * pengguna tiada kebenaran — bukan sekadar menyembunyikannya.
    */
   action?: HeaderAction;
-  /** Papar ikon loceng notifikasi di kanan bila diberi. */
-  onBellPress?: () => void;
   /** Papar anak panah kembali di kiri bila diberi — untuk skrin dalam (bukan tab). */
   onBackPress?: () => void;
 };
 
 /** Kepala skrin hijau forest dengan sudut bawah membulat. */
-export function ScreenHeader({ title, eyebrow, subtitle, action, onBellPress, onBackPress }: Props) {
+export function ScreenHeader({ title, eyebrow, subtitle, action, onBackPress }: Props) {
   const insets = useSafeAreaInsets();
 
   return (
@@ -63,17 +61,6 @@ export function ScreenHeader({ title, eyebrow, subtitle, action, onBellPress, on
             onPress={action.onPress}
             className="h-11 w-11 items-center justify-center rounded-pill bg-white/10 active:opacity-70">
             <Ionicons name={action.icon} size={20} color={Colors.white} />
-          </Pressable>
-        ) : null}
-
-        {onBellPress ? (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Notifikasi"
-            hitSlop={10}
-            onPress={onBellPress}
-            className="h-11 w-11 items-center justify-center rounded-pill bg-white/10 active:opacity-70">
-            <Ionicons name="notifications-outline" size={20} color={Colors.white} />
           </Pressable>
         ) : null}
       </View>

@@ -29,7 +29,7 @@ export default function LoginScreen() {
   const [notice, setNotice] = useState<string | null>(() => takeAuthNotice());
   const [busy, setBusy] = useState(false);
   const [biometricBusy, setBiometricBusy] = useState(false);
-  const [biometricLabel, setBiometricLabel] = useState<string | null>(null);
+  const [biometricAvailable, setBiometricAvailable] = useState(false);
   const [forgotOpen, setForgotOpen] = useState(false);
 
   // Papar butang biometrik hanya bila peranti menyokong DAN pengguna pernah aktifkan.
@@ -39,7 +39,7 @@ export default function LoginScreen() {
     void (async () => {
       const [support, available] = await Promise.all([getBiometricSupport(), hasBiometricLogin()]);
       if (!active) return;
-      setBiometricLabel(support.usable && available ? support.label : null);
+      setBiometricAvailable(support.usable && available);
     })();
 
     return () => {
@@ -104,7 +104,7 @@ export default function LoginScreen() {
           <View className="items-center pb-10 pt-12">
             <Image
               source={require('@/assets/images/mysaff-logo-wide.png')}
-              style={{ width: '78%', maxWidth: 320, aspectRatio: LOGO_ASPECT_RATIO }}
+              style={{ width: '55%', maxWidth: 220, aspectRatio: LOGO_ASPECT_RATIO }}
               contentFit="contain"
               accessibilityLabel="MySAFF — Melangkah Bersama"
             />
@@ -159,10 +159,10 @@ export default function LoginScreen() {
             </View>
           </Card>
 
-          {biometricLabel ? (
+          {biometricAvailable ? (
             <View className="mt-5">
               <Button
-                label={`Log Masuk dengan ${biometricLabel}`}
+                label="Log Masuk dengan Fingerprint atau Face ID"
                 variant="ghost"
                 loading={biometricBusy}
                 disabled={busy}
