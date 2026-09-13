@@ -35,7 +35,9 @@ export type CreateUsrahEventInput = {
   geofence_radius_meters: number;
 };
 
-export type UpdateUsrahEventInput = Partial<CreateUsrahEventInput & { is_active: boolean; poster_url: string }>;
+export type UpdateUsrahEventInput = Partial<
+  CreateUsrahEventInput & { is_active: boolean; poster_url: string; poster_with_qr_url: string }
+>;
 
 /**
  * Kandungan kod QR.
@@ -123,6 +125,24 @@ export async function deleteUsrahEvent(id: string): Promise<void> {
 export async function uploadEventPoster(eventId: string, uri: string): Promise<string> {
   const url = await uploadImage(POSTER_BUCKET, eventId + '.jpg', uri, POSTER_MAX_WIDTH);
   await updateUsrahEvent(eventId, { poster_url: url });
+  return url;
+}
+
+/**
+ * Poster ber-QR lebih lebar daripada poster biasa: kod QR di penjuru mesti
+ * kekal tajam bila diimbas dari skrin telefon lain atau dari cetakan.
+ */
+const POSTER_QR_MAX_WIDTH = 1440;
+
+/**
+ * Muat naik poster gabungan (poster + kod QR) dan simpan URLnya.
+ *
+ * '<event_id>-qr.jpg' — fail berasingan, supaya poster asal yang dipapar dalam
+ * carousel skrin Utama tidak pernah ditimpa.
+ */
+export async function uploadEventPosterWithQr(eventId: string, uri: string): Promise<string> {
+  const url = await uploadImage(POSTER_BUCKET, eventId + '-qr.jpg', uri, POSTER_QR_MAX_WIDTH);
+  await updateUsrahEvent(eventId, { poster_with_qr_url: url });
   return url;
 }
 

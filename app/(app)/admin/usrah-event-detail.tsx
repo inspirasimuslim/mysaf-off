@@ -1,9 +1,10 @@
 import { Image } from 'expo-image';
 import { useLocalSearchParams } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Text, View } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 
+import { PosterQrComposer, type PosterQrComposerHandle } from '@/components/poster-qr-composer';
 import { ScreenHeader } from '@/components/screen-header';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -19,9 +20,10 @@ import { ToggleRow } from '@/components/ui/toggle-row';
 import { Colors } from '@/constants/theme';
 import { useProgramAccess, useUsrahAccess } from '@/lib/department-access';
 import { toMalayError } from '@/lib/errors';
+import { fileSlug, shareImage } from '@/lib/image-share';
 import { pickImage } from '@/lib/image-upload';
 import { useGoBack } from '@/lib/navigation';
-import { fetchUsrahEvent, updateUsrahEvent, uploadEventPoster } from '@/lib/usrah-events';
+import { fetchUsrahEvent, updateUsrahEvent, uploadEventPoster, uploadEventPosterWithQr } from '@/lib/usrah-events';
 import {
   EVENT_TYPE_LABEL,
   USRAH_EVENT_STATUS_LABEL,
@@ -137,6 +139,39 @@ export default function UsrahEventDetailScreen() {
     },
     [busy, event, hydrate],
   );
+
+  // --- Poster + kod QR -------------------------------------------------------
+  const composerRef = useRef<PosterQrComposerHandle>(null);
+  const [composeReady, setComposeReady] = useState(false);
+  const [qrBusy, setQrBusy] = useState(false);
+
+  const generatePosterWithQr = useCallback(async () => {
+    if (!event || qrBusy || !composerRef.current) return;
+
+    setBanner(null);
+    setQrBusy(true);
+    try {
+      const uri = await composerRef.current.capture();
+      const url = await uploadEventPosterWithQr(event.id, uri);
+      setEvent({ ...event, poster_with_qr_url: url });
+      setBanner({ tone: 'positive', message: 'Poster dengan kod QR telah dijana dan disimpan.' });
+    } catch (caught) {
+      setBanner({ tone: 'negative', message: toMalayError(caught, 'Gagal menjana poster dengan kod QR.') });
+    } finally {
+      setQrBusy(false);
+    }
+  }, [event, qrBusy]);
+
+  const sharePosterWithQr = useCallback(async () => {
+    if (!event?.poster_with_qr_url) return;
+
+    setBanner(null);
+    try {
+      await shareImage(event.poster_with_qr_url, 'poster-qr-' + fileSlug(event.name) + '.jpg', 'Poster ' + event.name);
+    } catch (caught) {
+      setBanner({ tone: 'negative', message: toMalayError(caught, 'Gagal berkongsi poster.') });
+    }
+  }, [event]);
 
   const changePoster = useCallback(async () => {
     if (!event || busy) return;
@@ -267,6 +302,50 @@ export default function UsrahEventDetailScreen() {
             </View>
           ) : null}
         </View>
+
+        {/* --- Poster + kod QR ----------------------------------------------- */}
+        {event.poster_url ? (
+          <View>
+            <SectionTitle
+              title="Poster + Kod QR"
+              caption="Satu imej untuk diedar: poster dengan kod QR kehadiran di penjuru. Poster asal di skrin Utama tidak berubah. Jana semula selepas menukar poster."
+            />
+            <PosterQrComposer
+              ref={composerRef}
+              posterUrl={event.poster_url}
+              qrValue={event.qr_token}
+              onReady={setComposeReady}
+            />
+
+            <View className="gap-3 pt-3">
+              {canEdit ? (
+                <Button
+                  label={event.poster_with_qr_url ? 'Jana Semula Poster + QR' : 'Jana Poster + QR'}
+                  loading={qrBusy}
+                  disabled={qrBusy || busy || !composeReady}
+                  onPress={() => void generatePosterWithQr()}
+                />
+              ) : null}
+              {event.poster_with_qr_url ? (
+                <Button
+                  label="Kongsi / Muat Turun Poster + QR"
+                  variant="secondary"
+                  disabled={qrBusy}
+                  onPress={() => void sharePosterWithQr()}
+                />
+              ) : null}
+              {/*
+                Imej ini sampai kepada setiap ahli melalui skrin butiran acara,
+                dan sesiapa yang memegangnya memegang kod QR. Amaran ini
+                kelihatan pada titik keputusan, bukan tersembunyi dalam dokumen.
+              */}
+              <Notice
+                tone="warn"
+                message="Ahli boleh menyimpan poster ini dan mengimbas kodnya dari galeri. Untuk program tanpa pin lokasi, kehadiran boleh dituntut dari mana-mana selagi program aktif."
+              />
+            </View>
+          </View>
+        ) : null}
 
         {/* --- Lokasi -------------------------------------------------------- */}
         <View>

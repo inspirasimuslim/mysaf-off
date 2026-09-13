@@ -1,17 +1,21 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
 
 import { ScreenHeader } from '@/components/screen-header';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { LoadingScreen } from '@/components/ui/loading-screen';
+import { Notice } from '@/components/ui/notice';
 import { Screen } from '@/components/ui/screen';
 import { SectionTitle } from '@/components/ui/section-title';
 import { Colors } from '@/constants/theme';
+import { toMalayError } from '@/lib/errors';
+import { fileSlug, shareImage } from '@/lib/image-share';
 import { useGoBack } from '@/lib/navigation';
 import { fetchUpcomingEvents } from '@/lib/usrah-events';
 import {
@@ -22,17 +26,16 @@ import {
 } from '@/types/database';
 
 /**
- * Butiran acara seperti dilihat oleh AHLI — paparan sahaja.
+ * Butiran acara seperti dilihat oleh AHLI.
  *
- * TIADA kod QR di sini, dan itu keputusan keselamatan dan bukan kekurangan
- * ciri. Kod QR ialah bukti kehadiran: jika setiap ahli boleh membukanya dari
- * telefon sendiri, geofence menjadi satu-satunya halangan yang tinggal dan
- * sesiapa dalam radius boleh menandakan hadir tanpa datang ke majlis. Kod itu
- * dipegang admin, dipaparkan di lokasi, dan diimbas melalui tab Scan.
+ * Kod QR tidak dipapar sebagai kod hidup di sini. Bila admin menjana poster
+ * ber-QR (`poster_with_qr_url`), ahli boleh MENYIMPAN imej itu dan mengimbasnya
+ * kemudian melalui "Upload dari Galeri" di tab Scan — keputusan produk yang
+ * sengaja, dengan akibat yang dicatat dalam `20260913000022_poster_with_qr.sql`:
+ * geofence menjadi halangan utama kehadiran jarak jauh bagi acara itu.
  *
  * Data datang daripada `event_upcoming_directory()`, jadi skrin ini tidak
- * pernah memegang `qr_token` mahupun koordinat pin — bukan sekadar tidak
- * memaparkannya.
+ * pernah memegang `qr_token` sebagai teks mahupun koordinat pin.
  */
 export default function EventInfoScreen() {
   const goBack = useGoBack();
@@ -40,6 +43,22 @@ export default function EventInfoScreen() {
 
   const [event, setEvent] = useState<UpcomingEvent | null>(null);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  const savePosterWithQr = useCallback(async () => {
+    if (!event?.poster_with_qr_url || saving) return;
+
+    setSaveError(null);
+    setSaving(true);
+    try {
+      await shareImage(event.poster_with_qr_url, 'poster-qr-' + fileSlug(event.name) + '.jpg', 'Simpan poster ' + event.name);
+    } catch (caught) {
+      setSaveError(toMalayError(caught, 'Gagal menyimpan poster.'));
+    } finally {
+      setSaving(false);
+    }
+  }, [event, saving]);
 
   useEffect(() => {
     if (!id) return;
@@ -103,6 +122,22 @@ export default function EventInfoScreen() {
             transition={150}
             accessibilityLabel={'Poster ' + event.name}
           />
+        ) : null}
+
+        {event.poster_with_qr_url ? (
+          <View className="gap-2">
+            <Button
+              label="Simpan Poster (dengan QR)"
+              variant="secondary"
+              loading={saving}
+              disabled={saving}
+              onPress={() => void savePosterWithQr()}
+            />
+            <Text className="text-center text-xs text-ink-muted">
+              Simpan ke galeri, kemudian imbas melalui tab Scan → Upload dari Galeri.
+            </Text>
+            {saveError ? <Notice tone="negative" message={saveError} /> : null}
+          </View>
         ) : null}
 
         <View>

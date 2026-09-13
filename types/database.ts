@@ -311,6 +311,8 @@ export type UsrahEvent = {
   name: string;
   event_type: EventType;
   poster_url: string | null;
+  /** Poster dengan kod QR terbenam, dijana admin. `poster_url` kekal poster asal. */
+  poster_with_qr_url: string | null;
 
   /** Kod kawasan (lihat `KAWASAN_USRAH_OPTIONS`) — usrah sahaja. */
   kawasan_usrah: string | null;
@@ -483,6 +485,8 @@ export type UpcomingEvent = {
   event_type: EventType;
   name: string;
   poster_url: string | null;
+  /** Poster dengan kod QR — ada hanya bila admin sudah menjananya. */
+  poster_with_qr_url: string | null;
   start_date: string;
   end_date: string;
   start_time: string;
