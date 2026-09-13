@@ -126,7 +126,14 @@ export async function requireSuperAdmin(request: Request): Promise<string> {
  * dalam tiga hari. Selepas itu ia tidak lagi membuka apa-apa, dan hanya Super
  * Admin boleh membukanya semula.
  */
-export const TEMP_PASSWORD = 'ikhwandihati';
+/*
+  Huruf besar, huruf kecil dan nombor — syarat kerumitan kata laluan Supabase
+  Auth semasa. Akaun yang diprovision atau direset sebelum pertukaran ini masih
+  memegang nilai lama 'ikhwandihati' di Auth; `complete_password_change()`
+  menolak kedua-duanya (migration 20260913000019). Nilai ini diulang dalam
+  `lib/temp-password.ts` — tukar bersama.
+*/
+export const TEMP_PASSWORD = 'IKHWANdihati99';
 
 /** Tempoh kata laluan sementara sah — sama untuk cipta seorang dan cipta pukal. */
 export const TEMP_PASSWORD_DAYS = 3;

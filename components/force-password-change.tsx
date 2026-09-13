@@ -63,7 +63,7 @@ export function ForcePasswordChange({ onDone }: { onDone: () => void }) {
       /*
         Tanda dibuang SELEPAS kata laluan benar-benar bertukar, bukan sebelumnya.
         Susunan terbalik akan melepaskan seseorang masuk sambil kata laluannya
-        masih 'ikhwandihati' apabila panggilan Auth gagal.
+        masih kata laluan sementara apabila panggilan Auth gagal.
 
         Kegagalan di sini pula dilaporkan dan TIDAK melepaskan pengguna masuk:
         kata laluan sudah bertukar, jadi mencuba semula selamat — dan pintu

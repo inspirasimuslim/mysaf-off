@@ -19,8 +19,11 @@ import { supabase } from './supabase';
  * jawapannya tidak bergantung pada policy yang tiada kaitan dengan kata laluan.
  */
 
-/** Kata laluan yang diedarkan bersama akaun baharu — sama seperti dalam Edge Function. */
-export const TEMP_PASSWORD = 'ikhwandihati';
+/**
+ * Kata laluan yang diedarkan bersama akaun baharu — sama seperti dalam Edge
+ * Function (`_shared/admin.ts`) dan semakan `complete_password_change()`.
+ */
+export const TEMP_PASSWORD = 'IKHWANdihati99';
 
 export const EXPIRED_MESSAGE =
   'Tempoh log masuk sementara anda telah tamat. Hubungi Super Admin untuk membukanya semula.';

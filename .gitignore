@@ -51,3 +51,6 @@ seed-data/
 
 # sandaran pangkalan data — NRIC, alamat, hash kata laluan (scripts/backup-db.mjs)
 backups/
+
+# fail gabungan Edge Function untuk ditampal ke Dashboard (scripts/build-deploy.mjs)
+scratchpad/
