@@ -1,11 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { useLocalSearchParams } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
-import { Text, View } from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Platform, Text, View } from 'react-native';
+import QRCode from 'react-native-qrcode-svg';
+import { captureRef } from 'react-native-view-shot';
 
 import { ScreenHeader } from '@/components/screen-header';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -25,20 +26,26 @@ import {
   type UpcomingEvent,
 } from '@/types/database';
 
+const QR_SIZE = 220;
+
+/** Lebar imej kod QR yang disimpan — cukup tajam untuk diimbas semula dari galeri. */
+const QR_IMAGE_WIDTH = 1080;
+
 /**
  * Butiran acara seperti dilihat oleh AHLI.
  *
- * Kod QR tidak dipapar sebagai kod hidup di sini. Bila admin menjana poster
- * ber-QR (`poster_with_qr_url`), ahli boleh MENYIMPAN imej itu dan mengimbasnya
- * kemudian melalui "Upload dari Galeri" di tab Scan — keputusan produk yang
- * sengaja, dengan akibat yang dicatat dalam `20260913000022_poster_with_qr.sql`:
- * geofence menjadi halangan utama kehadiran jarak jauh bagi acara itu.
+ * Poster dan kod QR dipapar BERASINGAN. Kod QR boleh disimpan sebagai imej dan
+ * diimbas kemudian melalui "Upload dari Galeri" di tab Scan — keputusan produk
+ * yang sengaja, dengan akibat yang dicatat dalam
+ * `20260913000025_event_qr_for_members.sql`: geofence dan tetingkap masa ialah
+ * halangan kehadiran jarak jauh.
  *
- * Data datang daripada `event_upcoming_directory()`, jadi skrin ini tidak
- * pernah memegang `qr_token` sebagai teks mahupun koordinat pin.
+ * Data datang daripada `event_upcoming_directory()`: acara aktif sahaja, tanpa
+ * koordinat pin atau tetapan geofence.
  */
 export default function EventInfoScreen() {
   const goBack = useGoBack();
+  const router = useRouter();
   const { id } = useLocalSearchParams<{ id?: string }>();
 
   const [event, setEvent] = useState<UpcomingEvent | null>(null);
@@ -46,15 +53,39 @@ export default function EventInfoScreen() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  const savePosterWithQr = useCallback(async () => {
-    if (!event?.poster_with_qr_url || saving) return;
+  /** Hanya kad putih kod QR yang ditangkap — bukan poster, bukan butang. */
+  const qrRef = useRef<View>(null);
+  const saveQr = useCallback(async () => {
+    const view = qrRef.current;
+    if (!event || saving || !view) return;
 
     setSaveError(null);
     setSaving(true);
     try {
-      await shareImage(event.poster_with_qr_url, 'poster-qr-' + fileSlug(event.name) + '.jpg', 'Simpan poster ' + event.name);
+      /*
+        `captureRef` di web MENGABAIKAN `width` bila `height` tiada — imej keluar
+        pada saiz skrin (~260px), terlalu kecil untuk diimbas semula dengan
+        yakin. Kedua-duanya dihantar, mengikut nisbah kad sebenar.
+
+        Diukur pada saat tangkapan dan bukan melalui `onLayout`: `onLayout`
+        tidak dijamin sudah berjalan (contoh: tab pelayar di latar belakang),
+        dan tanpa ukuran imej kembali ke saiz skrin tanpa sebarang ralat.
+      */
+      const measured = await new Promise<{ width: number; height: number }>((resolve) =>
+        view.measure((_x, _y, width, height) => resolve({ width, height })),
+      );
+      const size = measured.width
+        ? { width: QR_IMAGE_WIDTH, height: Math.round((QR_IMAGE_WIDTH * measured.height) / measured.width) }
+        : {};
+      const uri = await captureRef(qrRef, {
+        format: 'jpg',
+        quality: 1,
+        ...size,
+        result: Platform.OS === 'web' ? 'data-uri' : 'tmpfile',
+      });
+      await shareImage(uri, 'kod-qr-' + fileSlug(event.name) + '.jpg', 'Simpan kod QR ' + event.name);
     } catch (caught) {
-      setSaveError(toMalayError(caught, 'Gagal menyimpan poster.'));
+      setSaveError(toMalayError(caught, 'Gagal menyimpan kod QR. Cuba ambil screenshot skrin ini.'));
     } finally {
       setSaving(false);
     }
@@ -114,6 +145,7 @@ export default function EventInfoScreen() {
       />
 
       <View className="gap-6 px-gutter pt-6">
+        {/* --- Poster: tiada poster, tiada bahagian ------------------------------ */}
         {event.poster_url ? (
           <Image
             source={{ uri: event.poster_url }}
@@ -124,23 +156,56 @@ export default function EventInfoScreen() {
           />
         ) : null}
 
-        {event.poster_with_qr_url ? (
-          <View className="gap-2">
+        {/* --- Kod QR Kehadiran ---------------------------------------------- */}
+        <View>
+          <SectionTitle title="Kod QR Kehadiran" />
+          <Card>
+            <View className="items-center gap-3">
+              {/*
+                Sudut bulat pada pembalut SAHAJA: View yang ditangkap mesti segi
+                empat tepat, kerana JPEG tiada ketelusan dan sudut bulat menjadi
+                hitam atau putih dalam imej.
+              */}
+              <View style={{ borderRadius: 16, overflow: 'hidden' }}>
+                <View
+                  ref={qrRef}
+                  collapsable={false}                  style={{ backgroundColor: Colors.white, padding: 20, alignItems: 'center', maxWidth: QR_SIZE + 40 }}>
+                  <QRCode value={event.qr_token} size={QR_SIZE} color={Colors.ink} backgroundColor={Colors.white} />
+                  {/* Nama acara ikut dalam imej supaya kod dalam galeri boleh dikenal pasti. */}
+                  <Text
+                    style={{ marginTop: 12, color: Colors.ink }}
+                    className="text-center text-sm font-semibold"
+                    numberOfLines={2}>
+                    {event.name}
+                  </Text>
+                </View>
+              </View>
+
+              <Text className="text-center text-xs text-ink-muted">
+                Screenshot atau muat turun kod ni untuk scan semasa program.
+              </Text>
+            </View>
+          </Card>
+
+          <View className="gap-3 pt-3">
             <Button
-              label="Simpan Poster (dengan QR)"
-              variant="secondary"
+              label="Simpan/Screenshot Kod QR"
               loading={saving}
               disabled={saving}
-              onPress={() => void savePosterWithQr()}
+              icon={<Ionicons name="download-outline" size={18} color={Colors.white} />}
+              onPress={() => void saveQr()}
             />
-            <Text className="text-center text-xs text-ink-muted">
-              Simpan ke galeri, kemudian imbas melalui tab Scan → Upload dari Galeri.
-            </Text>
             {saveError ? <Notice tone="negative" message={saveError} /> : null}
+            <Button
+              label="Ada Kod QR Lain? Upload dari Galeri"
+              variant="secondary"
+              icon={<Ionicons name="images-outline" size={18} color={Colors.ink} />}
+              onPress={() => router.navigate('/(app)/usrah-scan')}
+            />
           </View>
-        ) : null}
+        </View>
 
-        <View>
+        <View className="pb-8">
           <SectionTitle title="Maklumat" />
           <Card>
             <View className="gap-4">
@@ -158,10 +223,6 @@ export default function EventInfoScreen() {
               <Row icon="location-outline" label="Lokasi" value={event.location_text ?? 'Belum ditetapkan'} />
             </View>
           </Card>
-        </View>
-
-        <View className="pb-8">
-          <Badge label="Imbas kod QR di lokasi untuk merekod kehadiran" tone="primary" />
         </View>
       </View>
     </Screen>

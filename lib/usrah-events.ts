@@ -34,7 +34,7 @@ export type CreateUsrahEventInput = {
 };
 
 export type UpdateUsrahEventInput = Partial<
-  CreateUsrahEventInput & { is_active: boolean; poster_url: string; poster_with_qr_url: string }
+  CreateUsrahEventInput & { is_active: boolean; poster_url: string }
 >;
 
 /**
@@ -122,31 +122,13 @@ export async function uploadEventPoster(eventId: string, uri: string): Promise<s
 }
 
 /**
- * Poster ber-QR lebih lebar daripada poster biasa: kod QR di penjuru mesti
- * kekal tajam bila diimbas dari skrin telefon lain atau dari cetakan.
- */
-const POSTER_QR_MAX_WIDTH = 1440;
-
-/**
- * Muat naik poster gabungan (poster + kod QR) dan simpan URLnya.
- *
- * '<event_id>-qr.jpg' — fail berasingan, supaya poster asal yang dipapar dalam
- * carousel skrin Utama tidak pernah ditimpa.
- */
-export async function uploadEventPosterWithQr(eventId: string, uri: string): Promise<string> {
-  const url = await uploadImage(POSTER_BUCKET, eventId + '-qr.jpg', uri, POSTER_QR_MAX_WIDTH);
-  await updateUsrahEvent(eventId, { poster_with_qr_url: url });
-  return url;
-}
-
-/**
  * Acara akan datang seperti dilihat oleh AHLI.
  *
  * Melalui `event_upcoming_directory()` dan bukan `.from('usrah_events')`: RLS
  * table itu kekal tertutup kepada ahli, dan atas sebab yang baik — barisnya
  * memegang `qr_token`, yang membolehkan sesiapa yang memilikinya mendakwa
- * hadir. Fungsi `security definer` itu mendedahkan sembilan kolum paparan
- * sahaja.
+ * hadir. Fungsi `security definer` itu mendedahkan kolum paparan dan kod QR
+ * acara aktif sahaja — tanpa koordinat pin, geofence atau pencipta.
  */
 export async function fetchUpcomingEvents(): Promise<UpcomingEvent[]> {
   const { data, error } = await supabase.rpc('event_upcoming_directory');
