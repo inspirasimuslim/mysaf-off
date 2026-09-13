@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "mysaf-off",
+    "name": "MySAFF",
     "slug": "mysaf-off",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -56,20 +56,20 @@
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "mysaf-off menggunakan lokasi anda untuk mengesahkan kehadiran usrah di lokasi program."
+          "locationAlwaysAndWhenInUsePermission": "MySAFF menggunakan lokasi anda untuk mengesahkan kehadiran usrah di lokasi program."
         }
       ],
       [
         "expo-camera",
         {
-          "cameraPermission": "mysaf-off menggunakan kamera untuk mengimbas kod QR kehadiran usrah.",
+          "cameraPermission": "MySAFF menggunakan kamera untuk mengimbas kod QR kehadiran usrah.",
           "recordAudioAndroid": false
         }
       ],
       [
         "expo-image-picker",
         {
-          "photosPermission": "mysaf-off perlu capaian galeri untuk membaca kod QR daripada gambar yang anda pilih."
+          "photosPermission": "MySAFF perlu capaian galeri untuk membaca kod QR daripada gambar yang anda pilih."
         }
       ]
     ],
