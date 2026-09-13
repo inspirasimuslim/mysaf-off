@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform, Text, View } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
@@ -45,7 +45,6 @@ const QR_IMAGE_WIDTH = 1080;
  */
 export default function EventInfoScreen() {
   const goBack = useGoBack();
-  const router = useRouter();
   const { id } = useLocalSearchParams<{ id?: string }>();
 
   const [event, setEvent] = useState<UpcomingEvent | null>(null);
@@ -196,12 +195,6 @@ export default function EventInfoScreen() {
               onPress={() => void saveQr()}
             />
             {saveError ? <Notice tone="negative" message={saveError} /> : null}
-            <Button
-              label="Ada Kod QR Lain? Upload dari Galeri"
-              variant="secondary"
-              icon={<Ionicons name="images-outline" size={18} color={Colors.ink} />}
-              onPress={() => router.navigate('/(app)/usrah-scan')}
-            />
           </View>
         </View>
 
