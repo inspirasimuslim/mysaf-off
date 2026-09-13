@@ -1,9 +1,9 @@
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { View } from 'react-native';
 
+import { EventListRow } from '@/components/event-list-row';
 import { ScreenHeader } from '@/components/screen-header';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { LoadingScreen } from '@/components/ui/loading-screen';
@@ -12,29 +12,20 @@ import { Screen } from '@/components/ui/screen';
 import { SectionTitle } from '@/components/ui/section-title';
 import { useProgramAccess } from '@/lib/department-access';
 import { toMalayError } from '@/lib/errors';
+import { downloadEventAttendance } from '@/lib/event-attendance-report';
 import { useGoBack } from '@/lib/navigation';
-import { downloadProgramReport } from '@/lib/program-report';
 import { fetchUsrahEvents } from '@/lib/usrah-events';
-import {
-  USRAH_EVENT_STATUS_LABEL,
-  dateRangeLabel,
-  timeRangeLabel,
-  usrahEventStatus,
-  type UsrahEvent,
-} from '@/types/database';
+import type { UsrahEvent } from '@/types/database';
 
 type Banner = { tone: 'positive' | 'info' | 'negative'; message: string } | null;
-
-const STATUS_TONE = { aktif: 'positive', tamat: 'neutral', nonaktif: 'warn' } as const;
 
 /**
  * Program am — modul JABATAN SETIAUSAHA.
  *
- * Bentuknya mengikut `usrah-events.tsx` kerana ia menguruskan table yang sama,
- * dengan satu perbezaan yang menentukan: eksport di sini ialah SATU FAIL SATU
- * PROGRAM dan bukan satu fail setahun. Program am tidak berkongsi kalendar
- * bersama seperti usrah bulanan — setiap satu berdiri sendiri, dan soalan yang
- * ditanya tentangnya sentiasa "siapa hadir ke acara ini".
+ * Bentuknya mengikut `usrah-events.tsx` kerana ia menguruskan table yang sama.
+ * Eksport di sini ialah SATU FAIL SATU PROGRAM: program am tidak berkongsi
+ * kalendar seperti usrah bulanan, dan soalan yang ditanya tentangnya sentiasa
+ * "siapa hadir ke acara ini".
  */
 export default function ProgramEventsScreen() {
   const router = useRouter();
@@ -45,8 +36,8 @@ export default function ProgramEventsScreen() {
   const [loading, setLoading] = useState(true);
   const [banner, setBanner] = useState<Banner>(null);
 
-  /** Id program yang sedang dieksport — butang lain kekal boleh ditekan. */
-  const [exportingId, setExportingId] = useState<string | null>(null);
+  /** Id program yang sedang dieksport — menu program lain dikunci sementara. */
+  const [busyId, setBusyId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -64,25 +55,26 @@ export default function ProgramEventsScreen() {
     void load();
   }, [accessLoading, canView, load]);
 
-  const exportEvent = useCallback(
+  /*
+    Eksport ialah bacaan, jadi `can_view` sudah memadai — admin yang hanya
+    menyemak tidak perlu kebenaran menulis untuk mengeluarkan senarai.
+  */
+  const exportAttendance = useCallback(
     async (event: UsrahEvent) => {
-      if (exportingId) return;
+      if (busyId) return;
 
       setBanner(null);
-      setExportingId(event.id);
+      setBusyId(event.id);
       try {
-        const report = await downloadProgramReport(event.id, event.name);
-        setBanner({
-          tone: 'positive',
-          message: 'Fail ' + report.fileName + ' dijana (' + report.rows + ' kehadiran).',
-        });
+        const report = await downloadEventAttendance(event.id, event.name);
+        setBanner({ tone: 'positive', message: 'Fail ' + report.fileName + ' dijana (' + report.rows + ' kehadiran).' });
       } catch (caught) {
         setBanner({ tone: 'negative', message: toMalayError(caught, 'Gagal menjana fail kehadiran.') });
       } finally {
-        setExportingId(null);
+        setBusyId(null);
       }
     },
-    [exportingId],
+    [busyId],
   );
 
   if (accessLoading || loading) return <LoadingScreen />;
@@ -117,18 +109,16 @@ export default function ProgramEventsScreen() {
         {canEdit ? (
           <Button
             label="+ Cipta Program"
-            onPress={() =>
-              router.push({ pathname: '/(app)/admin/usrah-event-create', params: { type: 'program' } })
-            }
+            onPress={() => router.push({ pathname: '/(app)/admin/usrah-event-create', params: { type: 'program' } })}
           />
         ) : (
           <Notice tone="info" message="Anda hanya mempunyai akses Lihat. Program di bawah adalah paparan sahaja." />
         )}
 
-        <View>
+        <View className="pb-8">
           <SectionTitle
             title={'Senarai Program (' + events.length + ')'}
-            caption="Kehadiran program TIDAK masuk ke grid dua belas bulan usrah — ia dieksport satu fail satu program."
+            caption="Kehadiran program tidak masuk ke grid dua belas bulan usrah. Tekan ⋯ untuk eksport kehadiran."
           />
 
           {events.length === 0 ? (
@@ -139,45 +129,23 @@ export default function ProgramEventsScreen() {
             />
           ) : (
             <View className="gap-2">
-              {events.map((event) => {
-                const status = usrahEventStatus(event);
-                return (
-                  <View key={event.id} className="gap-3 rounded-field border border-line bg-surface p-4">
-                    <Pressable
-                      accessibilityRole="button"
-                      accessibilityLabel={'Butiran ' + event.name}
-                      onPress={() =>
-                        router.push({ pathname: '/(app)/admin/usrah-event-detail', params: { id: event.id } })
-                      }
-                      className="flex-row items-center gap-3 active:opacity-70">
-                      <View className="flex-1">
-                        <Text className="text-sm font-semibold text-ink" numberOfLines={1}>
-                          {event.name}
-                        </Text>
-                        <Text className="mt-0.5 text-xs text-ink-muted">
-                          {dateRangeLabel(event.start_date, event.end_date)} ·{' '}
-                          {timeRangeLabel(event.start_time, event.end_time)}
-                          {event.location_text ? ' · ' + event.location_text : ''}
-                        </Text>
-                      </View>
-                      <Badge label={USRAH_EVENT_STATUS_LABEL[status]} tone={STATUS_TONE[status]} />
-                    </Pressable>
-
-                    {/*
-                      Eksport ialah bacaan, jadi `can_view` sudah memadai — admin
-                      yang hanya menyemak tidak perlu kebenaran menulis untuk
-                      mengeluarkan senarai kehadiran.
-                    */}
-                    <Button
-                      label="Eksport Kehadiran"
-                      variant="secondary"
-                      loading={exportingId === event.id}
-                      disabled={exportingId !== null}
-                      onPress={() => void exportEvent(event)}
-                    />
-                  </View>
-                );
-              })}
+              {events.map((event) => (
+                <EventListRow
+                  key={event.id}
+                  event={event}
+                  onPress={() => router.push({ pathname: '/(app)/admin/usrah-event-detail', params: { id: event.id } })}
+                  busy={busyId === event.id}
+                  locked={busyId !== null}
+                  actions={[
+                    {
+                      key: 'kehadiran',
+                      label: 'Eksport Kehadiran (.xlsx)',
+                      icon: 'download-outline',
+                      onPress: () => void exportAttendance(event),
+                    },
+                  ]}
+                />
+              ))}
             </View>
           )}
         </View>

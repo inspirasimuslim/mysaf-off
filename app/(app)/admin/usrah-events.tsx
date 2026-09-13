@@ -1,9 +1,9 @@
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { View } from 'react-native';
 
+import { EventListRow } from '@/components/event-list-row';
 import { ScreenHeader } from '@/components/screen-header';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -14,24 +14,13 @@ import { SectionTitle } from '@/components/ui/section-title';
 import { TextField } from '@/components/ui/text-field';
 import { useUsrahAccess } from '@/lib/department-access';
 import { toMalayError } from '@/lib/errors';
+import { downloadEventAttendance } from '@/lib/event-attendance-report';
 import { useGoBack } from '@/lib/navigation';
 import { fetchUsrahEvents } from '@/lib/usrah-events';
 import { downloadUsrahReport } from '@/lib/usrah-report';
-import {
-  USRAH_EVENT_STATUS_LABEL,
-  dateRangeLabel,
-  timeRangeLabel,
-  usrahEventStatus,
-  type UsrahEvent,
-} from '@/types/database';
+import type { UsrahEvent } from '@/types/database';
 
 type Banner = { tone: 'positive' | 'info' | 'negative'; message: string } | null;
-
-const STATUS_TONE = {
-  aktif: 'positive',
-  tamat: 'neutral',
-  nonaktif: 'warn',
-} as const;
 
 export default function UsrahEventsScreen() {
   const router = useRouter();
@@ -44,6 +33,9 @@ export default function UsrahEventsScreen() {
 
   const [year, setYear] = useState(String(new Date().getFullYear()));
   const [exporting, setExporting] = useState(false);
+
+  /** Id sesi yang sedang dieksport — menu sesi lain dikunci sementara. */
+  const [busyId, setBusyId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -84,6 +76,25 @@ export default function UsrahEventsScreen() {
       setExporting(false);
     }
   }, [exporting, year]);
+
+  /* Kehadiran SATU sesi — tambahan kepada laporan tahunan di bawah, bukan pengganti. */
+  const exportAttendance = useCallback(
+    async (event: UsrahEvent) => {
+      if (busyId) return;
+
+      setBanner(null);
+      setBusyId(event.id);
+      try {
+        const report = await downloadEventAttendance(event.id, event.name);
+        setBanner({ tone: 'positive', message: 'Fail ' + report.fileName + ' dijana (' + report.rows + ' kehadiran).' });
+      } catch (caught) {
+        setBanner({ tone: 'negative', message: toMalayError(caught, 'Gagal menjana fail kehadiran.') });
+      } finally {
+        setBusyId(null);
+      }
+    },
+    [busyId],
+  );
 
   if (accessLoading || loading) return <LoadingScreen />;
 
@@ -126,7 +137,7 @@ export default function UsrahEventsScreen() {
         <View>
           <SectionTitle
             title={'Senarai Sesi (' + events.length + ')'}
-            caption="Status dikira daripada tetingkap sah tiga jam selepas sesi tamat."
+            caption="Status dikira daripada tetingkap sah tiga jam selepas sesi tamat. Tekan ⋯ untuk eksport kehadiran sesi."
           />
 
           {events.length === 0 ? (
@@ -137,30 +148,23 @@ export default function UsrahEventsScreen() {
             />
           ) : (
             <View className="gap-2">
-              {events.map((event) => {
-                const status = usrahEventStatus(event);
-                return (
-                  <Pressable
-                    key={event.id}
-                    accessibilityRole="button"
-                    onPress={() =>
-                      router.push({ pathname: '/(app)/admin/usrah-event-detail', params: { id: event.id } })
-                    }
-                    className="flex-row items-center gap-3 rounded-field border border-line bg-surface p-4 active:opacity-70">
-                    <View className="flex-1">
-                      <Text className="text-sm font-semibold text-ink" numberOfLines={1}>
-                        {event.name}
-                      </Text>
-                      <Text className="mt-0.5 text-xs text-ink-muted">
-                        {dateRangeLabel(event.start_date, event.end_date)} ·{' '}
-                        {timeRangeLabel(event.start_time, event.end_time)}
-                        {event.location_text ? ' · ' + event.location_text : ''}
-                      </Text>
-                    </View>
-                    <Badge label={USRAH_EVENT_STATUS_LABEL[status]} tone={STATUS_TONE[status]} />
-                  </Pressable>
-                );
-              })}
+              {events.map((event) => (
+                <EventListRow
+                  key={event.id}
+                  event={event}
+                  onPress={() => router.push({ pathname: '/(app)/admin/usrah-event-detail', params: { id: event.id } })}
+                  busy={busyId === event.id}
+                  locked={busyId !== null}
+                  actions={[
+                    {
+                      key: 'kehadiran',
+                      label: 'Eksport Kehadiran (.xlsx)',
+                      icon: 'download-outline',
+                      onPress: () => void exportAttendance(event),
+                    },
+                  ]}
+                />
+              ))}
             </View>
           )}
         </View>
@@ -169,7 +173,7 @@ export default function UsrahEventsScreen() {
           Eksport ialah bacaan, jadi `can_view` sudah memadai — admin yang hanya
           menyemak tidak perlu kebenaran menulis untuk mengeluarkan laporan.
         */}
-        <View>
+        <View className="pb-8">
           <SectionTitle
             title="Muat Turun Laporan"
             caption="Kehadiran usrah bulanan setahun sebagai fail Excel (.xlsx)."
