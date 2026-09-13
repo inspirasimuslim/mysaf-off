@@ -82,7 +82,13 @@ export function DateTimeField({ label, mode, value, onChange, disabled = false }
 
     return (
       <TextField
-        label={label + (mode === 'date' ? ' (YYYY-MM-DD)' : ' (cth 8:00 PM)')}
+        /*
+          Petunjuk format dalam placeholder dan bukan dalam label: label yang
+          panjang berbalut dua baris apabila medan diletak separuh lebar, dan
+          kotak di sebelahnya tidak lagi sejajar.
+        */
+        label={label}
+        placeholder={mode === 'date' ? 'YYYY-MM-DD' : '8:00 PM'}
         value={mode === 'time' ? draft : value}
         onChangeText={(next) => {
           if (mode !== 'time') {
@@ -96,7 +102,7 @@ export function DateTimeField({ label, mode, value, onChange, disabled = false }
         editable={!disabled}
         autoCapitalize="characters"
         autoCorrect={false}
-        error={invalid ? 'Masa tidak difahami. Guna bentuk 8:00 PM atau 20:00.' : null}
+        error={invalid ? 'Guna 8:00 PM atau 20:00.' : null}
       />
     );
   }

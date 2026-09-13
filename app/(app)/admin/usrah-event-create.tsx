@@ -5,7 +5,6 @@ import { Text, View } from 'react-native';
 import { LocationPicker } from '@/components/location-picker';
 import { ScreenHeader } from '@/components/screen-header';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import { DateTimeField } from '@/components/ui/date-time-field';
 import { EmptyState } from '@/components/ui/empty-state';
 import { LoadingScreen } from '@/components/ui/loading-screen';
@@ -219,7 +218,7 @@ export default function UsrahEventCreateScreen() {
         onBackPress={goBack}
       />
 
-      <View className="gap-6 px-gutter pt-6">
+      <View className="gap-5 px-gutter pt-5">
         {banner ? <Notice tone={banner.tone} message={banner.message} /> : null}
 
         <View>
@@ -241,7 +240,7 @@ export default function UsrahEventCreateScreen() {
         {/* --- Nama: dijana untuk usrah, ditaip untuk program ------------------ */}
         <View>
           <SectionTitle title={eventType === 'usrah' ? 'Sesi Usrah' : 'Maklumat Program'} />
-          <View className="gap-4">
+          <View className="gap-3">
             {eventType === 'usrah' ? (
               <>
                 <PickerField
@@ -252,35 +251,41 @@ export default function UsrahEventCreateScreen() {
                   disabled={saving}
                   clearable={false}
                 />
-                <TextField
-                  label="Tahun"
-                  value={year}
-                  onChangeText={(value) => setYear(value.replace(/[^\d]/g, '').slice(0, 4))}
-                  editable={!saving}
-                  keyboardType="number-pad"
-                  error={year.length > 0 && !yearValid ? 'Tahun antara 2000 dan 2100.' : null}
-                />
-                <PickerField
-                  label="Bulan"
-                  value={month}
-                  options={MONTH_OPTIONS}
-                  onChange={setMonth}
-                  disabled={saving}
-                  clearable={false}
-                />
+
+                {/* Tahun dan bulan dibaca sebagai satu nilai, jadi ia duduk sebaris. */}
+                <View className="flex-row items-start gap-3">
+                  <View className="flex-1">
+                    <TextField
+                      label="Tahun"
+                      value={year}
+                      onChangeText={(value) => setYear(value.replace(/[^\d]/g, '').slice(0, 4))}
+                      editable={!saving}
+                      keyboardType="number-pad"
+                      error={year.length > 0 && !yearValid ? 'Antara 2000 dan 2100.' : null}
+                    />
+                  </View>
+                  <View className="flex-1">
+                    <PickerField
+                      label="Bulan"
+                      value={month}
+                      options={MONTH_OPTIONS}
+                      onChange={setMonth}
+                      disabled={saving}
+                      clearable={false}
+                    />
+                  </View>
+                </View>
 
                 {/*
                   Nama dipapar dan bukan disunting: ia dijana daripada tiga medan
                   di atas, jadi membenarkannya ditaip bermakna nama dan kolum
                   boleh bercanggah — dan nama itulah yang dilihat ahli.
                 */}
-                <View className="gap-2">
-                  <Text className="text-sm font-medium text-ink-muted">Nama sesi (dijana automatik)</Text>
-                  <Card>
-                    <Text className="text-base font-semibold text-ink">
-                      {nameValid ? generatedName : 'Pilih kawasan, tahun dan bulan'}
-                    </Text>
-                  </Card>
+                <View className="rounded-field bg-primary-soft px-4 py-2.5">
+                  <Text className="text-xs font-medium text-ink-muted">Nama sesi (dijana automatik)</Text>
+                  <Text className="mt-0.5 text-base font-semibold text-ink">
+                    {nameValid ? generatedName : 'Pilih kawasan, tahun dan bulan'}
+                  </Text>
                 </View>
               </>
             ) : (
@@ -306,63 +311,73 @@ export default function UsrahEventCreateScreen() {
           />
         </View>
 
-        <View>
-          <SectionTitle title="Lokasi" />
-          <TextField
-            label="Lokasi"
-            value={locationText}
-            onChangeText={setLocationText}
-            editable={!saving}
-            autoCapitalize="sentences"
-            autoCorrect={false}
-          />
-        </View>
-
+        {/*
+          Nama tempat, pin dan radius dalam SATU bahagian: ketiga-tiganya
+          menjawab soalan yang sama — di mana ahli mesti berada — dan radius
+          dilaraskan sambil memandang bulatannya pada peta, jadi stepper duduk
+          terus di bawah peta itu.
+        */}
         <View>
           <SectionTitle
-            title="Lokasi Peta"
+            title="Lokasi"
             caption="Pin menentukan pusat geofence yang menyemak jarak semasa ahli mengimbas QR."
           />
-          <LocationPicker
-            latitude={coords?.latitude ?? null}
-            longitude={coords?.longitude ?? null}
-            radiusMeters={radius}
-            onChange={setCoords}
-            disabled={saving}
-          />
+          <View className="gap-3">
+            <TextField
+              label="Nama tempat"
+              value={locationText}
+              onChangeText={setLocationText}
+              editable={!saving}
+              autoCapitalize="sentences"
+              autoCorrect={false}
+            />
+            <LocationPicker
+              latitude={coords?.latitude ?? null}
+              longitude={coords?.longitude ?? null}
+              radiusMeters={radius}
+              onChange={setCoords}
+              disabled={saving}
+            />
+            <StepperField
+              label={'Radius geofence (' + MIN_RADIUS + '–' + MAX_RADIUS + ' m)'}
+              value={radius}
+              onChange={setRadius}
+              step={RADIUS_STEP}
+              min={MIN_RADIUS}
+              max={MAX_RADIUS}
+              suffix="m"
+              disabled={saving}
+              caption="Kehadiran ditolak di luar bulatan. Longgarkan untuk dewan besar atau GPS lemah."
+            />
+          </View>
         </View>
 
-        {/* --- Julat tarikh & masa -------------------------------------------- */}
+        {/* --- Julat tarikh & masa: mula di kiri, tamat di kanan -------------- */}
         <View>
-          <SectionTitle
-            title="Tarikh & Masa"
-            caption="Acara satu hari: tetapkan tarikh mula dan tamat kepada hari yang sama."
-          />
-          <View className="gap-4">
-            <DateTimeField label="Tarikh mula" mode="date" value={startDate} onChange={setStartDate} disabled={saving} />
-            <DateTimeField label="Tarikh tamat" mode="date" value={endDate} onChange={setEndDate} disabled={saving} />
-            <DateTimeField label="Masa mula" mode="time" value={startTime} onChange={setStartTime} disabled={saving} />
-            <DateTimeField label="Masa tamat" mode="time" value={endTime} onChange={setEndTime} disabled={saving} />
+          <SectionTitle title="Tarikh & Masa" caption="Acara satu hari: tarikh mula dan tamat yang sama." />
+          <View className="gap-3">
+            <View className="flex-row items-start gap-3">
+              <View className="flex-1">
+                <DateTimeField label="Tarikh mula" mode="date" value={startDate} onChange={setStartDate} disabled={saving} />
+              </View>
+              <View className="flex-1">
+                <DateTimeField label="Tarikh tamat" mode="date" value={endDate} onChange={setEndDate} disabled={saving} />
+              </View>
+            </View>
+
+            <View className="flex-row items-start gap-3">
+              <View className="flex-1">
+                <DateTimeField label="Masa mula" mode="time" value={startTime} onChange={setStartTime} disabled={saving} />
+              </View>
+              <View className="flex-1">
+                <DateTimeField label="Masa tamat" mode="time" value={endTime} onChange={setEndTime} disabled={saving} />
+              </View>
+            </View>
 
             {dateValid && !rangeValid ? (
               <Notice tone="negative" message="Tarikh tamat tidak boleh lebih awal daripada tarikh mula." />
             ) : null}
           </View>
-        </View>
-
-        <View>
-          <SectionTitle title="Radius Geofence" />
-          <StepperField
-            label={'Radius (' + MIN_RADIUS + '–' + MAX_RADIUS + ' meter)'}
-            value={radius}
-            onChange={setRadius}
-            step={RADIUS_STEP}
-            min={MIN_RADIUS}
-            max={MAX_RADIUS}
-            suffix="m"
-            disabled={saving}
-            caption="Kehadiran ditolak di luar bulatan ini. Longgarkan untuk dewan besar atau kawasan liputan GPS lemah."
-          />
         </View>
 
         <View className="pb-8">

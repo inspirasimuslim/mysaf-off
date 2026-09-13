@@ -163,7 +163,7 @@ export default function DepartmentsScreen() {
           onBackPress={goBack}
         />
 
-        <View className="gap-6 px-gutter pt-6">
+        <View className="gap-5 px-gutter pt-5">
           {banner ? <Notice tone={banner.tone} message={banner.message} /> : null}
 
           <Button label="Tambah Department" onPress={openAddModal} />
@@ -180,14 +180,22 @@ export default function DepartmentsScreen() {
                 title="Senarai Department"
                 caption="Department nonaktif kekal dalam sistem tetapi tidak boleh dipilih untuk lantikan baharu."
               />
-              <View className="gap-4">
+              {/*
+                Satu baris setiap department: nama dan status dibaca bersama,
+                jadi badge duduk terus di sebelah nama dan bukan di baris kedua.
+                Nama yang panjang dibenarkan dua baris dan bukan dipotong —
+                beberapa nama lajnah hampir sama di hujungnya.
+              */}
+              <View className="gap-2">
                 {departments.map((department) => (
                   <View
                     key={department.id}
-                    className="flex-row items-center gap-3 rounded-card border border-line bg-surface p-card">
-                    <View className="flex-1">
-                      <Text className="text-base font-semibold text-ink">{department.name}</Text>
-                      <View className="mt-2">
+                    className="flex-row items-center gap-3 rounded-card border border-line bg-surface py-2 pl-4 pr-2">
+                    <View className="flex-1 flex-row items-center gap-2">
+                      <Text className="flex-shrink text-sm font-semibold text-ink" numberOfLines={2}>
+                        {department.name}
+                      </Text>
+                      <View>
                         <Badge
                           label={department.is_active ? 'Aktif' : 'Nonaktif'}
                           tone={department.is_active ? 'positive' : 'neutral'}

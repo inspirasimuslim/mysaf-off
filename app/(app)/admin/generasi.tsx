@@ -179,7 +179,7 @@ export default function GenerasiScreen() {
           onBackPress={goBack}
         />
 
-        <View className="gap-6 px-gutter pt-6">
+        <View className="gap-5 px-gutter pt-5">
           {banner ? <Notice tone={banner.tone} message={banner.message} /> : null}
 
           <Button label="Tambah Generasi" onPress={openAddModal} />
@@ -196,15 +196,21 @@ export default function GenerasiScreen() {
                 title="Senarai Generasi"
                 caption="Generasi nonaktif kekal pada rekod sedia ada tetapi tidak boleh dipilih untuk ahli baharu."
               />
-              <View className="gap-4">
+              {/*
+                Satu baris setiap generasi. Kod ('i01') tidak dipapar: label
+                sudah membawa nombor yang sama, dan kod hanya perlu wujud dalam
+                data sebagai kunci `members.generasi`.
+              */}
+              <View className="gap-2">
                 {generations.map((generation) => (
                   <View
                     key={generation.id}
-                    className="flex-row items-center gap-3 rounded-card border border-line bg-surface p-card">
-                    <View className="flex-1">
-                      <Text className="text-base font-semibold text-ink">{generation.label}</Text>
-                      <Text className="mt-0.5 text-sm text-ink-muted">{generation.code}</Text>
-                      <View className="mt-2">
+                    className="flex-row items-center gap-3 rounded-card border border-line bg-surface py-2 pl-4 pr-2">
+                    <View className="flex-1 flex-row items-center gap-2">
+                      <Text className="flex-shrink text-base font-semibold text-ink" numberOfLines={1}>
+                        {generation.label}
+                      </Text>
+                      <View>
                         <Badge
                           label={generation.is_active ? 'Aktif' : 'Nonaktif'}
                           tone={generation.is_active ? 'positive' : 'neutral'}
