@@ -63,6 +63,14 @@ const MESSAGE_MAP: { match: RegExp; message: string }[] = [
   { match: /refresh token|session.*(expired|missing|not found)/i, message: 'Sesi telah tamat. Sila log masuk semula.' },
 ];
 
+/**
+ * Ralat yang mesejnya SUDAH ditulis untuk pengguna dalam Bahasa Malaysia —
+ * contoh "Belum ada kehadiran direkodkan untuk acara ini." Tanpa kelas ini
+ * `toMalayError` menggantikan mesej itu dengan teks sandaran umum, dan admin
+ * hanya nampak "Gagal menjana fail" tanpa tahu sebabnya.
+ */
+export class UserError extends Error {}
+
 /** Kod ralat GoTrue, kalau ada. */
 export function errorCode(error: unknown): string | null {
   if (typeof error === 'object' && error !== null && 'code' in error) {
@@ -82,6 +90,8 @@ function errorMessage(error: unknown): string {
 }
 
 export function toMalayError(error: unknown, fallback = 'Ralat tidak dijangka. Sila cuba lagi.'): string {
+  if (error instanceof UserError && error.message) return error.message;
+
   const code = errorCode(error);
   if (code && CODE_MAP[code]) return CODE_MAP[code] as string;
 

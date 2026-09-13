@@ -5,6 +5,7 @@ import * as XLSX from 'xlsx';
 
 import { generationLabel } from '@/types/database';
 
+import { UserError } from './errors';
 import { fetchYuranReport } from './yuran';
 
 /**
@@ -39,7 +40,7 @@ export type YuranReport = {
 export async function downloadYuranReport(year: number): Promise<YuranReport> {
   const rows = await fetchYuranReport(year);
   if (!rows.length) {
-    throw new Error('Tiada rekod yuran untuk tahun ' + year + '.');
+    throw new UserError('Tiada rekod yuran untuk tahun ' + year + '.');
   }
 
   const sheetRows = rows.map((row) => ({

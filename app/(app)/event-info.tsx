@@ -18,6 +18,7 @@ import { Colors } from '@/constants/theme';
 import { toMalayError } from '@/lib/errors';
 import { fileSlug, shareImage } from '@/lib/image-share';
 import { useGoBack } from '@/lib/navigation';
+import { RSVP_LABEL, fetchMyRsvp, rsvpOpen, setMyRsvp, type RsvpResponse } from '@/lib/rsvp';
 import { fetchUpcomingEvents } from '@/lib/usrah-events';
 import {
   EVENT_TYPE_LABEL,
@@ -51,6 +52,30 @@ export default function EventInfoScreen() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+
+  // --- RSVP -------------------------------------------------------------------
+  const [myRsvp, setMyRsvpState] = useState<RsvpResponse | null>(null);
+  /** Jawapan yang sedang disimpan — spinner pada butang itu sahaja. */
+  const [rsvpSaving, setRsvpSaving] = useState<RsvpResponse | null>(null);
+  const [rsvpError, setRsvpError] = useState<string | null>(null);
+
+  const answerRsvp = useCallback(
+    async (response: RsvpResponse) => {
+      if (!event || rsvpSaving) return;
+
+      setRsvpError(null);
+      setRsvpSaving(response);
+      try {
+        await setMyRsvp(event.id, response);
+        setMyRsvpState(response);
+      } catch (caught) {
+        setRsvpError(toMalayError(caught, 'Gagal menyimpan respon. Acara mungkin sudah tamat.'));
+      } finally {
+        setRsvpSaving(null);
+      }
+    },
+    [event, rsvpSaving],
+  );
 
   /** Hanya kad putih kod QR yang ditangkap — bukan poster, bukan butang. */
   const qrRef = useRef<View>(null);
@@ -103,8 +128,15 @@ export default function EventInfoScreen() {
           web) tidak membawa apa-apa selain `id`, dan skrin yang bergantung pada
           parameter yang dihantar akan kosong di situ.
         */
-        const rows = await fetchUpcomingEvents();
-        if (active) setEvent(rows.find((row) => row.id === id) ?? null);
+        const [rows, mine] = await Promise.all([
+          fetchUpcomingEvents(),
+          // Jawapan sedia ada tidak kritikal: gagal dibaca bermakna butang tidak disorot, bukan skrin rosak.
+          fetchMyRsvp(id).catch(() => null),
+        ]);
+        if (active) {
+          setEvent(rows.find((row) => row.id === id) ?? null);
+          setMyRsvpState(mine);
+        }
       } catch {
         if (active) setEvent(null);
       } finally {
@@ -153,6 +185,47 @@ export default function EventInfoScreen() {
             transition={150}
             accessibilityLabel={'Poster ' + event.name}
           />
+        ) : null}
+
+        {/*
+          --- RSVP ----------------------------------------------------------------
+          Hanya sebelum `valid_until`: selepas itu RLS menolak jawapan, jadi
+          butang yang dipapar hanya akan gagal. Direktori sudah menapis acara
+          yang dimatikan.
+        */}
+        {rsvpOpen(event.valid_until) ? (
+          <View>
+            <SectionTitle title="Adakah anda akan hadir?" />
+            <View className="flex-row gap-3">
+              {(['hadir', 'tidak_hadir'] as const).map((response) => {
+                const selected = myRsvp === response;
+                return (
+                  <View key={response} className="flex-1">
+                    <Button
+                      label={RSVP_LABEL[response]}
+                      variant={selected ? 'primary' : 'secondary'}
+                      className="px-3"
+                      accessibilityState={{ selected, disabled: rsvpSaving !== null, busy: rsvpSaving === response }}
+                      loading={rsvpSaving === response}
+                      disabled={rsvpSaving !== null}
+                      icon={selected ? <Ionicons name="checkmark" size={18} color={Colors.white} /> : undefined}
+                      onPress={() => void answerRsvp(response)}
+                    />
+                  </View>
+                );
+              })}
+            </View>
+            <Text className="mt-2 text-center text-xs text-ink-muted">
+              {myRsvp
+                ? 'Respon anda: ' + RSVP_LABEL[myRsvp] + '. Boleh ditukar sehingga acara tamat.'
+                : 'Belum memberi respon. Jawapan anda membantu penganjur membuat persediaan.'}
+            </Text>
+            {rsvpError ? (
+              <View className="pt-2">
+                <Notice tone="negative" message={rsvpError} />
+              </View>
+            ) : null}
+          </View>
         ) : null}
 
         {/* --- Kod QR Kehadiran ---------------------------------------------- */}

@@ -5,6 +5,7 @@ import * as XLSX from 'xlsx';
 
 import { generationLabel } from '@/types/database';
 
+import { UserError } from './errors';
 import { fetchPipisReport } from './pipis';
 
 /**
@@ -37,7 +38,7 @@ export type PipisReport = {
 export async function downloadPipisReport(): Promise<PipisReport> {
   const rows = await fetchPipisReport();
   if (!rows.length) {
-    throw new Error('Tiada rekod ahli untuk dilaporkan.');
+    throw new UserError('Tiada rekod ahli untuk dilaporkan.');
   }
 
   const sheetRows = rows.map((row) => ({

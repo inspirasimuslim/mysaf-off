@@ -21,6 +21,7 @@ import { useProgramAccess, useUsrahAccess } from '@/lib/department-access';
 import { toMalayError } from '@/lib/errors';
 import { pickImage } from '@/lib/image-upload';
 import { useGoBack } from '@/lib/navigation';
+import { downloadRsvpList, fetchRsvpSummary, type RsvpSummary } from '@/lib/rsvp';
 import { fetchUsrahEvent, updateUsrahEvent, uploadEventPoster } from '@/lib/usrah-events';
 import {
   EVENT_TYPE_LABEL,
@@ -139,6 +140,40 @@ export default function UsrahEventDetailScreen() {
     },
     [busy, event, hydrate],
   );
+
+  // --- RSVP -------------------------------------------------------------------
+  const [rsvp, setRsvp] = useState<RsvpSummary | null>(null);
+  const [rsvpBusy, setRsvpBusy] = useState(false);
+  const eventId = event?.id;
+
+  useEffect(() => {
+    if (!eventId) return;
+    let active = true;
+
+    // Ringkasan ialah maklumat tambahan: kegagalannya tidak menghalang skrin.
+    fetchRsvpSummary(eventId)
+      .then((summary) => active && setRsvp(summary))
+      .catch(() => active && setRsvp(null));
+
+    return () => {
+      active = false;
+    };
+  }, [eventId]);
+
+  const downloadRsvp = useCallback(async () => {
+    if (!event || rsvpBusy) return;
+
+    setBanner(null);
+    setRsvpBusy(true);
+    try {
+      const report = await downloadRsvpList(event.id, event.name);
+      setBanner({ tone: 'positive', message: 'Fail ' + report.fileName + ' dijana (' + report.rows + ' respon).' });
+    } catch (caught) {
+      setBanner({ tone: 'negative', message: toMalayError(caught, 'Gagal menjana senarai RSVP.') });
+    } finally {
+      setRsvpBusy(false);
+    }
+  }, [event, rsvpBusy]);
 
   const changePoster = useCallback(async () => {
     if (!event || busy) return;
@@ -260,6 +295,37 @@ export default function UsrahEventDetailScreen() {
               label="Lihat Kehadiran Live"
               variant="secondary"
               onPress={() => router.push({ pathname: '/(app)/admin/event-attendance-live', params: { id: event.id } })}
+            />
+          </View>
+        </View>
+
+        {/* --- RSVP ---------------------------------------------------------- */}
+        <View>
+          <SectionTitle
+            title="RSVP Ahli"
+            caption="Belum respon dikira terhadap semua ahli aktif yang mempunyai akaun."
+          />
+          <Card>
+            <View className="gap-4">
+              <View className="flex-row">
+                <RsvpStat value={rsvp?.hadir} label="Akan Hadir" />
+                <RsvpStat value={rsvp?.tidak_hadir} label="Tidak Hadir" />
+                <RsvpStat value={rsvp?.belum} label="Belum Respon" />
+              </View>
+              <Text className="text-center text-xs text-ink-muted">
+                {rsvp
+                  ? rsvp.hadir + ' Akan Hadir · ' + rsvp.tidak_hadir + ' Tidak Hadir · ' + rsvp.belum + ' Belum Respon'
+                  : 'Ringkasan RSVP tidak dapat dimuatkan.'}
+              </Text>
+            </View>
+          </Card>
+          <View className="pt-3">
+            <Button
+              label="Muat Turun Senarai RSVP"
+              variant="secondary"
+              loading={rsvpBusy}
+              disabled={rsvpBusy}
+              onPress={() => void downloadRsvp()}
             />
           </View>
         </View>
@@ -391,6 +457,17 @@ export default function UsrahEventDetailScreen() {
         ) : null}
       </View>
     </Screen>
+  );
+}
+
+function RsvpStat({ value, label }: { value: number | undefined; label: string }) {
+  return (
+    <View className="flex-1 items-center">
+      <Text className="text-2xl font-bold text-ink" style={{ fontVariant: ['tabular-nums'] }}>
+        {value ?? '–'}
+      </Text>
+      <Text className="mt-0.5 text-xs text-ink-muted">{label}</Text>
+    </View>
   );
 }
 

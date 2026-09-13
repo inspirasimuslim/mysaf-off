@@ -5,6 +5,7 @@ import * as XLSX from 'xlsx';
 
 import { generationLabel } from '@/types/database';
 
+import { UserError } from './errors';
 import { supabase } from './supabase';
 import { MONTH_LABELS } from './usrah-import';
 
@@ -87,7 +88,7 @@ function buildWorkbook(rows: ReportRow[]): XLSX.WorkBook {
 export async function downloadUsrahReport(year: number): Promise<UsrahReport> {
   const rows = await fetchUsrahReportRows(year);
   if (!rows.length) {
-    throw new Error('Tiada rekod kehadiran untuk tahun ' + year + '.');
+    throw new UserError('Tiada rekod kehadiran untuk tahun ' + year + '.');
   }
 
   const book = buildWorkbook(rows);

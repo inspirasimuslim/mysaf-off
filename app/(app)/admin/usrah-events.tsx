@@ -16,6 +16,7 @@ import { useUsrahAccess } from '@/lib/department-access';
 import { toMalayError } from '@/lib/errors';
 import { downloadEventAttendance } from '@/lib/event-attendance-report';
 import { useGoBack } from '@/lib/navigation';
+import { downloadRsvpList } from '@/lib/rsvp';
 import { fetchUsrahEvents } from '@/lib/usrah-events';
 import { downloadUsrahReport } from '@/lib/usrah-report';
 import type { UsrahEvent } from '@/types/database';
@@ -78,17 +79,26 @@ export default function UsrahEventsScreen() {
   }, [exporting, year]);
 
   /* Kehadiran SATU sesi — tambahan kepada laporan tahunan di bawah, bukan pengganti. */
-  const exportAttendance = useCallback(
-    async (event: UsrahEvent) => {
+  const runExport = useCallback(
+    async (event: UsrahEvent, kind: 'kehadiran' | 'rsvp') => {
       if (busyId) return;
 
       setBanner(null);
       setBusyId(event.id);
       try {
-        const report = await downloadEventAttendance(event.id, event.name);
-        setBanner({ tone: 'positive', message: 'Fail ' + report.fileName + ' dijana (' + report.rows + ' kehadiran).' });
+        const report =
+          kind === 'kehadiran'
+            ? await downloadEventAttendance(event.id, event.name)
+            : await downloadRsvpList(event.id, event.name);
+        setBanner({
+          tone: 'positive',
+          message: 'Fail ' + report.fileName + ' dijana (' + report.rows + (kind === 'kehadiran' ? ' kehadiran).' : ' respon).'),
+        });
       } catch (caught) {
-        setBanner({ tone: 'negative', message: toMalayError(caught, 'Gagal menjana fail kehadiran.') });
+        setBanner({
+          tone: 'negative',
+          message: toMalayError(caught, kind === 'kehadiran' ? 'Gagal menjana fail kehadiran.' : 'Gagal menjana senarai RSVP.'),
+        });
       } finally {
         setBusyId(null);
       }
@@ -160,7 +170,13 @@ export default function UsrahEventsScreen() {
                       key: 'kehadiran',
                       label: 'Eksport Kehadiran (.xlsx)',
                       icon: 'download-outline',
-                      onPress: () => void exportAttendance(event),
+                      onPress: () => void runExport(event, 'kehadiran'),
+                    },
+                    {
+                      key: 'rsvp',
+                      label: 'Muat Turun Senarai RSVP (.xlsx)',
+                      icon: 'people-outline',
+                      onPress: () => void runExport(event, 'rsvp'),
                     },
                   ]}
                 />

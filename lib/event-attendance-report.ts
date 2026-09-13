@@ -2,6 +2,7 @@ import * as XLSX from 'xlsx';
 
 import { generationLabel } from '@/types/database';
 
+import { UserError } from './errors';
 import { supabase } from './supabase';
 import { deliverWorkbook } from './xlsx-download';
 
@@ -54,7 +55,7 @@ export async function downloadEventAttendance(eventId: string, eventName: string
 
   const rows = (data as AttendanceRow[] | null) ?? [];
   if (!rows.length) {
-    throw new Error('Belum ada kehadiran direkodkan untuk acara ini.');
+    throw new UserError('Belum ada kehadiran direkodkan untuk acara ini.');
   }
 
   const sheet = XLSX.utils.json_to_sheet(

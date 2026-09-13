@@ -489,6 +489,8 @@ export type UpcomingEvent = {
    * tetingkap masa — lihat `20260913000025_event_qr_for_members.sql`.
    */
   qr_token: string;
+  /** Akhir tetingkap kehadiran — butang RSVP ahli dipapar hanya sebelum masa ini. */
+  valid_until: string;
   start_date: string;
   end_date: string;
   start_time: string;
