@@ -1,5 +1,5 @@
 import { Image } from 'expo-image';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Text, View } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
@@ -42,6 +42,7 @@ const STATUS_TONE = { aktif: 'positive', tamat: 'neutral', nonaktif: 'warn' } as
 
 export default function UsrahEventDetailScreen() {
   const goBack = useGoBack();
+  const router = useRouter();
   const { id } = useLocalSearchParams<{ id?: string }>();
   /*
     Kebenaran diambil daripada KEDUA-DUA department kerana skrin ini melayan
@@ -273,6 +274,15 @@ export default function UsrahEventDetailScreen() {
               ) : null}
             </View>
           </Card>
+
+          {/* Paparan besar untuk laptop/projektor semasa program berlangsung. */}
+          <View className="pt-3">
+            <Button
+              label="Lihat Kehadiran Live"
+              variant="secondary"
+              onPress={() => router.push({ pathname: '/(app)/admin/event-attendance-live', params: { id: event.id } })}
+            />
+          </View>
         </View>
 
         {/* --- Poster -------------------------------------------------------- */}
