@@ -1,9 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { useCallback, useRef, useState } from 'react';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 
-import { PosterCarousel, type PosterItem } from '@/components/poster-carousel';
+import { PosterCarousel, useWebMouseScroll, type PosterItem } from '@/components/poster-carousel';
 import { ScreenHeader } from '@/components/screen-header';
 import { UsrahStrip } from '@/components/usrah-strip';
 import { Card } from '@/components/ui/card';
@@ -11,9 +11,11 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { MemberAvatar } from '@/components/ui/member-avatar';
 import { Notice } from '@/components/ui/notice';
 import { Screen } from '@/components/ui/screen';
+import { SectionTitle } from '@/components/ui/section-title';
 import { useAndroidExitPrompt } from '@/lib/android-back';
 import { fetchVisibleAnnouncements } from '@/lib/announcements';
 import { displayName, useAuth } from '@/lib/auth-context';
+import { fetchBirthdaysToday, shortName, type BirthdayToday } from '@/lib/birthdays';
 import { fetchMyMemberLinked } from '@/lib/members';
 import { fetchPipisSummary, peratusLabel, ringgitBulat, type PipisSummary } from '@/lib/pipis';
 import { fetchUpcomingEvents } from '@/lib/usrah-events';
@@ -38,6 +40,7 @@ export default function DashboardScreen() {
   const [yuran, setYuran] = useState<YuranSummary | null>(null);
   const [pipis, setPipis] = useState<PipisSummary | null>(null);
   const [profile, setProfile] = useState<{ fullName: string; avatarUrl: string | null } | null>(null);
+  const [birthdays, setBirthdays] = useState<BirthdayToday[]>([]);
 
   /*
     Dibaca semula setiap kali skrin mendapat fokus, sama seperti `UsrahStrip`:
@@ -59,6 +62,17 @@ export default function DashboardScreen() {
           if (active) setEvents(rows);
         } catch {
           if (active) setEvents([]);
+        }
+      })();
+
+      // Dibaca semula setiap fokus juga: app yang dibiarkan terbuka melepasi
+      // tengah malam patut menukar senarai hari jadi bila Utama dibuka semula.
+      void (async () => {
+        try {
+          const rows = await fetchBirthdaysToday();
+          if (active) setBirthdays(rows);
+        } catch {
+          if (active) setBirthdays([]);
         }
       })();
 
@@ -168,6 +182,12 @@ export default function DashboardScreen() {
         <UsrahStrip userId={user?.id ?? null} />
 
         {/*
+          Tidak wujud langsung dalam pokok komponen bila tiada sesiapa lahir hari
+          ini — tiada tajuk kosong, tiada teks "Tiada".
+        */}
+        {birthdays.length ? <BirthdayRow rows={birthdays} /> : null}
+
+        {/*
           Dua carousel, kedua-duanya hilang sepenuhnya bila kosong. Skrin Utama
           bagi ahli yang tiada program dan tiada pengumuman patut kelihatan
           sengaja pendek, bukan seperti skrin yang gagal memuatkan.
@@ -194,6 +214,34 @@ export default function DashboardScreen() {
         onCancel={exitPrompt.cancel}
       />
     </Screen>
+  );
+}
+
+/**
+ * Ahli yang lahir hari ini — satu baris chip teks, "Hafiz i12".
+ *
+ * Sengaja paling ringkas: tiada avatar, tiada kad. Ia ucapan kecil di tengah
+ * skrin Utama, bukan seksyen yang bersaing dengan program dan yuran. Baris
+ * ditatal ke tepi bila tidak muat; di web tetikus boleh menyeret atau memusing
+ * roda, sama seperti carousel poster.
+ */
+function BirthdayRow({ rows }: { rows: BirthdayToday[] }) {
+  const scrollRef = useRef<ScrollView>(null);
+  useWebMouseScroll(scrollRef, true);
+
+  return (
+    <View>
+      <SectionTitle title="Ahli yang lahir hari ini" />
+      <ScrollView ref={scrollRef} horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+        {rows.map((row, index) => (
+          <View key={row.full_name + ':' + index} className="rounded-pill bg-primary-soft px-3 py-1.5">
+            <Text className="text-sm font-semibold text-primary">
+              {shortName(row.full_name) + (row.generasi ? ' ' + row.generasi : '')}
+            </Text>
+          </View>
+        ))}
+      </ScrollView>
+    </View>
   );
 }
 

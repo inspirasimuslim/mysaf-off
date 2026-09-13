@@ -54,7 +54,7 @@ type Props = {
  * tidak membuka poster itu. Sentuhan tidak disentuh — pelayar sudah
  * mengendalikannya. Native tidak menjalankan apa-apa di sini.
  */
-function useWebMouseScroll(ref: RefObject<ScrollView | null>, enabled: boolean) {
+export function useWebMouseScroll(ref: RefObject<ScrollView | null>, enabled: boolean) {
   useEffect(() => {
     if (Platform.OS !== 'web' || !enabled) return;
 
