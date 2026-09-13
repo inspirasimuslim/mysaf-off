@@ -114,6 +114,8 @@ export default function EventInfoScreen() {
       const result = await deliverImage(uri, 'kod-qr-' + fileSlug(event.name) + '.jpg', 'Kod QR ' + event.name, mode);
       setSaveNotice(imageDeliveryMessage(result));
     } catch (caught) {
+      // Mesej di bawah umum — butiran sebenar (tangkapan skrin atau simpan native) hanya kelihatan di log Metro.
+      console.warn('[event-info] simpan kod QR gagal:', caught);
       setSaveError(toMalayError(caught, 'Gagal menyimpan kod QR. Cuba ambil screenshot skrin ini.'));
     } finally {
       setSaving(null);
