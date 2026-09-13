@@ -7,9 +7,11 @@ import { PosterCarousel, type PosterItem } from '@/components/poster-carousel';
 import { ScreenHeader } from '@/components/screen-header';
 import { UsrahStrip } from '@/components/usrah-strip';
 import { Card } from '@/components/ui/card';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { MemberAvatar } from '@/components/ui/member-avatar';
 import { Notice } from '@/components/ui/notice';
 import { Screen } from '@/components/ui/screen';
+import { useAndroidExitPrompt } from '@/lib/android-back';
 import { fetchVisibleAnnouncements } from '@/lib/announcements';
 import { displayName, useAuth } from '@/lib/auth-context';
 import { fetchMyMemberLinked } from '@/lib/members';
@@ -26,6 +28,8 @@ const AVATAR_SIZE = 44;
 export default function DashboardScreen() {
   const { user } = useAuth();
   const router = useRouter();
+  /* Utama ialah skrin akar selepas log masuk: back di sini bertanya sebelum menutup app. */
+  const exitPrompt = useAndroidExitPrompt();
 
   const [banner, setBanner] = useState<Banner>(null);
 
@@ -180,6 +184,15 @@ export default function DashboardScreen() {
           onPress={(id) => router.push({ pathname: '/(app)/announcement-info', params: { id } })}
         />
       </View>
+
+      <ConfirmDialog
+        visible={exitPrompt.visible}
+        title="Keluar Aplikasi"
+        message="Adakah anda pasti mahu keluar aplikasi?"
+        confirmLabel="Keluar"
+        onConfirm={exitPrompt.exit}
+        onCancel={exitPrompt.cancel}
+      />
     </Screen>
   );
 }

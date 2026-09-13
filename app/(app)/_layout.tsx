@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { LoadingScreen } from '@/components/ui/loading-screen';
 import { Colors } from '@/constants/theme';
+import { useAndroidBackNavigation } from '@/lib/android-back';
 import { useAuth } from '@/lib/auth-context';
 import { signOutEverywhere } from '@/lib/session';
 import { SUSPENDED_MESSAGE, setAuthNotice, useAccountStatus } from '@/lib/suspension';
@@ -160,6 +161,21 @@ export default function AppLayout() {
     };
   }, [userId, status]);
 
+  /*
+    Butang back Android — lihat `lib/android-back.ts`. Dipanggil SEBELUM return
+    awal supaya ia aktif pada skrin gate juga: selagi app belum melepasi semakan
+    sekatan dan kata laluan, back disekat sepenuhnya. `'unknown'` bagi kata
+    laluan TIDAK disekat kerana gate itu gagal-terbuka dan app sudah dibuka.
+  */
+  const backBlocked =
+    initialising ||
+    !session ||
+    status !== 'active' ||
+    password.state === 'checking' ||
+    password.state === 'expired' ||
+    password.state === 'must-change';
+  useAndroidBackNavigation(backBlocked);
+
   if (initialising) return <LoadingScreen />;
   if (!session) return <Redirect href="/(auth)/login" />;
 
@@ -190,6 +206,13 @@ export default function AppLayout() {
 
   return (
     <Tabs
+      /*
+        'history' dan bukan lalai 'firstRoute'. Skrin dalam seperti Yuran dan
+        Tetapan ialah tab tersembunyi, jadi dengan 'firstRoute' butang back dari
+        Yuran (dibuka dari Pembayaran) melompat terus ke Utama. Dengan sejarah,
+        back kembali ke skrin yang benar-benar dilawati sebelumnya.
+      */
+      backBehavior="history"
       screenOptions={{
         headerShown: false,
         sceneStyle: { backgroundColor: Colors.background },
