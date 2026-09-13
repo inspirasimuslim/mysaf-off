@@ -43,7 +43,8 @@ const STATUS_TONE = { aktif: 'positive', tamat: 'neutral', nonaktif: 'warn' } as
 export default function UsrahEventDetailScreen() {
   const goBack = useGoBack();
   const router = useRouter();
-  const { id } = useLocalSearchParams<{ id?: string }>();
+  /** `posterError`: dihantar oleh skrin cipta bila acara tercipta tetapi posternya gagal dimuat naik. */
+  const { id, posterError } = useLocalSearchParams<{ id?: string; posterError?: string }>();
   /*
     Kebenaran diambil daripada KEDUA-DUA department kerana skrin ini melayan
     kedua-dua jenis acara, dan baris yang dimuatkan sendiri yang menentukan yang
@@ -249,6 +250,19 @@ export default function UsrahEventDetailScreen() {
       <View className="gap-6 px-gutter pt-6">
         {banner ? <Notice tone={banner.tone} message={banner.message} /> : null}
 
+        {/* Hilang sendiri sebaik poster berjaya dimuat naik semula. */}
+        {posterError && !event.poster_url ? (
+          <Notice
+            tone="warn"
+            message={
+              'Poster gagal dimuat naik, tetapi ' +
+              EVENT_TYPE_LABEL[event.event_type].toLowerCase() +
+              ' berjaya dicipta dan kod QR di bawah sudah sah. Cuba muat naik poster semula di bahagian Poster. Punca: ' +
+              posterError
+            }
+          />
+        ) : null}
+
         {/* --- Kod QR -------------------------------------------------------- */}
         <View>
           <SectionTitle
@@ -314,7 +328,19 @@ export default function UsrahEventDetailScreen() {
         </View>
 
         {/* --- Poster + kod QR ----------------------------------------------- */}
-        {event.poster_url ? (
+        {!event.poster_url ? (
+          /*
+            Tanpa poster, bahagian ini dahulu hilang terus — dan admin menyangka
+            kod QR tidak dijana. Kod QR sudah wujud; hanya imej gabungan yang
+            memerlukan poster.
+          */
+          <View>
+            <SectionTitle title="Poster + Kod QR" />
+            <Text className="text-sm text-ink-muted">
+              Muat naik poster dahulu untuk menjana poster dengan kod QR. Kod QR di atas sudah sah dan boleh diimbas sekarang.
+            </Text>
+          </View>
+        ) : (
           <View>
             <SectionTitle
               title="Poster + Kod QR"
@@ -355,7 +381,7 @@ export default function UsrahEventDetailScreen() {
               />
             </View>
           </View>
-        ) : null}
+        )}
 
         {/* --- Lokasi -------------------------------------------------------- */}
         <View>

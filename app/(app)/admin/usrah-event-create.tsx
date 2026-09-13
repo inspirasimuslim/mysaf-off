@@ -151,23 +151,28 @@ export default function UsrahEventCreateScreen() {
       });
 
       /*
-        Poster dimuat naik selepas acara wujud kerana nama objeknya ialah
-        '<event_id>.jpg'. Kegagalan muat naik TIDAK membatalkan acara yang sudah
-        tercipta — admin dibawa ke skrin butiran dan boleh mencuba posternya
-        semula di sana.
+        Pada titik ini acara SUDAH wujud dengan kod QR yang sah — token dijana
+        dalam INSERT di atas. Poster langkah berasingan dan opsyenal: nama
+        objeknya '<event_id>.jpg', jadi ia hanya boleh dimuat naik selepas itu,
+        dan kegagalannya tidak membatalkan acara.
+
+        Status kegagalan dibawa ke skrin butiran sebagai parameter. Banner di
+        skrin ini tidak berguna: `router.replace` menutup skrin ini serta-merta,
+        jadi admin tidak pernah melihatnya dan menyangka semuanya berjaya.
       */
+      let posterError: string | null = null;
       if (posterUri) {
         try {
           await uploadEventPoster(event.id, posterUri);
         } catch (caught) {
-          setBanner({
-            tone: 'info',
-            message: toMalayError(caught, 'Acara dicipta, tetapi poster gagal dimuat naik.'),
-          });
+          posterError = toMalayError(caught, 'Ralat tidak diketahui.');
         }
       }
 
-      router.replace({ pathname: '/(app)/admin/usrah-event-detail', params: { id: event.id } });
+      router.replace({
+        pathname: '/(app)/admin/usrah-event-detail',
+        params: posterError ? { id: event.id, posterError } : { id: event.id },
+      });
     } catch (caught) {
       setBanner({ tone: 'negative', message: toMalayError(caught, 'Gagal mencipta acara.') });
     } finally {

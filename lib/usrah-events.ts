@@ -1,5 +1,3 @@
-import * as Crypto from 'expo-crypto';
-
 import type { EventType, UpcomingEvent, UsrahEvent } from '@/types/database';
 
 import { uploadImage } from './image-upload';
@@ -40,17 +38,6 @@ export type UpdateUsrahEventInput = Partial<
 >;
 
 /**
- * Kandungan kod QR.
- *
- * `randomUUID` dan bukan nilai yang diterbitkan daripada `id` program: sesiapa
- * yang memegang token ini boleh mendakwa hadir, jadi ia tidak boleh diteka
- * daripada apa-apa yang kelihatan pada skrin atau dalam URL.
- */
-function newQrToken(): string {
-  return Crypto.randomUUID();
-}
-
-/**
  * Acara satu jenis sahaja.
  *
  * Penapis `event_type` di sini ialah kemudahan, bukan sempadan keselamatan:
@@ -83,13 +70,19 @@ export async function fetchUsrahEvent(id: string): Promise<UsrahEvent | null> {
  * mengiranya (tiga jam selepas acara TAMAT, waktu Malaysia). Jam peranti boleh
  * silap atau diubah, dan tetingkap kehadiran bukan perkara yang patut
  * bergantung pada jam pengguna.
+ *
+ * `qr_token` juga TIDAK dihantar: trigger menjananya dalam INSERT yang sama
+ * (UUID rawak, tidak boleh diteka daripada `id`), dan kekangan menolak token
+ * kosong. Jadi baris yang berjaya dicipta SENTIASA mempunyai kod QR yang sah,
+ * tanpa bergantung pada poster atau apa-apa langkah selepasnya. Lihat
+ * `20260913000024_qr_token_server_generated.sql`.
  */
 export async function createUsrahEvent(input: CreateUsrahEventInput): Promise<UsrahEvent> {
   const { data: session } = await supabase.auth.getUser();
 
   const { data, error } = await supabase
     .from('usrah_events')
-    .insert({ ...input, qr_token: newQrToken(), created_by: session.user?.id ?? null })
+    .insert({ ...input, created_by: session.user?.id ?? null })
     .select('*')
     .single();
 
