@@ -48,3 +48,6 @@ example
 # data peribadi ahli — JANGAN commit (fail import mentah, 300+ rekod peribadi)
 seed-data/
 *.xlsx
+
+# sandaran pangkalan data — NRIC, alamat, hash kata laluan (scripts/backup-db.mjs)
+backups/

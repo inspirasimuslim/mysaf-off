@@ -94,7 +94,7 @@ export default function UsrahScanScreen() {
       }
 
       setPhase({ step: 'proses', note: 'Merekod kehadiran...' });
-      const result = await recordAttendance(event.id, coords, method);
+      const result = await recordAttendance(event.id, token.trim(), coords, method);
 
       setPhase({ step: 'berjaya', result });
     } catch (caught) {

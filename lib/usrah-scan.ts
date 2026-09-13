@@ -109,13 +109,20 @@ export async function findEventByQrToken(qrToken: string): Promise<ScannedEvent 
   return row ?? null;
 }
 
+/**
+ * Kod QR dihantar semula bersama id program. Id sahaja bukan bukti — ia
+ * dipulangkan kepada setiap ahli oleh direktori acara — jadi pelayan menolak
+ * tuntutan yang tidak membawa kod yang dipapar di lokasi.
+ */
 export async function recordAttendance(
   eventId: string,
+  qrToken: string,
   coords: { latitude: number; longitude: number } | null,
   method: ScanMethod,
 ): Promise<AttendanceResult> {
   const { data, error } = await supabase.rpc('record_usrah_attendance', {
     p_event_id: eventId,
+    p_qr_token: qrToken,
     p_latitude: coords?.latitude ?? null,
     p_longitude: coords?.longitude ?? null,
     p_method: method,

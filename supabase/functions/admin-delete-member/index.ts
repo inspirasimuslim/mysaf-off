@@ -50,6 +50,24 @@ Deno.serve(async (request) => {
       throw new RequestError('Anda tidak boleh memadam rekod anda sendiri.', 409);
     }
 
+    /*
+      Kebenaran department membenarkan menyunting rekod AHLI, bukan membuang
+      pemegang peranan. Tanpa semakan ini admin JABATAN DATA & SUMBER MANUSIA
+      boleh memadam akaun Super Admin — sedangkan menukar peranan pun sudah
+      dikhaskan untuk Super Admin sahaja.
+    */
+    if (member.user_id) {
+      const { data: target } = await admin.from('profiles').select('role').eq('id', member.user_id).maybeSingle();
+
+      if (target && target.role !== 'ahli') {
+        const { data: callerIsSuperAdmin, error: roleError } = await admin.rpc('is_super_admin', { uid: callerId });
+        if (roleError) throw new RequestError('Gagal mengesahkan kebenaran akaun.', 500);
+        if (callerIsSuperAdmin !== true) {
+          throw new RequestError('Akaun Admin dan Super Admin hanya boleh dipadam oleh Super Admin.', 403);
+        }
+      }
+    }
+
     // Fail avatar tidak terikat pada baris melalui foreign key, jadi ia perlu
     // dibuang secara eksplisit atau ia kekal selamanya dalam bucket.
     await admin.storage.from('avatars').remove([memberId + '.jpg', memberId + '.png', memberId + '.jpeg']).catch(
