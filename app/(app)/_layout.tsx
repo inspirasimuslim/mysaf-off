@@ -13,6 +13,7 @@ import { LoadingScreen } from '@/components/ui/loading-screen';
 import { Colors } from '@/constants/theme';
 import { useAndroidBackNavigation } from '@/lib/android-back';
 import { useAuth } from '@/lib/auth-context';
+import { activityCaptureProps, useIdleTimeout } from '@/lib/idle-timer';
 import { signOutEverywhere } from '@/lib/session';
 import { SUSPENDED_MESSAGE, setAuthNotice, useAccountStatus } from '@/lib/suspension';
 import { EXPIRED_MESSAGE, fetchPasswordStatus, type PasswordStatus } from '@/lib/temp-password';
@@ -132,7 +133,25 @@ function LoginWindowExpired() {
   );
 }
 
+/**
+ * Log keluar automatik selepas 20 minit tidak aktif — lihat `lib/idle-timer.ts`.
+ *
+ * Dipasang DI LUAR gate supaya ia aktif pada skrin sekatan dan tukar kata
+ * laluan paksa juga. View pembalut menangkap setiap sentuhan pada fasa capture
+ * tanpa merampasnya.
+ */
 export default function AppLayout() {
+  const { session, initialising } = useAuth();
+  useIdleTimeout(!initialising && !!session);
+
+  return (
+    <View style={{ flex: 1 }} {...activityCaptureProps}>
+      <AppGate />
+    </View>
+  );
+}
+
+function AppGate() {
   const { session, user, initialising } = useAuth();
   const insets = useSafeAreaInsets();
 

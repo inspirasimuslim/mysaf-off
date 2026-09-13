@@ -20,6 +20,7 @@ import {
 import { useProgramAccess, useUsrahAccess } from '@/lib/department-access';
 import { toMalayError } from '@/lib/errors';
 import { useGoBack } from '@/lib/navigation';
+import { useResetScrollOnFocus } from '@/lib/scroll-reset';
 import { fetchUsrahEvent } from '@/lib/usrah-events';
 import { EVENT_TYPE_LABEL, dateRangeLabel, generationLabel, type UsrahEvent } from '@/types/database';
 
@@ -65,6 +66,8 @@ export default function EventAttendanceLiveScreen() {
 
   /** Id yang sudah dilihat — kehadiran di luar set ini ialah yang baru masuk. */
   const seen = useRef<Set<string> | null>(null);
+  const scrollRef = useRef<ScrollView>(null);
+  useResetScrollOnFocus(scrollRef);
 
   const refresh = useCallback(async () => {
     if (!id) return;
@@ -162,6 +165,7 @@ export default function EventAttendanceLiveScreen() {
 
   return (
     <ScrollView
+      ref={scrollRef}
       className="flex-1 bg-background"
       contentContainerStyle={{ alignItems: 'center', paddingBottom: insets.bottom + 32 }}
       showsVerticalScrollIndicator={false}>

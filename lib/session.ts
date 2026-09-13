@@ -12,7 +12,7 @@ import { AUTH_STORAGE_KEY, supabase } from './supabase';
  * memancarkan `SIGNED_OUT`. Jadi dengan membuang kunci sesi terlebih dahulu, kita
  * dapat log keluar di peranti ini tanpa membatalkan sesi di pelayan.
  */
-async function clearLocalSession(): Promise<{ error: AuthError | null }> {
+export async function clearLocalSession(): Promise<{ error: AuthError | null }> {
   await SecureStorageAdapter.removeItem(AUTH_STORAGE_KEY);
   return supabase.auth.signOut({ scope: 'local' });
 }

@@ -13,6 +13,7 @@ import { TextField } from '@/components/ui/text-field';
 import { Colors } from '@/constants/theme';
 import { getBiometricSupport, getStoredRefreshToken, hasBiometricLogin, promptBiometric } from '@/lib/biometrics';
 import { toMalayError } from '@/lib/errors';
+import { resetIdleTracking } from '@/lib/idle-timer';
 import { takeAuthNotice } from '@/lib/suspension';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 
@@ -31,6 +32,11 @@ export default function LoginScreen() {
   const [biometricBusy, setBiometricBusy] = useState(false);
   const [biometricAvailable, setBiometricAvailable] = useState(false);
   const [forgotOpen, setForgotOpen] = useState(false);
+
+  // Tiada sesi di sini — cap masa aktiviti lama tidak boleh melog keluar log masuk seterusnya.
+  useEffect(() => {
+    resetIdleTracking();
+  }, []);
 
   // Papar butang biometrik hanya bila peranti menyokong DAN pengguna pernah aktifkan.
   useEffect(() => {
