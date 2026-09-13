@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { FlatList, Pressable, Text, View } from 'react-native';
@@ -9,6 +10,7 @@ import { MemberAvatar } from '@/components/ui/member-avatar';
 import { Notice } from '@/components/ui/notice';
 import { Screen } from '@/components/ui/screen';
 import { TextField } from '@/components/ui/text-field';
+import { Colors } from '@/constants/theme';
 import { useMemberAccess } from '@/lib/department-access';
 import { toMalayError } from '@/lib/errors';
 import { fetchMemberDirectory, fetchMembers } from '@/lib/members';
@@ -143,6 +145,22 @@ export default function AhliScreen() {
 
       <View className="gap-6 px-gutter pt-6">
         {error ? <Notice tone="negative" message={error} /> : null}
+
+        {/* Rumusan agregat — dibuka kepada semua ahli, tiada data individu. */}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Rumusan Keseluruhan Ahli"
+          onPress={() => router.push('/(app)/ahli-rumusan')}
+          className="flex-row items-center gap-3 rounded-card border border-line bg-surface p-4 active:opacity-70">
+          <View className="h-11 w-11 items-center justify-center rounded-pill bg-primary-soft">
+            <Ionicons name="stats-chart" size={20} color={Colors.primary} />
+          </View>
+          <View className="flex-1">
+            <Text className="text-base font-semibold text-ink">Rumusan Keseluruhan Ahli</Text>
+            <Text className="mt-0.5 text-xs text-ink-muted">Jantina, generasi, sekolah, negeri dan lain-lain</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={Colors.inkFaint} />
+        </Pressable>
 
         <TextField
           label="Cari"
