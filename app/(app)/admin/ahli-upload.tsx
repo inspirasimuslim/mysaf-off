@@ -16,6 +16,7 @@ import { useMemberAccess } from '@/lib/department-access';
 import { toMalayError } from '@/lib/errors';
 import { countMembers, importMembers } from '@/lib/members';
 import { useGoBack } from '@/lib/navigation';
+import { useTemplateDownload } from '@/lib/template-download';
 import { generationLabel } from '@/types/database';
 
 const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
@@ -60,6 +61,8 @@ export default function AhliUploadScreen() {
   const [importing, setImporting] = useState(false);
   const [progress, setProgress] = useState(0);
   const [done, setDone] = useState<Done | null>(null);
+
+  const template = useTemplateDownload('ahli', setBanner);
 
   // Jumlah rekod sedia ada dibaca awal supaya amaran "akan menimpa" boleh dipapar
   // sebelum pengguna menekan Sahkan, bukan selepasnya.
@@ -200,15 +203,24 @@ export default function AhliUploadScreen() {
           <View>
             <SectionTitle
               title="1. Pilih fail Excel"
-              caption="Fail .xlsx dengan pengepala asal (UserName, Generasi, Email dan lain-lain)."
+              caption="Fail .xlsx dengan pengepala asal (UserName, Generasi, Email dan lain-lain), atau fail eksport Senarai Ahli yang membawa lajur NomborAhli."
             />
-            <Button
-              label={parsed ? 'Tukar Fail' : 'Pilih Fail .xlsx'}
-              variant={parsed ? 'secondary' : 'primary'}
-              loading={picking}
-              disabled={picking || importing}
-              onPress={() => void pickFile()}
-            />
+            <View className="gap-3">
+              <Button
+                label="Muat Turun Template"
+                variant="ghost"
+                loading={template.busy}
+                disabled={template.busy || picking || importing}
+                onPress={() => void template.download()}
+              />
+              <Button
+                label={parsed ? 'Tukar Fail' : 'Pilih Fail .xlsx'}
+                variant={parsed ? 'secondary' : 'primary'}
+                loading={picking}
+                disabled={picking || importing}
+                onPress={() => void pickFile()}
+              />
+            </View>
           </View>
         ) : null}
 
@@ -216,7 +228,14 @@ export default function AhliUploadScreen() {
         {parsed && stats ? (
           <>
             <View>
-              <SectionTitle title="2. Pratonton" caption="Nombor ahli diberikan mengikut generasi i01 → i27, kemudian nama A–Z." />
+              <SectionTitle
+                title="2. Pratonton"
+                caption={
+                  parsed.hasMemberNumbers
+                    ? 'Nombor ahli diambil daripada lajur NomborAhli dalam fail.'
+                    : 'Nombor ahli diberikan mengikut generasi i01 → i27, kemudian nama A–Z.'
+                }
+              />
 
               <Card>
                 <View className="gap-2">
@@ -229,15 +248,32 @@ export default function AhliUploadScreen() {
               </Card>
             </View>
 
+            {/*
+              Tanpa NomborAhli, nombor 0001.. diberi semula mengikut susunan dan
+              upsert menulis ke atas rekod yang kebetulan memegang nombor itu —
+              bukan orang yang sama. Amaran ini merah kerana kesilapannya senyap:
+              import "berjaya", tetapi data ahli sudah bertukar tuan.
+            */}
             {existing ? (
-              <Notice
-                tone="warn"
-                message={
-                  'Pangkalan data sudah mempunyai ' +
-                  existing +
-                  ' rekod ahli. Baris dengan nombor ahli yang sama akan DIKEMAS KINI, bukan diduplikasi.'
-                }
-              />
+              parsed.hasMemberNumbers ? (
+                <Notice
+                  tone="warn"
+                  message={
+                    'Pangkalan data sudah mempunyai ' +
+                    existing +
+                    ' rekod ahli. Baris dengan NomborAhli yang sama akan DIKEMAS KINI, bukan diduplikasi.'
+                  }
+                />
+              ) : (
+                <Notice
+                  tone="negative"
+                  message={
+                    'Fail ini TIADA lajur NomborAhli. Nombor diberi semula mengikut generasi dan nama, dan akan MENIMPA ' +
+                    Math.min(existing, stats.total) +
+                    ' rekod sedia ada yang bernombor sama walaupun orangnya berbeza. Untuk mengemas kini data sedia ada, gunakan "Muat Turun Semua Data Ahli" di Senarai Ahli, sunting fail itu, dan muat naik semula.'
+                  }
+                />
+              )
             ) : null}
 
             {errors.length ? (

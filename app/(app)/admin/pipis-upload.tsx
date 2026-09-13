@@ -18,6 +18,7 @@ import { fetchMembers } from '@/lib/members';
 import { useGoBack } from '@/lib/navigation';
 import { importPipisContribution, ringgitPipis } from '@/lib/pipis';
 import { parsePipisWorkbook, summarisePipis, type PipisParseResult } from '@/lib/pipis-import';
+import { useTemplateDownload } from '@/lib/template-download';
 import type { MemberLookupRow } from '@/lib/usrah-import';
 import { generationLabel } from '@/types/database';
 
@@ -69,6 +70,8 @@ export default function PipisUploadScreen() {
   const [importing, setImporting] = useState(false);
   const [progress, setProgress] = useState(0);
   const [done, setDone] = useState<Done | null>(null);
+
+  const template = useTemplateDownload('pipis', setBanner);
 
   /*
     Padanan dibuat terhadap Senarai Ahli, jadi senarai itu mesti ada SEBELUM
@@ -201,13 +204,22 @@ export default function PipisUploadScreen() {
             title="Fail Excel"
             caption="Kolum: NAMA, GENERASI, KAWASAN, STATUS, JUMLAH_SUMBANGAN."
           />
-          <Button
-            label={fileName ? 'Tukar Fail' : 'Pilih Fail .xlsx'}
-            variant="secondary"
-            loading={picking || members === null}
-            disabled={picking || members === null || importing}
-            onPress={() => void pickFile()}
-          />
+          <View className="gap-3">
+            <Button
+              label="Muat Turun Template"
+              variant="ghost"
+              loading={template.busy}
+              disabled={template.busy || picking || importing}
+              onPress={() => void template.download()}
+            />
+            <Button
+              label={fileName ? 'Tukar Fail' : 'Pilih Fail .xlsx'}
+              variant="secondary"
+              loading={picking || members === null}
+              disabled={picking || members === null || importing}
+              onPress={() => void pickFile()}
+            />
+          </View>
           {fileName ? <Text className="pt-2 text-xs text-ink-muted">{fileName}</Text> : null}
         </View>
 

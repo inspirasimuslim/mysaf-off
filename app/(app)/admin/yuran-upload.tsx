@@ -16,6 +16,7 @@ import { useYuranAccess } from '@/lib/department-access';
 import { toMalayError } from '@/lib/errors';
 import { fetchMembers } from '@/lib/members';
 import { useGoBack } from '@/lib/navigation';
+import { useTemplateDownload } from '@/lib/template-download';
 import type { MemberLookupRow } from '@/lib/usrah-import';
 import { importYuranOpening, ringgit } from '@/lib/yuran';
 import { parseYuranWorkbook, summariseYuran, type YuranParseResult } from '@/lib/yuran-import';
@@ -71,6 +72,8 @@ export default function YuranUploadScreen() {
   const [importing, setImporting] = useState(false);
   const [progress, setProgress] = useState(0);
   const [done, setDone] = useState<Done | null>(null);
+
+  const template = useTemplateDownload('yuran', setBanner);
 
   /*
     Padanan dibuat terhadap Senarai Ahli, jadi senarai itu mesti ada SEBELUM
@@ -219,13 +222,22 @@ export default function YuranUploadScreen() {
             title="Fail Excel"
             caption="Kolum: NAMA, GENERASI, TUNGGAKAN, PEMBAYARAN_2025, BAKI_TUNGGAKAN, LEBIHAN_BAYARAN."
           />
-          <Button
-            label={fileName ? 'Tukar Fail' : 'Pilih Fail .xlsx'}
-            variant="secondary"
-            loading={picking || members === null}
-            disabled={picking || members === null || importing}
-            onPress={() => void pickFile()}
-          />
+          <View className="gap-3">
+            <Button
+              label="Muat Turun Template"
+              variant="ghost"
+              loading={template.busy}
+              disabled={template.busy || picking || importing}
+              onPress={() => void template.download()}
+            />
+            <Button
+              label={fileName ? 'Tukar Fail' : 'Pilih Fail .xlsx'}
+              variant="secondary"
+              loading={picking || members === null}
+              disabled={picking || members === null || importing}
+              onPress={() => void pickFile()}
+            />
+          </View>
           {fileName ? <Text className="pt-2 text-xs text-ink-muted">{fileName}</Text> : null}
         </View>
 

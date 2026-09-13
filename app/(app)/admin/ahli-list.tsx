@@ -14,6 +14,7 @@ import { SectionTitle } from '@/components/ui/section-title';
 import { TextField } from '@/components/ui/text-field';
 import { useMemberAccess } from '@/lib/department-access';
 import { toMalayError } from '@/lib/errors';
+import { downloadMembersFullExport } from '@/lib/member-export';
 import { fetchGenerations, fetchMembers } from '@/lib/members';
 import { useGoBack } from '@/lib/navigation';
 import { generationLabel, type Generation, type MemberSummary, type Option } from '@/types/database';
@@ -34,6 +35,35 @@ export default function AhliListScreen() {
   const [search, setSearch] = useState('');
   const [generation, setGeneration] = useState<string | null>(null);
   const [limit, setLimit] = useState(PAGE);
+
+  const [exporting, setExporting] = useState(false);
+  const [exportNotice, setExportNotice] = useState<{ tone: 'positive' | 'negative'; message: string } | null>(null);
+
+  /*
+    Kebenaran MELIHAT sudah memadai: eksport hanya membaca. Skrin ini sendiri
+    tidak dibuka tanpanya, dan `members_full_export()` menyemak semula di pelayan.
+  */
+  const exportAll = useCallback(async () => {
+    if (exporting) return;
+
+    setExportNotice(null);
+    setExporting(true);
+    try {
+      const result = await downloadMembersFullExport();
+      setExportNotice({
+        tone: 'positive',
+        message:
+          result.rows +
+          ' ahli dieksport ke ' +
+          result.fileName +
+          '. Fail ini mengandungi NRIC, alamat dan pendapatan — simpan dengan selamat dan jangan kongsi.',
+      });
+    } catch (caught) {
+      setExportNotice({ tone: 'negative', message: toMalayError(caught, 'Gagal mengeksport data ahli.') });
+    } finally {
+      setExporting(false);
+    }
+  }, [exporting]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -110,17 +140,27 @@ export default function AhliListScreen() {
 
       <View className="gap-6 px-gutter pt-6">
         {error ? <Notice tone="negative" message={error} /> : null}
+        {exportNotice ? <Notice tone={exportNotice.tone} message={exportNotice.message} /> : null}
 
-        {canEdit ? (
-          <View className="gap-3">
-            <Button label="Tambah Ahli" onPress={() => router.push('/(app)/admin/ahli-tambah')} />
-            <Button
-              label="Muat Naik Fail Excel"
-              variant="secondary"
-              onPress={() => router.push('/(app)/admin/ahli-upload')}
-            />
-          </View>
-        ) : null}
+        <View className="gap-3">
+          {canEdit ? (
+            <>
+              <Button label="Tambah Ahli" onPress={() => router.push('/(app)/admin/ahli-tambah')} />
+              <Button
+                label="Muat Naik Fail Excel"
+                variant="secondary"
+                onPress={() => router.push('/(app)/admin/ahli-upload')}
+              />
+            </>
+          ) : null}
+          <Button
+            label="Muat Turun Semua Data Ahli"
+            variant="secondary"
+            loading={exporting}
+            disabled={exporting || members.length === 0}
+            onPress={() => void exportAll()}
+          />
+        </View>
 
         <View className="gap-4">
           <TextField

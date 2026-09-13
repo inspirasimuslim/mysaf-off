@@ -49,6 +49,12 @@ export type ParseResult = {
   issues: ImportIssue[];
   /** Jumlah baris dalam fail, termasuk yang ditolak. */
   totalRows: number;
+  /**
+   * `true` bila fail membawa lajur NomborAhli (fail eksport Senarai Ahli).
+   * Nombor itu dikekalkan sebagai kunci kemas kini; tanpanya nombor diberi
+   * semula mengikut susunan dan boleh menimpa rekod lain yang bernombor sama.
+   */
+  hasMemberNumbers: boolean;
 };
 
 // =============================================================================
@@ -78,6 +84,13 @@ function bool(value: unknown): boolean {
   const raw = text(value);
   if (raw === null) return false;
   return /^(true|ya|yes|1)$/i.test(raw);
+}
+
+/** 1, '1', '0001' → '0001'. Excel membuang sifar di hadapan sebaik sel disunting. */
+function memberNumber(value: unknown): string | null {
+  const raw = text(value);
+  if (raw === null) return null;
+  return /^\d+$/.test(raw) ? raw.padStart(4, '0') : raw;
 }
 
 /** Buang tanda baca dan ruang berganda supaya padanan tidak terikat pada ejaan. */
@@ -136,13 +149,25 @@ export function toStatusPekerjaan(value: unknown): StatusPekerjaan | null {
   if (has('SURI RUMAH') || has('SURIRUMAH')) return 'suri_rumah';
   if (has('PESARA')) return 'pesara';
   if (has('BELAJAR') || has('PELAJAR')) return 'belajar_sepenuh_masa';
-  if (has('BEKERJA')) return 'bekerja';
+  // 'TIDAK BEKERJA' mengandungi 'BEKERJA', jadi ia mesti diperiksa dahulu.
   if (has('MENGANGGUR') || has('TIDAK BEKERJA')) return 'tidak_bekerja';
+  if (has('BEKERJA')) return 'bekerja';
   return null;
 }
 
+const PENDAPATAN_RANGES: readonly string[] = ['<1000', '1000-2999', '3000-4999', '5000-9999', '10000+'];
+
 /** Nombor pendapatan mentah → julat. Nilai <= 0 dianggap tiada maklumat. */
 export function toPendapatanRange(value: unknown): PendapatanRange | null {
+  /*
+    Nilai yang sudah berbentuk julat diterima apa adanya. Fail eksport menulis
+    julat seperti tersimpan ('3000-4999'); tanpa semakan ini `int()` membuang
+    sengkang dan membacanya sebagai 30004999, jadi setiap ahli yang dieksport
+    dan dimuat naik semula akan melompat ke '10000+'.
+  */
+  const raw = text(value);
+  if (raw !== null && PENDAPATAN_RANGES.includes(raw)) return raw as PendapatanRange;
+
   const amount = int(value);
   if (amount === null || amount <= 0) return null;
 
@@ -183,6 +208,13 @@ export const IGNORED_COLUMNS = ['Pekerjaan', 'BilTanggungan', 'NoTel2', 'Role'] 
 /** Pengepala yang mesti ada sebelum fail diterima. */
 const REQUIRED_COLUMNS = ['UserName', 'Generasi'] as const;
 
+/**
+ * Nama dalam baris contoh template (`lib/excel-templates.ts`). Baris itu ditolak
+ * di sini supaya template yang dimuat naik tanpa dipadam barisnya tidak mencipta
+ * seorang ahli bernama "CONTOH NAMA AHLI".
+ */
+export const TEMPLATE_EXAMPLE_NAME = 'CONTOH NAMA AHLI';
+
 function mapRow(raw: RawRow): ParsedMember {
   const statusPekerjaan = toStatusPekerjaan(raw.StatusBelajarBekerja);
 
@@ -197,8 +229,8 @@ function mapRow(raw: RawRow): ParsedMember {
   );
 
   return {
-    // --- Identiti --- (nombor_ahli diberikan kemudian oleh assignMemberNumbers)
-    nombor_ahli: null,
+    // --- Identiti --- (tanpa lajur NomborAhli, nombor diberikan oleh assignMemberNumbers)
+    nombor_ahli: memberNumber(raw.NomborAhli),
     generasi: toGenerationCode(raw.Generasi),
     full_name: text(raw.UserName) ?? '',
     jantina: text(raw.Jantina),
@@ -277,6 +309,38 @@ export function assignMemberNumbers(members: ParsedMember[]): ParsedMember[] {
   }));
 }
 
+/**
+ * Kekalkan NomborAhli dari fail — laluan fail eksport yang disunting dan dimuat
+ * naik semula.
+ *
+ * Nombor ialah kunci kemas kini, jadi memberinya semula mengikut susunan
+ * (seperti `assignMemberNumbers`) akan menulis data seseorang ke atas rekod
+ * orang lain sebaik sahaja satu ahli ditambah atau dibuang dari fail. Baris
+ * tanpa nombor diberi nombor selepas yang tertinggi dalam fail, dan dilaporkan
+ * supaya admin boleh menyemaknya.
+ */
+export function keepMemberNumbers(members: ParsedMember[], issues: ImportIssue[]): ParsedMember[] {
+  let next = members.reduce((highest, member) => {
+    const value = member.nombor_ahli && /^\d+$/.test(member.nombor_ahli) ? Number.parseInt(member.nombor_ahli, 10) : 0;
+    return Math.max(highest, value);
+  }, 0);
+
+  const numbered = members.filter((member) => member.nombor_ahli !== null);
+  const fresh = assignMemberNumbers(members.filter((member) => member.nombor_ahli === null)).map((member) => {
+    next += 1;
+    const nombor = String(next).padStart(4, '0');
+    issues.push({
+      level: 'amaran',
+      row: 0,
+      name: member.full_name,
+      message: 'Tiada NomborAhli — diberi nombor baharu ' + nombor + '. Pastikan nombor itu belum dimiliki ahli lain.',
+    });
+    return { ...member, nombor_ahli: nombor };
+  });
+
+  return [...numbered, ...fresh];
+}
+
 // =============================================================================
 // Kemasukan awam
 // =============================================================================
@@ -290,6 +354,8 @@ export function assignMemberNumbers(members: ParsedMember[]): ParsedMember[] {
 export function parseRows(rows: RawRow[]): ParseResult {
   const issues: ImportIssue[] = [];
   const accepted: ParsedMember[] = [];
+  /** NomborAhli yang sudah diambil → baris pertama yang memegangnya. */
+  const numbers = new Map<string, number>();
 
   rows.forEach((raw, index) => {
     // Baris 1 ialah pengepala, jadi baris data pertama ialah baris 2 dalam Excel.
@@ -300,6 +366,11 @@ export function parseRows(rows: RawRow[]): ParseResult {
 
     if (!member.full_name) {
       issues.push({ level: 'ralat', row: rowNumber, name, message: 'Tiada UserName — baris dilangkau.' });
+      return;
+    }
+
+    if (member.full_name.toUpperCase() === TEMPLATE_EXAMPLE_NAME) {
+      issues.push({ level: 'ralat', row: rowNumber, name, message: 'Baris contoh daripada template — dilangkau.' });
       return;
     }
 
@@ -353,6 +424,21 @@ export function parseRows(rows: RawRow[]): ParseResult {
       });
     }
 
+    // Dua baris dengan nombor yang sama akan saling menimpa semasa upsert.
+    if (member.nombor_ahli) {
+      const earlier = numbers.get(member.nombor_ahli);
+      if (earlier !== undefined) {
+        issues.push({
+          level: 'ralat',
+          row: rowNumber,
+          name,
+          message: 'NomborAhli ' + member.nombor_ahli + ' sudah digunakan pada baris ' + earlier + ' — baris dilangkau.',
+        });
+        return;
+      }
+      numbers.set(member.nombor_ahli, rowNumber);
+    }
+
     accepted.push(member);
   });
 
@@ -374,7 +460,10 @@ export function parseRows(rows: RawRow[]): ParseResult {
     }
   });
 
-  return { members: assignMemberNumbers(accepted), issues, totalRows: rows.length };
+  const hasMemberNumbers = accepted.some((member) => member.nombor_ahli !== null);
+  const members = hasMemberNumbers ? keepMemberNumbers(accepted, issues) : assignMemberNumbers(accepted);
+
+  return { members, issues, totalRows: rows.length, hasMemberNumbers };
 }
 
 /** Ralat yang membawa mesej sedia-papar dalam BM. */

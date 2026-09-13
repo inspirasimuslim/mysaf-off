@@ -17,6 +17,7 @@ import { useUsrahAccess } from '@/lib/department-access';
 import { toMalayError } from '@/lib/errors';
 import { fetchMembers } from '@/lib/members';
 import { useGoBack } from '@/lib/navigation';
+import { useTemplateDownload } from '@/lib/template-download';
 import { importUsrahAttendance } from '@/lib/usrah';
 import {
   countAttended,
@@ -76,6 +77,8 @@ export default function UsrahUploadScreen() {
   const [importing, setImporting] = useState(false);
   const [progress, setProgress] = useState(0);
   const [done, setDone] = useState<Done | null>(null);
+
+  const template = useTemplateDownload('usrah', setBanner);
 
   /*
     Padanan dibuat terhadap Senarai Ahli, jadi senarai itu mesti ada SEBELUM
@@ -245,13 +248,22 @@ export default function UsrahUploadScreen() {
               title="2. Pilih fail Excel"
               caption="Fail .xlsx dengan kolum NAMA, GENERASI dan JAN hingga DIS (0 = tidak hadir, 1 = hadir, kosong = belum ada rekod)."
             />
-            <Button
-              label={parsed ? 'Tukar Fail' : 'Pilih Fail .xlsx'}
-              variant={parsed ? 'secondary' : 'primary'}
-              loading={picking || members === null}
-              disabled={picking || importing || members === null}
-              onPress={() => void pickFile()}
-            />
+            <View className="gap-3">
+              <Button
+                label="Muat Turun Template"
+                variant="ghost"
+                loading={template.busy}
+                disabled={template.busy || picking || importing}
+                onPress={() => void template.download()}
+              />
+              <Button
+                label={parsed ? 'Tukar Fail' : 'Pilih Fail .xlsx'}
+                variant={parsed ? 'secondary' : 'primary'}
+                loading={picking || members === null}
+                disabled={picking || importing || members === null}
+                onPress={() => void pickFile()}
+              />
+            </View>
           </View>
         ) : null}
 
