@@ -40,13 +40,32 @@ export function subscribeLiveAttendance(
   onChange: () => void,
   onStatus: (status: LiveStatus) => void,
 ): () => void {
+  /*
+    Tiga pendengar, bukan satu dengan `event: '*'`.
+
+    Realtime tidak menyokong penapis pada DELETE, dan pada table ber-RLS mesej
+    DELETE hanya membawa kunci utama (`id`) — bukan `event_id` — jadi penapis
+    `event_id=eq.…` tidak pernah sepadan dan pemadaman tidak sampai langsung. Kiraan akan kekal pada nombor
+    lama sehingga skrin dibuka semula.
+
+    DELETE dilanggan TANPA penapis. Mesejnya hanya isyarat untuk membaca semula
+    melalui RPC (yang menapis mengikut acara dan kebenaran), dan kandungannya
+    hanya id baris, jadi tiada data acara lain terdedah. Pemadaman jarang
+    berlaku — pembetulan oleh admin — jadi bacaan semula tambahan tidak membebankan.
+  */
   const channel = supabase
     .channel('kehadiran-live:' + eventId)
     .on(
       'postgres_changes',
-      { event: '*', schema: 'public', table: 'usrah_attendance_scans', filter: 'event_id=eq.' + eventId },
+      { event: 'INSERT', schema: 'public', table: 'usrah_attendance_scans', filter: 'event_id=eq.' + eventId },
       () => onChange(),
     )
+    .on(
+      'postgres_changes',
+      { event: 'UPDATE', schema: 'public', table: 'usrah_attendance_scans', filter: 'event_id=eq.' + eventId },
+      () => onChange(),
+    )
+    .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'usrah_attendance_scans' }, () => onChange())
     .subscribe((status) => onStatus(status as LiveStatus));
 
   return () => {
