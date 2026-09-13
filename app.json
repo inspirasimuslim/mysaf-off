@@ -71,6 +71,14 @@
         {
           "photosPermission": "MySAFF perlu capaian galeri untuk membaca kod QR daripada gambar yang anda pilih."
         }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "MySAFF perlu capaian galeri untuk membaca kod QR daripada gambar yang anda pilih.",
+          "savePhotosPermission": "MySAFF perlu kebenaran untuk menyimpan kod QR dan gambar ke galeri anda.",
+          "granularPermissions": ["photo"]
+        }
       ]
     ],
     "experiments": {

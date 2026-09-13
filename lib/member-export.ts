@@ -1,5 +1,7 @@
 import * as XLSX from 'xlsx';
 
+import { UserError } from './errors';
+import type { DeliveryMode, DeliveryResult } from './file-delivery';
 import { AHLI_COLUMNS, MEMBER_NUMBER_COLUMN, memberToSheetRow, type MemberExportRow } from './member-sheet';
 import { supabase } from './supabase';
 import { deliverWorkbook } from './xlsx-download';
@@ -34,11 +36,11 @@ export async function fetchMembersFullExport(): Promise<MemberExportRow[]> {
   return rows;
 }
 
-export type MemberExportResult = { rows: number; fileName: string };
+export type MemberExportResult = { rows: number; fileName: string; result: DeliveryResult };
 
-export async function downloadMembersFullExport(): Promise<MemberExportResult> {
+export async function downloadMembersFullExport(mode: DeliveryMode): Promise<MemberExportResult> {
   const rows = await fetchMembersFullExport();
-  if (!rows.length) throw new Error('Tiada rekod ahli untuk dieksport.');
+  if (!rows.length) throw new UserError('Tiada rekod ahli untuk dieksport.');
 
   const sheet = XLSX.utils.json_to_sheet(rows.map(memberToSheetRow), {
     header: [MEMBER_NUMBER_COLUMN, ...AHLI_COLUMNS],
@@ -55,6 +57,6 @@ export async function downloadMembersFullExport(): Promise<MemberExportResult> {
     String(today.getDate()).padStart(2, '0');
   const fileName = 'data-ahli-' + stamp + '.xlsx';
 
-  await deliverWorkbook(book, fileName, 'Data Penuh Ahli');
-  return { rows: rows.length, fileName };
+  const result = await deliverWorkbook(book, fileName, 'Data Penuh Ahli', mode);
+  return { rows: rows.length, fileName, result };
 }

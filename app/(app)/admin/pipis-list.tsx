@@ -2,6 +2,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
+import { SaveShareButtons } from '@/components/save-share-buttons';
 import { ScreenHeader } from '@/components/screen-header';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -14,6 +15,7 @@ import { SectionTitle } from '@/components/ui/section-title';
 import { TextField } from '@/components/ui/text-field';
 import { usePipisAccess } from '@/lib/department-access';
 import { toMalayError } from '@/lib/errors';
+import { deliveryMessage, type DeliveryMode } from '@/lib/file-delivery';
 import { useGoBack } from '@/lib/navigation';
 import { fetchPipisReport, peratusLabel, ringgitPipis, type PipisReportRow } from '@/lib/pipis';
 import { downloadPipisReport } from '@/lib/pipis-report';
@@ -47,7 +49,7 @@ export default function PipisListScreen() {
   const [banner, setBanner] = useState<Banner>(null);
 
   const [search, setSearch] = useState('');
-  const [exporting, setExporting] = useState(false);
+  const [exporting, setExporting] = useState<DeliveryMode | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -90,23 +92,26 @@ export default function PipisListScreen() {
     [rows],
   );
 
-  const exportReport = useCallback(async () => {
-    if (exporting) return;
+  const exportReport = useCallback(
+    async (mode: DeliveryMode) => {
+      if (exporting) return;
 
-    setBanner(null);
-    setExporting(true);
-    try {
-      const report = await downloadPipisReport();
-      setBanner({
-        tone: 'positive',
-        message: 'Laporan ' + report.fileName + ' dijana (' + report.rows + ' ahli).',
-      });
-    } catch (caught) {
-      setBanner({ tone: 'negative', message: toMalayError(caught, 'Gagal menjana laporan.') });
-    } finally {
-      setExporting(false);
-    }
-  }, [exporting]);
+      setBanner(null);
+      setExporting(mode);
+      try {
+        const report = await downloadPipisReport(mode);
+        setBanner({
+          tone: report.result === 'cancelled' ? 'info' : 'positive',
+          message: deliveryMessage(report.result, report.fileName, report.rows + ' ahli'),
+        });
+      } catch (caught) {
+        setBanner({ tone: 'negative', message: toMalayError(caught, 'Gagal menjana laporan.') });
+      } finally {
+        setExporting(null);
+      }
+    },
+    [exporting],
+  );
 
   if (accessLoading || loading) return <LoadingScreen />;
 
@@ -151,12 +156,13 @@ export default function PipisListScreen() {
             hanya menyemak tidak perlu kebenaran menulis untuk mengeluarkan
             laporan.
           */}
-          <Button
-            label="Muat Turun Excel"
+          <SaveShareButtons
+            kind="file"
             variant="secondary"
-            loading={exporting}
-            disabled={exporting}
-            onPress={() => void exportReport()}
+            webLabel="Muat Turun Excel"
+            nativeCaption="Laporan PIPIS ASET (.xlsx)"
+            busy={exporting}
+            onPress={(mode) => void exportReport(mode)}
           />
 
           {canEdit ? (

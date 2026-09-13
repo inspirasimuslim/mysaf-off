@@ -3,6 +3,7 @@ import * as XLSX from 'xlsx';
 import { generationLabel } from '@/types/database';
 
 import { UserError } from './errors';
+import type { DeliveryMode, DeliveryResult } from './file-delivery';
 import { supabase } from './supabase';
 import { deliverWorkbook } from './xlsx-download';
 
@@ -36,6 +37,7 @@ type AttendanceRow = {
 export type EventAttendanceReport = {
   rows: number;
   fileName: string;
+  result: DeliveryResult;
 };
 
 /** 'Program Ihya Ramadan' → 'kehadiran-program-ihya-ramadan.xlsx'. */
@@ -49,7 +51,11 @@ export function eventFileName(prefix: string, eventName: string): string {
   return prefix + '-' + (slug || 'acara') + '.xlsx';
 }
 
-export async function downloadEventAttendance(eventId: string, eventName: string): Promise<EventAttendanceReport> {
+export async function downloadEventAttendance(
+  eventId: string,
+  eventName: string,
+  mode: DeliveryMode,
+): Promise<EventAttendanceReport> {
   const { data, error } = await supabase.rpc('event_attendance_export', { p_event_id: eventId });
   if (error) throw error;
 
@@ -72,7 +78,7 @@ export async function downloadEventAttendance(eventId: string, eventName: string
   XLSX.utils.book_append_sheet(book, sheet, 'Kehadiran');
 
   const fileName = eventFileName('kehadiran', eventName);
-  await deliverWorkbook(book, fileName, 'Kehadiran ' + eventName);
+  const result = await deliverWorkbook(book, fileName, 'Kehadiran ' + eventName, mode);
 
-  return { rows: rows.length, fileName };
+  return { rows: rows.length, fileName, result };
 }

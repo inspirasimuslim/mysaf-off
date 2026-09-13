@@ -2,7 +2,7 @@ import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { View } from 'react-native';
 
-import { EventListRow } from '@/components/event-list-row';
+import { EventListRow, exportMenuActions } from '@/components/event-list-row';
 import { ScreenHeader } from '@/components/screen-header';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -13,12 +13,20 @@ import { SectionTitle } from '@/components/ui/section-title';
 import { useProgramAccess } from '@/lib/department-access';
 import { toMalayError } from '@/lib/errors';
 import { downloadEventAttendance } from '@/lib/event-attendance-report';
+import { deliveryMessage, type DeliveryMode } from '@/lib/file-delivery';
 import { useGoBack } from '@/lib/navigation';
 import { downloadRsvpList } from '@/lib/rsvp';
 import { fetchUsrahEvents } from '@/lib/usrah-events';
 import type { UsrahEvent } from '@/types/database';
 
 type Banner = { tone: 'positive' | 'info' | 'negative'; message: string } | null;
+
+type ExportKind = 'kehadiran' | 'rsvp';
+
+const EXPORTS = [
+  { key: 'kehadiran', label: 'Kehadiran (.xlsx)', icon: 'download-outline' },
+  { key: 'rsvp', label: 'Senarai RSVP (.xlsx)', icon: 'people-outline' },
+] as const satisfies readonly { key: ExportKind; label: string; icon: string }[];
 
 /**
  * Program am — modul JABATAN SETIAUSAHA.
@@ -61,7 +69,7 @@ export default function ProgramEventsScreen() {
     menyemak tidak perlu kebenaran menulis untuk mengeluarkan senarai.
   */
   const runExport = useCallback(
-    async (event: UsrahEvent, kind: 'kehadiran' | 'rsvp') => {
+    async (event: UsrahEvent, kind: ExportKind, mode: DeliveryMode) => {
       if (busyId) return;
 
       setBanner(null);
@@ -69,11 +77,11 @@ export default function ProgramEventsScreen() {
       try {
         const report =
           kind === 'kehadiran'
-            ? await downloadEventAttendance(event.id, event.name)
-            : await downloadRsvpList(event.id, event.name);
+            ? await downloadEventAttendance(event.id, event.name, mode)
+            : await downloadRsvpList(event.id, event.name, mode);
         setBanner({
-          tone: 'positive',
-          message: 'Fail ' + report.fileName + ' dijana (' + report.rows + (kind === 'kehadiran' ? ' kehadiran).' : ' respon).'),
+          tone: report.result === 'cancelled' ? 'info' : 'positive',
+          message: deliveryMessage(report.result, report.fileName, report.rows + (kind === 'kehadiran' ? ' kehadiran' : ' respon')),
         });
       } catch (caught) {
         setBanner({
@@ -146,20 +154,7 @@ export default function ProgramEventsScreen() {
                   onPress={() => router.push({ pathname: '/(app)/admin/usrah-event-detail', params: { id: event.id } })}
                   busy={busyId === event.id}
                   locked={busyId !== null}
-                  actions={[
-                    {
-                      key: 'kehadiran',
-                      label: 'Eksport Kehadiran (.xlsx)',
-                      icon: 'download-outline',
-                      onPress: () => void runExport(event, 'kehadiran'),
-                    },
-                    {
-                      key: 'rsvp',
-                      label: 'Muat Turun Senarai RSVP (.xlsx)',
-                      icon: 'people-outline',
-                      onPress: () => void runExport(event, 'rsvp'),
-                    },
-                  ]}
+                  actions={exportMenuActions(EXPORTS, (kind, mode) => void runExport(event, kind, mode))}
                 />
               ))}
             </View>

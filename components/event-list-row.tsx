@@ -1,11 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useState } from 'react';
-import { ActivityIndicator, Modal, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Modal, Platform, Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Badge } from '@/components/ui/badge';
 import { Colors } from '@/constants/theme';
+import type { DeliveryMode } from '@/lib/file-delivery';
 import {
   USRAH_EVENT_STATUS_LABEL,
   dateRangeLabel,
@@ -24,6 +25,40 @@ export type EventRowAction = {
   icon: keyof typeof Ionicons.glyphMap;
   onPress: () => void;
 };
+
+/**
+ * Tindakan eksport untuk menu baris: di peranti setiap eksport menjadi DUA
+ * pilihan — "Simpan … ke Peranti" dan "Kongsi …" — manakala di web satu
+ * "Muat Turun …" kerana pelayar memuat turun terus. Lihat `file-delivery.ts`.
+ */
+export function exportMenuActions<K extends string>(
+  exports: readonly { key: K; label: string; icon: keyof typeof Ionicons.glyphMap }[],
+  run: (key: K, mode: DeliveryMode) => void,
+): EventRowAction[] {
+  if (Platform.OS === 'web') {
+    return exports.map((item) => ({
+      key: item.key,
+      label: 'Muat Turun ' + item.label,
+      icon: item.icon,
+      onPress: () => run(item.key, 'save'),
+    }));
+  }
+
+  return exports.flatMap((item) => [
+    {
+      key: item.key + '-save',
+      label: 'Simpan ' + item.label + ' ke Peranti',
+      icon: item.icon,
+      onPress: () => run(item.key, 'save'),
+    },
+    {
+      key: item.key + '-share',
+      label: 'Kongsi ' + item.label,
+      icon: 'share-social-outline' as const,
+      onPress: () => run(item.key, 'share'),
+    },
+  ]);
+}
 
 type Props = {
   event: UsrahEvent;

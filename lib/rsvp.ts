@@ -4,6 +4,7 @@ import { generationLabel } from '@/types/database';
 
 import { eventFileName } from './event-attendance-report';
 import { UserError } from './errors';
+import type { DeliveryMode, DeliveryResult } from './file-delivery';
 import { supabase } from './supabase';
 import { deliverWorkbook } from './xlsx-download';
 
@@ -59,7 +60,11 @@ type RsvpExportRow = {
   responded_at: string;
 };
 
-export async function downloadRsvpList(eventId: string, eventName: string): Promise<{ rows: number; fileName: string }> {
+export async function downloadRsvpList(
+  eventId: string,
+  eventName: string,
+  mode: DeliveryMode,
+): Promise<{ rows: number; fileName: string; result: DeliveryResult }> {
   const { data, error } = await supabase.rpc('event_rsvp_export', { p_event_id: eventId });
   if (error) throw error;
 
@@ -81,7 +86,7 @@ export async function downloadRsvpList(eventId: string, eventName: string): Prom
   XLSX.utils.book_append_sheet(book, sheet, 'RSVP');
 
   const fileName = eventFileName('rsvp', eventName);
-  await deliverWorkbook(book, fileName, 'RSVP ' + eventName);
+  const result = await deliverWorkbook(book, fileName, 'RSVP ' + eventName, mode);
 
-  return { rows: rows.length, fileName };
+  return { rows: rows.length, fileName, result };
 }

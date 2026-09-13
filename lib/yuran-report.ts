@@ -1,11 +1,10 @@
-import { Directory, File, Paths } from 'expo-file-system';
-import * as Sharing from 'expo-sharing';
-import { Platform } from 'react-native';
 import * as XLSX from 'xlsx';
 
 import { generationLabel } from '@/types/database';
 
 import { UserError } from './errors';
+import type { DeliveryMode, DeliveryResult } from './file-delivery';
+import { deliverWorkbook } from './xlsx-download';
 import { fetchYuranReport } from './yuran';
 
 /**
@@ -20,24 +19,15 @@ import { fetchYuranReport } from './yuran';
  * sempadan tahun.
  */
 
-const MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
-
 export type YuranReport = {
   year: number;
   rows: number;
-  /** Laluan fail di peranti; kosong di web kerana pelayar terus memuat turunnya. */
-  uri: string | null;
   fileName: string;
+  result: DeliveryResult;
 };
 
-/**
- * Jana fail dan serahkan kepada pengguna.
- *
- * Dua platform, dua cara menyerahkan fail — sama seperti `usrah-report.ts` dan
- * `program-report.ts`: peranti menulis ke cache dan menyerahkannya kepada share
- * sheet sistem; web mencetuskan muat turun daripada blob dalam ingatan.
- */
-export async function downloadYuranReport(year: number): Promise<YuranReport> {
+/** Jana fail dan serahkan kepada pengguna — simpan atau kongsi, lihat `file-delivery.ts`. */
+export async function downloadYuranReport(year: number, mode: DeliveryMode): Promise<YuranReport> {
   const rows = await fetchYuranReport(year);
   if (!rows.length) {
     throw new UserError('Tiada rekod yuran untuk tahun ' + year + '.');
@@ -59,33 +49,7 @@ export async function downloadYuranReport(year: number): Promise<YuranReport> {
   XLSX.utils.book_append_sheet(book, sheet, 'Yuran ' + year);
 
   const fileName = 'yuran-' + year + '.xlsx';
+  const result = await deliverWorkbook(book, fileName, 'Laporan Yuran ' + year, mode);
 
-  if (Platform.OS === 'web') {
-    const output = XLSX.write(book, { type: 'array', bookType: 'xlsx' }) as ArrayBuffer;
-    const url = URL.createObjectURL(new Blob([output], { type: MIME }));
-
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = fileName;
-    anchor.click();
-    URL.revokeObjectURL(url);
-
-    return { year, rows: rows.length, uri: null, fileName };
-  }
-
-  const base64 = XLSX.write(book, { type: 'base64', bookType: 'xlsx' }) as string;
-
-  const directory = new Directory(Paths.cache, 'laporan');
-  if (!directory.exists) directory.create({ intermediates: true });
-
-  const file = new File(directory, fileName);
-  if (file.exists) file.delete();
-  file.create();
-  file.write(Uint8Array.from(atob(base64), (character) => character.charCodeAt(0)));
-
-  if (await Sharing.isAvailableAsync()) {
-    await Sharing.shareAsync(file.uri, { mimeType: MIME, dialogTitle: 'Laporan Yuran ' + year });
-  }
-
-  return { year, rows: rows.length, uri: file.uri, fileName };
+  return { year, rows: rows.length, fileName, result };
 }

@@ -1,12 +1,10 @@
 import { Image } from 'expo-image';
-import { Directory, File, Paths } from 'expo-file-system';
 import { useLocalSearchParams } from 'expo-router';
-import * as Sharing from 'expo-sharing';
 import { useCallback, useEffect, useState } from 'react';
-import { Platform, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 
+import { SaveShareButtons } from '@/components/save-share-buttons';
 import { ScreenHeader } from '@/components/screen-header';
-import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { LoadingScreen } from '@/components/ui/loading-screen';
@@ -15,6 +13,8 @@ import { Screen } from '@/components/ui/screen';
 import { SectionTitle } from '@/components/ui/section-title';
 import { fetchAdhocPayment } from '@/lib/adhoc-payments';
 import { toMalayError } from '@/lib/errors';
+import type { DeliveryMode } from '@/lib/file-delivery';
+import { deliverImage, fileSlug, imageDeliveryMessage } from '@/lib/image-share';
 import { useGoBack } from '@/lib/navigation';
 import type { AdhocPaymentType } from '@/types/database';
 
@@ -37,7 +37,8 @@ export default function AdhocPaymentInfoScreen() {
   const [row, setRow] = useState<AdhocPaymentType | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
+  const [saving, setSaving] = useState<DeliveryMode | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) {
@@ -64,55 +65,28 @@ export default function AdhocPaymentInfoScreen() {
   }, [id]);
 
   /**
-   * Serahkan imej QR kepada pengguna untuk disimpan.
-   *
-   * Dua platform, dua cara — sama seperti muat turun laporan: peranti menulis
-   * ke cache dan menyerahkannya kepada share sheet sistem (dari situ pengguna
-   * memilih "Simpan Imej"), manakala web mencetuskan muat turun terus.
-   *
-   * Melalui share sheet dan bukan tulisan terus ke galeri kerana menulis ke
-   * galeri memerlukan `expo-media-library` dan kebenaran storan — satu
-   * pergantungan dan satu dialog kebenaran lagi, untuk sesuatu yang share
-   * sheet sudah lakukan.
+   * Serahkan imej QR kepada pengguna: "Simpan ke Galeri" (terus ke galeri
+   * telefon) atau "Kongsi" (share sheet). Web memuat turun terus. Lihat
+   * `lib/image-share.ts`.
    */
-  const saveQr = useCallback(async () => {
-    if (!row?.qr_image_url || saving) return;
+  const saveQr = useCallback(
+    async (mode: DeliveryMode) => {
+      if (!row?.qr_image_url || saving) return;
 
-    setError(null);
-    setSaving(true);
-
-    try {
-      const fileName = 'qr-' + row.title.replace(/[^a-zA-Z0-9]+/g, '-').toLowerCase().slice(0, 40) + '.jpg';
-
-      if (Platform.OS === 'web') {
-        const anchor = document.createElement('a');
-        anchor.href = row.qr_image_url;
-        anchor.download = fileName;
-        anchor.target = '_blank';
-        anchor.click();
-        return;
+      setError(null);
+      setNotice(null);
+      setSaving(mode);
+      try {
+        const result = await deliverImage(row.qr_image_url, 'qr-' + fileSlug(row.title) + '.jpg', row.title, mode);
+        setNotice(imageDeliveryMessage(result));
+      } catch (caught) {
+        setError(toMalayError(caught, 'Gagal menyimpan kod QR.'));
+      } finally {
+        setSaving(null);
       }
-
-      const response = await fetch(row.qr_image_url);
-      const bytes = new Uint8Array(await response.arrayBuffer());
-
-      const directory = new Directory(Paths.cache, 'qr');
-      if (!directory.exists) directory.create({ intermediates: true });
-
-      const file = new File(directory, fileName);
-      if (file.exists) file.delete();
-      file.create();
-      file.write(bytes);
-
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(file.uri, { mimeType: 'image/jpeg', dialogTitle: row.title });
-      }
-    } catch (caught) {
-      setError(toMalayError(caught, 'Gagal menyimpan kod QR.'));
-    } finally {
-      setSaving(false);
-    }
-  }, [row, saving]);
+    },
+    [row, saving],
+  );
 
   if (loading) return <LoadingScreen />;
 
@@ -161,13 +135,14 @@ export default function AdhocPaymentInfoScreen() {
                 />
               </View>
 
-              <Button
-                label="Simpan / Kongsi Kod QR"
+              <SaveShareButtons
+                kind="image"
                 variant="secondary"
-                loading={saving}
-                disabled={saving}
-                onPress={() => void saveQr()}
+                webLabel="Muat Turun Kod QR"
+                busy={saving}
+                onPress={(mode) => void saveQr(mode)}
               />
+              {notice ? <Notice tone="positive" message={notice} /> : null}
             </View>
           </View>
         ) : (

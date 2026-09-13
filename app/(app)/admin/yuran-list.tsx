@@ -2,6 +2,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
+import { SaveShareButtons } from '@/components/save-share-buttons';
 import { ScreenHeader } from '@/components/screen-header';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -14,6 +15,7 @@ import { SectionTitle } from '@/components/ui/section-title';
 import { TextField } from '@/components/ui/text-field';
 import { useYuranAccess } from '@/lib/department-access';
 import { toMalayError } from '@/lib/errors';
+import { deliveryMessage, type DeliveryMode } from '@/lib/file-delivery';
 import { useGoBack } from '@/lib/navigation';
 import { downloadYuranReport } from '@/lib/yuran-report';
 import { fetchYuranReport, generateYuranYear, ringgit, type YuranReportRow } from '@/lib/yuran';
@@ -49,7 +51,7 @@ export default function YuranListScreen() {
   const [year, setYear] = useState(String(new Date().getFullYear()));
   const [search, setSearch] = useState('');
   const [busy, setBusy] = useState(false);
-  const [exporting, setExporting] = useState(false);
+  const [exporting, setExporting] = useState<DeliveryMode | null>(null);
 
   const parsedYear = Number.parseInt(year, 10);
   const yearValid = Number.isFinite(parsedYear) && parsedYear >= 2000 && parsedYear <= 2100;
@@ -128,23 +130,26 @@ export default function YuranListScreen() {
     }
   }, [busy, load, parsedYear, yearValid]);
 
-  const exportReport = useCallback(async () => {
-    if (exporting || !yearValid) return;
+  const exportReport = useCallback(
+    async (mode: DeliveryMode) => {
+      if (exporting || !yearValid) return;
 
-    setBanner(null);
-    setExporting(true);
-    try {
-      const report = await downloadYuranReport(parsedYear);
-      setBanner({
-        tone: 'positive',
-        message: 'Laporan ' + report.fileName + ' dijana (' + report.rows + ' ahli).',
-      });
-    } catch (caught) {
-      setBanner({ tone: 'negative', message: toMalayError(caught, 'Gagal menjana laporan.') });
-    } finally {
-      setExporting(false);
-    }
-  }, [exporting, parsedYear, yearValid]);
+      setBanner(null);
+      setExporting(mode);
+      try {
+        const report = await downloadYuranReport(parsedYear, mode);
+        setBanner({
+          tone: report.result === 'cancelled' ? 'info' : 'positive',
+          message: deliveryMessage(report.result, report.fileName, report.rows + ' ahli'),
+        });
+      } catch (caught) {
+        setBanner({ tone: 'negative', message: toMalayError(caught, 'Gagal menjana laporan.') });
+      } finally {
+        setExporting(null);
+      }
+    },
+    [exporting, parsedYear, yearValid],
+  );
 
   if (accessLoading || loading) return <LoadingScreen />;
 
@@ -190,7 +195,7 @@ export default function YuranListScreen() {
               label="Tahun"
               value={year}
               onChangeText={(value) => setYear(value.replace(/[^\d]/g, '').slice(0, 4))}
-              editable={!busy && !exporting}
+              editable={!busy && exporting === null}
               keyboardType="number-pad"
               error={year.length > 0 && !yearValid ? 'Tahun antara 2000 dan 2100.' : null}
             />
@@ -209,12 +214,14 @@ export default function YuranListScreen() {
               yang hanya menyemak tidak perlu kebenaran menulis untuk
               mengeluarkan laporan.
             */}
-            <Button
-              label="Muat Turun Excel"
+            <SaveShareButtons
+              kind="file"
               variant="secondary"
-              loading={exporting}
-              disabled={exporting || !yearValid}
-              onPress={() => void exportReport()}
+              webLabel="Muat Turun Excel"
+              nativeCaption={'Laporan Yuran ' + (yearValid ? parsedYear : '') + ' (.xlsx)'}
+              busy={exporting}
+              disabled={!yearValid}
+              onPress={(mode) => void exportReport(mode)}
             />
           </View>
         </View>

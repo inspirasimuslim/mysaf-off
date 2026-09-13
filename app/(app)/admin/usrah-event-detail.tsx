@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 
+import { SaveShareButtons } from '@/components/save-share-buttons';
 import { ScreenHeader } from '@/components/screen-header';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -19,6 +20,7 @@ import { ToggleRow } from '@/components/ui/toggle-row';
 import { Colors } from '@/constants/theme';
 import { useProgramAccess, useUsrahAccess } from '@/lib/department-access';
 import { toMalayError } from '@/lib/errors';
+import { deliveryMessage, type DeliveryMode } from '@/lib/file-delivery';
 import { pickImage } from '@/lib/image-upload';
 import { useGoBack } from '@/lib/navigation';
 import { downloadRsvpList, fetchRsvpSummary, type RsvpSummary } from '@/lib/rsvp';
@@ -143,7 +145,7 @@ export default function UsrahEventDetailScreen() {
 
   // --- RSVP -------------------------------------------------------------------
   const [rsvp, setRsvp] = useState<RsvpSummary | null>(null);
-  const [rsvpBusy, setRsvpBusy] = useState(false);
+  const [rsvpBusy, setRsvpBusy] = useState<DeliveryMode | null>(null);
   const eventId = event?.id;
 
   useEffect(() => {
@@ -160,20 +162,26 @@ export default function UsrahEventDetailScreen() {
     };
   }, [eventId]);
 
-  const downloadRsvp = useCallback(async () => {
-    if (!event || rsvpBusy) return;
+  const downloadRsvp = useCallback(
+    async (mode: DeliveryMode) => {
+      if (!event || rsvpBusy) return;
 
-    setBanner(null);
-    setRsvpBusy(true);
-    try {
-      const report = await downloadRsvpList(event.id, event.name);
-      setBanner({ tone: 'positive', message: 'Fail ' + report.fileName + ' dijana (' + report.rows + ' respon).' });
-    } catch (caught) {
-      setBanner({ tone: 'negative', message: toMalayError(caught, 'Gagal menjana senarai RSVP.') });
-    } finally {
-      setRsvpBusy(false);
-    }
-  }, [event, rsvpBusy]);
+      setBanner(null);
+      setRsvpBusy(mode);
+      try {
+        const report = await downloadRsvpList(event.id, event.name, mode);
+        setBanner({
+          tone: report.result === 'cancelled' ? 'info' : 'positive',
+          message: deliveryMessage(report.result, report.fileName, report.rows + ' respon'),
+        });
+      } catch (caught) {
+        setBanner({ tone: 'negative', message: toMalayError(caught, 'Gagal menjana senarai RSVP.') });
+      } finally {
+        setRsvpBusy(null);
+      }
+    },
+    [event, rsvpBusy],
+  );
 
   const changePoster = useCallback(async () => {
     if (!event || busy) return;
@@ -320,12 +328,13 @@ export default function UsrahEventDetailScreen() {
             </View>
           </Card>
           <View className="pt-3">
-            <Button
-              label="Muat Turun Senarai RSVP"
+            <SaveShareButtons
+              kind="file"
               variant="secondary"
-              loading={rsvpBusy}
-              disabled={rsvpBusy}
-              onPress={() => void downloadRsvp()}
+              webLabel="Muat Turun Senarai RSVP"
+              nativeCaption="Senarai RSVP (.xlsx)"
+              busy={rsvpBusy}
+              onPress={(mode) => void downloadRsvp(mode)}
             />
           </View>
         </View>

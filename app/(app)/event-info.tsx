@@ -6,6 +6,7 @@ import { Platform, Text, View } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 import { captureRef } from 'react-native-view-shot';
 
+import { SaveShareButtons } from '@/components/save-share-buttons';
 import { ScreenHeader } from '@/components/screen-header';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -16,7 +17,8 @@ import { Screen } from '@/components/ui/screen';
 import { SectionTitle } from '@/components/ui/section-title';
 import { Colors } from '@/constants/theme';
 import { toMalayError } from '@/lib/errors';
-import { fileSlug, shareImage } from '@/lib/image-share';
+import type { DeliveryMode } from '@/lib/file-delivery';
+import { deliverImage, fileSlug, imageDeliveryMessage } from '@/lib/image-share';
 import { useGoBack } from '@/lib/navigation';
 import { RSVP_LABEL, fetchMyRsvp, rsvpOpen, setMyRsvp, type RsvpResponse } from '@/lib/rsvp';
 import { fetchUpcomingEvents } from '@/lib/usrah-events';
@@ -50,7 +52,8 @@ export default function EventInfoScreen() {
 
   const [event, setEvent] = useState<UpcomingEvent | null>(null);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [saving, setSaving] = useState<DeliveryMode | null>(null);
+  const [saveNotice, setSaveNotice] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
 
   // --- RSVP -------------------------------------------------------------------
@@ -79,12 +82,13 @@ export default function EventInfoScreen() {
 
   /** Hanya kad putih kod QR yang ditangkap — bukan poster, bukan butang. */
   const qrRef = useRef<View>(null);
-  const saveQr = useCallback(async () => {
+  const saveQr = useCallback(async (mode: DeliveryMode) => {
     const view = qrRef.current;
     if (!event || saving || !view) return;
 
     setSaveError(null);
-    setSaving(true);
+    setSaveNotice(null);
+    setSaving(mode);
     try {
       /*
         `captureRef` di web MENGABAIKAN `width` bila `height` tiada — imej keluar
@@ -107,11 +111,12 @@ export default function EventInfoScreen() {
         ...size,
         result: Platform.OS === 'web' ? 'data-uri' : 'tmpfile',
       });
-      await shareImage(uri, 'kod-qr-' + fileSlug(event.name) + '.jpg', 'Simpan kod QR ' + event.name);
+      const result = await deliverImage(uri, 'kod-qr-' + fileSlug(event.name) + '.jpg', 'Kod QR ' + event.name, mode);
+      setSaveNotice(imageDeliveryMessage(result));
     } catch (caught) {
       setSaveError(toMalayError(caught, 'Gagal menyimpan kod QR. Cuba ambil screenshot skrin ini.'));
     } finally {
-      setSaving(false);
+      setSaving(null);
     }
   }, [event, saving]);
 
@@ -260,13 +265,13 @@ export default function EventInfoScreen() {
           </Card>
 
           <View className="gap-3 pt-3">
-            <Button
-              label="Simpan/Screenshot Kod QR"
-              loading={saving}
-              disabled={saving}
-              icon={<Ionicons name="download-outline" size={18} color={Colors.white} />}
-              onPress={() => void saveQr()}
+            <SaveShareButtons
+              kind="image"
+              webLabel="Simpan/Screenshot Kod QR"
+              busy={saving}
+              onPress={(mode) => void saveQr(mode)}
             />
+            {saveNotice ? <Notice tone="positive" message={saveNotice} /> : null}
             {saveError ? <Notice tone="negative" message={saveError} /> : null}
           </View>
         </View>

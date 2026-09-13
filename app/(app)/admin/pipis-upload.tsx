@@ -2,6 +2,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import { useCallback, useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
 
+import { SaveShareButtons } from '@/components/save-share-buttons';
 import { ScreenHeader } from '@/components/screen-header';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -205,12 +206,14 @@ export default function PipisUploadScreen() {
             caption="Kolum: NAMA, GENERASI, KAWASAN, STATUS, JUMLAH_SUMBANGAN."
           />
           <View className="gap-3">
-            <Button
-              label="Muat Turun Template"
+            <SaveShareButtons
+              kind="file"
               variant="ghost"
-              loading={template.busy}
-              disabled={template.busy || picking || importing}
-              onPress={() => void template.download()}
+              webLabel="Muat Turun Template"
+              nativeCaption="Template Excel"
+              busy={template.busy}
+              disabled={picking || importing}
+              onPress={(mode) => void template.download(mode)}
             />
             <Button
               label={fileName ? 'Tukar Fail' : 'Pilih Fail .xlsx'}

@@ -1,13 +1,12 @@
-import { Directory, File, Paths } from 'expo-file-system';
-import * as Sharing from 'expo-sharing';
-import { Platform } from 'react-native';
 import * as XLSX from 'xlsx';
 
 import { generationLabel } from '@/types/database';
 
 import { UserError } from './errors';
+import type { DeliveryMode, DeliveryResult } from './file-delivery';
 import { supabase } from './supabase';
 import { MONTH_LABELS } from './usrah-import';
+import { deliverWorkbook } from './xlsx-download';
 
 /**
  * Laporan kehadiran usrah setahun sebagai fail .xlsx.
@@ -18,8 +17,6 @@ import { MONTH_LABELS } from './usrah-import';
  * nama. Fungsi `security definer` itu mendedahkan tiga kolum pengenalan sahaja
  * kepada sesiapa yang sudah dibenarkan melihat rekod usrah.
  */
-
-const MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
 type ReportRow = {
   nombor_ahli: string | null;
@@ -38,6 +35,7 @@ function cell(value: unknown): string {
 export type UsrahReport = {
   year: number;
   rows: number;
+  result: DeliveryResult;
   /** Laluan fail di peranti; kosong di web kerana pelayar terus memuat turunnya. */
   uri: string | null;
   fileName: string;
@@ -85,7 +83,7 @@ function buildWorkbook(rows: ReportRow[]): XLSX.WorkBook {
  *   - Web: tiada sistem fail untuk ditulis, jadi pautan muat turun dicetuskan
  *     terus daripada blob dalam ingatan.
  */
-export async function downloadUsrahReport(year: number): Promise<UsrahReport> {
+export async function downloadUsrahReport(year: number, mode: DeliveryMode): Promise<UsrahReport> {
   const rows = await fetchUsrahReportRows(year);
   if (!rows.length) {
     throw new UserError('Tiada rekod kehadiran untuk tahun ' + year + '.');
@@ -93,33 +91,7 @@ export async function downloadUsrahReport(year: number): Promise<UsrahReport> {
 
   const book = buildWorkbook(rows);
   const fileName = 'kehadiran-usrah-' + year + '.xlsx';
+  const result = await deliverWorkbook(book, fileName, 'Laporan Kehadiran Usrah ' + year, mode);
 
-  if (Platform.OS === 'web') {
-    const output = XLSX.write(book, { type: 'array', bookType: 'xlsx' }) as ArrayBuffer;
-    const url = URL.createObjectURL(new Blob([output], { type: MIME }));
-
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = fileName;
-    anchor.click();
-    URL.revokeObjectURL(url);
-
-    return { year, rows: rows.length, uri: null, fileName };
-  }
-
-  const base64 = XLSX.write(book, { type: 'base64', bookType: 'xlsx' }) as string;
-
-  const directory = new Directory(Paths.cache, 'laporan');
-  if (!directory.exists) directory.create({ intermediates: true });
-
-  const file = new File(directory, fileName);
-  if (file.exists) file.delete();
-  file.create();
-  file.write(Uint8Array.from(atob(base64), (character) => character.charCodeAt(0)));
-
-  if (await Sharing.isAvailableAsync()) {
-    await Sharing.shareAsync(file.uri, { mimeType: MIME, dialogTitle: 'Laporan Kehadiran Usrah ' + year });
-  }
-
-  return { year, rows: rows.length, uri: file.uri, fileName };
+  return { year, rows: rows.length, uri: null, fileName, result };
 }

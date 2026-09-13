@@ -2,7 +2,8 @@ import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { View } from 'react-native';
 
-import { EventListRow } from '@/components/event-list-row';
+import { EventListRow, exportMenuActions } from '@/components/event-list-row';
+import { SaveShareButtons } from '@/components/save-share-buttons';
 import { ScreenHeader } from '@/components/screen-header';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -15,6 +16,7 @@ import { TextField } from '@/components/ui/text-field';
 import { useUsrahAccess } from '@/lib/department-access';
 import { toMalayError } from '@/lib/errors';
 import { downloadEventAttendance } from '@/lib/event-attendance-report';
+import { deliveryMessage, type DeliveryMode } from '@/lib/file-delivery';
 import { useGoBack } from '@/lib/navigation';
 import { downloadRsvpList } from '@/lib/rsvp';
 import { fetchUsrahEvents } from '@/lib/usrah-events';
@@ -22,6 +24,13 @@ import { downloadUsrahReport } from '@/lib/usrah-report';
 import type { UsrahEvent } from '@/types/database';
 
 type Banner = { tone: 'positive' | 'info' | 'negative'; message: string } | null;
+
+type ExportKind = 'kehadiran' | 'rsvp';
+
+const EXPORTS = [
+  { key: 'kehadiran', label: 'Kehadiran (.xlsx)', icon: 'download-outline' },
+  { key: 'rsvp', label: 'Senarai RSVP (.xlsx)', icon: 'people-outline' },
+] as const satisfies readonly { key: ExportKind; label: string; icon: string }[];
 
 export default function UsrahEventsScreen() {
   const router = useRouter();
@@ -33,7 +42,7 @@ export default function UsrahEventsScreen() {
   const [banner, setBanner] = useState<Banner>(null);
 
   const [year, setYear] = useState(String(new Date().getFullYear()));
-  const [exporting, setExporting] = useState(false);
+  const [exporting, setExporting] = useState<DeliveryMode | null>(null);
 
   /** Id sesi yang sedang dieksport — menu sesi lain dikunci sementara. */
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -54,33 +63,36 @@ export default function UsrahEventsScreen() {
     void load();
   }, [accessLoading, canView, load]);
 
-  const exportReport = useCallback(async () => {
-    if (exporting) return;
+  const exportReport = useCallback(
+    async (mode: DeliveryMode) => {
+      if (exporting) return;
 
-    const parsed = Number.parseInt(year, 10);
-    if (!Number.isFinite(parsed)) {
-      setBanner({ tone: 'negative', message: 'Masukkan tahun yang sah.' });
-      return;
-    }
+      const parsed = Number.parseInt(year, 10);
+      if (!Number.isFinite(parsed)) {
+        setBanner({ tone: 'negative', message: 'Masukkan tahun yang sah.' });
+        return;
+      }
 
-    setBanner(null);
-    setExporting(true);
-    try {
-      const report = await downloadUsrahReport(parsed);
-      setBanner({
-        tone: 'positive',
-        message: 'Laporan ' + report.fileName + ' dijana (' + report.rows + ' ahli).',
-      });
-    } catch (caught) {
-      setBanner({ tone: 'negative', message: toMalayError(caught, 'Gagal menjana laporan.') });
-    } finally {
-      setExporting(false);
-    }
-  }, [exporting, year]);
+      setBanner(null);
+      setExporting(mode);
+      try {
+        const report = await downloadUsrahReport(parsed, mode);
+        setBanner({
+          tone: report.result === 'cancelled' ? 'info' : 'positive',
+          message: deliveryMessage(report.result, report.fileName, report.rows + ' ahli'),
+        });
+      } catch (caught) {
+        setBanner({ tone: 'negative', message: toMalayError(caught, 'Gagal menjana laporan.') });
+      } finally {
+        setExporting(null);
+      }
+    },
+    [exporting, year],
+  );
 
   /* Kehadiran SATU sesi — tambahan kepada laporan tahunan di bawah, bukan pengganti. */
   const runExport = useCallback(
-    async (event: UsrahEvent, kind: 'kehadiran' | 'rsvp') => {
+    async (event: UsrahEvent, kind: ExportKind, mode: DeliveryMode) => {
       if (busyId) return;
 
       setBanner(null);
@@ -88,11 +100,11 @@ export default function UsrahEventsScreen() {
       try {
         const report =
           kind === 'kehadiran'
-            ? await downloadEventAttendance(event.id, event.name)
-            : await downloadRsvpList(event.id, event.name);
+            ? await downloadEventAttendance(event.id, event.name, mode)
+            : await downloadRsvpList(event.id, event.name, mode);
         setBanner({
-          tone: 'positive',
-          message: 'Fail ' + report.fileName + ' dijana (' + report.rows + (kind === 'kehadiran' ? ' kehadiran).' : ' respon).'),
+          tone: report.result === 'cancelled' ? 'info' : 'positive',
+          message: deliveryMessage(report.result, report.fileName, report.rows + (kind === 'kehadiran' ? ' kehadiran' : ' respon')),
         });
       } catch (caught) {
         setBanner({
@@ -165,20 +177,7 @@ export default function UsrahEventsScreen() {
                   onPress={() => router.push({ pathname: '/(app)/admin/usrah-event-detail', params: { id: event.id } })}
                   busy={busyId === event.id}
                   locked={busyId !== null}
-                  actions={[
-                    {
-                      key: 'kehadiran',
-                      label: 'Eksport Kehadiran (.xlsx)',
-                      icon: 'download-outline',
-                      onPress: () => void runExport(event, 'kehadiran'),
-                    },
-                    {
-                      key: 'rsvp',
-                      label: 'Muat Turun Senarai RSVP (.xlsx)',
-                      icon: 'people-outline',
-                      onPress: () => void runExport(event, 'rsvp'),
-                    },
-                  ]}
+                  actions={exportMenuActions(EXPORTS, (kind, mode) => void runExport(event, kind, mode))}
                 />
               ))}
             </View>
@@ -200,15 +199,15 @@ export default function UsrahEventsScreen() {
                 label="Tahun"
                 value={year}
                 onChangeText={(value) => setYear(value.replace(/[^\d]/g, '').slice(0, 4))}
-                editable={!exporting}
+                editable={exporting === null}
                 keyboardType="number-pad"
               />
-              <Button
-                label="Jana Fail Excel"
+              <SaveShareButtons
+                kind="file"
                 variant="secondary"
-                loading={exporting}
-                disabled={exporting}
-                onPress={() => void exportReport()}
+                webLabel="Jana Fail Excel"
+                busy={exporting}
+                onPress={(mode) => void exportReport(mode)}
               />
             </View>
           </Card>

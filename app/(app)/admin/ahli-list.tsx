@@ -2,6 +2,7 @@ import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
+import { SaveShareButtons } from '@/components/save-share-buttons';
 import { ScreenHeader } from '@/components/screen-header';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -14,6 +15,7 @@ import { SectionTitle } from '@/components/ui/section-title';
 import { TextField } from '@/components/ui/text-field';
 import { useMemberAccess } from '@/lib/department-access';
 import { toMalayError } from '@/lib/errors';
+import { deliveryMessage, type DeliveryMode } from '@/lib/file-delivery';
 import { downloadMembersFullExport } from '@/lib/member-export';
 import { fetchGenerations, fetchMembers } from '@/lib/members';
 import { useGoBack } from '@/lib/navigation';
@@ -36,34 +38,41 @@ export default function AhliListScreen() {
   const [generation, setGeneration] = useState<string | null>(null);
   const [limit, setLimit] = useState(PAGE);
 
-  const [exporting, setExporting] = useState(false);
-  const [exportNotice, setExportNotice] = useState<{ tone: 'positive' | 'negative'; message: string } | null>(null);
+  const [exporting, setExporting] = useState<DeliveryMode | null>(null);
+  const [exportNotice, setExportNotice] = useState<{ tone: 'positive' | 'info' | 'negative'; message: string } | null>(
+    null,
+  );
 
   /*
     Kebenaran MELIHAT sudah memadai: eksport hanya membaca. Skrin ini sendiri
     tidak dibuka tanpanya, dan `members_full_export()` menyemak semula di pelayan.
   */
-  const exportAll = useCallback(async () => {
-    if (exporting) return;
+  const exportAll = useCallback(
+    async (mode: DeliveryMode) => {
+      if (exporting) return;
 
-    setExportNotice(null);
-    setExporting(true);
-    try {
-      const result = await downloadMembersFullExport();
-      setExportNotice({
-        tone: 'positive',
-        message:
-          result.rows +
-          ' ahli dieksport ke ' +
-          result.fileName +
-          '. Fail ini mengandungi NRIC, alamat dan pendapatan — simpan dengan selamat dan jangan kongsi.',
-      });
-    } catch (caught) {
-      setExportNotice({ tone: 'negative', message: toMalayError(caught, 'Gagal mengeksport data ahli.') });
-    } finally {
-      setExporting(false);
-    }
-  }, [exporting]);
+      setExportNotice(null);
+      setExporting(mode);
+      try {
+        const report = await downloadMembersFullExport(mode);
+        if (report.result === 'cancelled') {
+          setExportNotice({ tone: 'info', message: deliveryMessage('cancelled', report.fileName) });
+          return;
+        }
+        setExportNotice({
+          tone: 'positive',
+          message:
+            deliveryMessage(report.result, report.fileName, report.rows + ' ahli') +
+            ' Fail ini mengandungi NRIC, alamat dan pendapatan — simpan dengan selamat dan jangan kongsi.',
+        });
+      } catch (caught) {
+        setExportNotice({ tone: 'negative', message: toMalayError(caught, 'Gagal mengeksport data ahli.') });
+      } finally {
+        setExporting(null);
+      }
+    },
+    [exporting],
+  );
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -153,12 +162,14 @@ export default function AhliListScreen() {
               />
             </>
           ) : null}
-          <Button
-            label="Muat Turun Semua Data Ahli"
+          <SaveShareButtons
+            kind="file"
             variant="secondary"
-            loading={exporting}
-            disabled={exporting || members.length === 0}
-            onPress={() => void exportAll()}
+            webLabel="Muat Turun Semua Data Ahli"
+            nativeCaption="Semua Data Ahli (.xlsx)"
+            busy={exporting}
+            disabled={members.length === 0}
+            onPress={(mode) => void exportAll(mode)}
           />
         </View>
 

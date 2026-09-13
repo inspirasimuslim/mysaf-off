@@ -2,14 +2,8 @@ import { useCallback, useState } from 'react';
 
 import { toMalayError } from './errors';
 import { TEMPLATES, buildTemplateWorkbook, type TemplateKind } from './excel-templates';
+import type { DeliveryMode } from './file-delivery';
 import { deliverWorkbook } from './xlsx-download';
-
-/** Jana template dan serahkan kepada pengguna. Memulangkan nama fail. */
-export async function downloadTemplate(kind: TemplateKind): Promise<string> {
-  const template = TEMPLATES[kind];
-  await deliverWorkbook(buildTemplateWorkbook(kind), template.fileName, template.title);
-  return template.fileName;
-}
 
 type Report = (banner: { tone: 'info' | 'negative'; message: string }) => void;
 
@@ -20,24 +14,36 @@ type Report = (banner: { tone: 'info' | 'negative'; message: string }) => void;
  * berasingan, jadi skrin tidak mendapat dua tempat yang bersaing untuk mesej.
  */
 export function useTemplateDownload(kind: TemplateKind, report: Report) {
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState<DeliveryMode | null>(null);
 
-  const download = useCallback(async () => {
-    if (busy) return;
+  const download = useCallback(
+    async (mode: DeliveryMode) => {
+      if (busy) return;
 
-    setBusy(true);
-    try {
-      const fileName = await downloadTemplate(kind);
-      report({
-        tone: 'info',
-        message: 'Template ' + fileName + ' sedia. Isi mulai baris 2 dan padam baris contoh sebelum dimuat naik.',
-      });
-    } catch (caught) {
-      report({ tone: 'negative', message: toMalayError(caught, 'Gagal menyediakan template.') });
-    } finally {
-      setBusy(false);
-    }
-  }, [busy, kind, report]);
+      setBusy(mode);
+      try {
+        const template = TEMPLATES[kind];
+        const result = await deliverWorkbook(buildTemplateWorkbook(kind), template.fileName, template.title, mode);
+        if (result === 'cancelled') {
+          report({ tone: 'info', message: 'Simpanan dibatalkan — tiada folder dipilih.' });
+          return;
+        }
+        report({
+          tone: 'info',
+          message:
+            'Template ' +
+            template.fileName +
+            (result === 'saved' ? ' disimpan ke folder pilihan anda.' : ' sedia.') +
+            ' Isi mulai baris 2 dan padam baris contoh sebelum dimuat naik.',
+        });
+      } catch (caught) {
+        report({ tone: 'negative', message: toMalayError(caught, 'Gagal menyediakan template.') });
+      } finally {
+        setBusy(null);
+      }
+    },
+    [busy, kind, report],
+  );
 
   return { busy, download };
 }
