@@ -7,23 +7,25 @@ import { PosterCarousel, type PosterItem } from '@/components/poster-carousel';
 import { ScreenHeader } from '@/components/screen-header';
 import { UsrahStrip } from '@/components/usrah-strip';
 import { Card } from '@/components/ui/card';
+import { MemberAvatar } from '@/components/ui/member-avatar';
 import { Notice } from '@/components/ui/notice';
 import { Screen } from '@/components/ui/screen';
 import { fetchVisibleAnnouncements } from '@/lib/announcements';
 import { displayName, useAuth } from '@/lib/auth-context';
 import { fetchMyMemberLinked } from '@/lib/members';
 import { fetchPipisSummary, peratusLabel, ringgitBulat, type PipisSummary } from '@/lib/pipis';
-import { usePermissions } from '@/lib/permissions';
 import { fetchUpcomingEvents } from '@/lib/usrah-events';
 import { fetchYuranSummary, ringgit, type YuranSummary } from '@/lib/yuran';
 import { shortDateRangeLabel, type Announcement, type UpcomingEvent } from '@/types/database';
 
 type Banner = { tone: 'positive' | 'info' | 'negative'; message: string } | null;
 
+/** Sama saiz dengan ikon kepala skrin (44px) ditambah bingkai 2px — sebaris dengan perisai dan gear. */
+const AVATAR_SIZE = 44;
+
 export default function DashboardScreen() {
   const { user } = useAuth();
   const router = useRouter();
-  const { isAdmin } = usePermissions();
 
   const [banner, setBanner] = useState<Banner>(null);
 
@@ -31,6 +33,7 @@ export default function DashboardScreen() {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [yuran, setYuran] = useState<YuranSummary | null>(null);
   const [pipis, setPipis] = useState<PipisSummary | null>(null);
+  const [profile, setProfile] = useState<{ fullName: string; avatarUrl: string | null } | null>(null);
 
   /*
     Dibaca semula setiap kali skrin mendapat fokus, sama seperti `UsrahStrip`:
@@ -77,6 +80,10 @@ export default function DashboardScreen() {
           const member = await fetchMyMemberLinked(userId);
           if (!active || !member) return;
 
+          // Rekod yang sama membawa gambar profil; dibaca semula setiap fokus,
+          // jadi gambar yang baru ditukar di Profil kelihatan sebaik kembali.
+          setProfile({ fullName: member.full_name, avatarUrl: member.avatar_url });
+
           const [yuranSummary, pipisSummary] = await Promise.all([
             fetchYuranSummary(member.id),
             fetchPipisSummary(member.id),
@@ -120,15 +127,23 @@ export default function DashboardScreen() {
         title={displayName(user)}
         subtitle={user?.email ?? undefined}
         /*
-          Pintu masuk pentadbiran tidak wujud langsung dalam pokok komponen
-          untuk ahli biasa — bukan sekadar disembunyikan. Ikon perisai sengaja
-          berbeza daripada gear Tetapan di Profil supaya dua pintu itu tidak
-          dikelirukan.
+          Avatar di skrin Utama SAHAJA — di sinilah ahli disapa dengan namanya.
+          Sebelum rekod ahli dibaca (atau bila akaun belum dipautkan), inisial
+          daripada nama akaun dipapar supaya bulatan tidak melompat masuk kemudian.
         */
-        action={
-          isAdmin()
-            ? { icon: 'shield-half-outline', label: 'Hub Admin', onPress: () => router.push('/(app)/admin') }
-            : undefined
+        leading={
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Buka Profil"
+            hitSlop={6}
+            onPress={() => router.push('/(app)/profil')}
+            className="rounded-pill border-2 border-white/40 active:opacity-70">
+            <MemberAvatar
+              fullName={profile?.fullName ?? displayName(user)}
+              avatarUrl={profile?.avatarUrl ?? null}
+              size={AVATAR_SIZE}
+            />
+          </Pressable>
         }
       />
 

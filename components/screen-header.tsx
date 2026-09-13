@@ -1,16 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import type { ReactNode } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Colors } from '@/constants/theme';
-
-/** Ikon tindakan tambahan di kanan kepala skrin. */
-export type HeaderAction = {
-  icon: keyof typeof Ionicons.glyphMap;
-  /** Label pembaca skrin — ikon sahaja tidak mencukupi. */
-  label: string;
-  onPress: () => void;
-};
+import { usePermissions } from '@/lib/permissions';
 
 type Props = {
   title: string;
@@ -18,32 +13,37 @@ type Props = {
   eyebrow?: string;
   subtitle?: string;
   /**
-   * Ikon tindakan di kanan. Pemanggil yang menentukan sama ada ia wujud, jadi
-   * skrin boleh meninggalkannya SEPENUHNYA daripada pokok komponen apabila
-   * pengguna tiada kebenaran — bukan sekadar menyembunyikannya.
+   * Elemen di kiri teks tajuk — contoh: avatar di Dashboard. Skrin yang tidak
+   * memberinya tidak mendapat apa-apa di situ.
    */
-  action?: HeaderAction;
+  leading?: ReactNode;
   /** Papar anak panah kembali di kiri bila diberi — untuk skrin dalam (bukan tab). */
   onBackPress?: () => void;
 };
 
-/** Kepala skrin hijau forest dengan sudut bawah membulat. */
-export function ScreenHeader({ title, eyebrow, subtitle, action, onBackPress }: Props) {
+/**
+ * Kepala skrin hijau forest dengan sudut bawah membulat.
+ *
+ * Dua pintu tetap di kanan, pada SETIAP skrin yang memakai kepala ini: Hub Admin
+ * (perisai) di kiri dan Tetapan (gear) di kanan. Kedua-duanya tinggal di sini dan
+ * bukan dihantar oleh setiap skrin, supaya tiada skrin boleh terlupa — sebelum
+ * ini perisai hanya ada di Dashboard dan gear hanya di Profil.
+ *
+ * `router.navigate` dan bukan `push`: kedua-dua destinasi ialah tab tersembunyi,
+ * dan mengetuk perisai dari dalam stack admin patut kembali ke Hub, bukan
+ * menimbun salinan Hub kedua di atasnya.
+ */
+export function ScreenHeader({ title, eyebrow, subtitle, leading, onBackPress }: Props) {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
+  const { isAdmin } = usePermissions();
 
   return (
     <View className="rounded-b-[28px] bg-primary px-gutter pb-7" style={{ paddingTop: insets.top + 18 }}>
       <View className="flex-row items-center gap-4">
-        {onBackPress ? (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Kembali"
-            hitSlop={10}
-            onPress={onBackPress}
-            className="h-11 w-11 items-center justify-center rounded-pill bg-white/10 active:opacity-70">
-            <Ionicons name="chevron-back" size={20} color={Colors.white} />
-          </Pressable>
-        ) : null}
+        {onBackPress ? <HeaderIcon icon="chevron-back" label="Kembali" onPress={onBackPress} /> : null}
+
+        {leading ?? null}
 
         <View className="flex-1">
           {eyebrow ? <Text className="text-sm text-white/70">{eyebrow}</Text> : null}
@@ -53,17 +53,41 @@ export function ScreenHeader({ title, eyebrow, subtitle, action, onBackPress }: 
           {subtitle ? <Text className="mt-1 text-sm text-white/70">{subtitle}</Text> : null}
         </View>
 
-        {action ? (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={action.label}
-            hitSlop={10}
-            onPress={action.onPress}
-            className="h-11 w-11 items-center justify-center rounded-pill bg-white/10 active:opacity-70">
-            <Ionicons name={action.icon} size={20} color={Colors.white} />
-          </Pressable>
-        ) : null}
+        <View className="flex-row items-center gap-2">
+          {/*
+            Perisai tidak wujud langsung dalam pokok komponen untuk ahli biasa —
+            bukan sekadar disembunyikan. `isAdmin()` merangkumi Super Admin. Ikon
+            perisai sengaja berbeza daripada gear supaya dua pintu itu tidak
+            dikelirukan.
+          */}
+          {isAdmin() ? (
+            <HeaderIcon icon="shield-half-outline" label="Hub Admin" onPress={() => router.navigate('/(app)/admin')} />
+          ) : null}
+          <HeaderIcon icon="settings-outline" label="Tetapan" onPress={() => router.navigate('/(app)/tetapan')} />
+        </View>
       </View>
     </View>
+  );
+}
+
+function HeaderIcon({
+  icon,
+  label,
+  onPress,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  /** Label pembaca skrin — ikon sahaja tidak mencukupi. */
+  label: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      hitSlop={10}
+      onPress={onPress}
+      className="h-11 w-11 items-center justify-center rounded-pill bg-white/10 active:opacity-70">
+      <Ionicons name={icon} size={20} color={Colors.white} />
+    </Pressable>
   );
 }
