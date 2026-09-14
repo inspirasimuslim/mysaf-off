@@ -1,12 +1,12 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useRef, useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { useCallback, useRef, useState, type ReactNode } from 'react';
+import { Pressable, ScrollView, Text, View, type TextStyle } from 'react-native';
 
 import { PosterCarousel, useWebMouseScroll, type PosterItem } from '@/components/poster-carousel';
 import { ScreenHeader } from '@/components/screen-header';
 import { UsrahStrip } from '@/components/usrah-strip';
-import { Card } from '@/components/ui/card';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { MemberAvatar } from '@/components/ui/member-avatar';
 import { Notice } from '@/components/ui/notice';
@@ -17,7 +17,7 @@ import { fetchVisibleAnnouncements } from '@/lib/announcements';
 import { displayName, useAuth } from '@/lib/auth-context';
 import { fetchBirthdaysToday, shortName, type BirthdayToday } from '@/lib/birthdays';
 import { fetchMyMemberLinked } from '@/lib/members';
-import { fetchPipisSummary, peratusLabel, ringgitBulat, type PipisSummary } from '@/lib/pipis';
+import { PIPIS_TARGET, fetchPipisSummary, peratusLabel, ringgitBulat, type PipisSummary } from '@/lib/pipis';
 import { fetchUpcomingEvents } from '@/lib/usrah-events';
 import { fetchYuranSummary, ringgit, type YuranSummary } from '@/lib/yuran';
 import { shortDateRangeLabel, type Announcement, type UpcomingEvent } from '@/types/database';
@@ -245,115 +245,203 @@ function BirthdayRow({ rows }: { rows: BirthdayToday[] }) {
   );
 }
 
+/*
+  Kad gradient Utama. Warna ditulis terus kerana gradient tiada padanan dalam
+  token Tailwind, dan kedua-dua kad mesti membaca sebagai satu keluarga:
+  kotak ikon putih di kiri atas, chevron di kanan atas, satu angka besar.
+
+  Kad Yuran memakai teks putih, jadi hujung gradient yang cerah dipilih cukup
+  pekat untuk teks putih dan diberi bayang teks yang ringan. Kad PIPIS pastel
+  memakai teks hijau gelap — bayang tidak diperlukan di situ.
+*/
+const YURAN_OWING = ['#F2894E', '#DC3F5E'] as const;
+const YURAN_SETTLED = ['#0F5132', '#3FA66B'] as const;
+const YURAN_LOADING = ['#9CA3AF', '#6B7280'] as const;
+const PIPIS_GRADIENT = ['#A8E6CF', '#56C596'] as const;
+const PIPIS_BAR = ['#2E9E63', '#0F5132'] as const;
+const PIPIS_INK = '#0B3D2A';
+
+/** Yuran tahunan tetap — label rujukan pada kad sahaja, bukan sumber pengiraan. */
+const YURAN_TAHUNAN_LABEL = 'RM30';
+
+const SOFT_SHADOW: TextStyle = {
+  textShadowColor: 'rgba(0,0,0,0.18)',
+  textShadowOffset: { width: 0, height: 1 },
+  textShadowRadius: 3,
+};
+
+/** Ringgit tanpa ".00" bila tiada sen — "RM90", tetapi "RM15.50" kekal lengkap. */
+function ringgitRingkas(amount: number): string {
+  return Number.isInteger(amount) ? 'RM' + amount : ringgit(amount);
+}
+
 /**
- * Status yuran — hijau bila tiada apa yang perlu dibuat, merah bila ada.
- *
- * Keadaan "belum dibaca" memaparkan em dash dan BUKAN sifar. Sifar bermakna
- * "anda tidak berhutang", dan itu jawapan yang tidak boleh diberikan sebelum
- * bacaan selesai.
+ * Rangka bersama dua kad: gradient penuh, kotak ikon, tajuk, chevron.
+ * Pressable menjadi pembalut supaya SELURUH kad boleh diketuk.
  */
-function YuranCard({ summary, onPress }: { summary: YuranSummary | null; onPress: () => void }) {
-  const settled = summary !== null && summary.tertunggak === 0;
+function GradientStatCard({
+  colors,
+  icon,
+  iconColor,
+  title,
+  subtitle,
+  ink,
+  shadow,
+  accessibilityLabel,
+  onPress,
+  children,
+}: {
+  colors: readonly [string, string];
+  icon: ReactNode;
+  iconColor: string;
+  title: string;
+  subtitle: string;
+  ink: string;
+  shadow?: boolean;
+  accessibilityLabel: string;
+  onPress: () => void;
+  children: ReactNode;
+}) {
+  const textShadow = shadow ? SOFT_SHADOW : undefined;
 
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel="Status yuran"
+      accessibilityLabel={accessibilityLabel}
       onPress={onPress}
-      className="flex-1 active:opacity-70">
-      <Card tone={settled ? 'primary' : 'surface'} className="min-h-[132px]">
-        <View className="flex-row items-center gap-2">
-          <Ionicons
-            name="wallet-outline"
-            size={16}
-            color={settled ? 'rgba(255,255,255,0.7)' : '#6B7280'}
-          />
-          <Text className={`text-sm ${settled ? 'text-white/70' : 'text-ink-muted'}`}>Status Yuran</Text>
+      className="flex-1 active:opacity-80">
+      <LinearGradient
+        colors={colors}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={{ flex: 1, minHeight: 148, borderRadius: 20, padding: 16 }}>
+        <View className="flex-row items-start gap-2">
+          <View
+            className="h-9 w-9 items-center justify-center rounded-xl"
+            style={{ backgroundColor: 'rgba(255,255,255,0.9)' }}>
+            {icon}
+          </View>
+
+          <View className="flex-1">
+            <Text className="text-sm font-bold" style={[{ color: ink }, textShadow]} numberOfLines={2}>
+              {title}
+            </Text>
+            <Text className="text-xs" style={[{ color: ink, opacity: 0.8 }, textShadow]} numberOfLines={1}>
+              {subtitle}
+            </Text>
+          </View>
+
+          <View
+            className="h-6 w-6 items-center justify-center rounded-pill"
+            style={{ backgroundColor: 'rgba(255,255,255,0.35)' }}>
+            <Ionicons name="chevron-forward" size={14} color={iconColor} />
+          </View>
         </View>
 
-        {summary === null ? (
-          <Text className="mt-3 text-stat font-bold text-ink-faint">—</Text>
-        ) : settled ? (
-          <>
-            <Text className="mt-3 text-stat font-bold text-white">Lunas</Text>
-            <Text className="mt-1 text-xs text-white/70">
-              {summary.kredit > 0 ? 'Kredit ' + ringgit(summary.kredit) : 'Tiada tunggakan'}
-            </Text>
-          </>
-        ) : (
-          <>
-            <Text className="mt-3 text-stat font-bold text-negative">{ringgit(summary.tertunggak)}</Text>
-            <Text className="mt-1 text-xs text-ink-muted">Tertunggak</Text>
-          </>
-        )}
-      </Card>
+        <View className="mt-3 flex-1 justify-end">{children}</View>
+      </LinearGradient>
     </Pressable>
   );
 }
 
 /**
- * Sumbangan PIPIS ASET — peratus daripada sasaran RM5,000.
+ * Status yuran — gradient merah jambu bila ada tunggakan, hijau bila lunas.
  *
- * Struktur kad sengaja SAMA seperti `YuranCard` di sebelahnya: ikon dan label
- * kecil di atas, satu angka besar, satu baris keterangan. Dua kad bersebelahan
- * yang membaca dengan cara berbeza menjadikan barisan itu kelihatan seperti dua
- * skrin yang bertindih.
- *
- * Keadaan "belum dibaca" memaparkan em dash dan BUKAN 0%. Sifar bermakna
- * "anda belum menyumbang", dan itu jawapan yang tidak boleh diberikan sebelum
- * bacaan selesai.
+ * Keadaan "belum dibaca" memaparkan em dash di atas gradient kelabu dan BUKAN
+ * sifar. Sifar bermakna "anda tidak berhutang", dan itu jawapan yang tidak
+ * boleh diberikan sebelum bacaan selesai.
  */
-function PipisCard({ summary, onPress }: { summary: PipisSummary | null; onPress: () => void }) {
-  const reached = summary !== null && summary.jumlah >= summary.sasaran;
+function YuranCard({ summary, onPress }: { summary: YuranSummary | null; onPress: () => void }) {
+  const settled = summary !== null && summary.tertunggak === 0;
+  const colors = summary === null ? YURAN_LOADING : settled ? YURAN_SETTLED : YURAN_OWING;
 
   return (
-    <Pressable
-      accessibilityRole="button"
+    <GradientStatCard
+      colors={colors}
+      icon={<Ionicons name="calendar-outline" size={18} color={colors[1]} />}
+      iconColor="#FFFFFF"
+      title="Yuran Tahunan"
+      subtitle={YURAN_TAHUNAN_LABEL}
+      ink="#FFFFFF"
+      shadow
+      accessibilityLabel="Status yuran"
+      onPress={onPress}>
+      <Text
+        className="text-stat font-bold text-white"
+        style={SOFT_SHADOW}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.6}>
+        {summary === null ? '—' : settled ? 'RM0' : ringgitRingkas(summary.tertunggak)}
+      </Text>
+      <Text className="mt-0.5 text-xs font-semibold text-white" style={SOFT_SHADOW} numberOfLines={1}>
+        {summary === null
+          ? 'Memuatkan'
+          : settled
+            ? summary.kredit > 0
+              ? 'Lunas · Kredit ' + ringgitRingkas(summary.kredit)
+              : 'Lunas'
+            : 'Tunggakan'}
+      </Text>
+    </GradientStatCard>
+  );
+}
+
+/**
+ * Sumbangan PIPIS ASET — amaun, bar kemajuan dan peratus daripada sasaran.
+ *
+ * Bar dihadkan pada 100% lebar kerana sumbangan tiada siling: bar yang
+ * melimpah keluar kad kelihatan rosak. Peratus SEBENAR (boleh melebihi 100%)
+ * tetap dipapar sebagai teks di sebelahnya, jadi tiada maklumat hilang.
+ *
+ * Keadaan "belum dibaca" memaparkan em dash dan bar kosong, BUKAN RM0 / 0% —
+ * sifar bermakna "anda belum menyumbang", dan itu jawapan yang tidak boleh
+ * diberikan sebelum bacaan selesai.
+ */
+function PipisCard({ summary, onPress }: { summary: PipisSummary | null; onPress: () => void }) {
+  const fill = summary === null ? 0 : Math.max(0, Math.min(summary.peratus, 100));
+
+  return (
+    <GradientStatCard
+      colors={PIPIS_GRADIENT}
+      icon={<MaterialCommunityIcons name="sprout" size={18} color={PIPIS_BAR[1]} />}
+      iconColor={PIPIS_INK}
+      title="PIPIS ASET"
+      subtitle="Jumlah Kutipan"
+      ink={PIPIS_INK}
       accessibilityLabel="Sumbangan PIPIS ASET"
-      onPress={onPress}
-      className="flex-1 active:opacity-70">
-      <Card tone={reached ? 'primary' : 'surface'} className="min-h-[132px]">
-        <View className="flex-row items-center gap-2">
-          <Ionicons
-            name="business-outline"
-            size={16}
-            color={reached ? 'rgba(255,255,255,0.7)' : '#6B7280'}
-          />
-          <Text className={`text-sm ${reached ? 'text-white/70' : 'text-ink-muted'}`}>PIPIS ASET</Text>
+      onPress={onPress}>
+      {/* Sen dibuang: tiga aksara itu yang menolak angka keluar dari kad separuh lebar. */}
+      <Text
+        className="text-stat font-bold"
+        style={{ color: PIPIS_INK }}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.6}>
+        {summary === null ? '—' : ringgitBulat(summary.jumlah)}
+      </Text>
+
+      <View className="mt-2 flex-row items-center gap-2">
+        <View
+          className="h-2 flex-1 overflow-hidden rounded-pill"
+          style={{ backgroundColor: 'rgba(255,255,255,0.55)' }}>
+          {fill > 0 ? (
+            <LinearGradient
+              colors={PIPIS_BAR}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={{ width: `${fill}%`, height: '100%', borderRadius: 999 }}
+            />
+          ) : null}
         </View>
+        <Text className="text-xs font-bold" style={{ color: PIPIS_INK }}>
+          {summary === null ? '—' : peratusLabel(summary.peratus)}
+        </Text>
+      </View>
 
-        {summary === null ? (
-          <Text className="mt-3 text-stat font-bold text-ink-faint">—</Text>
-        ) : (
-          <>
-            {/*
-              Amaun mendapat saiz `stat`, peratus berada pada baris kecil di
-              bawahnya. Peratus sahaja menjawab "sejauh mana" tetapi bukan
-              "berapa" — dan ahli yang membuka kad ini selalunya mahu angka
-              ringgit yang boleh dibandingkan dengan resit banknya.
-
-              Sen dibuang: tiga aksara itu yang menolak peratus keluar dari
-              kad selebar separuh skrin, dan ia tidak pernah mengubah jawapan.
-            */}
-            <Text
-              className={`mt-3 text-stat font-bold ${reached ? 'text-white' : 'text-warn'}`}
-              numberOfLines={1}
-              adjustsFontSizeToFit
-              minimumFontScale={0.6}>
-              {ringgitBulat(summary.jumlah)}
-            </Text>
-            <Text className={`mt-1 text-xs ${reached ? 'text-white/70' : 'text-ink-muted'}`}>
-              {peratusLabel(summary.peratus) +
-                ' · ' +
-                (summary.jumlah > summary.sasaran
-                  ? 'Lebih RM5,000'
-                  : reached
-                    ? 'Cukup RM5,000'
-                    : 'dari RM5,000')}
-            </Text>
-          </>
-        )}
-      </Card>
-    </Pressable>
+      <Text className="mt-1 text-xs" style={{ color: PIPIS_INK, opacity: 0.8 }} numberOfLines={1}>
+        {'Sasaran ' + ringgitBulat(summary?.sasaran ?? PIPIS_TARGET)}
+      </Text>
+    </GradientStatCard>
   );
 }
