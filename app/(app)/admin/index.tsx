@@ -3,9 +3,9 @@ import { View } from 'react-native';
 
 import { ScreenHeader } from '@/components/screen-header';
 import { ActionRow } from '@/components/ui/action-row';
+import { CollapsibleSection } from '@/components/ui/collapsible-section';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Screen } from '@/components/ui/screen';
-import { SectionTitle } from '@/components/ui/section-title';
 import {
   useMemberAccess,
   usePipisAccess,
@@ -25,11 +25,18 @@ import { usePermissions } from '@/lib/permissions';
  * kebenaran department melalui `useMemberAccess()`. Menyembunyikan kad di sini
  * hanyalah supaya pengguna tidak menemui pintu yang akan menolaknya — RLS di
  * Supabase tetap penentu muktamad.
+ *
+ * Setiap department ialah satu seksyen yang boleh ditutup, tertutup secara
+ * lalai: Super Admin melihat enam seksyen dan lima belas kad, dan senarai
+ * terbuka sepenuhnya memaksa tatal jauh untuk sampai ke Bendahari. Kiraan kad
+ * pada kepala seksyen memberitahu isinya tanpa perlu membuka. Pengecualian —
+ * admin yang hanya memegang SATU department mendapat seksyennya terbuka, kerana
+ * tiada apa-apa lagi untuk dikemaskan dan satu ketukan tambahan hanyalah beban.
  */
 export default function AdminHubScreen() {
   const router = useRouter();
   const goBack = useGoBack();
-  const { isSuperAdmin } = usePermissions();
+  const { isSuperAdmin, loading: permissionsLoading } = usePermissions();
   const memberAccess = useMemberAccess();
   const usrahAccess = useUsrahAccess();
   const programAccess = useProgramAccess();
@@ -37,13 +44,24 @@ export default function AdminHubScreen() {
   const pipisAccess = usePipisAccess();
 
   const superAdmin = isSuperAdmin();
-  const nothingAvailable =
-    !superAdmin &&
-    !memberAccess.canView &&
-    !usrahAccess.canView &&
-    !programAccess.canView &&
-    !yuranAccess.canView &&
-    !pipisAccess.canView;
+  /*
+    Setiap department dimuat berasingan. Seksyen dipasang hanya selepas
+    kesemuanya selesai — jika tidak, seksyen pertama yang siap dipasang ketika
+    kiraan masih satu, terbuka, dan kekal terbuka selepas yang lain menyusul.
+  */
+  const accessLoading =
+    permissionsLoading ||
+    [memberAccess, usrahAccess, programAccess, yuranAccess, pipisAccess].some((access) => access.loading);
+  const visibleSections = [
+    superAdmin,
+    memberAccess.canView,
+    usrahAccess.canView,
+    programAccess.canView,
+    yuranAccess.canView,
+    pipisAccess.canView,
+  ].filter(Boolean).length;
+  const nothingAvailable = visibleSections === 0;
+  const openByDefault = visibleSections === 1;
 
   return (
     <Screen padTop={false}>
@@ -54,7 +72,9 @@ export default function AdminHubScreen() {
         onBackPress={goBack}
       />
 
-      <View className="gap-6 px-gutter pt-6">
+      <View className="gap-4 px-gutter pt-6">
+        {accessLoading ? null : (
+        <>
         {/*
           Ketiga-tiga skrin ini menolak bukan-Super Admin dengan skrin "Tiada
           akses" mereka sendiri (`departments.tsx` termasuk — ia menyemak
@@ -62,51 +82,53 @@ export default function AdminHubScreen() {
           admin department tidak dihantar ke pintu yang pasti menolaknya.
         */}
         {superAdmin ? (
-          <View>
-            <SectionTitle title="Organisasi" caption="Struktur department dan pemegang jawatan." />
-            <View className="gap-4">
-              <ActionRow
-                icon="business-outline"
-                title="Department"
-                subtitle="Tambah, aktif/nonaktif dan padam department"
-                onPress={() => router.push('/(app)/admin/departments')}
-              />
+          <CollapsibleSection
+            variant="plain"
+            title="Organisasi"
+            caption="Struktur department dan pemegang jawatan."
+            count={5}
+            defaultOpen={openByDefault}>
+            <ActionRow
+              icon="business-outline"
+              title="Department"
+              subtitle="Tambah, aktif/nonaktif dan padam department"
+              onPress={() => router.push('/(app)/admin/departments')}
+            />
 
-              <ActionRow
-                icon="layers-outline"
-                title="Generasi"
-                subtitle="Tambah, aktif/nonaktif dan padam generasi"
-                onPress={() => router.push('/(app)/admin/generasi')}
-              />
+            <ActionRow
+              icon="layers-outline"
+              title="Generasi"
+              subtitle="Tambah, aktif/nonaktif dan padam generasi"
+              onPress={() => router.push('/(app)/admin/generasi')}
+            />
 
-              <ActionRow
-                icon="shield-outline"
-                title="Lantik Admin"
-                subtitle="Lantik admin dan tetapkan kebenaran department"
-                onPress={() => router.push('/(app)/admin/admins')}
-              />
+            <ActionRow
+              icon="shield-outline"
+              title="Lantik Admin"
+              subtitle="Lantik admin dan tetapkan kebenaran department"
+              onPress={() => router.push('/(app)/admin/admins')}
+            />
 
-              <ActionRow
-                icon="shield-checkmark-outline"
-                title="Super Admin"
-                subtitle="Lantik atau turunkan pangkat Super Admin"
-                onPress={() => router.push('/(app)/admin/super-admins')}
-              />
+            <ActionRow
+              icon="shield-checkmark-outline"
+              title="Super Admin"
+              subtitle="Lantik atau turunkan pangkat Super Admin"
+              onPress={() => router.push('/(app)/admin/super-admins')}
+            />
 
-              {/*
-                Bukan di bawah "Data & Sumber Manusia" walaupun ia menyentuh
-                rekod ahli: operasi ini mencipta AKAUN secara pukal dengan kata
-                laluan yang diketahui umum, dan itu keputusan peringkat
-                organisasi, bukan kerja penyelenggaraan rekod.
-              */}
-              <ActionRow
-                icon="key-outline"
-                title="Provision Akaun Ahli"
-                subtitle="Cipta akaun log masuk untuk ahli yang belum ada akaun"
-                onPress={() => router.push('/(app)/admin/provision-accounts')}
-              />
-            </View>
-          </View>
+            {/*
+              Bukan di bawah "Data & Sumber Manusia" walaupun ia menyentuh
+              rekod ahli: operasi ini mencipta AKAUN secara pukal dengan kata
+              laluan yang diketahui umum, dan itu keputusan peringkat
+              organisasi, bukan kerja penyelenggaraan rekod.
+            */}
+            <ActionRow
+              icon="key-outline"
+              title="Provision Akaun Ahli"
+              subtitle="Cipta akaun log masuk untuk ahli yang belum ada akaun"
+              onPress={() => router.push('/(app)/admin/provision-accounts')}
+            />
+          </CollapsibleSection>
         ) : null}
 
         {/*
@@ -115,30 +137,32 @@ export default function AdminHubScreen() {
           kebenaran department itu, termasuk admin biasa.
         */}
         {memberAccess.canView ? (
-          <View>
-            <SectionTitle title="Data & Sumber Manusia" caption="Urus rekod keahlian." />
-            <View className="gap-4">
-              <ActionRow
-                icon="people-outline"
-                title="Senarai Ahli"
-                subtitle={
-                  memberAccess.canEdit
-                    ? 'Cari, semak dan sunting rekod ahli'
-                    : 'Cari dan semak rekod ahli (paparan sahaja)'
-                }
-                onPress={() => router.push('/(app)/admin/ahli-list')}
-              />
+          <CollapsibleSection
+            variant="plain"
+            title="Data & Sumber Manusia"
+            caption="Urus rekod keahlian."
+            count={memberAccess.canEdit ? 2 : 1}
+            defaultOpen={openByDefault}>
+            <ActionRow
+              icon="people-outline"
+              title="Senarai Ahli"
+              subtitle={
+                memberAccess.canEdit
+                  ? 'Cari, semak dan sunting rekod ahli'
+                  : 'Cari dan semak rekod ahli (paparan sahaja)'
+              }
+              onPress={() => router.push('/(app)/admin/ahli-list')}
+            />
 
-              {memberAccess.canEdit ? (
-                <ActionRow
-                  icon="cloud-upload-outline"
-                  title="Muat Naik Ahli"
-                  subtitle="Import senarai ahli dari fail Excel"
-                  onPress={() => router.push('/(app)/admin/ahli-upload')}
-                />
-              ) : null}
-            </View>
-          </View>
+            {memberAccess.canEdit ? (
+              <ActionRow
+                icon="cloud-upload-outline"
+                title="Muat Naik Ahli"
+                subtitle="Import senarai ahli dari fail Excel"
+                onPress={() => router.push('/(app)/admin/ahli-upload')}
+              />
+            ) : null}
+          </CollapsibleSection>
         ) : null}
 
         {/*
@@ -147,30 +171,32 @@ export default function AdminHubScreen() {
           bahagian tanpa yang satu lagi.
         */}
         {usrahAccess.canView ? (
-          <View>
-            <SectionTitle title="Tarbiah" caption="Urus rekod kehadiran usrah." />
-            <View className="gap-4">
-              <ActionRow
-                icon="qr-code-outline"
-                title="Program Usrah"
-                subtitle={
-                  usrahAccess.canEdit
-                    ? 'Cipta sesi usrah, jana kod QR dan muat turun laporan tahunan'
-                    : 'Semak sesi usrah dan muat turun laporan (paparan sahaja)'
-                }
-                onPress={() => router.push('/(app)/admin/usrah-events')}
-              />
+          <CollapsibleSection
+            variant="plain"
+            title="Tarbiah"
+            caption="Urus rekod kehadiran usrah."
+            count={usrahAccess.canEdit ? 2 : 1}
+            defaultOpen={openByDefault}>
+            <ActionRow
+              icon="qr-code-outline"
+              title="Program Usrah"
+              subtitle={
+                usrahAccess.canEdit
+                  ? 'Cipta sesi usrah, jana kod QR dan muat turun laporan tahunan'
+                  : 'Semak sesi usrah dan muat turun laporan (paparan sahaja)'
+              }
+              onPress={() => router.push('/(app)/admin/usrah-events')}
+            />
 
-              {usrahAccess.canEdit ? (
-                <ActionRow
-                  icon="cloud-upload-outline"
-                  title="Muat Naik Usrah"
-                  subtitle="Import kehadiran usrah bulanan dari fail Excel"
-                  onPress={() => router.push('/(app)/admin/usrah-upload')}
-                />
-              ) : null}
-            </View>
-          </View>
+            {usrahAccess.canEdit ? (
+              <ActionRow
+                icon="cloud-upload-outline"
+                title="Muat Naik Usrah"
+                subtitle="Import kehadiran usrah bulanan dari fail Excel"
+                onPress={() => router.push('/(app)/admin/usrah-upload')}
+              />
+            ) : null}
+          </CollapsibleSection>
         ) : null}
 
         {/*
@@ -180,32 +206,34 @@ export default function AdminHubScreen() {
           modul boleh dipegang secara berasingan.
         */}
         {programAccess.canView ? (
-          <View>
-            <SectionTitle title="Setiausaha" caption="Urus program dan kehadirannya." />
-            <View className="gap-4">
-              <ActionRow
-                icon="calendar-outline"
-                title="Program"
-                subtitle={
-                  programAccess.canEdit
-                    ? 'Cipta program, jana kod QR dan eksport kehadiran setiap program'
-                    : 'Semak program dan eksport kehadiran (paparan sahaja)'
-                }
-                onPress={() => router.push('/(app)/admin/program-events')}
-              />
+          <CollapsibleSection
+            variant="plain"
+            title="Setiausaha"
+            caption="Urus program dan kehadirannya."
+            count={2}
+            defaultOpen={openByDefault}>
+            <ActionRow
+              icon="calendar-outline"
+              title="Program"
+              subtitle={
+                programAccess.canEdit
+                  ? 'Cipta program, jana kod QR dan eksport kehadiran setiap program'
+                  : 'Semak program dan eksport kehadiran (paparan sahaja)'
+              }
+              onPress={() => router.push('/(app)/admin/program-events')}
+            />
 
-              <ActionRow
-                icon="megaphone-outline"
-                title="Pengumuman"
-                subtitle={
-                  programAccess.canEdit
-                    ? 'Cipta dan urus pengumuman yang dipapar di skrin Utama ahli'
-                    : 'Semak pengumuman (paparan sahaja)'
-                }
-                onPress={() => router.push('/(app)/admin/announcements')}
-              />
-            </View>
-          </View>
+            <ActionRow
+              icon="megaphone-outline"
+              title="Pengumuman"
+              subtitle={
+                programAccess.canEdit
+                  ? 'Cipta dan urus pengumuman yang dipapar di skrin Utama ahli'
+                  : 'Semak pengumuman (paparan sahaja)'
+              }
+              onPress={() => router.push('/(app)/admin/announcements')}
+            />
+          </CollapsibleSection>
         ) : null}
 
         {/*
@@ -214,38 +242,40 @@ export default function AdminHubScreen() {
           tanpa yang lain, jadi kadnya berdiri sendiri.
         */}
         {yuranAccess.canView ? (
-          <View>
-            <SectionTitle title="Bendahari" caption="Urus yuran keahlian dan pembayaran lain." />
-            <View className="gap-4">
-              <ActionRow
-                icon="wallet-outline"
-                title="Yuran"
-                subtitle={
-                  yuranAccess.canEdit
-                    ? 'Semak baki, rekod bayaran, jana yuran tahunan dan eksport laporan'
-                    : 'Semak baki dan eksport laporan (paparan sahaja)'
-                }
-                onPress={() => router.push('/(app)/admin/yuran-list')}
-              />
+          <CollapsibleSection
+            variant="plain"
+            title="Bendahari"
+            caption="Urus yuran keahlian dan pembayaran lain."
+            count={2}
+            defaultOpen={openByDefault}>
+            <ActionRow
+              icon="wallet-outline"
+              title="Yuran"
+              subtitle={
+                yuranAccess.canEdit
+                  ? 'Semak baki, rekod bayaran, jana yuran tahunan dan eksport laporan'
+                  : 'Semak baki dan eksport laporan (paparan sahaja)'
+              }
+              onPress={() => router.push('/(app)/admin/yuran-list')}
+            />
 
-              {/*
-                Pembayaran adhoc berkongsi department dengan Yuran tetapi bukan
-                bentuknya: ia papan notis tanpa lejar — tiada baki, tiada siapa
-                yang direkod sebagai sudah membayar. Kad berasingan supaya
-                perbezaan itu tidak hilang di bawah satu nama.
-              */}
-              <ActionRow
-                icon="qr-code-outline"
-                title="Pembayaran Adhoc"
-                subtitle={
-                  yuranAccess.canEdit
-                    ? 'Cipta tabung/infaq, muat naik kod QR DuitNow dan urus paparannya'
-                    : 'Semak senarai tabung dan infaq (paparan sahaja)'
-                }
-                onPress={() => router.push('/(app)/admin/adhoc-payment-list')}
-              />
-            </View>
-          </View>
+            {/*
+              Pembayaran adhoc berkongsi department dengan Yuran tetapi bukan
+              bentuknya: ia papan notis tanpa lejar — tiada baki, tiada siapa
+              yang direkod sebagai sudah membayar. Kad berasingan supaya
+              perbezaan itu tidak hilang di bawah satu nama.
+            */}
+            <ActionRow
+              icon="qr-code-outline"
+              title="Pembayaran Adhoc"
+              subtitle={
+                yuranAccess.canEdit
+                  ? 'Cipta tabung/infaq, muat naik kod QR DuitNow dan urus paparannya'
+                  : 'Semak senarai tabung dan infaq (paparan sahaja)'
+              }
+              onPress={() => router.push('/(app)/admin/adhoc-payment-list')}
+            />
+          </CollapsibleSection>
         ) : null}
 
         {/*
@@ -254,21 +284,23 @@ export default function AdminHubScreen() {
           keahlian, PIPIS ialah dana aset. Dua department, dua kad.
         */}
         {pipisAccess.canView ? (
-          <View>
-            <SectionTitle title="Ekonomi & Aset" caption="Urus sumbangan PIPIS ASET." />
-            <View className="gap-4">
-              <ActionRow
-                icon="business-outline"
-                title="PIPIS ASET"
-                subtitle={
-                  pipisAccess.canEdit
-                    ? 'Semak sumbangan, rekod pelarasan, import fail dan eksport laporan'
-                    : 'Semak sumbangan dan eksport laporan (paparan sahaja)'
-                }
-                onPress={() => router.push('/(app)/admin/pipis-list')}
-              />
-            </View>
-          </View>
+          <CollapsibleSection
+            variant="plain"
+            title="Ekonomi & Aset"
+            caption="Urus sumbangan PIPIS ASET."
+            count={1}
+            defaultOpen={openByDefault}>
+            <ActionRow
+              icon="business-outline"
+              title="PIPIS ASET"
+              subtitle={
+                pipisAccess.canEdit
+                  ? 'Semak sumbangan, rekod pelarasan, import fail dan eksport laporan'
+                  : 'Semak sumbangan dan eksport laporan (paparan sahaja)'
+              }
+              onPress={() => router.push('/(app)/admin/pipis-list')}
+            />
+          </CollapsibleSection>
         ) : null}
 
         {/*
@@ -283,6 +315,8 @@ export default function AdminHubScreen() {
             description="Akaun anda belum diberikan kebenaran pada mana-mana department. Hubungi Super Admin untuk capaian."
           />
         ) : null}
+        </>
+        )}
       </View>
     </Screen>
   );

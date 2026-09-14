@@ -3,11 +3,13 @@ import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import { CollapsibleSection } from '@/components/ui/collapsible-section';
 import { MemberAvatar } from '@/components/ui/member-avatar';
 import { Notice } from '@/components/ui/notice';
 import { PickerField } from '@/components/ui/picker-field';
 import { SectionTitle } from '@/components/ui/section-title';
+import { TabBar } from '@/components/ui/tab-bar';
 import { TextField } from '@/components/ui/text-field';
 import { ToggleRow } from '@/components/ui/toggle-row';
 import { Colors } from '@/constants/theme';
@@ -46,6 +48,16 @@ import {
  * Borang ini bukan lapisan kawalan — RLS dan trigger tetap penentu muktamad.
  */
 
+export type ProfileTab = 'diri' | 'pendidikan' | 'pekerjaan' | 'keluarga' | 'jawatan';
+
+const PROFILE_TABS: Option<ProfileTab>[] = [
+  { value: 'diri', label: 'Maklumat Diri' },
+  { value: 'pendidikan', label: 'Pendidikan' },
+  { value: 'pekerjaan', label: 'Pekerjaan' },
+  { value: 'keluarga', label: 'Keluarga' },
+  { value: 'jawatan', label: 'Jawatan' },
+];
+
 type Props = {
   member: Member;
   generations: Generation[];
@@ -56,6 +68,14 @@ type Props = {
   /** Dipanggil bila avatar diketuk. Tanpa ini, ikon kamera tidak dipapar. */
   onPickAvatar?: () => void;
   avatarBusy?: boolean;
+  /**
+   * Bila diberi, borang dipapar sebagai kepala profil diikuti tab — susun atur
+   * skrin Profil ahli. Tanpanya semua seksyen dipapar serentak (panel Admin).
+   *
+   * Tab dikawal oleh pemanggil kerana borang dipasang semula selepas setiap
+   * simpanan; keadaan dalaman akan melontar pengguna kembali ke tab pertama.
+   */
+  tabs?: { value: ProfileTab; onChange: (next: ProfileTab) => void };
   /** Hanya medan yang benar-benar berubah dihantar. */
   onSave: (patch: Partial<Member>) => void;
 };
@@ -89,11 +109,24 @@ const JAWATAN_FIELDS = [
   'jawatan_pas_1', 'jawatan_pas_2', 'jawatan_pas_3', 'no_keahlian_pas',
 ] as const satisfies readonly (keyof Member)[];
 
+/** Kapsyen seksyen — sama ada dipapar sebagai seksyen boleh tutup atau sebagai tab. */
+const CAPTIONS = {
+  pendidikan: 'Butiran institusi muncul selepas status pengajian dipilih.',
+  pekerjaan: 'Butiran tambahan muncul mengikut status pekerjaan yang dipilih.',
+  keluarga: 'Butiran pasangan muncul selepas status berkahwin dipilih.',
+  jawatan: 'Jawatan dalam Ikhwan dan PAS, jika ada.',
+} as const;
+
 function countFilled(member: Member, keys: readonly (keyof Member)[]): number {
   return keys.filter((key) => {
     const value = member[key];
     return value !== null && value !== undefined && value !== '';
   }).length;
+}
+
+function usrahLabel(code: string | null): string | null {
+  if (!code) return null;
+  return KAWASAN_USRAH_OPTIONS.find((option) => option.value === code)?.label ?? code;
 }
 
 /** Kunci medan yang disimpan sebagai nombor. */
@@ -113,6 +146,7 @@ export function MemberForm({
   busy = false,
   onPickAvatar,
   avatarBusy = false,
+  tabs,
   onSave,
 }: Props) {
   const [draft, setDraft] = useState<Member>(member);
@@ -222,247 +256,328 @@ export function MemberForm({
      gambar boleh ditukar. */
   const canPickAvatar = !readOnly && Boolean(onPickAvatar);
 
-  return (
-    <View className="gap-6">
-      {/* --- Avatar ----------------------------------------------------------- */}
-      <View className="items-center">
-        <Pressable
-          accessibilityRole={canPickAvatar ? 'button' : 'image'}
-          accessibilityLabel={canPickAvatar ? 'Tukar gambar profil' : member.full_name}
-          disabled={!canPickAvatar || avatarBusy}
-          onPress={onPickAvatar}
-          className={canPickAvatar ? 'active:opacity-70' : ''}>
-          {/* Dari prop dan bukan draf: gambar bukan medan borang, jadi nilai
-              terkini datang daripada rekod, bukan daripada salinan beku draf. */}
-          <MemberAvatar fullName={draft.full_name} avatarUrl={member.avatar_url} size={AVATAR_SIZE} />
+  /* --- Kepingan borang -------------------------------------------------------
+     Setiap kepingan dibina sekali dan disusun oleh dua susun atur di bawah,
+     supaya medan, syarat paparan dan logik simpan tidak berpecah dua. */
 
-          {canPickAvatar ? (
-            <View className="absolute bottom-0 right-0 h-9 w-9 items-center justify-center rounded-pill border-2 border-surface bg-primary">
-              {avatarBusy ? (
-                <ActivityIndicator size="small" color={Colors.white} />
-              ) : (
-                <Ionicons name="camera" size={16} color={Colors.white} />
-              )}
-            </View>
-          ) : null}
-        </Pressable>
-      </View>
+  const avatar = (
+    <View className="items-center">
+      <Pressable
+        accessibilityRole={canPickAvatar ? 'button' : 'image'}
+        accessibilityLabel={canPickAvatar ? 'Tukar gambar profil' : member.full_name}
+        disabled={!canPickAvatar || avatarBusy}
+        onPress={onPickAvatar}
+        className={canPickAvatar ? 'active:opacity-70' : ''}>
+        {/* Dari prop dan bukan draf: gambar bukan medan borang, jadi nilai
+            terkini datang daripada rekod, bukan daripada salinan beku draf. */}
+        <MemberAvatar fullName={draft.full_name} avatarUrl={member.avatar_url} size={AVATAR_SIZE} />
 
-      {/* --- Identiti keahlian ------------------------------------------------ */}
-      <View>
-        <SectionTitle
-          title="Maklumat Keahlian"
-          caption={
-            readOnly
-              ? 'Paparan sahaja — anda tiada kebenaran menyunting rekod ini.'
-              : canEditAdminColumns
-                ? 'Nombor ahli mesti unik dalam sistem.'
-                : 'Medan ini ditetapkan oleh admin dan tidak boleh diubah sendiri.'
-          }
-        />
-        <View className="gap-4">
-          {canEditAdminColumns ? (
-            <>
-              <TextField
-                label="Nombor ahli"
-                value={draft.nombor_ahli ?? ''}
-                onChangeText={setText('nombor_ahli')}
-                editable={!locked}
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
-              <PickerField
-                label="Generasi"
-                value={draft.generasi}
-                options={generationOptions}
-                onChange={(next) => set('generasi', next)}
-                disabled={locked}
-              />
-              <TextField
-                label="Emel"
-                value={draft.email ?? ''}
-                onChangeText={setText('email')}
-                editable={!locked}
-                autoCapitalize="none"
-                autoCorrect={false}
-                keyboardType="email-address"
-              />
-            </>
-          ) : (
-            <>
-              <ReadOnlyField label="Nombor ahli" value={draft.nombor_ahli} />
-              <ReadOnlyField label="Generasi" value={generationLabel(draft.generasi)} />
-              <ReadOnlyField label="Emel" value={draft.email} />
-              <ReadOnlyField label="Status sekatan" value={draft.disekat ? 'Disekat' : 'Aktif'} />
-            </>
-          )}
+        {canPickAvatar ? (
+          <View className="absolute bottom-0 right-0 h-9 w-9 items-center justify-center rounded-pill border-2 border-surface bg-primary">
+            {avatarBusy ? (
+              <ActivityIndicator size="small" color={Colors.white} />
+            ) : (
+              <Ionicons name="camera" size={16} color={Colors.white} />
+            )}
+          </View>
+        ) : null}
+      </Pressable>
+    </View>
+  );
 
-          {canEditAdminColumns ? (
-            <ToggleRow
-              icon="ban-outline"
-              title="Sekat ahli"
-              subtitle="Ahli disekat tidak boleh log masuk. Rekod kekal dalam sistem."
-              value={draft.disekat}
-              onValueChange={(next) => set('disekat', next)}
+  const keahlian = (
+    <View>
+      <SectionTitle
+        title="Maklumat Keahlian"
+        caption={
+          readOnly
+            ? 'Paparan sahaja — anda tiada kebenaran menyunting rekod ini.'
+            : canEditAdminColumns
+              ? 'Nombor ahli mesti unik dalam sistem.'
+              : 'Medan ini ditetapkan oleh admin dan tidak boleh diubah sendiri.'
+        }
+      />
+      <View className="gap-4">
+        {canEditAdminColumns ? (
+          <>
+            <TextField
+              label="Nombor ahli"
+              value={draft.nombor_ahli ?? ''}
+              onChangeText={setText('nombor_ahli')}
+              editable={!locked}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            <PickerField
+              label="Generasi"
+              value={draft.generasi}
+              options={generationOptions}
+              onChange={(next) => set('generasi', next)}
               disabled={locked}
             />
-          ) : null}
-        </View>
-      </View>
+            <TextField
+              label="Emel"
+              value={draft.email ?? ''}
+              onChangeText={setText('email')}
+              editable={!locked}
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="email-address"
+            />
+          </>
+        ) : (
+          <>
+            <ReadOnlyField label="Nombor ahli" value={draft.nombor_ahli} />
+            <ReadOnlyField label="Generasi" value={generationLabel(draft.generasi)} />
+            <ReadOnlyField label="Emel" value={draft.email} />
+            <ReadOnlyField label="Status sekatan" value={draft.disekat ? 'Disekat' : 'Aktif'} />
+          </>
+        )}
 
-      {/* --- Peribadi -------------------------------------------------------- */}
+        {canEditAdminColumns ? (
+          <ToggleRow
+            icon="ban-outline"
+            title="Sekat ahli"
+            subtitle="Ahli disekat tidak boleh log masuk. Rekod kekal dalam sistem."
+            value={draft.disekat}
+            onValueChange={(next) => set('disekat', next)}
+            disabled={locked}
+          />
+        ) : null}
+      </View>
+    </View>
+  );
+
+  const peribadiFields = (
+    <>
+      <TextField
+        label="Nama penuh"
+        value={draft.full_name}
+        onChangeText={(value) => set('full_name', value)}
+        editable={!locked}
+        autoCapitalize="characters"
+        autoCorrect={false}
+      />
+      <PickerField
+        label="Jantina"
+        value={draft.jantina}
+        options={JANTINA_OPTIONS}
+        onChange={(next) => set('jantina', next)}
+        disabled={locked}
+      />
+      {field('No. kad pengenalan', 'nric')}
+      {field('No. telefon', 'no_tel', { keyboardType: 'phone-pad' })}
+      <PickerField
+        label="Kawasan usrah"
+        value={draft.kawasan_usrah}
+        options={usrahOptions}
+        onChange={(next) => set('kawasan_usrah', next)}
+        disabled={locked}
+      />
+      {field('Alamat tetap', 'alamat')}
+      {field('Alamat semasa', 'alamat_semasa')}
+    </>
+  );
+
+  const pendidikanFields = (
+    <>
+      {field('Tahap pendidikan tertinggi', 'tahap_pendidikan')}
+      {field('Sekolah', 'sekolah')}
+
+      <PickerField
+        label="Status pengajian"
+        value={draft.status_pengajian}
+        options={STATUS_PENGAJIAN_OPTIONS}
+        onChange={(next) => set('status_pengajian', next)}
+        disabled={locked}
+      />
+
+      {studying ? (
+        <>
+          {field('Nama institusi', 'nama_institusi')}
+          {field('Alamat institusi', 'alamat_institusi')}
+          {field('Tahun pengajian', 'tahun_pengajian')}
+          {field('Jurusan pengajian', 'jurusan_pengajian')}
+          {field('Sumber pembiayaan', 'sumber_pembiayaan')}
+          {field('Nyatakan pembiayaan lain', 'pembiayaan_lain')}
+        </>
+      ) : null}
+    </>
+  );
+
+  const pekerjaanFields = (
+    <>
+      <PickerField
+        label="Status pekerjaan"
+        value={draft.status_pekerjaan}
+        options={STATUS_PEKERJAAN_OPTIONS}
+        onChange={(next) => set('status_pekerjaan', next)}
+        disabled={locked}
+      />
+
+      {working ? (
+        <>
+          {field('Sektor pekerjaan', 'sektor_pekerjaan')}
+          {field('Jawatan', 'jawatan_pekerjaan')}
+          {field('Nama majikan / syarikat', 'nama_majikan')}
+          {field('Alamat tempat kerja', 'alamat_tempat_kerja')}
+        </>
+      ) : null}
+
+      {inBusiness ? (
+        <>
+          {field('Jenis perniagaan', 'jenis_perniagaan')}
+          {field('Nama syarikat', 'nama_majikan')}
+          {field('Alamat tempat perniagaan', 'alamat_tempat_kerja')}
+        </>
+      ) : null}
+
+      {working || inBusiness ? (
+        <PickerField
+          label="Anggaran pendapatan sebulan"
+          value={draft.anggaran_pendapatan_range}
+          options={PENDAPATAN_RANGE_OPTIONS}
+          onChange={(next) => set('anggaran_pendapatan_range', next)}
+          disabled={locked}
+        />
+      ) : null}
+    </>
+  );
+
+  const keluargaFields = (
+    <>
+      <PickerField
+        label="Status perkahwinan"
+        value={draft.status_perkahwinan}
+        options={STATUS_PERKAHWINAN_OPTIONS}
+        onChange={(next) => set('status_perkahwinan', next)}
+        disabled={locked}
+      />
+
+      {married ? (
+        <>
+          {field('Nama pasangan', 'nama_pasangan')}
+          {field('Tahun berkahwin', 'tahun_berkahwin')}
+          {numberField('Bilangan anak', 'bil_anak')}
+        </>
+      ) : null}
+
+      <PickerField
+        label="Anggaran pendapatan isi rumah"
+        value={draft.anggaran_pendapatan_isi_rumah_range}
+        options={PENDAPATAN_RANGE_OPTIONS}
+        onChange={(next) => set('anggaran_pendapatan_isi_rumah_range', next)}
+        disabled={locked}
+      />
+      {numberField('Bilangan tanggungan selain keluarga', 'bil_tanggungan_selain_keluarga')}
+      {field('Pekerjaan ibu', 'pekerjaan_ibu')}
+      {field('Pekerjaan bapa', 'pekerjaan_bapa')}
+      {numberField('Bilangan tanggungan ibu bapa', 'bil_tanggungan_ibu_bapa')}
+    </>
+  );
+
+  const jawatanFields = (
+    <>
+      {field('Jawatan Ikhwan 1', 'jawatan_ikhwan_1')}
+      {field('Jawatan Ikhwan 2', 'jawatan_ikhwan_2')}
+      {field('Jawatan Ikhwan 3', 'jawatan_ikhwan_3')}
+      {field('Jawatan PAS 1', 'jawatan_pas_1')}
+      {field('Jawatan PAS 2', 'jawatan_pas_2')}
+      {field('Jawatan PAS 3', 'jawatan_pas_3')}
+      {field('No. keahlian PAS', 'no_keahlian_pas')}
+    </>
+  );
+
+  /*
+    Tiada butang Simpan langsung bila borang dikunci — memaparkannya sebagai
+    "disabled" masih mengisyaratkan simpanan mungkin berjaya suatu ketika,
+    sedangkan kebenaran department tidak akan berubah di skrin ini.
+  */
+  const saveButton = readOnly ? null : (
+    <>
+      {!draft.full_name.trim() ? <Notice tone="negative" message="Nama penuh tidak boleh dikosongkan." /> : null}
+
+      <Button
+        label="Simpan Perubahan"
+        loading={busy}
+        disabled={busy || !dirty || !draft.full_name.trim()}
+        onPress={() => onSave(patch)}
+      />
+    </>
+  );
+
+  /* --- Susun atur Profil: kepala tetap + tab ----------------------------------
+     Satu draf untuk semua tab: suntingan di "Pendidikan" tidak hilang bila
+     pengguna beralih ke "Keluarga", dan satu butang Simpan menghantar kesemuanya.
+     Kepala dibaca daripada rekod tersimpan, bukan draf, supaya ia tidak berubah
+     sebelum simpanan berjaya. */
+  if (tabs) {
+    const caption = tabs.value === 'diri' ? null : CAPTIONS[tabs.value];
+
+    return (
+      <View className="gap-6">
+        <View className="gap-3">
+          {avatar}
+          <Text className="text-center text-xl font-bold text-ink">{member.full_name}</Text>
+        </View>
+
+        <Card className="gap-4">
+          <InfoRow icon="layers-outline" label="Generasi" value={generationLabel(member.generasi)} />
+          <InfoRow icon="mail-outline" label="Emel" value={member.email} />
+          <InfoRow icon="location-outline" label="Kawasan usrah" value={usrahLabel(member.kawasan_usrah)} />
+        </Card>
+
+        <View className="gap-2">
+          <TabBar value={tabs.value} options={PROFILE_TABS} onChange={tabs.onChange} />
+          {caption ? <Text className="text-sm text-ink-muted">{caption}</Text> : null}
+        </View>
+
+        <View className="gap-4">
+          {tabs.value === 'diri' ? (
+            <>
+              {canEditAdminColumns ? keahlian : null}
+              {peribadiFields}
+            </>
+          ) : null}
+          {tabs.value === 'pendidikan' ? pendidikanFields : null}
+          {tabs.value === 'pekerjaan' ? pekerjaanFields : null}
+          {tabs.value === 'keluarga' ? keluargaFields : null}
+          {tabs.value === 'jawatan' ? jawatanFields : null}
+        </View>
+
+        {saveButton}
+      </View>
+    );
+  }
+
+  /* --- Susun atur Admin: semua seksyen serentak ------------------------------- */
+  return (
+    <View className="gap-6">
+      {avatar}
+      {keahlian}
+
       <View>
         <SectionTitle title="Maklumat Peribadi" />
-        <View className="gap-4">
-          <TextField
-            label="Nama penuh"
-            value={draft.full_name}
-            onChangeText={(value) => set('full_name', value)}
-            editable={!locked}
-            autoCapitalize="characters"
-            autoCorrect={false}
-          />
-          <PickerField
-            label="Jantina"
-            value={draft.jantina}
-            options={JANTINA_OPTIONS}
-            onChange={(next) => set('jantina', next)}
-            disabled={locked}
-          />
-          {field('No. kad pengenalan', 'nric')}
-          {field('No. telefon', 'no_tel', { keyboardType: 'phone-pad' })}
-          <PickerField
-            label="Kawasan usrah"
-            value={draft.kawasan_usrah}
-            options={usrahOptions}
-            onChange={(next) => set('kawasan_usrah', next)}
-            disabled={locked}
-          />
-          {field('Alamat tetap', 'alamat')}
-          {field('Alamat semasa', 'alamat_semasa')}
-        </View>
+        <View className="gap-4">{peribadiFields}</View>
       </View>
 
-      <CollapsibleSection title="Pendidikan" caption="Butiran institusi muncul selepas status pengajian dipilih." filled={countFilled(draft, PENDIDIKAN_FIELDS)}>
-        {field('Tahap pendidikan tertinggi', 'tahap_pendidikan')}
-        {field('Sekolah', 'sekolah')}
-
-        <PickerField
-          label="Status pengajian"
-          value={draft.status_pengajian}
-          options={STATUS_PENGAJIAN_OPTIONS}
-          onChange={(next) => set('status_pengajian', next)}
-          disabled={locked}
-        />
-
-        {studying ? (
-          <>
-            {field('Nama institusi', 'nama_institusi')}
-            {field('Alamat institusi', 'alamat_institusi')}
-            {field('Tahun pengajian', 'tahun_pengajian')}
-            {field('Jurusan pengajian', 'jurusan_pengajian')}
-            {field('Sumber pembiayaan', 'sumber_pembiayaan')}
-            {field('Nyatakan pembiayaan lain', 'pembiayaan_lain')}
-          </>
-        ) : null}
+      <CollapsibleSection title="Pendidikan" caption={CAPTIONS.pendidikan} count={countFilled(draft, PENDIDIKAN_FIELDS)}>
+        {pendidikanFields}
       </CollapsibleSection>
 
-      <CollapsibleSection title="Pekerjaan" caption="Butiran tambahan muncul mengikut status pekerjaan yang dipilih." filled={countFilled(draft, PEKERJAAN_FIELDS)}>
-        <PickerField
-          label="Status pekerjaan"
-          value={draft.status_pekerjaan}
-          options={STATUS_PEKERJAAN_OPTIONS}
-          onChange={(next) => set('status_pekerjaan', next)}
-          disabled={locked}
-        />
-
-        {working ? (
-          <>
-            {field('Sektor pekerjaan', 'sektor_pekerjaan')}
-            {field('Jawatan', 'jawatan_pekerjaan')}
-            {field('Nama majikan / syarikat', 'nama_majikan')}
-            {field('Alamat tempat kerja', 'alamat_tempat_kerja')}
-          </>
-        ) : null}
-
-        {inBusiness ? (
-          <>
-            {field('Jenis perniagaan', 'jenis_perniagaan')}
-            {field('Nama syarikat', 'nama_majikan')}
-            {field('Alamat tempat perniagaan', 'alamat_tempat_kerja')}
-          </>
-        ) : null}
-
-        {working || inBusiness ? (
-          <PickerField
-            label="Anggaran pendapatan sebulan"
-            value={draft.anggaran_pendapatan_range}
-            options={PENDAPATAN_RANGE_OPTIONS}
-            onChange={(next) => set('anggaran_pendapatan_range', next)}
-            disabled={locked}
-          />
-        ) : null}
+      <CollapsibleSection title="Pekerjaan" caption={CAPTIONS.pekerjaan} count={countFilled(draft, PEKERJAAN_FIELDS)}>
+        {pekerjaanFields}
       </CollapsibleSection>
 
-      <CollapsibleSection title="Keluarga" caption="Butiran pasangan muncul selepas status berkahwin dipilih." filled={countFilled(draft, KELUARGA_FIELDS)}>
-        <PickerField
-          label="Status perkahwinan"
-          value={draft.status_perkahwinan}
-          options={STATUS_PERKAHWINAN_OPTIONS}
-          onChange={(next) => set('status_perkahwinan', next)}
-          disabled={locked}
-        />
-
-        {married ? (
-          <>
-            {field('Nama pasangan', 'nama_pasangan')}
-            {field('Tahun berkahwin', 'tahun_berkahwin')}
-            {numberField('Bilangan anak', 'bil_anak')}
-          </>
-        ) : null}
-
-        <PickerField
-          label="Anggaran pendapatan isi rumah"
-          value={draft.anggaran_pendapatan_isi_rumah_range}
-          options={PENDAPATAN_RANGE_OPTIONS}
-          onChange={(next) => set('anggaran_pendapatan_isi_rumah_range', next)}
-          disabled={locked}
-        />
-        {numberField('Bilangan tanggungan selain keluarga', 'bil_tanggungan_selain_keluarga')}
-        {field('Pekerjaan ibu', 'pekerjaan_ibu')}
-        {field('Pekerjaan bapa', 'pekerjaan_bapa')}
-        {numberField('Bilangan tanggungan ibu bapa', 'bil_tanggungan_ibu_bapa')}
+      <CollapsibleSection title="Keluarga" caption={CAPTIONS.keluarga} count={countFilled(draft, KELUARGA_FIELDS)}>
+        {keluargaFields}
       </CollapsibleSection>
 
-      <CollapsibleSection title="Jawatan" caption="Jawatan dalam Ikhwan dan PAS, jika ada." filled={countFilled(draft, JAWATAN_FIELDS)}>
-        {field('Jawatan Ikhwan 1', 'jawatan_ikhwan_1')}
-        {field('Jawatan Ikhwan 2', 'jawatan_ikhwan_2')}
-        {field('Jawatan Ikhwan 3', 'jawatan_ikhwan_3')}
-        {field('Jawatan PAS 1', 'jawatan_pas_1')}
-        {field('Jawatan PAS 2', 'jawatan_pas_2')}
-        {field('Jawatan PAS 3', 'jawatan_pas_3')}
-        {field('No. keahlian PAS', 'no_keahlian_pas')}
+      <CollapsibleSection title="Jawatan" caption={CAPTIONS.jawatan} count={countFilled(draft, JAWATAN_FIELDS)}>
+        {jawatanFields}
       </CollapsibleSection>
 
-      {/*
-        Tiada butang Simpan langsung bila borang dikunci — memaparkannya sebagai
-        "disabled" masih mengisyaratkan simpanan mungkin berjaya suatu ketika,
-        sedangkan kebenaran department tidak akan berubah di skrin ini.
-      */}
-      {readOnly ? null : (
-        <>
-          {!draft.full_name.trim() ? (
-            <Notice tone="negative" message="Nama penuh tidak boleh dikosongkan." />
-          ) : null}
-
-          <Button
-            label="Simpan Perubahan"
-            loading={busy}
-            disabled={busy || !dirty || !draft.full_name.trim()}
-            onPress={() => onSave(patch)}
-          />
-        </>
-      )}
+      {saveButton}
     </View>
   );
 }
@@ -474,6 +589,31 @@ function ReadOnlyField({ label, value }: { label: string; value: string | null }
       <Text className="text-sm font-medium text-ink-muted">{label}</Text>
       <View className="h-14 flex-row items-center rounded-field border border-line bg-background px-4">
         <Text className={`flex-1 text-base ${value ? 'text-ink' : 'text-ink-faint'}`} numberOfLines={1}>
+          {value || 'Tiada'}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+/** Baris ringkasan kepala profil — label kecil di atas nilai, ikon di kiri. */
+function InfoRow({
+  icon,
+  label,
+  value,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  value: string | null;
+}) {
+  return (
+    <View className="flex-row items-center gap-3">
+      <View className="h-9 w-9 items-center justify-center rounded-pill bg-primary-soft">
+        <Ionicons name={icon} size={16} color={Colors.primary} />
+      </View>
+      <View className="flex-1">
+        <Text className="text-xs text-ink-muted">{label}</Text>
+        <Text className={`text-base ${value ? 'text-ink' : 'text-ink-faint'}`} numberOfLines={1}>
           {value || 'Tiada'}
         </Text>
       </View>

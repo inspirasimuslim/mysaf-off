@@ -2,9 +2,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
 
-import { MemberForm } from '@/components/member-form';
+import { MemberForm, type ProfileTab } from '@/components/member-form';
 import { ScreenHeader } from '@/components/screen-header';
-import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { LoadingScreen } from '@/components/ui/loading-screen';
@@ -15,7 +14,7 @@ import { pickAvatar, uploadAvatar } from '@/lib/avatar';
 import { displayName, useAuth } from '@/lib/auth-context';
 import { toMalayError } from '@/lib/errors';
 import { fetchGenerations, fetchMyMember, fetchMyMemberLinked, updateMember } from '@/lib/members';
-import { generationLabel, type Generation, type Member } from '@/types/database';
+import type { Generation, Member } from '@/types/database';
 
 type Banner = { tone: 'positive' | 'negative'; message: string } | null;
 
@@ -38,6 +37,8 @@ export default function ProfilScreen() {
   const [banner, setBanner] = useState<Banner>(null);
   const [saving, setSaving] = useState(false);
   const [version, setVersion] = useState(0);
+  // Di sini dan bukan dalam borang: borang dipasang semula selepas setiap simpanan.
+  const [tab, setTab] = useState<ProfileTab>('diri');
 
   useEffect(() => {
     if (!userId) {
@@ -114,13 +115,9 @@ export default function ProfilScreen() {
 
   if (loading) return <LoadingScreen />;
 
-  const header = (
-    <ScreenHeader
-      title="Profil"
-      eyebrow={member?.nombor_ahli ? 'Ahli ' + member.nombor_ahli : undefined}
-      subtitle={member ? generationLabel(member.generasi) : undefined}
-    />
-  );
+  // Nombor ahli dan generasi tidak lagi di kepala skrin: generasi kini dalam
+  // kepala profil borang, dan nombor ahli sengaja tidak dipapar kepada ahli.
+  const header = <ScreenHeader title="Profil" />;
 
   // --- Akaun belum dikaitkan ke mana-mana rekod ahli -------------------------
   if (!member) {
@@ -163,23 +160,6 @@ export default function ProfilScreen() {
         {error ? <Notice tone="negative" message={error} /> : null}
         {banner ? <Notice tone={banner.tone} message={banner.message} /> : null}
 
-        <Card>
-          <View className="flex-row items-center gap-4">
-            <View className="h-14 w-14 items-center justify-center rounded-pill bg-primary-soft">
-              <Ionicons name="person" size={24} color={Colors.primary} />
-            </View>
-            <View className="flex-1">
-              <Text className="text-lg font-bold text-ink" numberOfLines={1}>
-                {member.full_name}
-              </Text>
-              <Text className="mt-0.5 text-sm text-ink-muted" numberOfLines={1}>
-                {member.email ?? 'Tiada emel'}
-              </Text>
-            </View>
-            {member.disekat ? <Badge label="Disekat" tone="negative" /> : null}
-          </View>
-        </Card>
-
         <MemberForm
           key={member.id + ':' + version}
           member={member}
@@ -188,6 +168,7 @@ export default function ProfilScreen() {
           busy={saving}
           onPickAvatar={() => void changeAvatar()}
           avatarBusy={avatarBusy}
+          tabs={{ value: tab, onChange: setTab }}
           onSave={(patch) => void save(patch)}
         />
       </View>
