@@ -17,12 +17,30 @@ const AuthContext = createContext<AuthState>({
   initialising: true,
 });
 
+let forcedSignedOut = false;
+let applyForcedSignOut: (() => void) | null = null;
+
+/**
+ * Keluarkan sesi dari UI SERTA-MERTA, tanpa menunggu Supabase.
+ *
+ * `supabase.auth.signOut()` boleh tergantung (permintaan rangkaian pada
+ * sambungan mati, atau menunggu refresh token yang memegang kunci dalaman).
+ * Selagi ia belum selesai, `TOKEN_REFRESHED` yang tiba lewat diabaikan supaya
+ * sesi tidak hidup semula; `SIGNED_OUT` atau `SIGNED_IN` sebenar menamatkan
+ * keadaan ini.
+ */
+export function forceSignedOut(): void {
+  forcedSignedOut = true;
+  applyForcedSignOut?.();
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [initialising, setInitialising] = useState(true);
 
   useEffect(() => {
     let active = true;
+    applyForcedSignOut = () => setSession(null);
 
     supabase.auth
       .getSession()
@@ -37,13 +55,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (active) setInitialising(false);
       });
 
-    const { data: subscription } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      setSession(nextSession);
+    const { data: subscription } = supabase.auth.onAuthStateChange((event, nextSession) => {
       void syncStoredRefreshToken(nextSession?.refresh_token);
+
+      if (forcedSignedOut) {
+        if (event !== 'SIGNED_OUT' && event !== 'SIGNED_IN') return;
+        forcedSignedOut = false;
+      }
+      setSession(nextSession);
     });
 
     return () => {
       active = false;
+      applyForcedSignOut = null;
       subscription.subscription.unsubscribe();
     };
   }, []);
