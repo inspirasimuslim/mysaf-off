@@ -24,7 +24,14 @@ export type EventRowAction = {
   label: string;
   icon: keyof typeof Ionicons.glyphMap;
   onPress: () => void;
+  /** Tindakan yang memusnahkan data — dipapar merah. */
+  destructive?: boolean;
 };
+
+/** Pilihan "Padam" menu baris — hanya diberi kepada pemegang `can_edit`. */
+export function deleteMenuAction(onPress: () => void): EventRowAction {
+  return { key: 'padam', label: 'Padam', icon: 'trash-outline', destructive: true, onPress };
+}
 
 /**
  * Tindakan eksport untuk menu baris: di peranti setiap eksport menjadi DUA
@@ -178,8 +185,10 @@ export function EventListRow({ event, onPress, actions, busy = false, locked = f
                   accessibilityRole="button"
                   onPress={() => choose(action)}
                   className="flex-row items-center gap-3 rounded-field border border-line bg-surface p-4 active:opacity-70">
-                  <Ionicons name={action.icon} size={20} color={Colors.primary} />
-                  <Text className="flex-1 text-base text-ink">{action.label}</Text>
+                  <Ionicons name={action.icon} size={20} color={action.destructive ? Colors.negative : Colors.primary} />
+                  <Text className={`flex-1 text-base ${action.destructive ? 'font-semibold text-negative' : 'text-ink'}`}>
+                    {action.label}
+                  </Text>
                 </Pressable>
               ))}
             </View>

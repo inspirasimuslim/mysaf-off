@@ -2,7 +2,8 @@ import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { View } from 'react-native';
 
-import { EventListRow, exportMenuActions } from '@/components/event-list-row';
+import { EventDeleteModal, deleteResultMessage } from '@/components/event-delete-modal';
+import { EventListRow, deleteMenuAction, exportMenuActions } from '@/components/event-list-row';
 import { ScreenHeader } from '@/components/screen-header';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -10,6 +11,7 @@ import { LoadingScreen } from '@/components/ui/loading-screen';
 import { Notice } from '@/components/ui/notice';
 import { Screen } from '@/components/ui/screen';
 import { SectionTitle } from '@/components/ui/section-title';
+import { ToggleRow } from '@/components/ui/toggle-row';
 import { useProgramAccess } from '@/lib/department-access';
 import { toMalayError } from '@/lib/errors';
 import { downloadEventAttendance } from '@/lib/event-attendance-report';
@@ -48,16 +50,19 @@ export default function ProgramEventsScreen() {
   /** Id program yang sedang dieksport — menu program lain dikunci sementara. */
   const [busyId, setBusyId] = useState<string | null>(null);
 
+  const [showArchive, setShowArchive] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<UsrahEvent | null>(null);
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      setEvents(await fetchUsrahEvents('program'));
+      setEvents(await fetchUsrahEvents('program', showArchive));
     } catch (caught) {
       setBanner({ tone: 'negative', message: toMalayError(caught, 'Gagal memuatkan senarai program.') });
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [showArchive]);
 
   useEffect(() => {
     if (accessLoading || !canView) return;
@@ -133,17 +138,33 @@ export default function ProgramEventsScreen() {
           <Notice tone="info" message="Anda hanya mempunyai akses Lihat. Program di bawah adalah paparan sahaja." />
         )}
 
+        <ToggleRow
+          icon="archive-outline"
+          title="Papar Arkib"
+          subtitle="Program yang dipadam tetapi ada rekod kehadiran/RSVP"
+          value={showArchive}
+          onValueChange={setShowArchive}
+        />
+
         <View className="pb-8">
           <SectionTitle
-            title={'Senarai Program (' + events.length + ')'}
-            caption="Kehadiran program tidak masuk ke grid dua belas bulan usrah. Tekan ⋯ untuk eksport kehadiran."
+            title={(showArchive ? 'Arkib Program (' : 'Senarai Program (') + events.length + ')'}
+            caption={
+              showArchive
+                ? 'Sejarah kehadiran & RSVP kekal. Tekan ⋯ untuk eksport.'
+                : 'Kehadiran program tidak masuk ke grid dua belas bulan usrah. Tekan ⋯ untuk eksport kehadiran.'
+            }
           />
 
           {events.length === 0 ? (
             <EmptyState
-              icon="calendar-outline"
-              title="Belum ada program"
-              description="Program yang dicipta akan muncul di sini bersama kod QR kehadirannya."
+              icon={showArchive ? 'archive-outline' : 'calendar-outline'}
+              title={showArchive ? 'Tiada program diarkib' : 'Belum ada program'}
+              description={
+                showArchive
+                  ? 'Program yang dipadam ketika ada rekod kehadiran/RSVP akan muncul di sini.'
+                  : 'Program yang dicipta akan muncul di sini bersama kod QR kehadirannya.'
+              }
             />
           ) : (
             <View className="gap-2">
@@ -154,13 +175,32 @@ export default function ProgramEventsScreen() {
                   onPress={() => router.push({ pathname: '/(app)/admin/usrah-event-detail', params: { id: event.id } })}
                   busy={busyId === event.id}
                   locked={busyId !== null}
-                  actions={exportMenuActions(EXPORTS, (kind, mode) => void runExport(event, kind, mode))}
+                  actions={[
+                    ...exportMenuActions(EXPORTS, (kind, mode) => void runExport(event, kind, mode)),
+                    ...(canEdit && !event.archived_at
+                      ? [deleteMenuAction(() => { setBanner(null); setDeleteTarget(event); })]
+                      : []),
+                  ]}
                 />
               ))}
             </View>
           )}
         </View>
       </View>
+
+      <EventDeleteModal
+        event={deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onDone={(event, result) => {
+          setDeleteTarget(null);
+          setBanner({ tone: result.outcome === 'deleted' ? 'positive' : 'info', message: deleteResultMessage(event, result) });
+          void load();
+        }}
+        onError={(message) => {
+          setDeleteTarget(null);
+          setBanner({ tone: 'negative', message });
+        }}
+      />
     </Screen>
   );
 }

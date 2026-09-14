@@ -333,6 +333,8 @@ export type UsrahEvent = {
   qr_token: string;
   valid_until: string;
   is_active: boolean;
+  /** Ditetapkan bila "Padam" diarkibkan kerana acara ada rekod kehadiran/RSVP. */
+  archived_at: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;

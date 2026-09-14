@@ -45,11 +45,10 @@ export type UpdateUsrahEventInput = Partial<
  * Ia wujud supaya admin yang memegang KEDUA-DUA department masih melihat dua
  * senarai berasingan dan bukan satu senarai bercampur.
  */
-export async function fetchUsrahEvents(eventType: EventType): Promise<UsrahEvent[]> {
-  const { data, error } = await supabase
-    .from('usrah_events')
-    .select('*')
-    .eq('event_type', eventType)
+export async function fetchUsrahEvents(eventType: EventType, archived = false): Promise<UsrahEvent[]> {
+  const base = supabase.from('usrah_events').select('*').eq('event_type', eventType);
+
+  const { data, error } = await (archived ? base.not('archived_at', 'is', null) : base.is('archived_at', null))
     .order('start_date', { ascending: false })
     .order('start_time', { ascending: false });
 
@@ -104,9 +103,41 @@ export async function updateUsrahEvent(id: string, patch: UpdateUsrahEventInput)
   return row;
 }
 
-export async function deleteUsrahEvent(id: string): Promise<void> {
-  const { error } = await supabase.from('usrah_events').delete().eq('id', id);
+export type DeleteEventResult = {
+  outcome: 'deleted' | 'archived';
+  attendance: number;
+  rsvp: number;
+};
+
+/**
+ * "Padam" acara — pelayan yang memutuskan sama ada dipadam terus atau diarkib.
+ *
+ * Acara dengan rekod kehadiran/RSVP diarkibkan supaya sejarahnya kekal; yang
+ * tiada rekod dipadam terus. Lihat `20260915000028_event_delete_archive.sql`.
+ *
+ * Selepas padam terus, poster asal dan poster ber-QR dibuang dari Storage.
+ * Pembuangan itu cuba-terbaik: baris sudah tiada, jadi kegagalan di sini hanya
+ * meninggalkan fail yatim — bukan sebab untuk melaporkan padam sebagai gagal.
+ */
+export async function deleteOrArchiveEvent(id: string): Promise<DeleteEventResult> {
+  const { data, error } = await supabase.rpc('delete_or_archive_event', { p_event_id: id });
   if (error) throw error;
+
+  const row = (data as { outcome: string; attendance_count: number; rsvp_count: number }[] | null)?.[0];
+  if (!row) throw new Error('Program tidak dijumpai atau anda tiada kebenaran memadamnya.');
+
+  if (row.outcome === 'deleted') {
+    await supabase.storage
+      .from(POSTER_BUCKET)
+      .remove([id + '.jpg', id + '-qr.jpg'])
+      .catch(() => undefined);
+  }
+
+  return {
+    outcome: row.outcome === 'deleted' ? 'deleted' : 'archived',
+    attendance: row.attendance_count,
+    rsvp: row.rsvp_count,
+  };
 }
 
 /**

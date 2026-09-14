@@ -2,7 +2,8 @@ import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { View } from 'react-native';
 
-import { EventListRow, exportMenuActions } from '@/components/event-list-row';
+import { EventDeleteModal, deleteResultMessage } from '@/components/event-delete-modal';
+import { EventListRow, deleteMenuAction, exportMenuActions } from '@/components/event-list-row';
 import { SaveShareButtons } from '@/components/save-share-buttons';
 import { ScreenHeader } from '@/components/screen-header';
 import { Button } from '@/components/ui/button';
@@ -13,6 +14,7 @@ import { Notice } from '@/components/ui/notice';
 import { Screen } from '@/components/ui/screen';
 import { SectionTitle } from '@/components/ui/section-title';
 import { TextField } from '@/components/ui/text-field';
+import { ToggleRow } from '@/components/ui/toggle-row';
 import { useUsrahAccess } from '@/lib/department-access';
 import { toMalayError } from '@/lib/errors';
 import { downloadEventAttendance } from '@/lib/event-attendance-report';
@@ -47,16 +49,19 @@ export default function UsrahEventsScreen() {
   /** Id sesi yang sedang dieksport — menu sesi lain dikunci sementara. */
   const [busyId, setBusyId] = useState<string | null>(null);
 
+  const [showArchive, setShowArchive] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<UsrahEvent | null>(null);
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      setEvents(await fetchUsrahEvents('usrah'));
+      setEvents(await fetchUsrahEvents('usrah', showArchive));
     } catch (caught) {
       setBanner({ tone: 'negative', message: toMalayError(caught, 'Gagal memuatkan senarai program.') });
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [showArchive]);
 
   useEffect(() => {
     if (accessLoading || !canView) return;
@@ -156,17 +161,33 @@ export default function UsrahEventsScreen() {
           <Notice tone="info" message="Anda hanya mempunyai akses Lihat. Program di bawah adalah paparan sahaja." />
         )}
 
+        <ToggleRow
+          icon="archive-outline"
+          title="Papar Arkib"
+          subtitle="Sesi yang dipadam tetapi ada rekod kehadiran/RSVP"
+          value={showArchive}
+          onValueChange={setShowArchive}
+        />
+
         <View>
           <SectionTitle
-            title={'Senarai Sesi (' + events.length + ')'}
-            caption="Status dikira daripada tetingkap sah tiga jam selepas sesi tamat. Tekan ⋯ untuk eksport kehadiran sesi."
+            title={(showArchive ? 'Arkib Sesi (' : 'Senarai Sesi (') + events.length + ')'}
+            caption={
+              showArchive
+                ? 'Sejarah kehadiran & RSVP kekal. Tekan ⋯ untuk eksport.'
+                : 'Status dikira daripada tetingkap sah tiga jam selepas sesi tamat. Tekan ⋯ untuk eksport kehadiran sesi.'
+            }
           />
 
           {events.length === 0 ? (
             <EmptyState
-              icon="calendar-outline"
-              title="Belum ada sesi usrah"
-              description="Sesi yang dicipta akan muncul di sini bersama kod QR kehadirannya."
+              icon={showArchive ? 'archive-outline' : 'calendar-outline'}
+              title={showArchive ? 'Tiada sesi diarkib' : 'Belum ada sesi usrah'}
+              description={
+                showArchive
+                  ? 'Sesi yang dipadam ketika ada rekod kehadiran/RSVP akan muncul di sini.'
+                  : 'Sesi yang dicipta akan muncul di sini bersama kod QR kehadirannya.'
+              }
             />
           ) : (
             <View className="gap-2">
@@ -177,7 +198,12 @@ export default function UsrahEventsScreen() {
                   onPress={() => router.push({ pathname: '/(app)/admin/usrah-event-detail', params: { id: event.id } })}
                   busy={busyId === event.id}
                   locked={busyId !== null}
-                  actions={exportMenuActions(EXPORTS, (kind, mode) => void runExport(event, kind, mode))}
+                  actions={[
+                    ...exportMenuActions(EXPORTS, (kind, mode) => void runExport(event, kind, mode)),
+                    ...(canEdit && !event.archived_at
+                      ? [deleteMenuAction(() => { setBanner(null); setDeleteTarget(event); })]
+                      : []),
+                  ]}
                 />
               ))}
             </View>
@@ -213,6 +239,20 @@ export default function UsrahEventsScreen() {
           </Card>
         </View>
       </View>
+
+      <EventDeleteModal
+        event={deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onDone={(event, result) => {
+          setDeleteTarget(null);
+          setBanner({ tone: result.outcome === 'deleted' ? 'positive' : 'info', message: deleteResultMessage(event, result) });
+          void load();
+        }}
+        onError={(message) => {
+          setDeleteTarget(null);
+          setBanner({ tone: 'negative', message });
+        }}
+      />
     </Screen>
   );
 }
