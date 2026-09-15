@@ -34,9 +34,15 @@ export function OrgPositionRow({ position }: { position: OrgPosition }) {
         {vacant ? (
           <Text className="mt-0.5 text-base italic text-ink-faint">Kosong</Text>
         ) : (
-          <Text className="mt-0.5 text-base font-semibold text-ink" numberOfLines={2}>
-            {position.full_name}
-          </Text>
+          <>
+            <Text className="mt-0.5 text-base font-semibold text-ink" numberOfLines={2}>
+              {position.full_name}
+            </Text>
+            {/* Bentuk sama seperti kepala kumpulan di Direktori Ahli. */}
+            {position.generasi ? (
+              <Text className="mt-0.5 text-sm text-ink-muted">{'Generasi ' + position.generasi}</Text>
+            ) : null}
+          </>
         )}
       </View>
     </View>
