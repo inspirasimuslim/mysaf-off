@@ -71,6 +71,8 @@ type Props = {
    * jadi susun atur admin dan ahli yang belum berkedudukan tidak berubah.
    */
   headerAside?: ReactNode;
+  /** Susun atur Profil sahaja: satu baris di bawah kad maklumat, di atas tab. */
+  headerNote?: ReactNode;
   /** Dipanggil bila avatar diketuk. Tanpa ini, ikon kamera tidak dipapar. */
   onPickAvatar?: () => void;
   avatarBusy?: boolean;
@@ -152,6 +154,7 @@ export function MemberForm({
   busy = false,
   onPickAvatar,
   headerAside,
+  headerNote,
   avatarBusy = false,
   tabs,
   onSave,
@@ -551,6 +554,8 @@ export function MemberForm({
             <InfoRow icon="location-outline" label="Kawasan usrah" value={usrahLabel(member.kawasan_usrah)} />
           </Card>
         )}
+
+        {headerNote}
 
         <View className="gap-2">
           <TabBar value={tabs.value} options={PROFILE_TABS} onChange={tabs.onChange} />

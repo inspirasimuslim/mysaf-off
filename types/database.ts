@@ -133,6 +133,9 @@ export type Member = {
 
   // --- Pautan akaun ---
   user_id: string | null;
+
+  /** Kali terakhir ahli SENDIRI mengubah maklumatnya. Diurus trigger sahaja. */
+  self_updated_at: string | null;
 };
 
 /** Bentuk baris untuk skrin senarai — kolum berat tidak dibaca. */

@@ -32,7 +32,7 @@ export type RawRow = Record<string, unknown>;
  * `avatar_url` turut ditinggalkan — fail Excel tiada gambar, jadi import tidak
  * sepatutnya menulis kolum itu langsung dan menimpa apa yang mungkin ada.
  */
-export type ParsedMember = Omit<Member, 'id' | 'user_id' | 'avatar_url'>;
+export type ParsedMember = Omit<Member, 'id' | 'user_id' | 'avatar_url' | 'self_updated_at'>;
 
 export type ImportIssueLevel = 'ralat' | 'amaran';
 

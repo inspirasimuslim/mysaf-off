@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useEffect, useState } from 'react';
-import { Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
 import { AchievementBadge } from '@/components/achievement-badge';
 import { MemberForm, type ProfileTab } from '@/components/member-form';
@@ -10,13 +10,13 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { LoadingScreen } from '@/components/ui/loading-screen';
 import { Notice } from '@/components/ui/notice';
 import { Screen } from '@/components/ui/screen';
-import { Colors } from '@/constants/theme';
+import { BIRTHDAY_GOLD, Colors } from '@/constants/theme';
 import { fetchMyActivityRank, type MyActivityRank } from '@/lib/activity-rank';
 import { pickAvatar, uploadAvatar } from '@/lib/avatar';
 import { displayName, useAuth } from '@/lib/auth-context';
 import { toMalayError } from '@/lib/errors';
 import { fetchGenerations, fetchMyMember, fetchMyMemberLinked, updateMember } from '@/lib/members';
-import type { Generation, Member } from '@/types/database';
+import { MONTH_NAMES, type Generation, type Member } from '@/types/database';
 
 type Banner = { tone: 'positive' | 'negative'; message: string } | null;
 
@@ -196,6 +196,9 @@ export default function ProfilScreen() {
           canEditAdminColumns={false}
           busy={saving}
           headerAside={rank ? <AchievementBadge rank={rank} /> : undefined}
+          headerNote={
+            <SelfUpdateStatus value={member.self_updated_at} onPress={() => setTab('diri')} />
+          }
           onPickAvatar={() => void changeAvatar()}
           avatarBusy={avatarBusy}
           tabs={{ value: tab, onChange: setTab }}
@@ -203,5 +206,46 @@ export default function ProfilScreen() {
         />
       </View>
     </Screen>
+  );
+}
+
+/** "hari ini" / "semalam" / "3 hari lalu" dalam seminggu; selepas itu tarikh penuh. */
+function formatSelfUpdated(iso: string): string {
+  const then = new Date(iso);
+  const startOf = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const days = Math.round((startOf(new Date()) - startOf(then)) / 86_400_000);
+
+  if (days <= 0) return 'hari ini';
+  if (days === 1) return 'semalam';
+  if (days < 7) return `${days} hari lalu`;
+  return `${then.getDate()} ${MONTH_NAMES[then.getMonth()]} ${then.getFullYear()}`;
+}
+
+/*
+  Dua bentuk dengan berat visual berbeza. Sudah pernah dikemas kini: satu baris
+  kelabu, maklumat sahaja. Belum pernah: jalur emas lembut yang boleh ditekan —
+  galakan, bukan ralat, jadi bukan merah. Ia duduk betul-betul di atas tab, jadi
+  menekannya cukup dengan membuka tab "Maklumat Diri" di bawahnya.
+*/
+function SelfUpdateStatus({ value, onPress }: { value: string | null; onPress: () => void }) {
+  if (value) {
+    return (
+      <View className="flex-row items-center justify-center gap-1.5">
+        <Ionicons name="time-outline" size={14} color={Colors.inkFaint} />
+        <Text className="text-xs text-ink-muted">Kemaskini terakhir: {formatSelfUpdated(value)}</Text>
+      </View>
+    );
+  }
+
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      className="flex-row items-center gap-3 rounded-pill px-4 py-2.5 active:opacity-70"
+      style={{ backgroundColor: Colors.warnSoft }}>
+      <Ionicons name="create-outline" size={16} color={BIRTHDAY_GOLD} />
+      <Text className="flex-1 text-sm font-semibold text-ink">Sila kemaskini maklumat diri anda</Text>
+      <Ionicons name="chevron-forward" size={16} color={BIRTHDAY_GOLD} />
+    </Pressable>
   );
 }
