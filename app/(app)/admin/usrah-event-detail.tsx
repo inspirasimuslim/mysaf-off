@@ -1,9 +1,9 @@
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Text, View } from 'react-native';
-import QRCode from 'react-native-qrcode-svg';
+import { Switch, Text, View } from 'react-native';
 
+import { EventQrCard } from '@/components/event-qr-card';
 import { SaveShareButtons } from '@/components/save-share-buttons';
 import { ScreenHeader } from '@/components/screen-header';
 import { Badge } from '@/components/ui/badge';
@@ -27,20 +27,13 @@ import { downloadRsvpList, fetchRsvpSummary, type RsvpSummary } from '@/lib/rsvp
 import { fetchUsrahEvent, updateUsrahEvent, uploadEventPoster } from '@/lib/usrah-events';
 import {
   EVENT_TYPE_LABEL,
-  ONLINE_WINDOW_STATUS_LABEL,
   USRAH_EVENT_STATUS_LABEL,
   dateRangeLabel,
-  mytDateTimeLabel,
-  mytParts,
-  mytTimestamp,
-  onlineWindowStatus,
   timeLabel,
   timeRangeLabel,
   usrahEventStatus,
   type UsrahEvent,
 } from '@/types/database';
-
-const QR_SIZE = 220;
 
 type Banner = { tone: 'positive' | 'info' | 'negative'; message: string } | null;
 
@@ -74,11 +67,6 @@ export default function UsrahEventDetailScreen() {
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
   const [locationText, setLocationText] = useState('');
-  /** Tempoh QR online (acara hibrid sahaja), dalam waktu Malaysia. */
-  const [onlineStartDate, setOnlineStartDate] = useState('');
-  const [onlineStartTime, setOnlineStartTime] = useState('');
-  const [onlineEndDate, setOnlineEndDate] = useState('');
-  const [onlineEndTime, setOnlineEndTime] = useState('');
 
   const hydrate = useCallback((row: UsrahEvent) => {
     setEvent(row);
@@ -88,14 +76,6 @@ export default function UsrahEventDetailScreen() {
     setStartTime(timeLabel(row.start_time));
     setEndTime(timeLabel(row.end_time));
     setLocationText(row.location_text ?? '');
-    if (row.online_valid_from && row.online_valid_until) {
-      const from = mytParts(row.online_valid_from);
-      const until = mytParts(row.online_valid_until);
-      setOnlineStartDate(from.date);
-      setOnlineStartTime(from.time);
-      setOnlineEndDate(until.date);
-      setOnlineEndTime(until.time);
-    }
   }, []);
 
   useEffect(() => {
@@ -120,22 +100,8 @@ export default function UsrahEventDetailScreen() {
     };
   }, [accessLoading, canView, hydrate, id]);
 
-  const hybrid = event?.event_mode === 'hibrid';
-  /** Rentetan 'YYYY-MM-DD HH:MM' boleh dibandingkan terus sebagai teks. */
-  const onlineValid =
-    !hybrid ||
-    (/^\d{4}-\d{2}-\d{2}$/.test(onlineStartDate) &&
-      /^\d{4}-\d{2}-\d{2}$/.test(onlineEndDate) &&
-      /^\d{2}:\d{2}$/.test(onlineStartTime) &&
-      /^\d{2}:\d{2}$/.test(onlineEndTime) &&
-      onlineEndDate + ' ' + onlineEndTime > onlineStartDate + ' ' + onlineStartTime);
-
   const save = useCallback(async () => {
     if (!event || busy) return;
-    if (!onlineValid) {
-      setBanner({ tone: 'negative', message: 'Masa tamat QR online mesti selepas masa mulanya.' });
-      return;
-    }
 
     setBanner(null);
     setBusy(true);
@@ -148,13 +114,6 @@ export default function UsrahEventDetailScreen() {
           start_time: startTime,
           end_time: endTime,
           location_text: locationText.trim() || null,
-          // Tempoh online hanya wujud pada acara hibrid; kekangan menolaknya pada acara bersemuka.
-          ...(event.event_mode === 'hibrid'
-            ? {
-                online_valid_from: mytTimestamp(onlineStartDate, onlineStartTime),
-                online_valid_until: mytTimestamp(onlineEndDate, onlineEndTime),
-              }
-            : {}),
         }),
       );
       setBanner({ tone: 'positive', message: 'Perubahan telah disimpan.' });
@@ -163,33 +122,19 @@ export default function UsrahEventDetailScreen() {
     } finally {
       setBusy(false);
     }
-  }, [
-    busy,
-    endDate,
-    endTime,
-    event,
-    hydrate,
-    locationText,
-    name,
-    onlineEndDate,
-    onlineEndTime,
-    onlineStartDate,
-    onlineStartTime,
-    onlineValid,
-    startDate,
-    startTime,
-  ]);
+  }, [busy, endDate, endTime, event, hydrate, locationText, name, startDate, startTime]);
 
-  const toggleActive = useCallback(
-    async (next: boolean) => {
+  /** Togol status program (`is_active`) atau kod QR (`qr_enabled`) — satu laluan kemas kini. */
+  const toggleFlag = useCallback(
+    async (patch: { is_active: boolean } | { qr_enabled: boolean }, failMessage: string) => {
       if (!event || busy) return;
 
       setBanner(null);
       setBusy(true);
       try {
-        hydrate(await updateUsrahEvent(event.id, { is_active: next }));
+        hydrate(await updateUsrahEvent(event.id, patch));
       } catch (caught) {
-        setBanner({ tone: 'negative', message: toMalayError(caught, 'Gagal menukar status program.') });
+        setBanner({ tone: 'negative', message: toMalayError(caught, failMessage) });
       } finally {
         setBusy(false);
       }
@@ -325,106 +270,58 @@ export default function UsrahEventDetailScreen() {
           />
         ) : null}
 
-        {/* --- Kod QR -------------------------------------------------------- */}
-        <View>
-          {/* Acara bersemuka: tajuk dan kad sama seperti sebelum mod hibrid wujud. */}
-          <SectionTitle
-            title={hybrid ? 'Kod QR Bersemuka' : 'Kod QR Kehadiran'}
-            caption={
-              hybrid
-                ? 'Untuk ahli yang hadir fizikal. Lokasi disemak mengikut geofence semasa imbasan.'
-                : 'Cetak atau kongsi tangkapan skrin kod ini. Ahli mengimbasnya untuk merekod kehadiran.'
-            }
-          />
-          <Card>
-            <View className="items-center gap-3">
-              <View className="rounded-card bg-white p-4">
-                <QRCode value={event.qr_token} size={QR_SIZE} color={Colors.ink} backgroundColor={Colors.white} />
-              </View>
-
+        {/*
+          --- Kod QR --------------------------------------------------------
+          Thumbnail padat (ketik untuk besarkan & simpan). Status dan togol
+          "Kod QR Aktif" duduk DALAM kad yang sama — bukan seksyen berasingan.
+        */}
+        <View className="gap-3">
+          <EventQrCard
+            token={event.qr_token}
+            eventName={event.name}
+            subtitle={'Sah sehingga ' + new Date(event.valid_until).toLocaleString('ms-MY')}
+            dimmed={!event.qr_enabled || status !== 'aktif'}>
+            <View className="flex-row flex-wrap items-center gap-2">
               <Badge label={USRAH_EVENT_STATUS_LABEL[status]} tone={STATUS_TONE[status]} />
-
-              <Text className="text-center text-xs text-ink-muted">
-                Sah sehingga {new Date(event.valid_until).toLocaleString('ms-MY')}
-              </Text>
-              {status !== 'aktif' ? (
-                <Notice
-                  tone="warn"
-                  message="Kod ini tidak lagi menerima kehadiran kerana program sudah tamat tempoh atau dimatikan."
-                />
-              ) : null}
+              {!event.qr_enabled ? <Badge label="Kod QR dimatikan" tone="warn" /> : null}
             </View>
-          </Card>
 
-          {/*
-            Kod QR online — acara hibrid sahaja. Tiada geofence; pelayan hanya
-            menyemak tempoh [online_valid_from, online_valid_until].
-          */}
-          {hybrid && event.online_qr_token && event.online_valid_from && event.online_valid_until
-            ? (() => {
-                const onlineStatus = onlineWindowStatus(event.online_valid_from, event.online_valid_until);
-                const closed = !event.is_active || onlineStatus === 'tamat';
-                return (
-                  <View className="pt-6">
-                    <SectionTitle
-                      title="Kod QR Online"
-                      caption="Untuk ahli yang sertai secara maya. Boleh diimbas dari mana-mana lokasi dalam tempoh sah."
-                    />
-                    <Card>
-                      <View className="items-center gap-3">
-                        <View className="rounded-card bg-white p-4">
-                          <QRCode
-                            value={event.online_qr_token}
-                            size={QR_SIZE}
-                            color={Colors.ink}
-                            backgroundColor={Colors.white}
-                          />
-                        </View>
+            {canEdit ? (
+              <View className="flex-row items-center gap-3">
+                <View className="flex-1">
+                  <Text className="text-sm font-semibold text-ink">Kod QR Aktif</Text>
+                  <Text className="text-xs text-ink-muted">
+                    {event.qr_enabled
+                      ? 'Ahli boleh merekod kehadiran.'
+                      : 'Semua imbasan ditolak sehingga dihidupkan semula.'}
+                  </Text>
+                </View>
+                <Switch
+                  value={event.qr_enabled}
+                  onValueChange={(next) => void toggleFlag({ qr_enabled: next }, 'Gagal menukar status kod QR.')}
+                  disabled={busy}
+                  trackColor={{ false: Colors.line, true: Colors.primaryMid }}
+                  thumbColor={Colors.white}
+                  ios_backgroundColor={Colors.line}
+                  accessibilityLabel="Kod QR Aktif"
+                />
+              </View>
+            ) : null}
+          </EventQrCard>
 
-                        <Badge
-                          label={
-                            event.is_active
-                              ? ONLINE_WINDOW_STATUS_LABEL[onlineStatus]
-                              : USRAH_EVENT_STATUS_LABEL.nonaktif
-                          }
-                          tone={
-                            !event.is_active
-                              ? 'warn'
-                              : onlineStatus === 'aktif'
-                                ? 'positive'
-                                : onlineStatus === 'belum'
-                                  ? 'info'
-                                  : 'neutral'
-                          }
-                        />
-
-                        <Text className="text-center text-xs text-ink-muted">
-                          {'Sah dari ' +
-                            mytDateTimeLabel(event.online_valid_from) +
-                            ' hingga ' +
-                            mytDateTimeLabel(event.online_valid_until)}
-                        </Text>
-                        {closed ? (
-                          <Notice
-                            tone="warn"
-                            message="Kod online ini tidak lagi menerima kehadiran kerana tempohnya sudah tamat atau program dimatikan."
-                          />
-                        ) : null}
-                      </View>
-                    </Card>
-                  </View>
-                );
-              })()
-            : null}
+          {status !== 'aktif' ? (
+            <Notice
+              tone="warn"
+              message="Kod ini tidak lagi menerima kehadiran kerana program sudah tamat tempoh atau dimatikan."
+            />
+          ) : null}
 
           {/* Paparan besar untuk laptop/projektor semasa program berlangsung. */}
-          <View className="pt-3">
-            <Button
-              label="Lihat Kehadiran Live"
-              variant="secondary"
-              onPress={() => router.push({ pathname: '/(app)/admin/event-attendance-live', params: { id: event.id } })}
-            />
-          </View>
+          <Button
+            label="Lihat Kehadiran Live"
+            variant="secondary"
+            onPress={() => router.push({ pathname: '/(app)/admin/event-attendance-live', params: { id: event.id } })}
+          />
         </View>
 
         {/* --- RSVP ---------------------------------------------------------- */}
@@ -489,7 +386,10 @@ export default function UsrahEventDetailScreen() {
 
         {/* --- Lokasi -------------------------------------------------------- */}
         <View>
-          <SectionTitle title="Lokasi & Geofence" />
+          <SectionTitle
+            title="Lokasi & Geofence"
+            caption="Imbasan dalam radius dilabel Bersemuka; di luar radius dilabel Online. Geofence tidak menolak kehadiran."
+          />
           <Card>
             <View className="gap-2">
               <Line label="Lokasi" value={event.location_text ?? 'Tiada'} />
@@ -519,7 +419,7 @@ export default function UsrahEventDetailScreen() {
                 title="Program aktif"
                 subtitle="Matikan untuk menutup kehadiran lebih awal."
                 value={event.is_active}
-                onValueChange={(next) => void toggleActive(next)}
+                onValueChange={(next) => void toggleFlag({ is_active: next }, 'Gagal menukar status program.')}
                 disabled={busy}
               />
             </View>
@@ -529,7 +429,7 @@ export default function UsrahEventDetailScreen() {
                 title="Sunting Maklumat"
                 caption="Menukar tarikh atau masa TAMAT mengira semula tetingkap sah."
               />
-              <View className="gap-4">
+              <View className="gap-3">
                 <TextField
                   label={event.event_type === 'usrah' ? 'Nama sesi' : 'Nama program'}
                   value={name}
@@ -538,34 +438,23 @@ export default function UsrahEventDetailScreen() {
                   autoCapitalize="sentences"
                   autoCorrect={false}
                 />
-                <DateTimeField
-                  label="Tarikh mula"
-                  mode="date"
-                  value={startDate}
-                  onChange={setStartDate}
-                  disabled={busy}
-                />
-                <DateTimeField
-                  label="Tarikh tamat"
-                  mode="date"
-                  value={endDate}
-                  onChange={setEndDate}
-                  disabled={busy}
-                />
-                <DateTimeField
-                  label="Masa mula"
-                  mode="time"
-                  value={startTime}
-                  onChange={setStartTime}
-                  disabled={busy}
-                />
-                <DateTimeField
-                  label="Masa tamat"
-                  mode="time"
-                  value={endTime}
-                  onChange={setEndTime}
-                  disabled={busy}
-                />
+                {/* Mula di kiri, tamat di kanan — sama seperti skrin cipta. */}
+                <View className="flex-row items-start gap-3">
+                  <View className="flex-1">
+                    <DateTimeField label="Tarikh mula" mode="date" value={startDate} onChange={setStartDate} disabled={busy} />
+                  </View>
+                  <View className="flex-1">
+                    <DateTimeField label="Tarikh tamat" mode="date" value={endDate} onChange={setEndDate} disabled={busy} />
+                  </View>
+                </View>
+                <View className="flex-row items-start gap-3">
+                  <View className="flex-1">
+                    <DateTimeField label="Masa mula" mode="time" value={startTime} onChange={setStartTime} disabled={busy} />
+                  </View>
+                  <View className="flex-1">
+                    <DateTimeField label="Masa tamat" mode="time" value={endTime} onChange={setEndTime} disabled={busy} />
+                  </View>
+                </View>
                 <TextField
                   label="Lokasi"
                   value={locationText}
@@ -574,46 +463,10 @@ export default function UsrahEventDetailScreen() {
                   autoCapitalize="sentences"
                   autoCorrect={false}
                 />
-                {hybrid ? (
-                  <>
-                    <Text className="pt-1 text-sm font-semibold text-ink">Tempoh QR Online (waktu Malaysia)</Text>
-                    <DateTimeField
-                      label="Tarikh mula online"
-                      mode="date"
-                      value={onlineStartDate}
-                      onChange={setOnlineStartDate}
-                      disabled={busy}
-                    />
-                    <DateTimeField
-                      label="Masa mula online"
-                      mode="time"
-                      value={onlineStartTime}
-                      onChange={setOnlineStartTime}
-                      disabled={busy}
-                    />
-                    <DateTimeField
-                      label="Tarikh tamat online"
-                      mode="date"
-                      value={onlineEndDate}
-                      onChange={setOnlineEndDate}
-                      disabled={busy}
-                    />
-                    <DateTimeField
-                      label="Masa tamat online"
-                      mode="time"
-                      value={onlineEndTime}
-                      onChange={setOnlineEndTime}
-                      disabled={busy}
-                    />
-                    {!onlineValid ? (
-                      <Notice tone="negative" message="Masa tamat QR online mesti selepas masa mulanya." />
-                    ) : null}
-                  </>
-                ) : null}
                 <Button
                   label="Simpan Perubahan"
                   loading={busy}
-                  disabled={busy || !name.trim() || !onlineValid}
+                  disabled={busy || !name.trim()}
                   onPress={() => void save()}
                 />
               </View>

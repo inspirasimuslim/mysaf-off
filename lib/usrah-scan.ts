@@ -1,6 +1,6 @@
 import * as Location from 'expo-location';
 
-import type { AttendanceMode, EventType } from '@/types/database';
+import type { EventType } from '@/types/database';
 
 import { toMalayError } from './errors';
 import { supabase } from './supabase';
@@ -33,15 +33,8 @@ export type ScannedEvent = {
   geofence_radius_meters: number;
   valid_until: string;
   is_active: boolean;
-  /**
-   * Sama ada lokasi akan disemak bagi TOKEN ini. Acara tanpa pin, dan setiap
-   * token online, mendapat `false` — kehadirannya diterima tanpa GPS.
-   */
+  /** Acara tanpa pin tidak boleh disemak jaraknya — kehadirannya diterima tanpa GPS. */
   has_pin: boolean;
-  /** Token mana yang sepadan: `qr_token` (bersemuka) atau `online_qr_token` (online). */
-  attendance_mode: AttendanceMode;
-  online_valid_from: string | null;
-  online_valid_until: string | null;
 };
 
 export type AttendanceResult = {
@@ -51,9 +44,13 @@ export type AttendanceResult = {
   end_date: string;
   start_time: string;
   end_time: string;
-  /** `null` bagi acara tanpa pin lokasi dan bagi kehadiran online. */
+  /** `null` bagi acara tanpa pin lokasi, atau bila GPS tidak dapat dibaca. */
   distance_meters: number | null;
-  attendance_mode: AttendanceMode;
+  /**
+   * Label, bukan keputusan terima/tolak: dalam radius geofence = bersemuka,
+   * di luar radius (atau tiada GPS pada acara berpin) = online.
+   */
+  attendance_mode: 'bersemuka' | 'online';
 };
 
 /**
@@ -80,7 +77,7 @@ export class ScanError extends Error {
   dipapar terus; apa-apa yang lain ialah kegagalan yang tidak dijangka dan
   melalui `toMalayError()` seperti biasa.
 */
-const RPC_CODES = new Set(['P0001', 'P0002', 'P0003', 'P0004', 'P0005', 'P0006', 'P0007', '22023']);
+const RPC_CODES = new Set(['P0001', 'P0002', 'P0003', 'P0004', 'P0005', 'P0006', 'P0007', 'P0008', '22023']);
 
 /** Sudah hadir — skrin memaparkannya sebagai maklumat, bukan kegagalan. */
 export const ALREADY_RECORDED = 'P0001';

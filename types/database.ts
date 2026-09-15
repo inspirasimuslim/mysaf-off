@@ -333,71 +333,16 @@ export type UsrahEvent = {
   qr_token: string;
   valid_until: string;
   is_active: boolean;
+  /**
+   * Togol kod QR oleh admin. `false` = setiap imbasan ditolak, tanpa mematikan
+   * acara itu sendiri. Lihat `20260915000031_single_qr_geofence_label.sql`.
+   */
+  qr_enabled: boolean;
   /** Ditetapkan bila "Padam" diarkibkan kerana acara ada rekod kehadiran/RSVP. */
   archived_at: string | null;
-  /** 'hibrid' = dua kod QR (bersemuka + online). Lihat `20260915000030_hybrid_attendance.sql`. */
-  event_mode: EventMode;
-  /** Kod QR online — dijana pelayan, NULL bagi acara bersemuka. Rahsia seperti `qr_token`. */
-  online_qr_token: string | null;
-  /** Tempoh kod QR online diterima (timestamptz) — berasingan daripada `valid_until`. */
-  online_valid_from: string | null;
-  online_valid_until: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;
-};
-
-/** Cara kehadiran diterima bagi satu acara. */
-export type EventMode = 'bersemuka' | 'hibrid';
-
-export const EVENT_MODE_OPTIONS: Option<EventMode>[] = [
-  { value: 'bersemuka', label: 'Bersemuka Sahaja' },
-  { value: 'hibrid', label: 'Hibrid' },
-];
-
-/** Mod satu rekod kehadiran — ditentukan pelayan mengikut kod QR yang diimbas. */
-export type AttendanceMode = 'bersemuka' | 'online';
-
-export const ATTENDANCE_MODE_LABEL: Record<AttendanceMode, string> = {
-  bersemuka: 'Bersemuka',
-  online: 'Online',
-};
-
-const MYT_OFFSET_MS = 8 * 60 * 60 * 1000;
-
-/**
- * timestamptz → tarikh 'YYYY-MM-DD' dan masa 'HH:MM' WAKTU MALAYSIA.
- *
- * Tidak bergantung pada zon masa peranti: tempoh online ditetapkan dan dibaca
- * dalam waktu Malaysia, sama seperti `valid_until` yang dikira pelayan.
- */
-export function mytParts(value: string): { date: string; time: string } {
-  const iso = new Date(Date.parse(value) + MYT_OFFSET_MS).toISOString();
-  return { date: iso.slice(0, 10), time: iso.slice(11, 16) };
-}
-
-/** Tarikh + masa waktu Malaysia → timestamptz untuk Postgres. */
-export function mytTimestamp(date: string, time: string): string {
-  return date + 'T' + time + ':00+08:00';
-}
-
-/** timestamptz → '15/09/2026 8:00 PM' (waktu Malaysia). */
-export function mytDateTimeLabel(value: string): string {
-  const parts = mytParts(value);
-  return dateLabel(parts.date) + ' ' + timeLabel12(parts.time);
-}
-
-export type OnlineWindowStatus = 'belum' | 'aktif' | 'tamat';
-
-export function onlineWindowStatus(from: string, until: string, now = Date.now()): OnlineWindowStatus {
-  if (now < Date.parse(from)) return 'belum';
-  return now > Date.parse(until) ? 'tamat' : 'aktif';
-}
-
-export const ONLINE_WINDOW_STATUS_LABEL: Record<OnlineWindowStatus, string> = {
-  belum: 'Belum bermula',
-  aktif: 'Aktif',
-  tamat: 'Tamat tempoh',
 };
 
 /**
@@ -558,11 +503,6 @@ export type UpcomingEvent = {
   start_time: string;
   end_time: string;
   location_text: string | null;
-  event_mode: EventMode;
-  /** Kod QR online (acara hibrid sahaja) — diimbas dari mana-mana lokasi dalam tempohnya. */
-  online_qr_token: string | null;
-  online_valid_from: string | null;
-  online_valid_until: string | null;
 };
 
 /** Satu baris `announcements`. */

@@ -87,10 +87,14 @@ export default function UsrahScanScreen() {
       // Program tanpa pin lokasi tidak boleh disemak jaraknya, jadi GPS
       // langsung tidak diminta — meminta kebenaran yang tidak akan digunakan
       // hanya melatih pengguna menolaknya.
+      //
+      // Bagi program berpin, lokasi hanya MELABEL mod (bersemuka/online) dan
+      // bukan penyekat. GPS yang ditolak atau gagal dibaca dihantar sebagai
+      // tiada lokasi; pelayan merekodnya sebagai online.
       let coords: { latitude: number; longitude: number } | null = null;
       if (event.has_pin) {
-        setPhase({ step: 'proses', note: 'Mengesahkan lokasi anda...' });
-        coords = await currentCoords();
+        setPhase({ step: 'proses', note: 'Membaca lokasi anda...' });
+        coords = await currentCoords().catch(() => null);
       }
 
       setPhase({ step: 'proses', note: 'Merekod kehadiran...' });
@@ -228,8 +232,8 @@ export default function UsrahScanScreen() {
             />
 
             <Text className="text-center text-xs leading-5 text-ink-muted">
-              Kod QR bersemuka hanya diterima di dalam kawasan program dan sebelum tempohnya tamat — pastikan
-              GPS dihidupkan. Kod QR online boleh diimbas dari mana-mana lokasi dalam tempoh sahnya.
+              Imbasan di dalam kawasan program direkod sebagai Bersemuka; di luar kawasan sebagai Online.
+              Hidupkan GPS supaya mod kehadiran anda tepat.
             </Text>
           </>
         ) : null}
@@ -248,7 +252,7 @@ export default function UsrahScanScreen() {
             <Card tone="primary">
               <View className="items-center gap-3">
                 <Ionicons name="checkmark-circle" size={44} color={Colors.white} />
-                {/* Mod datang daripada pelayan — ditentukan oleh kod QR yang diimbas. */}
+                {/* Mod ialah label pelayan mengikut jarak dari pin — bukan pilihan ahli. */}
                 <Text className="text-lg font-bold text-white">
                   {phase.result.attendance_mode === 'online'
                     ? 'Kehadiran Online Direkodkan'
