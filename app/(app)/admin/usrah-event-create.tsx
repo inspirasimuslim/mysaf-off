@@ -22,10 +22,12 @@ import { pickImage } from '@/lib/image-upload';
 import { useGoBack } from '@/lib/navigation';
 import { createUsrahEvent, uploadEventPoster } from '@/lib/usrah-events';
 import {
+  EVENT_MODE_OPTIONS,
   EVENT_TYPE_OPTIONS,
   KAWASAN_USRAH_OPTIONS,
   MONTH_OPTIONS,
   usrahEventName,
+  type EventMode,
   type EventType,
 } from '@/types/database';
 
@@ -84,6 +86,8 @@ export default function UsrahEventCreateScreen() {
   const [locationText, setLocationText] = useState('');
   const [coords, setCoords] = useState<{ latitude: number; longitude: number } | null>(null);
   const [radius, setRadius] = useState(DEFAULT_RADIUS);
+  /** Lalai Bersemuka Sahaja — lebih ketat; admin sengaja memilih Hibrid bila perlu. */
+  const [eventMode, setEventMode] = useState<EventMode>('bersemuka');
 
   /** URI tempatan; poster hanya dimuat naik SELEPAS acara wujud. */
   const [posterUri, setPosterUri] = useState<string | null>(null);
@@ -149,6 +153,7 @@ export default function UsrahEventCreateScreen() {
         latitude: coords?.latitude ?? null,
         longitude: coords?.longitude ?? null,
         geofence_radius_meters: radius,
+        event_mode: eventMode,
       });
 
       /*
@@ -183,6 +188,7 @@ export default function UsrahEventCreateScreen() {
     coords,
     endDate,
     endTime,
+    eventMode,
     eventType,
     kawasan,
     locationText,
@@ -376,6 +382,24 @@ export default function UsrahEventCreateScreen() {
               caption="Kehadiran ditolak di luar bulatan. Longgarkan untuk dewan besar atau GPS lemah."
             />
           </View>
+        </View>
+
+        {/*
+          --- Jenis kehadiran --------------------------------------------------
+          Masih SATU kod QR. Pilihan ini hanya menentukan peranan geofence di
+          atas: menghalang imbasan dari luar radius, atau menerimanya dan
+          melabelnya online.
+        */}
+        <View>
+          <SectionTitle
+            title="Jenis Kehadiran"
+            caption={
+              eventMode === 'bersemuka'
+                ? 'Imbasan dari luar radius geofence DITOLAK.'
+                : 'Imbasan dari mana-mana lokasi diterima; luar radius dilabel Online.'
+            }
+          />
+          <Segmented value={eventMode} options={EVENT_MODE_OPTIONS} onChange={setEventMode} disabled={saving} />
         </View>
 
         {/* --- Julat tarikh & masa: mula di kiri, tamat di kanan -------------- */}

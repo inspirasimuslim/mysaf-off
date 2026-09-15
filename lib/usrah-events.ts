@@ -1,4 +1,4 @@
-import type { EventType, UpcomingEvent, UsrahEvent } from '@/types/database';
+import type { EventMode, EventType, UpcomingEvent, UsrahEvent } from '@/types/database';
 
 import { uploadImage } from './image-upload';
 import { supabase } from './supabase';
@@ -31,6 +31,8 @@ export type CreateUsrahEventInput = {
   latitude: number | null;
   longitude: number | null;
   geofence_radius_meters: number;
+  /** 'bersemuka' = geofence menghalang; 'hibrid' = geofence melabel sahaja. */
+  event_mode: EventMode;
 };
 
 export type UpdateUsrahEventInput = Partial<

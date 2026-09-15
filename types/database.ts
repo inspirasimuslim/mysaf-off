@@ -305,6 +305,23 @@ export const MONTH_OPTIONS: Option<string>[] = MONTH_NAMES.map((label, index) =>
   label,
 }));
 
+/**
+ * Jenis kehadiran acara — peranan geofence, BUKAN bilangan kod QR.
+ * 'bersemuka' menolak imbasan dari luar radius; 'hibrid' menerimanya dan
+ * melabelnya online.
+ */
+export type EventMode = 'bersemuka' | 'hibrid';
+
+export const EVENT_MODE_OPTIONS: Option<EventMode>[] = [
+  { value: 'bersemuka', label: 'Bersemuka Sahaja' },
+  { value: 'hibrid', label: 'Hibrid' },
+];
+
+export const EVENT_MODE_LABEL: Record<EventMode, string> = {
+  bersemuka: 'Bersemuka Sahaja',
+  hibrid: 'Hibrid',
+};
+
 /** Satu baris `usrah_events`. */
 export type UsrahEvent = {
   id: string;
@@ -338,6 +355,12 @@ export type UsrahEvent = {
    * acara itu sendiri. Lihat `20260915000031_single_qr_geofence_label.sql`.
    */
   qr_enabled: boolean;
+  /**
+   * Peranan geofence pada acara berpin: 'bersemuka' MENGHALANG kehadiran dari
+   * luar radius, 'hibrid' hanya MELABELNYA sebagai online. Masih satu kod QR.
+   * Lihat `20260915000032_event_mode_geofence.sql`.
+   */
+  event_mode: EventMode;
   /** Ditetapkan bila "Padam" diarkibkan kerana acara ada rekod kehadiran/RSVP. */
   archived_at: string | null;
   created_by: string | null;

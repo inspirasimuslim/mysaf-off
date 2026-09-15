@@ -15,6 +15,7 @@ import { LoadingScreen } from '@/components/ui/loading-screen';
 import { Notice } from '@/components/ui/notice';
 import { Screen } from '@/components/ui/screen';
 import { SectionTitle } from '@/components/ui/section-title';
+import { Segmented } from '@/components/ui/segmented';
 import { TextField } from '@/components/ui/text-field';
 import { ToggleRow } from '@/components/ui/toggle-row';
 import { Colors } from '@/constants/theme';
@@ -26,12 +27,15 @@ import { useGoBack } from '@/lib/navigation';
 import { downloadRsvpList, fetchRsvpSummary, type RsvpSummary } from '@/lib/rsvp';
 import { fetchUsrahEvent, updateUsrahEvent, uploadEventPoster } from '@/lib/usrah-events';
 import {
+  EVENT_MODE_LABEL,
+  EVENT_MODE_OPTIONS,
   EVENT_TYPE_LABEL,
   USRAH_EVENT_STATUS_LABEL,
   dateRangeLabel,
   timeLabel,
   timeRangeLabel,
   usrahEventStatus,
+  type EventMode,
   type UsrahEvent,
 } from '@/types/database';
 
@@ -67,6 +71,7 @@ export default function UsrahEventDetailScreen() {
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
   const [locationText, setLocationText] = useState('');
+  const [eventMode, setEventMode] = useState<EventMode>('bersemuka');
 
   const hydrate = useCallback((row: UsrahEvent) => {
     setEvent(row);
@@ -76,6 +81,7 @@ export default function UsrahEventDetailScreen() {
     setStartTime(timeLabel(row.start_time));
     setEndTime(timeLabel(row.end_time));
     setLocationText(row.location_text ?? '');
+    setEventMode(row.event_mode);
   }, []);
 
   useEffect(() => {
@@ -114,6 +120,8 @@ export default function UsrahEventDetailScreen() {
           start_time: startTime,
           end_time: endTime,
           location_text: locationText.trim() || null,
+          // Pelayan membaca nilai TERKINI pada setiap imbasan — tukar berkesan serta-merta.
+          event_mode: eventMode,
         }),
       );
       setBanner({ tone: 'positive', message: 'Perubahan telah disimpan.' });
@@ -122,7 +130,7 @@ export default function UsrahEventDetailScreen() {
     } finally {
       setBusy(false);
     }
-  }, [busy, endDate, endTime, event, hydrate, locationText, name, startDate, startTime]);
+  }, [busy, endDate, endTime, event, eventMode, hydrate, locationText, name, startDate, startTime]);
 
   /** Togol status program (`is_active`) atau kod QR (`qr_enabled`) — satu laluan kemas kini. */
   const toggleFlag = useCallback(
@@ -283,6 +291,11 @@ export default function UsrahEventDetailScreen() {
             dimmed={!event.qr_enabled || status !== 'aktif'}>
             <View className="flex-row flex-wrap items-center gap-2">
               <Badge label={USRAH_EVENT_STATUS_LABEL[status]} tone={STATUS_TONE[status]} />
+              {/* Jenis kehadiran: menentukan sama ada geofence menghalang atau melabel. */}
+              <Badge
+                label={EVENT_MODE_LABEL[event.event_mode]}
+                tone={event.event_mode === 'hibrid' ? 'info' : 'primary'}
+              />
               {!event.qr_enabled ? <Badge label="Kod QR dimatikan" tone="warn" /> : null}
             </View>
 
@@ -455,6 +468,18 @@ export default function UsrahEventDetailScreen() {
                     <DateTimeField label="Masa tamat" mode="time" value={endTime} onChange={setEndTime} disabled={busy} />
                   </View>
                 </View>
+                <Segmented
+                  label="Jenis kehadiran"
+                  value={eventMode}
+                  options={EVENT_MODE_OPTIONS}
+                  onChange={setEventMode}
+                  disabled={busy}
+                />
+                <Text className="-mt-1 text-xs text-ink-muted">
+                  {eventMode === 'bersemuka'
+                    ? 'Imbasan dari luar radius geofence ditolak.'
+                    : 'Imbasan dari mana-mana lokasi diterima; luar radius dilabel Online.'}
+                </Text>
                 <TextField
                   label="Lokasi"
                   value={locationText}
