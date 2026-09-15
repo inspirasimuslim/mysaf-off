@@ -281,8 +281,8 @@ export default function AdminHubScreen() {
             defaultOpen={openByDefault}>
             <ActionRow
               icon="trophy-outline"
-              title="Aktiviti Terbaik"
-              subtitle="Ahli paling aktif dan generasi terbaik mengikut tempoh"
+              title="Penarafan Ahli dan Generasi"
+              subtitle="Ahli paling aktif, generasi terbaik dan ahli paling tidak aktif mengikut tempoh"
               onPress={() => router.push('/(app)/admin/aktiviti-terbaik')}
             />
           </CollapsibleSection>

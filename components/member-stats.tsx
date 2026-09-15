@@ -296,7 +296,16 @@ function niceMax(value: number): number {
  * melabel setiap generasi ketiga. Ketuk lajur untuk nilai tepat; generasi
  * terbesar dipilih secara lalai supaya baris ringkasan tidak pernah kosong.
  */
-export function GenerationColumns({ slices, formatLabel }: { slices: StatSlice[]; formatLabel: (code: string) => string }) {
+export function GenerationColumns({
+  slices,
+  formatLabel,
+  unit = 'ahli',
+}: {
+  slices: StatSlice[];
+  formatLabel: (code: string) => string;
+  /** Unit nilai lajur pada baris ringkasan — lalai 'ahli'. */
+  unit?: string;
+}) {
   const { width: windowWidth } = useWindowDimensions();
   /*
     Anggaran lebar sebelum `onLayout` pertama: lebar kandungan `Screen` (maks
@@ -337,7 +346,7 @@ export function GenerationColumns({ slices, formatLabel }: { slices: StatSlice[]
           {activeSlice ? formatLabel(activeSlice.label) : '—'}
         </Text>
         <Text className="flex-1 text-sm text-ink-muted">
-          {activeSlice ? activeSlice.count + ' ahli' : ''}
+          {activeSlice ? activeSlice.count + ' ' + unit : ''}
         </Text>
         {selected === null ? <Text className="text-[10px] text-ink-faint">terbesar</Text> : null}
       </Pressable>

@@ -2,8 +2,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Text, View } from 'react-native';
 
-import { GenerationColumns, StatCard, useCountUp } from '@/components/member-stats';
+import { GenerationColumns, StatCard } from '@/components/member-stats';
 import { NoAccessScreen } from '@/components/no-access';
+import { SaveShareButtons } from '@/components/save-share-buttons';
 import { ScreenHeader } from '@/components/screen-header';
 import { Button } from '@/components/ui/button';
 import { DateTimeField } from '@/components/ui/date-time-field';
@@ -12,26 +13,32 @@ import { MemberAvatar } from '@/components/ui/member-avatar';
 import { Notice } from '@/components/ui/notice';
 import { Screen } from '@/components/ui/screen';
 import { Segmented } from '@/components/ui/segmented';
-import { StepperField } from '@/components/ui/stepper-field';
+import { TextField } from '@/components/ui/text-field';
 import { Colors } from '@/constants/theme';
 import {
+  downloadInactiveMembers,
   fetchActivityRanking,
+  fetchInactiveMembers,
   maxPossibleScore,
   ringgit,
   type ActivityRanking,
   type GenerationActivity,
+  type InactiveList,
   type MemberActivity,
 } from '@/lib/activity-ranking';
 import { useGenerasiAccess } from '@/lib/department-access';
 import { toMalayError } from '@/lib/errors';
+import { deliveryMessage, type DeliveryMode } from '@/lib/file-delivery';
 import { useGoBack } from '@/lib/navigation';
 import { dateRangeLabel, generationLabel, generationOrder, type Option } from '@/types/database';
 
-type Tab = 'ahli' | 'generasi';
+type Tab = 'aktif' | 'generasi' | 'tidak-aktif';
 
+/** Label pendek — tiga pilihan penuh tidak muat sebaris pada telefon; tajuk penuh ada dalam kad setiap tab. */
 const TAB_OPTIONS: Option<Tab>[] = [
-  { value: 'ahli', label: 'Ahli Paling Aktif' },
-  { value: 'generasi', label: 'Generasi Terbaik' },
+  { value: 'aktif', label: 'Paling Aktif' },
+  { value: 'generasi', label: 'Generasi' },
+  { value: 'tidak-aktif', label: 'Tidak Aktif' },
 ];
 
 /** Ahli dipapar berperingkat — 325 baris sekali gus melambatkan skrin. */
@@ -59,24 +66,24 @@ function generasiName(code: string | null): string {
 }
 
 /**
- * Aktiviti Terbaik — penarafan ahli paling aktif dan generasi terbaik.
+ * Penarafan Ahli dan Generasi.
  *
  * Admin LAJNAH PEMBANGUNAN GENERASI sahaja (dan Super Admin); tiada pautan dari
  * mana-mana skrin ahli. RPC menyemak kebenaran yang sama — skrin ini hanya
  * mengelak pintu yang pasti menolak.
  *
- * Penarafan dijana sekali secara automatik dengan tempoh lalai (awal tahun
- * hingga hari ini), kemudian hanya bila admin menekan "Jana Penarafan" —
- * mengubah tarikh tidak mencetuskan panggilan setiap kali pemilih bergerak.
+ * Satu tempoh di atas dikongsi oleh ketiga-tiga tab. Penarafan penuh (Paling
+ * Aktif + Generasi) dijana sekali secara automatik, kemudian hanya melalui
+ * "Jana Penarafan". Senarai Tidak Aktif mempunyai butang dan markah maksimumnya
+ * sendiri, dan tidak dijana sehingga diminta.
  */
-export default function AktivitiTerbaikScreen() {
+export default function PenarafanScreen() {
   const goBack = useGoBack();
   const access = useGenerasiAccess();
 
   const [startDate, setStartDate] = useState(() => new Date().getFullYear() + '-01-01');
   const [endDate, setEndDate] = useState(() => isoDate(new Date()));
-  const [minScore, setMinScore] = useState(1);
-  const [tab, setTab] = useState<Tab>('ahli');
+  const [tab, setTab] = useState<Tab>('aktif');
 
   const [result, setResult] = useState<ActivityRanking | null>(null);
   const [busy, setBusy] = useState(false);
@@ -90,13 +97,13 @@ export default function AktivitiTerbaikScreen() {
     setBusy(true);
     setError(null);
     try {
-      setResult(await fetchActivityRanking(startDate, endDate, minScore));
+      setResult(await fetchActivityRanking(startDate, endDate));
     } catch (caught) {
       setError(toMalayError(caught, 'Gagal menjana penarafan.'));
     } finally {
       setBusy(false);
     }
-  }, [busy, endDate, minScore, rangeValid, startDate]);
+  }, [busy, endDate, rangeValid, startDate]);
 
   // Jana SEKALI bila akses disahkan; selepas itu hanya melalui butang.
   const autoRan = useRef(false);
@@ -110,28 +117,26 @@ export default function AktivitiTerbaikScreen() {
   if (!access.canView) {
     return (
       <NoAccessScreen
-        title="Aktiviti Terbaik"
+        title="Penarafan Ahli dan Generasi"
         description="Penarafan aktiviti memerlukan kebenaran melihat pada LAJNAH PEMBANGUNAN GENERASI."
       />
     );
   }
 
-  const stale =
-    result !== null &&
-    (result.startDate !== startDate || result.endDate !== endDate || result.minScore !== minScore);
+  const stale = result !== null && (result.startDate !== startDate || result.endDate !== endDate);
 
   return (
     <Screen padTop={false}>
       <ScreenHeader
         eyebrow="Pembangunan Generasi"
-        title="Aktiviti Terbaik"
-        subtitle={result ? dateRangeLabel(result.startDate, result.endDate) : 'Penarafan ahli & generasi'}
+        title="Penarafan Ahli dan Generasi"
+        subtitle={result ? dateRangeLabel(result.startDate, result.endDate) : 'Mengikut tempoh pilihan'}
         onBackPress={goBack}
       />
 
       <View className="gap-5 px-gutter pb-8 pt-5">
-        {/* --- Tempoh & kriteria --------------------------------------------- */}
-        <StatCard title="Tempoh & Kriteria" caption={'Markah maksimum dalam tempoh ini: ' + maxScore}>
+        {/* --- Tempoh (dikongsi semua tab) ----------------------------------- */}
+        <StatCard title="Tempoh" caption={'Markah maksimum dalam tempoh ini: ' + maxScore}>
           <View className="gap-3">
             <View className="flex-row items-start gap-3">
               <View className="flex-1">
@@ -141,17 +146,6 @@ export default function AktivitiTerbaikScreen() {
                 <DateTimeField label="Tarikh tamat" mode="date" value={endDate} onChange={setEndDate} disabled={busy} />
               </View>
             </View>
-
-            <StepperField
-              label="Markah minimum untuk aktif"
-              value={minScore}
-              onChange={setMinScore}
-              step={1}
-              min={1}
-              max={maxScore}
-              disabled={busy}
-              caption="Ahli dengan markah ini ke atas dikira aktif dalam Generasi Terbaik."
-            />
 
             {!rangeValid ? (
               <Notice tone="negative" message="Tarikh tamat mesti pada atau selepas tarikh mula." />
@@ -167,7 +161,7 @@ export default function AktivitiTerbaikScreen() {
 
             {stale && !busy ? (
               <Text className="text-center text-xs text-ink-muted">
-                Input telah berubah — tekan Jana Penarafan untuk mengira semula.
+                Tempoh telah berubah — tekan Jana Penarafan untuk mengira semula.
               </Text>
             ) : null}
           </View>
@@ -177,17 +171,19 @@ export default function AktivitiTerbaikScreen() {
 
         {busy && !result ? <LoadingCards /> : null}
 
-        {result ? (
-          <>
-            <Hero result={result} />
+        {result ? <Hero result={result} /> : null}
 
-            <Segmented value={tab} options={TAB_OPTIONS} onChange={setTab} />
+        <Segmented value={tab} options={TAB_OPTIONS} onChange={setTab} />
 
-            {tab === 'ahli' ? <MemberRanking members={result.members} /> : <GenerationRanking result={result} />}
+        {tab === 'aktif' ? (
+          result ? <MemberRanking members={result.members} /> : null
+        ) : tab === 'generasi' ? (
+          result ? <GenerationRanking result={result} /> : null
+        ) : (
+          <InactiveSection startDate={startDate} endDate={endDate} rangeValid={rangeValid} />
+        )}
 
-            <ScoringGuide />
-          </>
-        ) : null}
+        <ScoringGuide />
       </View>
     </Screen>
   );
@@ -198,8 +194,9 @@ export default function AktivitiTerbaikScreen() {
 // =============================================================================
 
 function Hero({ result }: { result: ActivityRanking }) {
-  const active = result.members.filter((row) => row.total_score >= result.minScore).length;
-  const shown = useCountUp(active);
+  const count = result.members.length;
+  const average = count ? result.members.reduce((sum, row) => sum + row.total_score, 0) / count : 0;
+  const zero = result.members.filter((row) => row.total_score === 0).length;
   const top = result.members[0];
   const best = result.generations.find((row) => row.generasi);
   const max = maxPossibleScore(result.startDate, result.endDate);
@@ -217,20 +214,21 @@ function Hero({ result }: { result: ActivityRanking }) {
         className="bg-white/5"
       />
 
-      <Text className="text-sm text-white/70">{'Ahli aktif (markah ≥ ' + result.minScore + ')'}</Text>
+      <Text className="text-sm text-white/70">{'Purata markah · ' + count + ' ahli'}</Text>
       <View className="mt-1 flex-row items-baseline gap-2">
         <Text
-          accessibilityLabel={active + ' ahli aktif'}
+          accessibilityLabel={'Purata ' + average.toFixed(1) + ' markah'}
           className="font-bold text-white"
           style={{ fontSize: 56, lineHeight: 62, fontVariant: ['tabular-nums'] }}>
-          {shown}
+          {average.toFixed(1)}
         </Text>
-        <Text className="text-base text-white/70">{'/ ' + result.members.length}</Text>
+        <Text className="text-base text-white/70">{'/ ' + max}</Text>
       </View>
 
       <View className="mt-4 flex-row flex-wrap gap-2">
-        {top ? <Fact value={top.total_score + '/' + max} label="markah tertinggi" /> : null}
+        {top ? <Fact value={String(top.total_score)} label="markah tertinggi" /> : null}
         {best ? <Fact value={best.generasi ?? '—'} label="generasi terbaik" /> : null}
+        <Fact value={String(zero)} label="ahli markah 0" />
       </View>
     </View>
   );
@@ -261,6 +259,8 @@ function MemberRanking({ members }: { members: MemberActivity[] }) {
 
   return (
     <View className="gap-3">
+      <SectionHeading title="Ahli Paling Aktif" caption="Markah sama disusun mengikut jumlah sumbangan PIPIS dalam tempoh." />
+
       {podium.map((row, index) => (
         <PodiumCard key={row.member_id} row={row} rank={index + 1} />
       ))}
@@ -268,7 +268,7 @@ function MemberRanking({ members }: { members: MemberActivity[] }) {
       {rest.length ? (
         <View className="overflow-hidden rounded-card border border-line bg-surface">
           {rest.map((row, index) => (
-            <RankRow key={row.member_id} row={row} rank={index + 4} last={index === rest.length - 1} />
+            <MemberRow key={row.member_id} row={row} rank={index + 4} last={index === rest.length - 1} />
           ))}
         </View>
       ) : null}
@@ -280,10 +280,6 @@ function MemberRanking({ members }: { members: MemberActivity[] }) {
           onPress={() => setShown((current) => current + PAGE)}
         />
       ) : null}
-
-      <Text className="text-center text-xs text-ink-faint">
-        Markah sama disusun mengikut jumlah sumbangan PIPIS dalam tempoh.
-      </Text>
     </View>
   );
 }
@@ -336,16 +332,19 @@ function PodiumCard({ row, rank }: { row: MemberActivity; rank: number }) {
   );
 }
 
-function RankRow({ row, rank, last }: { row: MemberActivity; rank: number; last: boolean }) {
+/** Baris ahli padat — dikongsi Paling Aktif (dengan kedudukan) dan Tidak Aktif (tanpa). */
+function MemberRow({ row, rank, last, tone = 'primary' }: { row: MemberActivity; rank?: number; last: boolean; tone?: 'primary' | 'muted' }) {
   return (
     <View
       accessible
-      accessibilityLabel={'Kedudukan ' + rank + ', ' + row.full_name + ', ' + row.total_score + ' markah'}
+      accessibilityLabel={(rank ? 'Kedudukan ' + rank + ', ' : '') + row.full_name + ', ' + row.total_score + ' markah'}
       className={`gap-2 p-3 ${last ? '' : 'border-b border-line'}`}>
       <View className="flex-row items-center gap-3">
-        <Text className="w-8 text-center text-sm font-bold text-ink-muted" style={{ fontVariant: ['tabular-nums'] }}>
-          {'#' + rank}
-        </Text>
+        {rank ? (
+          <Text className="w-8 text-center text-sm font-bold text-ink-muted" style={{ fontVariant: ['tabular-nums'] }}>
+            {'#' + rank}
+          </Text>
+        ) : null}
         <MemberAvatar fullName={row.full_name} avatarUrl={row.avatar_url} size={36} />
         <View className="flex-1">
           <Text className="text-sm font-semibold text-ink" numberOfLines={1}>
@@ -353,18 +352,20 @@ function RankRow({ row, rank, last }: { row: MemberActivity; rank: number; last:
           </Text>
           <Text className="text-xs text-ink-muted">{generasiName(row.generasi)}</Text>
         </View>
-        <Text className="text-2xl font-bold text-primary" style={{ fontVariant: ['tabular-nums'] }}>
+        <Text
+          className={`text-2xl font-bold ${tone === 'primary' ? 'text-primary' : 'text-ink-muted'}`}
+          style={{ fontVariant: ['tabular-nums'] }}>
           {row.total_score}
         </Text>
       </View>
-      <View style={{ paddingLeft: 44 }}>
+      <View style={{ paddingLeft: rank ? 44 : 0 }}>
         <ScoreChips row={row} compact />
       </View>
     </View>
   );
 }
 
-/** Pecahan markah: cip hijau bila dicapai, kelabu bila tidak — tidak bergantung pada warna sahaja. */
+/** Pecahan markah: cip hijau bila dicapai, kelabu bila tidak — ikon ✓/✕ supaya tidak bergantung pada warna. */
 function ScoreChips({ row, compact = false }: { row: MemberActivity; compact?: boolean }) {
   const chips = [
     { label: 'Yuran', earned: row.yuran_lunas > 0 },
@@ -402,7 +403,7 @@ function ScoreChips({ row, compact = false }: { row: MemberActivity; compact?: b
 
 function GenerationRanking({ result }: { result: ActivityRanking }) {
   const rows = result.generations;
-  const maxActive = Math.max(1, ...rows.map((row) => row.jumlah_ahli_aktif));
+  const maxTotal = Math.max(1, ...rows.map((row) => row.jumlah_markah_generasi));
 
   // Lajur mengikut URUTAN generasi (i01 → i27), bukan kedudukan — bentuk merentas zaman.
   const columns = useMemo(
@@ -410,39 +411,41 @@ function GenerationRanking({ result }: { result: ActivityRanking }) {
       rows
         .filter((row) => row.generasi)
         .sort((a, b) => generationOrder(a.generasi) - generationOrder(b.generasi))
-        .map((row) => ({ label: row.generasi as string, count: row.jumlah_ahli_aktif })),
+        .map((row) => ({ label: row.generasi as string, count: row.jumlah_markah_generasi })),
     [rows],
   );
 
   return (
     <View className="gap-5">
-      <StatCard title="Kedudukan Generasi" caption="Ikut bilangan ahli aktif; seri dipecahkan oleh jumlah PIPIS generasi.">
+      <StatCard
+        title="Generasi Terbaik"
+        caption="Jumlah markah semua ahli generasi; seri dipecahkan oleh jumlah PIPIS. Purata memberi gambaran adil bagi generasi kecil.">
         <View className="gap-4">
           {rows.map((row, index) => (
-            <GenerationRow key={row.generasi ?? 'tiada'} row={row} rank={index + 1} maxActive={maxActive} />
+            <GenerationRow key={row.generasi ?? 'tiada'} row={row} rank={index + 1} maxTotal={maxTotal} />
           ))}
         </View>
       </StatCard>
 
       {columns.length ? (
-        <StatCard title="Ahli Aktif Mengikut Generasi" caption={'Markah ≥ ' + result.minScore + ' · urutan generasi'}>
-          <GenerationColumns slices={columns} formatLabel={(code) => generationLabel(code)} />
+        <StatCard title="Jumlah Markah Mengikut Generasi" caption="Urutan generasi">
+          <GenerationColumns slices={columns} formatLabel={(code) => generationLabel(code)} unit="markah" />
         </StatCard>
       ) : null}
     </View>
   );
 }
 
-function GenerationRow({ row, rank, maxActive }: { row: GenerationActivity; rank: number; maxActive: number }) {
+function GenerationRow({ row, rank, maxTotal }: { row: GenerationActivity; rank: number; maxTotal: number }) {
   const medal = rank <= 3 ? MEDALS[rank - 1] : null;
-  const share = (row.jumlah_ahli_aktif / maxActive) * 100;
+  const share = (row.jumlah_markah_generasi / maxTotal) * 100;
 
   return (
     <View
       accessible
       accessibilityLabel={
-        'Kedudukan ' + rank + ', ' + generasiName(row.generasi) + ', ' + row.jumlah_ahli_aktif + ' daripada ' +
-        row.jumlah_ahli_generasi + ' aktif, ' + row.peratus_aktif + ' peratus'
+        'Kedudukan ' + rank + ', ' + generasiName(row.generasi) + ', ' + row.jumlah_markah_generasi +
+        ' markah, purata ' + row.purata_markah.toFixed(1) + ', ' + row.jumlah_ahli_generasi + ' ahli'
       }>
       <View className="flex-row items-center gap-3">
         <View
@@ -456,14 +459,17 @@ function GenerationRow({ row, rank, maxActive }: { row: GenerationActivity; rank
             {generasiName(row.generasi)}
             {row.generasi ? <Text className="text-xs font-normal text-ink-faint">{'  ' + row.generasi}</Text> : null}
           </Text>
-          <Text className="text-xs text-ink-muted">{'PIPIS ' + ringgit(row.jumlah_pipis_generasi)}</Text>
+          <Text className="text-xs text-ink-muted">
+            {'purata ' + row.purata_markah.toFixed(1) + ' · ' + row.jumlah_ahli_generasi + ' ahli · PIPIS ' +
+              ringgit(row.jumlah_pipis_generasi)}
+          </Text>
         </View>
 
         <View className="items-end">
-          <Text className="text-sm font-bold text-ink" style={{ fontVariant: ['tabular-nums'] }}>
-            {row.jumlah_ahli_aktif + '/' + row.jumlah_ahli_generasi + ' aktif'}
+          <Text className="text-lg font-bold text-ink" style={{ fontVariant: ['tabular-nums'] }}>
+            {row.jumlah_markah_generasi}
           </Text>
-          <Text className="text-xs text-ink-muted">{Math.round(row.peratus_aktif) + '%'}</Text>
+          <Text className="text-[10px] text-ink-muted">markah</Text>
         </View>
       </View>
 
@@ -482,8 +488,143 @@ function GenerationRow({ row, rank, maxActive }: { row: GenerationActivity; rank
 }
 
 // =============================================================================
+// Ahli Paling Tidak Aktif
+// =============================================================================
+
+function InactiveSection({ startDate, endDate, rangeValid }: { startDate: string; endDate: string; rangeValid: boolean }) {
+  const [maxInput, setMaxInput] = useState('0');
+  const [list, setList] = useState<InactiveList | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [shown, setShown] = useState(PAGE);
+  const [saving, setSaving] = useState<DeliveryMode | null>(null);
+  const [notice, setNotice] = useState<{ tone: 'positive' | 'info' | 'negative'; message: string } | null>(null);
+
+  const parsed = Number.parseInt(maxInput, 10);
+  const maxValid = maxInput.trim() !== '' && Number.isFinite(parsed) && parsed >= 0;
+
+  const generate = useCallback(async () => {
+    if (busy || !rangeValid || !maxValid) return;
+    setBusy(true);
+    setError(null);
+    setNotice(null);
+    try {
+      setList(await fetchInactiveMembers(startDate, endDate, parsed));
+      setShown(PAGE);
+    } catch (caught) {
+      setError(toMalayError(caught, 'Gagal menjana senarai.'));
+    } finally {
+      setBusy(false);
+    }
+  }, [busy, endDate, maxValid, parsed, rangeValid, startDate]);
+
+  const download = useCallback(
+    async (mode: DeliveryMode) => {
+      if (!list || saving) return;
+      setSaving(mode);
+      setNotice(null);
+      try {
+        const report = await downloadInactiveMembers(list, mode);
+        setNotice({
+          tone: report.result === 'cancelled' ? 'info' : 'positive',
+          message: deliveryMessage(report.result, report.fileName, report.rows + ' ahli'),
+        });
+      } catch (caught) {
+        setNotice({ tone: 'negative', message: toMalayError(caught, 'Gagal menjana fail Excel.') });
+      } finally {
+        setSaving(null);
+      }
+    },
+    [list, saving],
+  );
+
+  const stale =
+    list !== null && (list.startDate !== startDate || list.endDate !== endDate || (maxValid && list.maxScore !== parsed));
+
+  return (
+    <View className="gap-3">
+      <StatCard title="Ahli Paling Tidak Aktif" caption="Ahli dengan markah sama atau kurang daripada nilai ini, dalam tempoh di atas.">
+        <View className="gap-3">
+          <TextField
+            label="Markah maksimum"
+            value={maxInput}
+            onChangeText={(value) => setMaxInput(value.replace(/[^\d]/g, '').slice(0, 3))}
+            keyboardType="number-pad"
+            editable={!busy}
+            error={maxInput.trim() !== '' && !maxValid ? 'Masukkan nombor 0 atau lebih.' : null}
+          />
+          <Button
+            label="Jana Senarai"
+            variant="secondary"
+            loading={busy}
+            disabled={busy || !rangeValid || !maxValid}
+            icon={<Ionicons name="list-outline" size={18} color={Colors.ink} />}
+            onPress={() => void generate()}
+          />
+          {stale && !busy ? (
+            <Text className="text-center text-xs text-ink-muted">
+              Tempoh atau markah telah berubah — tekan Jana Senarai untuk mengira semula.
+            </Text>
+          ) : null}
+        </View>
+      </StatCard>
+
+      {error ? <Notice tone="negative" message={error} /> : null}
+
+      {list ? (
+        <>
+          <View className="flex-row items-baseline justify-between">
+            <Text className="text-base font-bold text-ink">{list.members.length + ' ahli'}</Text>
+            <Text className="text-xs text-ink-muted">{'markah ≤ ' + list.maxScore + ' · paling rendah dahulu'}</Text>
+          </View>
+
+          {list.members.length ? (
+            <>
+              <SaveShareButtons
+                kind="file"
+                variant="secondary"
+                webLabel="Muat Turun Senarai (.xlsx)"
+                nativeCaption="Muat Turun Senarai (.xlsx)"
+                busy={saving}
+                onPress={(mode) => void download(mode)}
+              />
+              {notice ? <Notice tone={notice.tone} message={notice.message} /> : null}
+
+              <View className="overflow-hidden rounded-card border border-line bg-surface">
+                {list.members.slice(0, shown).map((row, index, visible) => (
+                  <MemberRow key={row.member_id} row={row} last={index === visible.length - 1} tone="muted" />
+                ))}
+              </View>
+
+              {shown < list.members.length ? (
+                <Button
+                  label={'Tunjuk ' + Math.min(PAGE, list.members.length - shown) + ' lagi'}
+                  variant="secondary"
+                  onPress={() => setShown((current) => current + PAGE)}
+                />
+              ) : null}
+            </>
+          ) : (
+            <Notice tone="info" message={'Tiada ahli dengan markah ' + list.maxScore + ' atau kurang dalam tempoh ini.'} />
+          )}
+        </>
+      ) : null}
+    </View>
+  );
+}
+
+// =============================================================================
 // Panduan & rangka
 // =============================================================================
+
+function SectionHeading({ title, caption }: { title: string; caption?: string }) {
+  return (
+    <View>
+      <Text className="text-base font-bold text-ink">{title}</Text>
+      {caption ? <Text className="mt-0.5 text-xs text-ink-muted">{caption}</Text> : null}
+    </View>
+  );
+}
 
 function ScoringGuide() {
   const items: [string, string][] = [
@@ -515,7 +656,7 @@ function LoadingCards() {
   return (
     <View accessibilityLabel="Menjana penarafan" className="gap-5">
       <View className="h-36 rounded-card bg-primary/80" />
-      {[0, 1, 2].map((index) => (
+      {[0, 1].map((index) => (
         <View key={index} className="h-24 rounded-card border border-line bg-surface p-card">
           <View className="h-4 w-40 rounded-pill bg-line" />
           <View className="mt-4 h-3 w-4/5 rounded-pill bg-primary-tint" />

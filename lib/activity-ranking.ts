@@ -1,8 +1,15 @@
+import * as XLSX from 'xlsx';
+
+import { generationLabel } from '@/types/database';
+
+import { UserError } from './errors';
+import type { DeliveryMode, DeliveryResult } from './file-delivery';
 import { supabase } from './supabase';
+import { deliverWorkbook } from './xlsx-download';
 
 /**
- * Penarafan Ahli Paling Aktif & Generasi Terbaik — admin LAJNAH PEMBANGUNAN
- * GENERASI sahaja. Lihat `20260915000034_activity_ranking.sql`.
+ * Penarafan Ahli dan Generasi — admin LAJNAH PEMBANGUNAN GENERASI sahaja.
+ * Lihat `20260915000034_activity_ranking.sql` dan `…035_activity_ranking_v2.sql`.
  *
  * Markah dikira sepenuhnya di pelayan (lima komponen, ditulis keras). Skrin
  * hanya memapar; ia tidak mengira semula apa-apa.
@@ -32,9 +39,12 @@ export type MemberActivity = {
 export type GenerationActivity = {
   /** NULL = ahli tanpa generasi. */
   generasi: string | null;
-  jumlah_ahli_aktif: number;
+  /** SUM total_score semua ahli generasi — metrik kedudukan. */
+  jumlah_markah_generasi: number;
   jumlah_ahli_generasi: number;
-  peratus_aktif: number;
+  /** Konteks: generasi besar semula jadi mendapat jumlah lebih tinggi. */
+  purata_markah: number;
+  /** Pemecah seri. */
   jumlah_pipis_generasi: number;
 };
 
@@ -43,47 +53,105 @@ export type ActivityRanking = {
   generations: GenerationActivity[];
   startDate: string;
   endDate: string;
-  minScore: number;
+};
+
+export type InactiveList = {
+  members: MemberActivity[];
+  startDate: string;
+  endDate: string;
+  maxScore: number;
 };
 
 /** PostgREST memulangkan `numeric` sebagai nombor atau rentetan — seragamkan. */
 const num = (value: unknown): number => Number(value ?? 0);
 
-export async function fetchActivityRanking(
-  startDate: string,
-  endDate: string,
-  minScore: number,
-): Promise<ActivityRanking> {
+function normalizeMember(row: MemberActivity): MemberActivity {
+  return {
+    ...row,
+    yuran_lunas: num(row.yuran_lunas),
+    pipis_sumbang: num(row.pipis_sumbang),
+    usrah_bulan: num(row.usrah_bulan),
+    ada_jawatan_org: num(row.ada_jawatan_org),
+    ada_jawatan_pas: num(row.ada_jawatan_pas),
+    total_score: num(row.total_score),
+    pipis_amount_period: num(row.pipis_amount_period),
+  };
+}
+
+export async function fetchActivityRanking(startDate: string, endDate: string): Promise<ActivityRanking> {
   const [members, generations] = await Promise.all([
     supabase.rpc('member_activity_score', { p_start_date: startDate, p_end_date: endDate }),
-    supabase.rpc('generasi_terbaik', { p_start_date: startDate, p_end_date: endDate, p_min_score: minScore }),
+    supabase.rpc('generasi_terbaik', { p_start_date: startDate, p_end_date: endDate }),
   ]);
 
   if (members.error) throw members.error;
   if (generations.error) throw generations.error;
 
   return {
-    members: ((members.data ?? []) as MemberActivity[]).map((row) => ({
-      ...row,
-      yuran_lunas: num(row.yuran_lunas),
-      pipis_sumbang: num(row.pipis_sumbang),
-      usrah_bulan: num(row.usrah_bulan),
-      ada_jawatan_org: num(row.ada_jawatan_org),
-      ada_jawatan_pas: num(row.ada_jawatan_pas),
-      total_score: num(row.total_score),
-      pipis_amount_period: num(row.pipis_amount_period),
-    })),
+    members: ((members.data ?? []) as MemberActivity[]).map(normalizeMember),
     generations: ((generations.data ?? []) as GenerationActivity[]).map((row) => ({
       ...row,
-      jumlah_ahli_aktif: num(row.jumlah_ahli_aktif),
+      jumlah_markah_generasi: num(row.jumlah_markah_generasi),
       jumlah_ahli_generasi: num(row.jumlah_ahli_generasi),
-      peratus_aktif: num(row.peratus_aktif),
+      purata_markah: num(row.purata_markah),
       jumlah_pipis_generasi: num(row.jumlah_pipis_generasi),
     })),
     startDate,
     endDate,
-    minScore,
   };
+}
+
+/**
+ * Ahli dengan total_score ≤ `maxScore`, markah paling rendah dahulu.
+ *
+ * Tapisan di pelayan (`p_max_score`); susunan menaik di sini — RPC kekal
+ * menyusun menurun supaya penarafan penuh tidak berubah.
+ */
+export async function fetchInactiveMembers(startDate: string, endDate: string, maxScore: number): Promise<InactiveList> {
+  const { data, error } = await supabase.rpc('member_activity_score', {
+    p_start_date: startDate,
+    p_end_date: endDate,
+    p_max_score: maxScore,
+  });
+  if (error) throw error;
+
+  const members = ((data ?? []) as MemberActivity[])
+    .map(normalizeMember)
+    .sort((a, b) => a.total_score - b.total_score || a.full_name.localeCompare(b.full_name, 'ms', { sensitivity: 'base' }));
+
+  return { members, startDate, endDate, maxScore };
+}
+
+const yaTidak = (value: number): string => (value > 0 ? 'Ya' : 'Tidak');
+
+/** Senarai Ahli Paling Tidak Aktif yang DIPAPAR, sebagai .xlsx. */
+export async function downloadInactiveMembers(
+  list: InactiveList,
+  mode: DeliveryMode,
+): Promise<{ rows: number; fileName: string; result: DeliveryResult }> {
+  if (!list.members.length) throw new UserError('Tiada ahli dalam senarai untuk dimuat turun.');
+
+  const sheet = XLSX.utils.json_to_sheet(
+    list.members.map((row) => ({
+      'Nombor Ahli': row.nombor_ahli ?? '',
+      Nama: row.full_name,
+      Generasi: row.generasi ? generationLabel(row.generasi) : 'Tanpa generasi',
+      Markah: row.total_score,
+      'Yuran Lunas': yaTidak(row.yuran_lunas),
+      'Sumbang PIPIS': yaTidak(row.pipis_sumbang),
+      'Bulan Usrah': row.usrah_bulan,
+      'Jawatan Organisasi': yaTidak(row.ada_jawatan_org),
+      'Jawatan PAS': yaTidak(row.ada_jawatan_pas),
+      'Jumlah PIPIS Tempoh (RM)': row.pipis_amount_period,
+    })),
+  );
+  const book = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(book, sheet, 'Tidak Aktif');
+
+  const fileName = 'ahli-tidak-aktif-' + list.startDate + '-hingga-' + list.endDate + '.xlsx';
+  const result = await deliverWorkbook(book, fileName, 'Ahli Paling Tidak Aktif', mode);
+
+  return { rows: list.members.length, fileName, result };
 }
 
 /**
