@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 
 import { NoAccessScreen, SUPER_ADMIN_ONLY } from '@/components/no-access';
 import { ScreenHeader } from '@/components/screen-header';
@@ -16,32 +16,45 @@ import { Colors } from '@/constants/theme';
 import {
   ACTIVITY_CATEGORY_OPTIONS,
   ACTIVITY_PAGE_SIZE,
-  TARGET_TYPE_ICON,
   TARGET_TYPE_LABEL,
   fetchAdminActivity,
   type ActivityCategory,
   type AdminActivity,
 } from '@/lib/activity-log';
+import { groupActivity, type ActivityGroup } from '@/lib/activity-group';
 import { fetchAssignments, fetchDepartments, fetchProfiles } from '@/lib/admin';
 import { toMalayError } from '@/lib/errors';
 import { useGoBack } from '@/lib/navigation';
 import { usePermissions } from '@/lib/permissions';
 import { MONTH_NAMES, ROLE_LABEL } from '@/types/database';
 
-function formatWhen(iso: string): string {
+/** Pemisah "·" sebagai escape — lihat supabase/functions/admin-create-member. */
+const SEP = ' · ';
+
+/** Blok teratas dibuka; selebihnya tertutup supaya senarai panjang boleh diimbas. */
+const OPEN_BY_DEFAULT = 3;
+
+function formatDay(iso: string): string {
   const d = new Date(iso);
-  const hh = String(d.getHours()).padStart(2, '0');
-  const mm = String(d.getMinutes()).padStart(2, '0');
-  return `${d.getDate()} ${MONTH_NAMES[d.getMonth()]} ${d.getFullYear()}, ${hh}:${mm}`;
+  return `${d.getDate()} ${MONTH_NAMES[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+function formatTime(iso: string): string {
+  const d = new Date(iso);
+  return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
 }
 
 /**
  * Log Aktiviti Admin — Super Admin sahaja.
  *
- * Nama pelaku ialah salinan pada MASA tindakan. Department pula dibaca LANGSUNG
- * daripada `admin_assignments` hari ini dan dilabel "Department semasa" —
- * sistem tidak menyimpan department pelaku pada masa lampau, jadi memaparkannya
- * tanpa label itu akan mengelirukan bila seseorang sudah bertukar department.
+ * Dikumpul ikut admin + hari kerana soalan yang biasa ditanya ialah "apa yang
+ * si polan buat semalam", bukan membaca satu demi satu tindakan. Setiap
+ * tindakan satu baris; butiran penuh (medan diubah, amaun, dsb.) hanya bila
+ * baris diketuk.
+ *
+ * Nama admin ialah salinan pada MASA tindakan. Department pula dibaca LANGSUNG
+ * daripada `admin_assignments` hari ini — sistem tidak menyimpan department
+ * pada masa lampau — dan dipapar sekali pada kepala blok dengan nota semasa.
  */
 export default function ActivityLogScreen() {
   const goBack = useGoBack();
@@ -66,7 +79,7 @@ export default function ActivityLogScreen() {
 
   /*
     Department semasa bagi setiap akaun. Kegagalan SENYAP: log masih berguna
-    tanpanya, dan baris "Department semasa" sekadar tidak dipapar.
+    tanpanya, dan kepala blok sekadar tidak memaparkannya.
   */
   const [currentRole, setCurrentRole] = useState<Map<string, string>>(new Map());
 
@@ -97,7 +110,7 @@ export default function ActivityLogScreen() {
           if (profile.role === 'super_admin') {
             next.set(profile.id, [ROLE_LABEL.super_admin, ...names].join(', '));
           } else {
-            next.set(profile.id, names.length ? names.join(', ') : 'Tiada — bukan admin lagi');
+            next.set(profile.id, names.length ? names.join(', ') : 'Bukan admin lagi');
           }
         }
         setCurrentRole(next);
@@ -150,11 +163,10 @@ export default function ActivityLogScreen() {
     }
   }, [category, hasMore, loading, loadingMore, query, rows.length]);
 
+  const groups = useMemo(() => groupActivity(rows), [rows]);
+
   const filtering = query !== '' || category !== null;
-  const title = useMemo(
-    () => (filtering ? 'Padanan (' + rows.length + (hasMore ? '+' : '') + ')' : 'Aktiviti terkini'),
-    [filtering, hasMore, rows.length],
-  );
+  const count = rows.length + (hasMore ? '+' : '');
 
   if (permissionsLoading) return <LoadingScreen />;
   if (!allowed) return <NoAccessScreen title="Log Aktiviti Admin" description={SUPER_ADMIN_ONLY} />;
@@ -208,16 +220,17 @@ export default function ActivityLogScreen() {
         ) : (
           <View>
             <SectionTitle
-              title={title}
-              caption={'"Department semasa" ialah department pelaku HARI INI, bukan pada masa tindakan.'}
+              title={(filtering ? 'Padanan' : 'Aktiviti terkini') + ' (' + count + ')'}
+              caption="Dikumpul ikut admin dan hari. Department pada kepala blok ialah department SEMASA admin, bukan pada masa tindakan."
             />
 
             <View className="gap-3">
-              {rows.map((row) => (
-                <ActivityRow
-                  key={row.id}
-                  row={row}
-                  currentRole={row.actor_id ? currentRole.get(row.actor_id) : 'Akaun telah dipadam'}
+              {groups.map((group, index) => (
+                <GroupBlock
+                  key={group.key}
+                  group={group}
+                  currentRole={group.actorId ? currentRole.get(group.actorId) : 'Akaun telah dipadam'}
+                  defaultOpen={index < OPEN_BY_DEFAULT}
                 />
               ))}
             </View>
@@ -239,44 +252,108 @@ export default function ActivityLogScreen() {
   );
 }
 
-function ActivityRow({ row, currentRole }: { row: AdminActivity; currentRole: string | undefined }) {
-  const label = typeof row.details?.label === 'string' ? row.details.label : null;
-  const changed = Array.isArray(row.details?.diubah) ? row.details.diubah : [];
-  const meta = [
-    TARGET_TYPE_LABEL[row.target_type] ?? row.target_type,
-    row.target_id ? '#' + row.target_id.slice(0, 8) : null,
-    formatWhen(row.created_at),
-  ]
-    .filter(Boolean)
-    .join(' · ');
+/*
+  Bentuk dan kelakuan sama seperti `CollapsibleSection` (kad, chevron, pil
+  kiraan), tetapi lebih padat: komponen itu dibina untuk borang dengan jarak
+  `gap-4`, yang menjadikan senarai satu baris kelihatan longgar.
+*/
+function GroupBlock({
+  group,
+  currentRole,
+  defaultOpen,
+}: {
+  group: ActivityGroup;
+  currentRole: string | undefined;
+  defaultOpen: boolean;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  const subtitle = formatDay(group.latestAt) + (currentRole ? SEP + currentRole : '');
 
   return (
-    <View className="flex-row items-start gap-3 rounded-card border border-line bg-surface p-card">
-      <View className="h-9 w-9 items-center justify-center rounded-pill bg-primary-soft">
-        <Ionicons name={TARGET_TYPE_ICON[row.target_type] ?? 'ellipse-outline'} size={16} color={Colors.primary} />
-      </View>
-
-      <View className="flex-1 gap-0.5">
-        <Text className="text-base font-semibold text-ink">{row.action}</Text>
-        {label ? (
-          <Text className="text-sm text-ink" numberOfLines={2}>
-            {label}
+    <View className="overflow-hidden rounded-card border border-line bg-surface">
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={group.actorName + ', ' + formatDay(group.latestAt)}
+        accessibilityState={{ expanded: open }}
+        onPress={() => setOpen((current) => !current)}
+        className="flex-row items-center gap-3 px-4 py-3 active:opacity-70">
+        <View className="flex-1">
+          <Text className="text-sm font-bold text-ink" numberOfLines={1}>
+            {group.actorName}
           </Text>
-        ) : null}
-        <Text className="text-xs text-ink-muted">{meta}</Text>
-        {changed.length ? (
-          <Text className="text-xs text-ink-faint" numberOfLines={2}>
-            Medan: {changed.join(', ')}
+          <Text className="mt-0.5 text-xs text-ink-muted" numberOfLines={1}>
+            {subtitle}
           </Text>
-        ) : null}
-
-        <View className="mt-2 gap-0.5 border-t border-line pt-2">
-          <Text className="text-xs text-ink-muted">
-            oleh <Text className="font-semibold text-ink">{row.actor_name}</Text>
-          </Text>
-          {currentRole ? <Text className="text-xs text-ink-faint">Department semasa: {currentRole}</Text> : null}
         </View>
-      </View>
+
+        <View className="rounded-pill bg-primary-soft px-2.5 py-0.5">
+          <Text className="text-xs font-semibold text-primary">{group.rows.length} tindakan</Text>
+        </View>
+
+        <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={16} color={Colors.inkMuted} />
+      </Pressable>
+
+      {open ? (
+        <View className="border-t border-line">
+          {group.rows.map((row, index) => (
+            <ActivityLine key={row.id} row={row} divider={index > 0} />
+          ))}
+        </View>
+      ) : null}
     </View>
+  );
+}
+
+/** Nilai `details` selain label & medan, untuk paparan butiran. */
+function detailEntries(details: AdminActivity['details']): [string, string][] {
+  if (!details) return [];
+  return Object.entries(details)
+    .filter(([key, value]) => key !== 'label' && key !== 'diubah' && value !== null && value !== undefined)
+    .map(([key, value]) => [
+      key.replace(/_/g, ' '),
+      typeof value === 'boolean' ? (value ? 'Ya' : 'Tidak') : String(value),
+    ]);
+}
+
+function ActivityLine({ row, divider }: { row: AdminActivity; divider: boolean }) {
+  const [open, setOpen] = useState(false);
+
+  const label = typeof row.details?.label === 'string' ? row.details.label : null;
+  // Dalam baris padat, pemisah label ("0145 · NAMA") menjadi ruang supaya
+  // tidak bertembung dengan pemisah antara tindakan dan sasaran.
+  const shortLabel = label ? label.split(SEP).join(' ') : null;
+  const changed = Array.isArray(row.details?.diubah) ? row.details.diubah : [];
+  const target = [TARGET_TYPE_LABEL[row.target_type] ?? row.target_type, row.target_id ? '#' + row.target_id.slice(0, 8) : null]
+    .filter(Boolean)
+    .join(SEP);
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ expanded: open }}
+      onPress={() => setOpen((current) => !current)}
+      className={`px-4 py-2.5 active:bg-background ${divider ? 'border-t border-line' : ''}`}>
+      <View className="flex-row items-start gap-3">
+        <Text className="w-10 pt-px text-xs font-medium text-ink-faint" style={{ fontVariant: ['tabular-nums'] }}>
+          {formatTime(row.created_at)}
+        </Text>
+        <Text className="flex-1 text-sm text-ink" numberOfLines={open ? undefined : 1}>
+          <Text className="font-semibold">{row.action}</Text>
+          {shortLabel ? <Text className="text-ink-muted">{SEP + shortLabel}</Text> : null}
+        </Text>
+      </View>
+
+      {open ? (
+        <View className="mt-1.5 gap-0.5 pl-[52px]">
+          <Text className="text-xs text-ink-muted">{target}</Text>
+          {changed.length ? <Text className="text-xs text-ink-muted">Medan: {changed.join(', ')}</Text> : null}
+          {detailEntries(row.details).map(([key, value]) => (
+            <Text key={key} className="text-xs text-ink-muted">
+              {key}: {value}
+            </Text>
+          ))}
+        </View>
+      ) : null}
+    </Pressable>
   );
 }

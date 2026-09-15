@@ -14,6 +14,11 @@
 //
 // Sumber kebenaran kekal dalam supabase/functions — fail hasil dijana semula,
 // jangan disunting terus.
+//
+// Fail hasil ditulis dengan BOM UTF-8. Windows PowerShell 5.1 membaca fail
+// TANPA BOM sebagai Windows-1252, jadi `Get-Content ... | Set-Clipboard` dahulu
+// merosakkan "·" (mojibake) dalam kod yang ditampal — dan label Log Aktiviti
+// Admin tersimpan rosak. BOM itu dimakan oleh Get-Content, tidak ikut ditampal.
 
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -75,7 +80,7 @@ for (const name of names) {
   }
 
   const outPath = join(OUT_DIR, name + '.ts');
-  writeFileSync(outPath, output, 'utf8');
+  writeFileSync(outPath, '﻿' + output, 'utf8');
 
   const tempPassword = /TEMP_PASSWORD\s*=\s*'([^']+)'/.exec(output)?.[1];
   console.log(

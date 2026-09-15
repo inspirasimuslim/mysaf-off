@@ -82,7 +82,7 @@ Deno.serve(async (request) => {
 
     const logDeletion = (accountDeleted: boolean) =>
       logAdminActivity(admin, callerId, 'Padam Akaun Ahli', 'members', memberId, {
-        label: [member.nombor_ahli, member.full_name].filter(Boolean).join(' · '),
+        label: [member.nombor_ahli, member.full_name].filter(Boolean).join(' · '), // escape — lihat admin-create-member
         akaun_log_masuk_dipadam: accountDeleted,
       });
 

@@ -146,6 +146,8 @@ Deno.serve(async (request) => {
       }
 
       await logAdminActivity(admin, callerId, 'Tambah Ahli Baharu', 'members', memberId, {
+        // `·` (·) sebagai escape: kod ini ditampal ke Dashboard, dan laluan
+        // salin yang bukan UTF-8 merosakkan aksara literal (mojibake Windows-1252).
         label: nomborAhli + ' · ' + fullName,
         generasi,
       });

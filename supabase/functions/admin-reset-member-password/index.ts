@@ -77,7 +77,7 @@ Deno.serve(async (request) => {
 
     // Dilog walaupun bendera gagal: kata laluan SUDAH bertukar, dan itulah tindakannya.
     await logAdminActivity(admin, callerId, 'Reset Kata Laluan Ahli', 'members', member.id, {
-      label: [member.nombor_ahli, member.full_name].filter(Boolean).join(' · '),
+      label: [member.nombor_ahli, member.full_name].filter(Boolean).join(' · '), // escape — lihat admin-create-member
       bendera_mesti_tukar_berjaya: !flagError,
     });
 

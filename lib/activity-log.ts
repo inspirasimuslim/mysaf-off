@@ -1,5 +1,3 @@
-import type { Ionicons } from '@expo/vector-icons';
-
 import type { Option } from '@/types/database';
 
 import { supabase } from './supabase';
@@ -55,20 +53,6 @@ export const TARGET_TYPE_LABEL: Record<string, string> = {
   yuran_payments: 'Yuran',
   pipis_contributions: 'PIPIS',
   adhoc_payment_types: 'Pembayaran Adhoc',
-};
-
-export const TARGET_TYPE_ICON: Record<string, keyof typeof Ionicons.glyphMap> = {
-  members: 'person-outline',
-  departments: 'business-outline',
-  generations: 'layers-outline',
-  admin_assignments: 'shield-outline',
-  profiles: 'shield-checkmark-outline',
-  org_positions: 'git-network-outline',
-  usrah_events: 'calendar-outline',
-  announcements: 'megaphone-outline',
-  yuran_payments: 'wallet-outline',
-  pipis_contributions: 'wallet-outline',
-  adhoc_payment_types: 'qr-code-outline',
 };
 
 export const ACTIVITY_PAGE_SIZE = 50;
