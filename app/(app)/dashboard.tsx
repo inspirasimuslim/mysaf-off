@@ -5,19 +5,27 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Animated, Easing, Platform, Pressable, Text, View, type TextStyle } from 'react-native';
 
 import { PosterCarousel, type PosterItem } from '@/components/poster-carousel';
-import { BIRTHDAY_GOLD } from '@/constants/theme';
+import { BIRTHDAY_GOLD, Colors } from '@/constants/theme';
 import { ScreenHeader } from '@/components/screen-header';
 import { UsrahStrip } from '@/components/usrah-strip';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { MemberAvatar } from '@/components/ui/member-avatar';
 import { Notice } from '@/components/ui/notice';
 import { Screen } from '@/components/ui/screen';
+import { fetchMyActivityRank, type MyActivityRank } from '@/lib/activity-rank';
 import { useAndroidExitPrompt } from '@/lib/android-back';
 import { fetchVisibleAnnouncements } from '@/lib/announcements';
 import { displayName, useAuth } from '@/lib/auth-context';
 import { fetchBirthdaysToday, type BirthdayToday } from '@/lib/birthdays';
 import { fetchMyMemberLinked } from '@/lib/members';
-import { PIPIS_TARGET, fetchPipisSummary, peratusLabel, ringgitBulat, type PipisSummary } from '@/lib/pipis';
+import {
+  PIPIS_TARGET,
+  fetchPipisSummary,
+  peratusLabel,
+  ringgitBulat,
+  ringgitPipis,
+  type PipisSummary,
+} from '@/lib/pipis';
 import { fetchUpcomingEvents } from '@/lib/usrah-events';
 import { fetchYuranSummary, ringgit, type YuranSummary } from '@/lib/yuran';
 import { shortDateRangeLabel, type Announcement, type UpcomingEvent } from '@/types/database';
@@ -41,6 +49,7 @@ export default function DashboardScreen() {
   const [pipis, setPipis] = useState<PipisSummary | null>(null);
   const [profile, setProfile] = useState<{ fullName: string; avatarUrl: string | null } | null>(null);
   const [birthdays, setBirthdays] = useState<BirthdayToday[]>([]);
+  const [rank, setRank] = useState<MyActivityRank | null>(null);
 
   /*
     Dibaca semula setiap kali skrin mendapat fokus, sama seperti `UsrahStrip`:
@@ -73,6 +82,22 @@ export default function DashboardScreen() {
           if (active) setBirthdays(rows);
         } catch {
           if (active) setBirthdays([]);
+        }
+      })();
+
+      /*
+        Kedudukan dibaca sekali di sini dan sekali lagi di Profil, bukan
+        dikongsi. Ia satu panggilan ringan yang mesti segar setiap kali Utama
+        dibuka — markah berubah apabila yuran dibayar atau kehadiran diimbas —
+        dan cache merentas skrin hanya menambah keadaan untuk disegerakkan
+        tanpa menjimatkan apa-apa yang dirasai pengguna.
+      */
+      void (async () => {
+        try {
+          const row = await fetchMyActivityRank();
+          if (active) setRank(row);
+        } catch {
+          if (active) setRank(null);
         }
       })();
 
@@ -169,6 +194,16 @@ export default function DashboardScreen() {
         {banner ? <Notice tone={banner.tone} message={banner.message} /> : null}
 
         {/*
+          Chip kedudukan duduk betul-betul di bawah sapaan, bukan di antara kad:
+          ia maklumat tentang ORANG itu, jadi tempatnya bersama namanya dan
+          bukan bersama wang. Ia dihalakan ke Profil, di mana pecahan penuh
+          menerangkan dari mana nombor itu datang.
+        */}
+        {rank ? (
+          <RankChip rank={rank} onPress={() => router.push('/(app)/profil')} />
+        ) : null}
+
+        {/*
           Dua kad separuh lebar. Yuran ialah satu-satunya perkara di skrin ini
           yang menuntut tindakan daripada ahli, jadi ia mengambil tempat kiri —
           di mana mata jatuh dahulu — dan PIPIS di sebelahnya melaporkan
@@ -248,6 +283,27 @@ const MEASURE_INTERVAL = 100;
  * bertemu permulaan salinan kedua tanpa celah, dan gelung kembali ke 0 pada
  * kedudukan yang kelihatan serupa.
  */
+/**
+ * Chip kedudukan di skrin Utama — nombor sahaja, tiada pecahan.
+ *
+ * Sengaja kecil dan sebaris. Pecahan lima item tinggal di Profil; di sini ia
+ * hanya perlu menjawab "saya di mana?" dan menawarkan jalan ke jawapan penuh.
+ */
+function RankChip({ rank, onPress }: { rank: MyActivityRank; onPress: () => void }) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={'Ranking anda nombor ' + rank.rank + ' daripada ' + rank.total_ahli + ' ahli'}
+      onPress={onPress}
+      className="flex-row items-center gap-2 self-start rounded-pill border border-line bg-surface px-3 py-1.5 active:opacity-70">
+      <Ionicons name="medal" size={14} color={BIRTHDAY_GOLD} />
+      <Text className="text-sm font-bold text-ink">{'Ranking #' + rank.rank}</Text>
+      <Text className="text-sm text-ink-muted">{'/' + rank.total_ahli}</Text>
+      <Ionicons name="chevron-forward" size={12} color={Colors.inkFaint} />
+    </Pressable>
+  );
+}
+
 function BirthdayGreeting({ rows, onPress }: { rows: BirthdayToday[]; onPress: () => void }) {
   const [viewWidth, setViewWidth] = useState(0);
   const [trackWidth, setTrackWidth] = useState(0);
@@ -467,7 +523,7 @@ function GradientStatCard({
         colors={colors}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={{ flex: 1, minHeight: 148, borderRadius: 20, padding: 16 }}>
+        style={{ flex: 1, minHeight: 126, borderRadius: 20, padding: 14 }}>
         <View className="flex-row items-start gap-2">
           <View
             className="h-9 w-9 items-center justify-center rounded-xl"
@@ -491,7 +547,7 @@ function GradientStatCard({
           </View>
         </View>
 
-        <View className="mt-3 flex-1 justify-end">{children}</View>
+        <View className="mt-2 flex-1 justify-end">{children}</View>
       </LinearGradient>
     </Pressable>
   );
@@ -564,14 +620,20 @@ function PipisCard({ summary, onPress }: { summary: PipisSummary | null; onPress
       ink={PIPIS_INK}
       accessibilityLabel="Sumbangan PIPIS ASET"
       onPress={onPress}>
-      {/* Sen dibuang: tiga aksara itu yang menolak angka keluar dari kad separuh lebar. */}
+      {/*
+        Sen DIKEKALKAN, dan saiz font yang mengalah. Membundarkan 'RM1,437.40'
+        kepada 'RM1,437' menyembunyikan wang sebenar yang telah disumbangkan;
+        `adjustsFontSizeToFit` menyelesaikan masalah ruang tanpa menyembunyikan
+        apa-apa. Skala minimum lebih rendah daripada kad Yuran kerana angka di
+        sini tiga aksara lebih panjang.
+      */}
       <Text
         className="text-stat font-bold"
         style={{ color: PIPIS_INK }}
         numberOfLines={1}
         adjustsFontSizeToFit
-        minimumFontScale={0.6}>
-        {summary === null ? '—' : ringgitBulat(summary.jumlah)}
+        minimumFontScale={0.45}>
+        {summary === null ? '—' : ringgitPipis(summary.jumlah)}
       </Text>
 
       <View className="mt-2 flex-row items-center gap-2">

@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
 
+import { AchievementBadge } from '@/components/achievement-badge';
 import { MemberForm, type ProfileTab } from '@/components/member-form';
 import { ScreenHeader } from '@/components/screen-header';
 import { Card } from '@/components/ui/card';
@@ -10,6 +11,7 @@ import { LoadingScreen } from '@/components/ui/loading-screen';
 import { Notice } from '@/components/ui/notice';
 import { Screen } from '@/components/ui/screen';
 import { Colors } from '@/constants/theme';
+import { fetchMyActivityRank, type MyActivityRank } from '@/lib/activity-rank';
 import { pickAvatar, uploadAvatar } from '@/lib/avatar';
 import { displayName, useAuth } from '@/lib/auth-context';
 import { toMalayError } from '@/lib/errors';
@@ -39,6 +41,33 @@ export default function ProfilScreen() {
   const [version, setVersion] = useState(0);
   // Di sini dan bukan dalam borang: borang dipasang semula selepas setiap simpanan.
   const [tab, setTab] = useState<ProfileTab>('diri');
+
+  /*
+    Kedudukan dibaca berasingan daripada profil, dan kegagalannya SENYAP.
+    Lencana ialah maklumat tambahan; profil masih boleh disunting tanpanya, jadi
+    ralat di sini tidak patut menutup borang atau memaparkan notis merah.
+    `null` (akaun belum dipautkan) dan kegagalan bacaan berakhir sama — lencana
+    tidak dipapar langsung, bukan dipapar kosong.
+  */
+  const [rank, setRank] = useState<MyActivityRank | null>(null);
+
+  useEffect(() => {
+    if (!userId) return;
+    let active = true;
+
+    void (async () => {
+      try {
+        const row = await fetchMyActivityRank();
+        if (active) setRank(row);
+      } catch {
+        if (active) setRank(null);
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [userId]);
 
   useEffect(() => {
     if (!userId) {
@@ -159,6 +188,8 @@ export default function ProfilScreen() {
       <View className="gap-6 px-gutter pt-6">
         {error ? <Notice tone="negative" message={error} /> : null}
         {banner ? <Notice tone={banner.tone} message={banner.message} /> : null}
+
+        {rank ? <AchievementBadge rank={rank} /> : null}
 
         <MemberForm
           key={member.id + ':' + version}

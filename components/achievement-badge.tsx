@@ -1,0 +1,99 @@
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Text, View } from 'react-native';
+
+import type { MyActivityRank } from '@/lib/activity-rank';
+
+/*
+  Lencana pencapaian — satu-satunya tempat dalam app di mana seseorang melihat
+  kedudukannya sendiri secara penuh.
+
+  Gradient hijau gelap ialah warna jenama, bukan warna baharu; emas dipakai
+  HANYA pada nombor kedudukan dan pingat, supaya mata jatuh pada satu perkara.
+  Kilauan pepenjuru itu satu lapisan gradient lutsinar, bukan animasi: ia
+  memberi permukaan itu rasa "lencana" tanpa apa-apa yang berjalan pada thread
+  UI setiap bingkai.
+*/
+const BADGE_GRADIENT = ['#0A3A23', '#157347'] as const;
+const BADGE_GOLD = '#FBBF24';
+const SHINE = ['rgba(255,255,255,0)', 'rgba(255,255,255,0.14)', 'rgba(255,255,255,0)'] as const;
+
+/** Hijau lebih cerah daripada `positive`: pada latar hijau gelap, #16A34A hilang. */
+const TICK = '#4ADE80';
+const CROSS = 'rgba(255,255,255,0.38)';
+
+type Item = { label: string; done: boolean };
+
+function items(rank: MyActivityRank): Item[] {
+  return [
+    { label: 'Yuran Lunas', done: rank.yuran_lunas },
+    { label: 'Sumbang PIPIS', done: rank.pipis_sumbang },
+    { label: 'Kehadiran Usrah (' + rank.usrah_bulan + ' bulan)', done: rank.usrah_bulan > 0 },
+    { label: 'Jawatan Organisasi', done: rank.ada_jawatan_org },
+    { label: 'Jawatan PAS', done: rank.ada_jawatan_pas },
+  ];
+}
+
+export function AchievementBadge({ rank }: { rank: MyActivityRank }) {
+  return (
+    <LinearGradient
+      colors={BADGE_GRADIENT}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={{ borderRadius: 20, padding: 20, overflow: 'hidden' }}>
+      <LinearGradient
+        colors={SHINE}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 }}
+        pointerEvents="none"
+      />
+
+      <View className="flex-row items-center gap-3">
+        <View
+          className="h-12 w-12 items-center justify-center rounded-pill"
+          style={{ backgroundColor: 'rgba(251,191,36,0.16)' }}>
+          <Ionicons name="medal" size={24} color={BADGE_GOLD} />
+        </View>
+
+        <View className="flex-1">
+          <Text className="text-xs font-semibold uppercase" style={{ color: 'rgba(255,255,255,0.65)' }}>
+            Badge Pencapaian
+          </Text>
+          {/*
+            Nombor kedudukan dan jumlah ahli dipisahkan saiz, bukan baris: "#7"
+            ialah jawapannya, "daripada 325 Ahli" ialah skalanya.
+          */}
+          <Text className="mt-0.5 text-2xl font-bold" style={{ color: BADGE_GOLD }} numberOfLines={1}>
+            {'Ranking #' + rank.rank}
+            <Text className="text-sm font-semibold" style={{ color: 'rgba(255,255,255,0.75)' }}>
+              {' daripada ' + rank.total_ahli + ' Ahli'}
+            </Text>
+          </Text>
+        </View>
+      </View>
+
+      <View className="mt-4 gap-2.5">
+        {items(rank).map((item) => (
+          <View key={item.label} className="flex-row items-center gap-2.5">
+            <Ionicons
+              name={item.done ? 'checkmark-circle' : 'close-circle'}
+              size={18}
+              color={item.done ? TICK : CROSS}
+            />
+            <Text
+              className="flex-1 text-sm"
+              style={{ color: item.done ? '#FFFFFF' : 'rgba(255,255,255,0.55)' }}
+              numberOfLines={1}>
+              {item.label}
+            </Text>
+          </View>
+        ))}
+      </View>
+
+      <Text className="mt-4 text-xs" style={{ color: 'rgba(255,255,255,0.55)' }}>
+        {'Markah ' + rank.total_score + ' — dikira untuk tahun ' + new Date().getFullYear()}
+      </Text>
+    </LinearGradient>
+  );
+}
