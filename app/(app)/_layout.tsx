@@ -252,6 +252,14 @@ function AppGate() {
         options={{ title: 'Utama', tabBarIcon: tabIcon('home', 'home-outline') }}
       />
       {/*
+        PLACEHOLDER ujian visual — tab Album disisipkan untuk melihat sama ada
+        tujuh ikon muat pada bar tab. Tiada fungsi di belakangnya.
+      */}
+      <Tabs.Screen
+        name="album"
+        options={{ title: 'Album', tabBarIcon: tabIcon('images', 'images-outline') }}
+      />
+      {/*
         Menggantikan tab Kehadiran yang tidak pernah dibina. Kehadiran sudah
         dijawab di tempat lain — jalur usrah di skrin Utama dan kod QR di tab
         Scan — manakala wang bertaburan sehingga skrin ini mengumpulnya.
@@ -278,6 +286,14 @@ function AppGate() {
       <Tabs.Screen
         name="ahli"
         options={{ title: 'Ahli', tabBarIcon: tabIcon('people', 'people-outline') }}
+      />
+      {/*
+        PLACEHOLDER ujian visual — tab Komen disisipkan untuk melihat sama ada
+        tujuh ikon muat pada bar tab. Tiada fungsi di belakangnya.
+      */}
+      <Tabs.Screen
+        name="komen"
+        options={{ title: 'Komen', tabBarIcon: tabIcon('chatbubble-ellipses', 'chatbubble-ellipses-outline') }}
       />
       <Tabs.Screen
         name="profil"
