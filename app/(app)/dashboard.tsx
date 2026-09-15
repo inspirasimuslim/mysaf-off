@@ -528,31 +528,31 @@ function GradientStatCard({
         colors={colors}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={{ flex: 1, minHeight: 126, borderRadius: 20, padding: 14 }}>
+        style={{ flex: 1, minHeight: 96, borderRadius: 20, padding: 10 }}>
         <View className="flex-row items-start gap-2">
           <View
-            className="h-9 w-9 items-center justify-center rounded-xl"
+            className="h-8 w-8 items-center justify-center rounded-xl"
             style={{ backgroundColor: 'rgba(255,255,255,0.9)' }}>
             {icon}
           </View>
 
           <View className="flex-1">
-            <Text className="text-sm font-bold" style={[{ color: ink }, textShadow]} numberOfLines={2}>
+            <Text className="text-[13px] font-bold" style={[{ color: ink }, textShadow]} numberOfLines={2}>
               {title}
             </Text>
-            <Text className="text-xs" style={[{ color: ink, opacity: 0.8 }, textShadow]} numberOfLines={1}>
+            <Text className="text-[11px]" style={[{ color: ink, opacity: 0.8 }, textShadow]} numberOfLines={1}>
               {subtitle}
             </Text>
           </View>
 
           <View
-            className="h-6 w-6 items-center justify-center rounded-pill"
+            className="h-[22px] w-[22px] items-center justify-center rounded-pill"
             style={{ backgroundColor: 'rgba(255,255,255,0.35)' }}>
-            <Ionicons name="chevron-forward" size={14} color={iconColor} />
+            <Ionicons name="chevron-forward" size={12} color={iconColor} />
           </View>
         </View>
 
-        <View className="mt-2 flex-1 justify-end">{children}</View>
+        <View className="mt-1.5 flex-1 justify-end">{children}</View>
       </LinearGradient>
     </Pressable>
   );
@@ -572,7 +572,7 @@ function YuranCard({ summary, onPress }: { summary: YuranSummary | null; onPress
   return (
     <GradientStatCard
       colors={colors}
-      icon={<Ionicons name="calendar-outline" size={18} color={colors[1]} />}
+      icon={<Ionicons name="calendar-outline" size={16} color={colors[1]} />}
       iconColor="#FFFFFF"
       title="Yuran Tahunan"
       subtitle={YURAN_TAHUNAN_LABEL}
@@ -581,14 +581,14 @@ function YuranCard({ summary, onPress }: { summary: YuranSummary | null; onPress
       accessibilityLabel="Status yuran"
       onPress={onPress}>
       <Text
-        className="text-stat font-bold text-white"
+        className="text-stat-sm font-bold text-white"
         style={SOFT_SHADOW}
         numberOfLines={1}
         adjustsFontSizeToFit
-        minimumFontScale={0.6}>
+        minimumFontScale={0.55}>
         {summary === null ? '—' : settled ? 'RM0' : ringgitRingkas(summary.tertunggak)}
       </Text>
-      <Text className="mt-0.5 text-xs font-semibold text-white" style={SOFT_SHADOW} numberOfLines={1}>
+      <Text className="text-[10px] font-semibold text-white" style={SOFT_SHADOW} numberOfLines={1}>
         {summary === null
           ? 'Memuatkan'
           : settled
@@ -618,7 +618,7 @@ function PipisCard({ summary, onPress }: { summary: PipisSummary | null; onPress
   return (
     <GradientStatCard
       colors={PIPIS_GRADIENT}
-      icon={<MaterialCommunityIcons name="sprout" size={18} color={PIPIS_BAR[1]} />}
+      icon={<MaterialCommunityIcons name="sprout" size={16} color={PIPIS_BAR[1]} />}
       iconColor={PIPIS_INK}
       title="PIPIS ASET"
       subtitle="Jumlah Kutipan"
@@ -632,18 +632,27 @@ function PipisCard({ summary, onPress }: { summary: PipisSummary | null; onPress
         apa-apa. Skala minimum lebih rendah daripada kad Yuran kerana angka di
         sini tiga aksara lebih panjang.
       */}
+      {/*
+        Dua piksel lebih kecil daripada nombor kad Yuran, dan itu disengajakan.
+        `adjustsFontSizeToFit` TIDAK dilaksanakan oleh react-native-web — di web
+        teks yang terlalu panjang dipotong dengan elipsis dan bukan dikecilkan.
+        'RM1,437.40' memerlukan 157px pada 28px sedangkan kad hanya memberi
+        147px, jadi saiz asasnya diturunkan sehingga ia muat tanpa bergantung
+        pada ciri yang hanya wujud pada telefon. Prop itu dikekalkan untuk
+        jumlah luar biasa panjang di iOS dan Android.
+      */}
       <Text
-        className="text-stat font-bold"
+        className="text-[26px] font-bold leading-[28px]"
         style={{ color: PIPIS_INK }}
         numberOfLines={1}
         adjustsFontSizeToFit
-        minimumFontScale={0.45}>
+        minimumFontScale={0.4}>
         {summary === null ? '—' : ringgitPipis(summary.jumlah)}
       </Text>
 
-      <View className="mt-2 flex-row items-center gap-2">
+      <View className="mt-1.5 flex-row items-center gap-1.5">
         <View
-          className="h-2 flex-1 overflow-hidden rounded-pill"
+          className="h-1.5 flex-1 overflow-hidden rounded-pill"
           style={{ backgroundColor: 'rgba(255,255,255,0.55)' }}>
           {fill > 0 ? (
             <LinearGradient
@@ -654,12 +663,12 @@ function PipisCard({ summary, onPress }: { summary: PipisSummary | null; onPress
             />
           ) : null}
         </View>
-        <Text className="text-xs font-bold" style={{ color: PIPIS_INK }}>
+        <Text className="text-[10px] font-bold" style={{ color: PIPIS_INK }}>
           {summary === null ? '—' : peratusLabel(summary.peratus)}
         </Text>
       </View>
 
-      <Text className="mt-1 text-xs" style={{ color: PIPIS_INK, opacity: 0.8 }} numberOfLines={1}>
+      <Text className="mt-0.5 text-[10px]" style={{ color: PIPIS_INK, opacity: 0.8 }} numberOfLines={1}>
         {'Sasaran ' + ringgitBulat(summary?.sasaran ?? PIPIS_TARGET)}
       </Text>
     </GradientStatCard>

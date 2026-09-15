@@ -35,6 +35,7 @@ module.exports = {
       },
       fontSize: {
         stat: ['34px', { lineHeight: '38px' }],
+        'stat-sm': ['28px', { lineHeight: '30px' }],
         'stat-lg': ['44px', { lineHeight: '48px' }],
       },
       spacing: {
