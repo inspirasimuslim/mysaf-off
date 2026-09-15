@@ -183,3 +183,55 @@ export async function provisionMemberAccounts(): Promise<ProvisionSummary> {
   if (data?.error) throw new Error(String(data.error));
   return data as ProvisionSummary;
 }
+
+/** Skop reset pukal — dipapar SEBELUM admin menekan apa-apa. */
+export type PendingFirstLogin = { jumlah: number; tempoh_tamat: number };
+
+export async function fetchPendingFirstLogin(): Promise<PendingFirstLogin> {
+  const { data, error } = await supabase.rpc('count_pending_first_login');
+  if (error) throw error;
+
+  const rows = (data as PendingFirstLogin[] | null) ?? [];
+  return rows[0] ?? { jumlah: 0, tempoh_tamat: 0 };
+}
+
+export type BulkResetSummary = {
+  jumlah_diproses: number;
+  jumlah_gagal: number;
+  senarai_gagal: { nombor_ahli: string | null; full_name: string; sebab: string }[];
+  password: string;
+  expires_at: string | null;
+  /** Kata laluan bertukar tetapi tempoh gagal disimpan — mesti sampai kepada admin. */
+  peringatan?: string | null;
+};
+
+/**
+ * Tetapkan semula kata laluan SEMUA ahli yang belum berjaya log masuk kali
+ * pertama — Super Admin sahaja.
+ *
+ * Satu panggilan untuk ratusan akaun. Gelungnya berada di dalam Edge Function
+ * dan bukan di sini: satu panggilan rangkaian per ahli dari telefon akan
+ * terputus di tengah jalan pada talian yang goyah, dan meninggalkan sebahagian
+ * ahli direset tanpa sesiapa tahu yang mana.
+ */
+export async function bulkResetUnloggedMembers(): Promise<BulkResetSummary> {
+  const { data, error } = await supabase.functions.invoke('admin-bulk-reset-unlogged', { body: {} });
+
+  if (error) {
+    // Sebab sebenar ada dalam badan respons; `FunctionsHttpError` hanya membawa
+    // "non-2xx status code". Lihat `resetMemberPassword()` di atas.
+    const context = (error as { context?: Response })?.context;
+    if (context && typeof context.json === 'function') {
+      try {
+        const body = await context.json();
+        if (body?.error) throw new Error(String(body.error));
+      } catch (parsed) {
+        if (parsed instanceof Error && parsed.message) throw parsed;
+      }
+    }
+    throw new Error('Gagal menetapkan semula kata laluan secara pukal.');
+  }
+
+  if (data?.error) throw new Error(String(data.error));
+  return data as BulkResetSummary;
+}

@@ -96,7 +96,7 @@ export default function AdminHubScreen() {
             variant="plain"
             title="Organisasi"
             caption="Struktur department dan pemegang jawatan."
-            count={5}
+            count={6}
             defaultOpen={openByDefault}>
             <ActionRow
               icon="business-outline"
@@ -137,6 +137,19 @@ export default function AdminHubScreen() {
               title="Provision Akaun Ahli"
               subtitle="Cipta akaun log masuk untuk ahli yang belum ada akaun"
               onPress={() => router.push('/(app)/admin/provision-accounts')}
+            />
+
+            {/*
+              Pasangan kepada Provision, dan di sebelahnya atas sebab yang sama:
+              ia menetapkan kata laluan yang diketahui umum kepada ratusan akaun
+              sekaligus. Provision menyentuh ahli yang BELUM ada akaun; yang ini
+              menyentuh ahli yang ada akaun tetapi belum pernah masuk.
+            */}
+            <ActionRow
+              icon="refresh-outline"
+              title="Reset Akaun Belum Login"
+              subtitle="Reset kata laluan dan tempoh untuk ahli yang belum berjaya log masuk kali pertama"
+              onPress={() => router.push('/(app)/admin/bulk-reset-unlogged')}
             />
           </CollapsibleSection>
         ) : null}
