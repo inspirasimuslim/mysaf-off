@@ -8,6 +8,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { Screen } from '@/components/ui/screen';
 import {
   useDepartmentAccess,
+  useGenerasiAccess,
   useMemberAccess,
   usePipisAccess,
   useProgramAccess,
@@ -46,6 +47,7 @@ export default function AdminHubScreen() {
   const pipisAccess = usePipisAccess();
   // SETIAUSAHA — bukan JABATAN SETIAUSAHA (`programAccess`). Dua department.
   const orgChartAccess = useDepartmentAccess(ORG_CHART_DEPARTMENT);
+  const generasiAccess = useGenerasiAccess();
 
   const superAdmin = isSuperAdmin();
   /*
@@ -55,7 +57,7 @@ export default function AdminHubScreen() {
   */
   const accessLoading =
     permissionsLoading ||
-    [memberAccess, usrahAccess, programAccess, yuranAccess, pipisAccess, orgChartAccess].some(
+    [memberAccess, usrahAccess, programAccess, yuranAccess, pipisAccess, orgChartAccess, generasiAccess].some(
       (access) => access.loading,
     );
   const visibleSections = [
@@ -66,6 +68,7 @@ export default function AdminHubScreen() {
     yuranAccess.canView,
     pipisAccess.canView,
     orgChartAccess.canEdit,
+    generasiAccess.canView,
   ].filter(Boolean).length;
   const nothingAvailable = visibleSections === 0;
   const openByDefault = visibleSections === 1;
@@ -261,6 +264,26 @@ export default function AdminHubScreen() {
               title="Carta Organisasi"
               subtitle="Tetapkan pemegang jawatan, tambah atau padam bahagian dan jawatan, susun semula"
               onPress={() => router.push('/(app)/admin/org-chart-manage')}
+            />
+          </CollapsibleSection>
+        ) : null}
+
+        {/*
+          Penarafan aktiviti dimiliki oleh LAJNAH PEMBANGUNAN GENERASI. Admin
+          sahaja — tiada pautan dari mana-mana skrin ahli.
+        */}
+        {generasiAccess.canView ? (
+          <CollapsibleSection
+            variant="plain"
+            title="Pembangunan Generasi"
+            caption="Penarafan aktiviti ahli dan generasi."
+            count={1}
+            defaultOpen={openByDefault}>
+            <ActionRow
+              icon="trophy-outline"
+              title="Aktiviti Terbaik"
+              subtitle="Ahli paling aktif dan generasi terbaik mengikut tempoh"
+              onPress={() => router.push('/(app)/admin/aktiviti-terbaik')}
             />
           </CollapsibleSection>
         ) : null}

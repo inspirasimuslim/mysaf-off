@@ -129,3 +129,17 @@ export const EKONOMI_DEPARTMENT = 'LAJNAH EKONOMI DAN ASET';
 export function usePipisAccess(): DepartmentAccess {
   return useDepartmentAccess(EKONOMI_DEPARTMENT);
 }
+
+/**
+ * Department yang memiliki modul Aktiviti Terbaik (penarafan ahli & generasi).
+ *
+ * Mesti sepadan dengan semakan `has_department_access()` dalam
+ * `member_activity_score()` / `generasi_terbaik()` —
+ * `20260915000034_activity_ranking.sql`.
+ */
+export const PEMBANGUNAN_GENERASI_DEPARTMENT = 'LAJNAH PEMBANGUNAN GENERASI';
+
+/** Pintasan untuk modul Aktiviti Terbaik. */
+export function useGenerasiAccess(): DepartmentAccess {
+  return useDepartmentAccess(PEMBANGUNAN_GENERASI_DEPARTMENT);
+}
