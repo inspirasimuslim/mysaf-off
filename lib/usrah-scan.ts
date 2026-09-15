@@ -35,6 +35,8 @@ export type ScannedEvent = {
   is_active: boolean;
   /** Acara tanpa pin tidak boleh disemak jaraknya — kehadirannya diterima tanpa GPS. */
   has_pin: boolean;
+  /** 'bersemuka' = luar radius ditolak; 'hibrid' = luar radius dilabel online. */
+  event_mode: 'bersemuka' | 'hibrid';
 };
 
 export type AttendanceResult = {

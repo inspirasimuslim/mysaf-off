@@ -40,7 +40,8 @@ type Phase =
   /** Kamera hidup, menunggu kod QR. */
   | { step: 'imbas' }
   /** Kod sudah dibaca; program dicari, GPS dibaca, kehadiran direkod. */
-  | { step: 'proses'; note: string }
+  /** `hint`: peraturan lokasi acara yang baru dipadankan — hanya bila acara berpin. */
+  | { step: 'proses'; note: string; hint?: string }
   | { step: 'berjaya'; result: AttendanceResult }
   | { step: 'gagal'; message: string; tone: 'negative' | 'warn' };
 
@@ -88,16 +89,23 @@ export default function UsrahScanScreen() {
       // langsung tidak diminta — meminta kebenaran yang tidak akan digunakan
       // hanya melatih pengguna menolaknya.
       //
-      // Bagi program berpin, lokasi hanya MELABEL mod (bersemuka/online) dan
-      // bukan penyekat. GPS yang ditolak atau gagal dibaca dihantar sebagai
-      // tiada lokasi; pelayan merekodnya sebagai online.
+      // Bagi program berpin, `event_mode` menentukan peranan lokasi: acara
+      // bersemuka MENOLAK luar kawasan, hibrid melabelnya online. Petunjuk
+      // dipapar sebelum GPS dibaca. GPS yang ditolak atau gagal dihantar
+      // sebagai tiada lokasi — pelayan yang memutuskan dan memberi mesejnya.
+      const hint = event.has_pin
+        ? event.event_mode === 'hibrid'
+          ? 'Kehadiran dari luar kawasan akan direkod sebagai Online.'
+          : 'Anda mesti berada dalam kawasan program untuk rekod kehadiran.'
+        : undefined;
+
       let coords: { latitude: number; longitude: number } | null = null;
       if (event.has_pin) {
-        setPhase({ step: 'proses', note: 'Membaca lokasi anda...' });
+        setPhase({ step: 'proses', note: 'Membaca lokasi anda...', hint });
         coords = await currentCoords().catch(() => null);
       }
 
-      setPhase({ step: 'proses', note: 'Merekod kehadiran...' });
+      setPhase({ step: 'proses', note: 'Merekod kehadiran...', hint });
       const result = await recordAttendance(event.id, token.trim(), coords, method);
 
       setPhase({ step: 'berjaya', result });
@@ -231,9 +239,9 @@ export default function UsrahScanScreen() {
               onPress={() => void uploadFromGallery()}
             />
 
+            {/* Jenis kehadiran acara belum diketahui di sini — jangan buat andaian. */}
             <Text className="text-center text-xs leading-5 text-ink-muted">
-              Imbasan di dalam kawasan program direkod sebagai Bersemuka; di luar kawasan sebagai Online.
-              Hidupkan GPS supaya mod kehadiran anda tepat.
+              Imbas atau muat naik kod QR untuk rekod kehadiran.
             </Text>
           </>
         ) : null}
@@ -243,6 +251,9 @@ export default function UsrahScanScreen() {
             <View className="items-center gap-3 py-6">
               <Ionicons name="sync-outline" size={28} color={Colors.primary} />
               <Text className="text-base font-semibold text-ink">{phase.note}</Text>
+              {phase.hint ? (
+                <Text className="text-center text-sm leading-5 text-ink-muted">{phase.hint}</Text>
+              ) : null}
             </View>
           </Card>
         ) : null}
