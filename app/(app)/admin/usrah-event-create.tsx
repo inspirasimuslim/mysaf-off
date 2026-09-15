@@ -16,6 +16,7 @@ import { SectionTitle } from '@/components/ui/section-title';
 import { Segmented } from '@/components/ui/segmented';
 import { StepperField } from '@/components/ui/stepper-field';
 import { TextField } from '@/components/ui/text-field';
+import { ToggleRow } from '@/components/ui/toggle-row';
 import { useProgramAccess, useUsrahAccess } from '@/lib/department-access';
 import { toMalayError } from '@/lib/errors';
 import { pickImage } from '@/lib/image-upload';
@@ -25,6 +26,7 @@ import {
   EVENT_MODE_OPTIONS,
   EVENT_TYPE_OPTIONS,
   KAWASAN_USRAH_OPTIONS,
+  MONTH_NAMES,
   MONTH_OPTIONS,
   usrahEventName,
   type EventMode,
@@ -88,6 +90,8 @@ export default function UsrahEventCreateScreen() {
   const [radius, setRadius] = useState(DEFAULT_RADIUS);
   /** Lalai Bersemuka Sahaja — lebih ketat; admin sengaja memilih Hibrid bila perlu. */
   const [eventMode, setEventMode] = useState<EventMode>('bersemuka');
+  /** Program sahaja. Lalai OFF — admin sengaja menandanya. */
+  const [gantiUsrah, setGantiUsrah] = useState(false);
 
   /** URI tempatan; poster hanya dimuat naik SELEPAS acara wujud. */
   const [posterUri, setPosterUri] = useState<string | null>(null);
@@ -154,6 +158,8 @@ export default function UsrahEventCreateScreen() {
         longitude: coords?.longitude ?? null,
         geofence_radius_meters: radius,
         event_mode: eventMode,
+        // Usrah sendiri memang usrah — penanda ini bermakna untuk program sahaja.
+        ganti_usrah: eventType === 'program' && gantiUsrah,
       });
 
       /*
@@ -190,6 +196,7 @@ export default function UsrahEventCreateScreen() {
     endTime,
     eventMode,
     eventType,
+    gantiUsrah,
     kawasan,
     locationText,
     name,
@@ -301,14 +308,35 @@ export default function UsrahEventCreateScreen() {
                 </View>
               </>
             ) : (
-              <TextField
-                label="Nama program"
-                value={programName}
-                onChangeText={setProgramName}
-                editable={!saving}
-                autoCapitalize="sentences"
-                autoCorrect={false}
-              />
+              <>
+                <TextField
+                  label="Nama program"
+                  value={programName}
+                  onChangeText={setProgramName}
+                  editable={!saving}
+                  autoCapitalize="sentences"
+                  autoCorrect={false}
+                />
+                {/*
+                  Program sahaja. Bulan dibaca terus dari Tarikh Mula di bawah,
+                  jadi ayat ini berubah serta-merta bila tarikh ditukar — sama
+                  seperti pelayan, yang memilih bulan dari start_date acara.
+                */}
+                <ToggleRow
+                  icon="swap-horizontal-outline"
+                  title="Ganti Usrah"
+                  subtitle={
+                    'Kehadiran program ini turut dikira sebagai kehadiran Usrah bulan ' +
+                    (MONTH_NAMES[Number(startDate.slice(5, 7)) - 1] ?? '—') +
+                    ' ' +
+                    startDate.slice(0, 4) +
+                    '.'
+                  }
+                  value={gantiUsrah}
+                  onValueChange={setGantiUsrah}
+                  disabled={saving}
+                />
+              </>
             )}
           </View>
         </View>

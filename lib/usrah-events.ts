@@ -33,6 +33,8 @@ export type CreateUsrahEventInput = {
   geofence_radius_meters: number;
   /** 'bersemuka' = geofence menghalang; 'hibrid' = geofence melabel sahaja. */
   event_mode: EventMode;
+  /** Program sahaja — kehadiran turut dikira sebagai Usrah bulan tarikh mula. */
+  ganti_usrah: boolean;
 };
 
 export type UpdateUsrahEventInput = Partial<

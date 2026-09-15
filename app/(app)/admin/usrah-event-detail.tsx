@@ -30,6 +30,7 @@ import {
   EVENT_MODE_LABEL,
   EVENT_MODE_OPTIONS,
   EVENT_TYPE_LABEL,
+  MONTH_NAMES,
   USRAH_EVENT_STATUS_LABEL,
   dateRangeLabel,
   timeLabel,
@@ -72,6 +73,7 @@ export default function UsrahEventDetailScreen() {
   const [endTime, setEndTime] = useState('');
   const [locationText, setLocationText] = useState('');
   const [eventMode, setEventMode] = useState<EventMode>('bersemuka');
+  const [gantiUsrah, setGantiUsrah] = useState(false);
 
   const hydrate = useCallback((row: UsrahEvent) => {
     setEvent(row);
@@ -82,6 +84,7 @@ export default function UsrahEventDetailScreen() {
     setEndTime(timeLabel(row.end_time));
     setLocationText(row.location_text ?? '');
     setEventMode(row.event_mode);
+    setGantiUsrah(row.ganti_usrah);
   }, []);
 
   useEffect(() => {
@@ -122,6 +125,8 @@ export default function UsrahEventDetailScreen() {
           location_text: locationText.trim() || null,
           // Pelayan membaca nilai TERKINI pada setiap imbasan — tukar berkesan serta-merta.
           event_mode: eventMode,
+          // Program sahaja. Kehadiran yang SUDAH direkod tidak berubah bila ini ditukar.
+          ...(event.event_type === 'program' ? { ganti_usrah: gantiUsrah } : {}),
         }),
       );
       setBanner({ tone: 'positive', message: 'Perubahan telah disimpan.' });
@@ -130,7 +135,7 @@ export default function UsrahEventDetailScreen() {
     } finally {
       setBusy(false);
     }
-  }, [busy, endDate, endTime, event, eventMode, hydrate, locationText, name, startDate, startTime]);
+  }, [busy, endDate, endTime, event, eventMode, gantiUsrah, hydrate, locationText, name, startDate, startTime]);
 
   /** Togol status program (`is_active`) atau kod QR (`qr_enabled`) — satu laluan kemas kini. */
   const toggleFlag = useCallback(
@@ -296,6 +301,9 @@ export default function UsrahEventDetailScreen() {
                 label={EVENT_MODE_LABEL[event.event_mode]}
                 tone={event.event_mode === 'hibrid' ? 'info' : 'primary'}
               />
+              {event.event_type === 'program' ? (
+                <Badge label={'Ganti Usrah: ' + (event.ganti_usrah ? 'Ya' : 'Tidak')} tone={event.ganti_usrah ? 'warn' : 'neutral'} />
+              ) : null}
               {!event.qr_enabled ? <Badge label="Kod QR dimatikan" tone="warn" /> : null}
             </View>
 
@@ -468,6 +476,22 @@ export default function UsrahEventDetailScreen() {
                     <DateTimeField label="Masa tamat" mode="time" value={endTime} onChange={setEndTime} disabled={busy} />
                   </View>
                 </View>
+                {event.event_type === 'program' ? (
+                  <ToggleRow
+                    icon="swap-horizontal-outline"
+                    title="Ganti Usrah"
+                    subtitle={
+                      'Kehadiran turut dikira sebagai Usrah bulan ' +
+                      (MONTH_NAMES[Number(startDate.slice(5, 7)) - 1] ?? '—') +
+                      ' ' +
+                      startDate.slice(0, 4) +
+                      '. Kehadiran yang sudah direkod tidak berubah.'
+                    }
+                    value={gantiUsrah}
+                    onValueChange={setGantiUsrah}
+                    disabled={busy}
+                  />
+                ) : null}
                 <Segmented
                   label="Jenis kehadiran"
                   value={eventMode}

@@ -361,6 +361,11 @@ export type UsrahEvent = {
    * Lihat `20260915000032_event_mode_geofence.sql`.
    */
   event_mode: EventMode;
+  /**
+   * Program sahaja: kehadiran turut direkod sebagai kehadiran Usrah bagi bulan
+   * tarikh mula program. Lihat `20260915000036_ganti_usrah.sql`.
+   */
+  ganti_usrah: boolean;
   /** Ditetapkan bila "Padam" diarkibkan kerana acara ada rekod kehadiran/RSVP. */
   archived_at: string | null;
   created_by: string | null;

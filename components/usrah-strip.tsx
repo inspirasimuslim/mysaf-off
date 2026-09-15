@@ -4,7 +4,7 @@ import { Text, View } from 'react-native';
 
 import { Colors } from '@/constants/theme';
 import { fetchMyMemberLinked } from '@/lib/members';
-import { fetchUsrahYear, type UsrahYear } from '@/lib/usrah';
+import { fetchUsrahYearDetail, type UsrahMonthDetail } from '@/lib/usrah';
 import { MONTH_LABELS } from '@/lib/usrah-import';
 
 /**
@@ -16,21 +16,56 @@ import { MONTH_LABELS } from '@/lib/usrah-import';
  * pertama.
  *
  * Warna membawa makna, bukan hiasan:
- *   hijau  — hadir
- *   hitam  — tidak hadir
- *   kelabu — belum ada rekod (termasuk bulan yang belum berlaku)
+ *   hijau penuh          — hadir usrah
+ *   atas kuning, bawah hijau — hadir melalui program "Ganti Usrah"
+ *   hitam                — tidak hadir
+ *   kelabu               — belum ada rekod (termasuk bulan yang belum berlaku)
  */
 
 const DOT_SIZE = 14;
 /** Ruang untuk label menegak; label tiga huruf pada 9px muat dalam 26px. */
 const LABEL_BOX = 26;
+/** Separuh atas bulatan program ganti. */
+const GANTI_COLOR = '#EAB308';
 
-type State = { months: UsrahYear; ready: true } | { ready: false };
+type State = { months: UsrahMonthDetail[]; ready: true } | { ready: false };
 
 function dotColor(attended: boolean | null): string {
   if (attended === true) return Colors.primary;
   if (attended === false) return Colors.ink;
   return Colors.line;
+}
+
+/**
+ * Satu bulatan. Program ganti dilukis sebagai dua separuh dalam bekas bulat
+ * `overflow: hidden` — tiada SVG, jadi bentuk dan saiznya kekal sama dengan
+ * bulatan biasa di sebelahnya.
+ */
+function MonthDot({ month }: { month: UsrahMonthDetail | undefined }) {
+  const attended = month?.attended ?? null;
+  const ganti = attended === true && month?.source === 'program_ganti';
+
+  if (ganti) {
+    return (
+      <View
+        style={{ width: DOT_SIZE, height: DOT_SIZE, borderRadius: DOT_SIZE / 2, overflow: 'hidden' }}
+        accessibilityLabel="Hadir melalui program ganti usrah">
+        <View style={{ flex: 1, backgroundColor: GANTI_COLOR }} />
+        <View style={{ flex: 1, backgroundColor: Colors.primary }} />
+      </View>
+    );
+  }
+
+  return (
+    <View
+      style={{
+        width: DOT_SIZE,
+        height: DOT_SIZE,
+        borderRadius: DOT_SIZE / 2,
+        backgroundColor: dotColor(attended),
+      }}
+    />
+  );
 }
 
 export function UsrahStrip({ userId }: { userId: string | null }) {
@@ -53,7 +88,7 @@ export function UsrahStrip({ userId }: { userId: string | null }) {
           const member = await fetchMyMemberLinked(userId);
           if (!active || !member) return;
 
-          const months = await fetchUsrahYear(member.id, year);
+          const months = await fetchUsrahYearDetail(member.id, year);
           if (active) setState({ months, ready: true });
         } catch {
           // Widget ringkas di skrin utama — kegagalan bacaan menyembunyikannya,
@@ -70,6 +105,8 @@ export function UsrahStrip({ userId }: { userId: string | null }) {
 
   if (!state.ready) return null;
 
+  const hasGanti = state.months.some((month) => month.attended === true && month.source === 'program_ganti');
+
   return (
     <View>
       <Text className="text-sm font-semibold text-ink">Kehadiran Usrah {year}</Text>
@@ -77,14 +114,7 @@ export function UsrahStrip({ userId }: { userId: string | null }) {
       <View className="mt-3 flex-row items-start justify-between">
         {MONTH_LABELS.map((label, index) => (
           <View key={label} className="items-center">
-            <View
-              style={{
-                width: DOT_SIZE,
-                height: DOT_SIZE,
-                borderRadius: DOT_SIZE / 2,
-                backgroundColor: dotColor(state.months[index] ?? null),
-              }}
-            />
+            <MonthDot month={state.months[index]} />
 
             {/*
               Label diputar, jadi kotaknya perlu bersaiz tetap: `transform`
@@ -109,6 +139,14 @@ export function UsrahStrip({ userId }: { userId: string | null }) {
           </View>
         ))}
       </View>
+
+      {/* Petunjuk hanya bila ada bulan program ganti — jalur biasa kekal tanpa hiasan. */}
+      {hasGanti ? (
+        <View className="mt-2 flex-row items-center gap-1.5">
+          <MonthDot month={{ attended: true, source: 'program_ganti' }} />
+          <Text className="text-[11px] text-ink-muted">Hadir melalui program ganti usrah</Text>
+        </View>
+      ) : null}
     </View>
   );
 }

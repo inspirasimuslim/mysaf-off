@@ -16,6 +16,14 @@ const UPSERT_CHUNK = 500;
 /** 12 nilai, Januari → Disember. `null` bermakna belum ada rekod. */
 export type UsrahYear = (boolean | null)[];
 
+/**
+ * Asal kehadiran satu bulan: usrah sebenar, atau program bertanda "Ganti Usrah".
+ * Lihat `20260915000036_ganti_usrah.sql`.
+ */
+export type UsrahAttendanceSource = 'usrah' | 'program_ganti';
+
+export type UsrahMonthDetail = { attended: boolean | null; source: UsrahAttendanceSource | null };
+
 export type UsrahImportProgress = { done: number; total: number };
 
 type AttendanceRow = {
@@ -23,6 +31,7 @@ type AttendanceRow = {
   year: number;
   month: number;
   attended: boolean | null;
+  attendance_source: UsrahAttendanceSource;
 };
 
 export function emptyUsrahYear(): UsrahYear {
@@ -54,6 +63,32 @@ export async function fetchUsrahYear(memberId: string, year: number): Promise<Us
 }
 
 /**
+ * Seperti `fetchUsrahYear`, dengan asal setiap bulan — untuk jalur Dashboard
+ * yang melukis bulan program ganti secara berbeza. Bulan tanpa baris:
+ * `{ attended: null, source: null }`.
+ */
+export async function fetchUsrahYearDetail(memberId: string, year: number): Promise<UsrahMonthDetail[]> {
+  const { data, error } = await supabase
+    .from('usrah_monthly_attendance')
+    .select('month, attended, attendance_source')
+    .eq('member_id', memberId)
+    .eq('year', year);
+
+  if (error) throw error;
+
+  const months: UsrahMonthDetail[] = Array.from({ length: 12 }, () => ({ attended: null, source: null }));
+  (
+    (data as { month: number; attended: boolean | null; attendance_source: UsrahAttendanceSource }[] | null) ?? []
+  ).forEach((row) => {
+    if (row.month >= 1 && row.month <= 12) {
+      months[row.month - 1] = { attended: row.attended, source: row.attendance_source };
+    }
+  });
+
+  return months;
+}
+
+/**
  * Tulis kehadiran setahun bagi setiap ahli yang dipadankan.
  *
  * Kesemua 12 bulan ditulis, termasuk yang `null`. Import yang hanya menulis
@@ -73,7 +108,8 @@ export async function importUsrahAttendance(
 
   matched.forEach((match) => {
     match.months.forEach((attended, index) => {
-      rows.push({ member_id: match.memberId, year, month: index + 1, attended });
+      // Fail import ialah gambaran muktamad tahun itu — sumbernya usrah.
+      rows.push({ member_id: match.memberId, year, month: index + 1, attended, attendance_source: 'usrah' });
     });
   });
 
