@@ -4,6 +4,7 @@ import {
   TEMP_PASSWORD,
   adminClient,
   json,
+  logAdminActivity,
   readJson,
   requireSuperAdmin,
   tempPasswordExpiry,
@@ -28,7 +29,7 @@ Deno.serve(async (request) => {
   try {
     if (request.method !== 'POST') throw new RequestError('Kaedah tidak dibenarkan.', 405);
 
-    await requireSuperAdmin(request);
+    const callerId = await requireSuperAdmin(request);
 
     const body = await readJson(request);
     const memberId = text(body.member_id);
@@ -38,7 +39,7 @@ Deno.serve(async (request) => {
 
     const { data: member, error: readError } = await admin
       .from('members')
-      .select('id, full_name, email, user_id')
+      .select('id, nombor_ahli, full_name, email, user_id')
       .eq('id', memberId)
       .maybeSingle();
 
@@ -73,6 +74,12 @@ Deno.serve(async (request) => {
       .from('members')
       .update({ must_change_password: true, temp_password_expires_at: expiresAt })
       .eq('id', memberId);
+
+    // Dilog walaupun bendera gagal: kata laluan SUDAH bertukar, dan itulah tindakannya.
+    await logAdminActivity(admin, callerId, 'Reset Kata Laluan Ahli', 'members', member.id, {
+      label: [member.nombor_ahli, member.full_name].filter(Boolean).join(' · '),
+      bendera_mesti_tukar_berjaya: !flagError,
+    });
 
     /*
       Kata laluan sudah bertukar tetapi bendera tidak. Keadaan ini TIDAK dibiarkan

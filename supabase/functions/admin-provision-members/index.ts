@@ -4,6 +4,7 @@ import {
   TEMP_PASSWORD,
   adminClient,
   json,
+  logAdminActivity,
   requireSuperAdmin,
   tempPasswordExpiry,
 } from '../_shared/admin.ts';
@@ -70,7 +71,7 @@ Deno.serve(async (request) => {
   try {
     if (request.method !== 'POST') throw new RequestError('Kaedah tidak dibenarkan.', 405);
 
-    await requireSuperAdmin(request);
+    const callerId = await requireSuperAdmin(request);
 
     const admin = adminClient();
 
@@ -174,6 +175,16 @@ Deno.serve(async (request) => {
         });
       }
     }
+
+    // Bilangan sahaja — senarai emel yang gagal tidak disalin ke dalam log.
+    await logAdminActivity(admin, callerId, 'Provision Akaun Pukal', 'members', null, {
+      label: summary.dicipta + ' dicipta, ' + summary.dipaut_semula + ' dipaut semula',
+      dicipta: summary.dicipta,
+      dipaut_semula: summary.dipaut_semula,
+      dilangkau_sudah_ada_akaun: summary.dilangkau_sudah_ada_akaun,
+      dilangkau_tiada_emel: summary.dilangkau_tiada_emel,
+      gagal: summary.gagal.length,
+    });
 
     return json(summary);
   } catch (caught) {

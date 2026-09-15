@@ -3,6 +3,7 @@ import {
   RequestError,
   adminClient,
   json,
+  logAdminActivity,
   readJson,
   requireMemberEditor,
   text,
@@ -79,10 +80,17 @@ Deno.serve(async (request) => {
       throw new RequestError('Gagal memadam rekod ahli: ' + deleteMemberError.message, 500);
     }
 
+    const logDeletion = (accountDeleted: boolean) =>
+      logAdminActivity(admin, callerId, 'Padam Akaun Ahli', 'members', memberId, {
+        label: [member.nombor_ahli, member.full_name].filter(Boolean).join(' · '),
+        akaun_log_masuk_dipadam: accountDeleted,
+      });
+
     let accountDeleted = false;
     if (member.user_id) {
       const { error: deleteUserError } = await admin.auth.admin.deleteUser(member.user_id);
       if (deleteUserError) {
+        await logDeletion(false);
         // Rekod sudah tiada; beritahu dengan tepat apa yang tertinggal supaya
         // admin tidak menyangka semuanya selesai.
         return json(
@@ -98,6 +106,8 @@ Deno.serve(async (request) => {
       }
       accountDeleted = true;
     }
+
+    await logDeletion(accountDeleted);
 
     return json({
       member_deleted: true,

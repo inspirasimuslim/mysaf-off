@@ -96,7 +96,7 @@ export default function AdminHubScreen() {
             variant="plain"
             title="Organisasi"
             caption="Struktur department dan pemegang jawatan."
-            count={6}
+            count={7}
             defaultOpen={openByDefault}>
             <ActionRow
               icon="business-outline"
@@ -150,6 +150,13 @@ export default function AdminHubScreen() {
               title="Reset Akaun Belum Login"
               subtitle="Reset kata laluan dan tempoh untuk ahli yang belum berjaya log masuk kali pertama"
               onPress={() => router.push('/(app)/admin/bulk-reset-unlogged')}
+            />
+
+            <ActionRow
+              icon="document-text-outline"
+              title="Log Aktiviti Admin"
+              subtitle="Jejak tindakan admin merentasi sistem — siapa, apa dan bila"
+              onPress={() => router.push('/(app)/admin/activity-log')}
             />
           </CollapsibleSection>
         ) : null}

@@ -4,6 +4,7 @@ import {
   TEMP_PASSWORD,
   adminClient,
   json,
+  logAdminActivity,
   requireSuperAdmin,
   tempPasswordExpiry,
 } from '../_shared/admin.ts';
@@ -44,7 +45,7 @@ Deno.serve(async (request) => {
   try {
     if (request.method !== 'POST') throw new RequestError('Kaedah tidak dibenarkan.', 405);
 
-    await requireSuperAdmin(request);
+    const callerId = await requireSuperAdmin(request);
 
     const admin = adminClient();
 
@@ -144,6 +145,13 @@ Deno.serve(async (request) => {
           '). Ahli masih tidak akan dapat log masuk sehingga ini berjaya. Sila tekan butang ini sekali lagi.';
       }
     }
+
+    await logAdminActivity(admin, callerId, 'Reset Pukal Akaun Belum Login', 'members', null, {
+      label: berjaya.length + ' direset, ' + senarai_gagal.length + ' gagal',
+      diproses: berjaya.length,
+      gagal: senarai_gagal.length,
+      tempoh_disimpan: peringatan === null,
+    });
 
     return json({
       jumlah_diproses: berjaya.length,

@@ -43,6 +43,38 @@ export function adminClient(): SupabaseClient {
 }
 
 /**
+ * Rekod satu tindakan dalam Log Aktiviti Admin.
+ *
+ * Dipanggil SELEPAS tindakan berjaya. Klien service_role tidak membawa
+ * `auth.uid()`, jadi pelaku dihantar sebagai `p_actor_id` — id yang sudah
+ * disahkan daripada JWT pemanggil oleh `requireMemberEditor`/`requireSuperAdmin`.
+ *
+ * Tidak pernah melontar: tindakan sebenar sudah selesai, dan kegagalan menulis
+ * log tidak patut mengubah respons kepada "gagal" bagi sesuatu yang berjaya.
+ */
+export async function logAdminActivity(
+  admin: SupabaseClient,
+  actorId: string,
+  action: string,
+  targetType: string,
+  targetId: string | null,
+  details: Record<string, unknown> | null = null,
+): Promise<void> {
+  try {
+    const { error } = await admin.rpc('log_admin_activity', {
+      p_action: action,
+      p_target_type: targetType,
+      p_target_id: targetId,
+      p_details: details,
+      p_actor_id: actorId,
+    });
+    if (error) console.error('log_admin_activity gagal:', error.message);
+  } catch (caught) {
+    console.error('log_admin_activity gagal:', caught);
+  }
+}
+
+/**
  * Sahkan pemanggil ialah admin yang boleh menyunting rekod ahli.
  *
  * Semakan dibuat dengan MEMANGGIL SEMULA pangkalan data sebagai pemanggil

@@ -4,6 +4,7 @@ import {
   TEMP_PASSWORD,
   adminClient,
   json,
+  logAdminActivity,
   readJson,
   requireMemberEditor,
   tempPasswordExpiry,
@@ -56,7 +57,7 @@ Deno.serve(async (request) => {
   try {
     if (request.method !== 'POST') throw new RequestError('Kaedah tidak dibenarkan.', 405);
 
-    await requireMemberEditor(request);
+    const callerId = await requireMemberEditor(request);
 
     const body = await readJson(request);
     const fullName = text(body.full_name);
@@ -143,6 +144,11 @@ Deno.serve(async (request) => {
       if (!memberId) {
         throw new RequestError('Gagal menetapkan nombor ahli yang unik. Sila cuba lagi.', 409);
       }
+
+      await logAdminActivity(admin, callerId, 'Tambah Ahli Baharu', 'members', memberId, {
+        label: nomborAhli + ' · ' + fullName,
+        generasi,
+      });
 
       return json({
         member_id: memberId,
