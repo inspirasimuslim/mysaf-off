@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Animated, Easing, Platform, Pressable, Text, View, type TextStyle } from 'react-native';
 
 import { PosterCarousel, type PosterItem } from '@/components/poster-carousel';
-import { BIRTHDAY_GOLD, Colors } from '@/constants/theme';
+import { BIRTHDAY_GOLD, RANK_GOLD } from '@/constants/theme';
 import { ScreenHeader } from '@/components/screen-header';
 import { UsrahStrip } from '@/components/usrah-strip';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -168,7 +168,15 @@ export default function DashboardScreen() {
       <ScreenHeader
         eyebrow="Assalamualaikum,"
         title={displayName(user)}
-        subtitle={user?.email ?? undefined}
+        /*
+          Kedudukan menggantikan emel di bawah nama. Emel di situ tidak
+          memberitahu pemiliknya apa-apa yang dia belum tahu; kedudukan berubah
+          apabila dia membayar yuran atau mengimbas kehadiran, jadi ia
+          sebahagian daripada sapaan dan bukan sekadar pengenalan. Emel kembali
+          HANYA bila tiada kedudukan untuk dipapar, supaya baris itu tidak
+          runtuh dan nama tidak tergantung sendirian.
+        */
+        subtitle={rank ? <RankChip rank={rank} onPress={() => router.push('/(app)/profil')} /> : (user?.email ?? undefined)}
         /*
           Avatar di skrin Utama SAHAJA — di sinilah ahli disapa dengan namanya.
           Sebelum rekod ahli dibaca (atau bila akaun belum dipautkan), inisial
@@ -192,16 +200,6 @@ export default function DashboardScreen() {
 
       <View className="gap-8 px-gutter pt-6">
         {banner ? <Notice tone={banner.tone} message={banner.message} /> : null}
-
-        {/*
-          Chip kedudukan duduk betul-betul di bawah sapaan, bukan di antara kad:
-          ia maklumat tentang ORANG itu, jadi tempatnya bersama namanya dan
-          bukan bersama wang. Ia dihalakan ke Profil, di mana pecahan penuh
-          menerangkan dari mana nombor itu datang.
-        */}
-        {rank ? (
-          <RankChip rank={rank} onPress={() => router.push('/(app)/profil')} />
-        ) : null}
 
         {/*
           Dua kad separuh lebar. Yuran ialah satu-satunya perkara di skrin ini
@@ -284,22 +282,29 @@ const MEASURE_INTERVAL = 100;
  * kedudukan yang kelihatan serupa.
  */
 /**
- * Chip kedudukan di skrin Utama — nombor sahaja, tiada pecahan.
+ * Chip kedudukan, di bawah nama pada kepala hijau skrin Utama.
  *
- * Sengaja kecil dan sebaris. Pecahan lima item tinggal di Profil; di sini ia
- * hanya perlu menjawab "saya di mana?" dan menawarkan jalan ke jawapan penuh.
+ * Sengaja kecil dan sebaris: pecahan lima item tinggal di Profil, dan di sini
+ * ia hanya perlu menjawab "saya di mana?" serta menawarkan jalan ke jawapan
+ * penuh. Latar lutsinar putih dan bukan permukaan putih pekat — ia duduk di
+ * atas hijau, jadi ia mengikut bahasa ikon kepala di sebelahnya dan bukan
+ * bahasa kad di bawah.
+ *
+ * `self-start` supaya chip selebar kandungannya sahaja; tanpa itu ia meregang
+ * seluruh lebar kepala dan berhenti kelihatan seperti benda yang boleh diketuk.
  */
 function RankChip({ rank, onPress }: { rank: MyActivityRank; onPress: () => void }) {
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={'Ranking anda nombor ' + rank.rank + ' daripada ' + rank.total_ahli + ' ahli'}
+      hitSlop={6}
       onPress={onPress}
-      className="flex-row items-center gap-2 self-start rounded-pill border border-line bg-surface px-3 py-1.5 active:opacity-70">
-      <Ionicons name="medal" size={14} color={BIRTHDAY_GOLD} />
-      <Text className="text-sm font-bold text-ink">{'Ranking #' + rank.rank}</Text>
-      <Text className="text-sm text-ink-muted">{'/' + rank.total_ahli}</Text>
-      <Ionicons name="chevron-forward" size={12} color={Colors.inkFaint} />
+      className="flex-row items-center gap-1.5 self-start rounded-pill bg-white/15 px-2.5 py-1 active:opacity-70">
+      <Ionicons name="medal" size={13} color={RANK_GOLD} />
+      <Text className="text-sm font-bold text-white">{'Ranking #' + rank.rank}</Text>
+      <Text className="text-sm text-white/70">{'/' + rank.total_ahli}</Text>
+      <Ionicons name="chevron-forward" size={11} color="rgba(255,255,255,0.7)" />
     </Pressable>
   );
 }

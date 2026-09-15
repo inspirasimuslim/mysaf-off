@@ -189,14 +189,13 @@ export default function ProfilScreen() {
         {error ? <Notice tone="negative" message={error} /> : null}
         {banner ? <Notice tone={banner.tone} message={banner.message} /> : null}
 
-        {rank ? <AchievementBadge rank={rank} /> : null}
-
         <MemberForm
           key={member.id + ':' + version}
           member={member}
           generations={generations}
           canEditAdminColumns={false}
           busy={saving}
+          headerAside={rank ? <AchievementBadge rank={rank} /> : undefined}
           onPickAvatar={() => void changeAvatar()}
           avatarBusy={avatarBusy}
           tabs={{ value: tab, onChange: setTab }}

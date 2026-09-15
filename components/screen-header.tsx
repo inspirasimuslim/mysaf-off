@@ -11,7 +11,11 @@ type Props = {
   title: string;
   /** Baris kecil di atas tajuk — contoh: "Assalamualaikum,". */
   eyebrow?: string;
-  subtitle?: string;
+  /**
+   * Baris di bawah tajuk. Teks biasa pada kebanyakan skrin; skrin Utama
+   * memberinya elemen (chip kedudukan) di tempat emel pernah berada.
+   */
+  subtitle?: ReactNode;
   /**
    * Elemen di kiri teks tajuk — contoh: avatar di Dashboard. Skrin yang tidak
    * memberinya tidak mendapat apa-apa di situ.
@@ -50,7 +54,11 @@ export function ScreenHeader({ title, eyebrow, subtitle, leading, onBackPress }:
           <Text className="mt-0.5 text-2xl font-bold text-white" numberOfLines={1}>
             {title}
           </Text>
-          {subtitle ? <Text className="mt-1 text-sm text-white/70">{subtitle}</Text> : null}
+          {typeof subtitle === 'string' ? (
+            <Text className="mt-1 text-sm text-white/70">{subtitle}</Text>
+          ) : subtitle ? (
+            <View className="mt-1.5 flex-row">{subtitle}</View>
+          ) : null}
         </View>
 
         <View className="flex-row items-center gap-2">

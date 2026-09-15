@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 
 import { Button } from '@/components/ui/button';
@@ -65,6 +65,12 @@ type Props = {
   /** Kunci SELURUH borang: pengguna boleh melihat rekod tetapi bukan menyuntingnya. */
   readOnly?: boolean;
   busy?: boolean;
+  /**
+   * Elemen di sebelah KANAN kad maklumat pada susun atur Profil — lencana
+   * kedudukan. Tanpa ia, kad itu mengambil lebar penuh seperti sebelum ini,
+   * jadi susun atur admin dan ahli yang belum berkedudukan tidak berubah.
+   */
+  headerAside?: ReactNode;
   /** Dipanggil bila avatar diketuk. Tanpa ini, ikon kamera tidak dipapar. */
   onPickAvatar?: () => void;
   avatarBusy?: boolean;
@@ -145,6 +151,7 @@ export function MemberForm({
   readOnly = false,
   busy = false,
   onPickAvatar,
+  headerAside,
   avatarBusy = false,
   tabs,
   onSave,
@@ -521,11 +528,29 @@ export function MemberForm({
           <Text className="text-center text-xl font-bold text-ink">{member.full_name}</Text>
         </View>
 
-        <Card className="gap-4">
-          <InfoRow icon="layers-outline" label="Generasi" value={generationLabel(member.generasi)} />
-          <InfoRow icon="mail-outline" label="Emel" value={member.email} />
-          <InfoRow icon="location-outline" label="Kawasan usrah" value={usrahLabel(member.kawasan_usrah)} />
-        </Card>
+        {/*
+          Dua lajur bila ada lencana, satu lajur bila tiada. Nisbah 57/43
+          memberi kad maklumat ruang untuk tiga baris teksnya dan meninggalkan
+          lencana cukup lebar untuk nombor kedudukan serta lima labelnya.
+          `items-stretch` supaya lencana setinggi kad di sebelahnya, bukan
+          setinggi kandungannya sendiri.
+        */}
+        {headerAside ? (
+          <View className="flex-row items-stretch gap-3">
+            <Card className="gap-4" style={{ flex: 57 }}>
+              <InfoRow icon="layers-outline" label="Generasi" value={generationLabel(member.generasi)} />
+              <InfoRow icon="mail-outline" label="Emel" value={member.email} />
+              <InfoRow icon="location-outline" label="Kawasan usrah" value={usrahLabel(member.kawasan_usrah)} />
+            </Card>
+            <View style={{ flex: 43 }}>{headerAside}</View>
+          </View>
+        ) : (
+          <Card className="gap-4">
+            <InfoRow icon="layers-outline" label="Generasi" value={generationLabel(member.generasi)} />
+            <InfoRow icon="mail-outline" label="Emel" value={member.email} />
+            <InfoRow icon="location-outline" label="Kawasan usrah" value={usrahLabel(member.kawasan_usrah)} />
+          </Card>
+        )}
 
         <View className="gap-2">
           <TabBar value={tabs.value} options={PROFILE_TABS} onChange={tabs.onChange} />

@@ -51,4 +51,14 @@ export const Spacing = {
 */
 export const BIRTHDAY_GOLD = '#D97706';
 
+/*
+  Emas pencapaian — chip kedudukan pada kepala hijau, dan lencana di Profil.
+
+  Lebih cerah daripada `BIRTHDAY_GOLD` kerana ia sentiasa duduk di atas hijau
+  gelap: #D97706 pada latar itu membaca sebagai coklat kusam, bukan emas. Aksen
+  hari lahir pula duduk di atas latar terang, jadi keduanya tidak boleh berkongsi
+  satu nilai.
+*/
+export const RANK_GOLD = '#FBBF24';
+
 export type ColorName = keyof typeof Colors;
