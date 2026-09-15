@@ -292,6 +292,7 @@ function AppGate() {
       <Tabs.Screen name="tetapan" options={{ href: null }} />
       <Tabs.Screen name="ahli-view" options={{ href: null }} />
       <Tabs.Screen name="ahli-rumusan" options={{ href: null }} />
+      <Tabs.Screen name="organisasi" options={{ href: null }} />
       <Tabs.Screen name="yuran" options={{ href: null }} />
       <Tabs.Screen name="pipis" options={{ href: null }} />
       <Tabs.Screen name="adhoc-payment-info" options={{ href: null }} />

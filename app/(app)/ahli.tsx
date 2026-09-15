@@ -146,21 +146,33 @@ export default function AhliScreen() {
       <View className="gap-6 px-gutter pt-6">
         {error ? <Notice tone="negative" message={error} /> : null}
 
-        {/* Rumusan agregat — dibuka kepada semua ahli, tiada data individu. */}
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Rumusan Keseluruhan Ahli"
-          onPress={() => router.push('/(app)/ahli-rumusan')}
-          className="flex-row items-center gap-3 rounded-card border border-line bg-surface p-4 active:opacity-70">
-          <View className="h-11 w-11 items-center justify-center rounded-pill bg-primary-soft">
-            <Ionicons name="stats-chart" size={20} color={Colors.primary} />
-          </View>
-          <View className="flex-1">
-            <Text className="text-base font-semibold text-ink">Rumusan Keseluruhan Ahli</Text>
-            <Text className="mt-0.5 text-xs text-ink-muted">Jantina, generasi, sekolah, negeri dan lain-lain</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={Colors.inkFaint} />
-        </Pressable>
+        {/*
+          Dua pintu bersebelahan, kedua-duanya dibuka kepada semua ahli: rumusan
+          agregat (tiada data individu) dan carta organisasi (maklumat terbuka).
+        */}
+        <View className="flex-row gap-3">
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Rumusan Keseluruhan Ahli"
+            onPress={() => router.push('/(app)/ahli-rumusan')}
+            className="flex-1 gap-2 rounded-card border border-line bg-surface p-4 active:opacity-70">
+            <View className="h-11 w-11 items-center justify-center rounded-pill bg-primary-soft">
+              <Ionicons name="stats-chart" size={20} color={Colors.primary} />
+            </View>
+            <Text className="text-sm font-semibold leading-5 text-ink">Rumusan Keseluruhan Ahli</Text>
+          </Pressable>
+
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Organisasi 2025/2027"
+            onPress={() => router.push('/(app)/organisasi')}
+            className="flex-1 gap-2 rounded-card border border-line bg-surface p-4 active:opacity-70">
+            <View className="h-11 w-11 items-center justify-center rounded-pill bg-primary-soft">
+              <Ionicons name="git-network" size={20} color={Colors.primary} />
+            </View>
+            <Text className="text-sm font-semibold leading-5 text-ink">Organisasi 2025/2027</Text>
+          </Pressable>
+        </View>
 
         <TextField
           label="Cari"

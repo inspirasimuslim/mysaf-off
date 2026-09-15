@@ -7,6 +7,7 @@ import { CollapsibleSection } from '@/components/ui/collapsible-section';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Screen } from '@/components/ui/screen';
 import {
+  useDepartmentAccess,
   useMemberAccess,
   usePipisAccess,
   useProgramAccess,
@@ -14,6 +15,7 @@ import {
   useYuranAccess,
 } from '@/lib/department-access';
 import { useGoBack } from '@/lib/navigation';
+import { ORG_CHART_DEPARTMENT } from '@/lib/org-chart';
 import { usePermissions } from '@/lib/permissions';
 
 /**
@@ -42,6 +44,8 @@ export default function AdminHubScreen() {
   const programAccess = useProgramAccess();
   const yuranAccess = useYuranAccess();
   const pipisAccess = usePipisAccess();
+  // SETIAUSAHA — bukan JABATAN SETIAUSAHA (`programAccess`). Dua department.
+  const orgChartAccess = useDepartmentAccess(ORG_CHART_DEPARTMENT);
 
   const superAdmin = isSuperAdmin();
   /*
@@ -51,7 +55,9 @@ export default function AdminHubScreen() {
   */
   const accessLoading =
     permissionsLoading ||
-    [memberAccess, usrahAccess, programAccess, yuranAccess, pipisAccess].some((access) => access.loading);
+    [memberAccess, usrahAccess, programAccess, yuranAccess, pipisAccess, orgChartAccess].some(
+      (access) => access.loading,
+    );
   const visibleSections = [
     superAdmin,
     memberAccess.canView,
@@ -59,6 +65,7 @@ export default function AdminHubScreen() {
     programAccess.canView,
     yuranAccess.canView,
     pipisAccess.canView,
+    orgChartAccess.canEdit,
   ].filter(Boolean).length;
   const nothingAvailable = visibleSections === 0;
   const openByDefault = visibleSections === 1;
@@ -232,6 +239,28 @@ export default function AdminHubScreen() {
                   : 'Semak pengumuman (paparan sahaja)'
               }
               onPress={() => router.push('/(app)/admin/announcements')}
+            />
+          </CollapsibleSection>
+        ) : null}
+
+        {/*
+          Carta organisasi dimiliki oleh department SETIAUSAHA — BUKAN JABATAN
+          SETIAUSAHA di atas walaupun namanya hampir sama. Dua department dalam
+          seed data, dua seksyen. Hanya can_edit kerana carta sudah boleh
+          dilihat oleh semua ahli dari tab Ahli.
+        */}
+        {orgChartAccess.canEdit ? (
+          <CollapsibleSection
+            variant="plain"
+            title="Setiausaha Agung"
+            caption="Department SETIAUSAHA — carta organisasi."
+            count={1}
+            defaultOpen={openByDefault}>
+            <ActionRow
+              icon="git-network-outline"
+              title="Carta Organisasi"
+              subtitle="Tetapkan pemegang jawatan, tambah atau padam bahagian dan jawatan, susun semula"
+              onPress={() => router.push('/(app)/admin/org-chart-manage')}
             />
           </CollapsibleSection>
         ) : null}
