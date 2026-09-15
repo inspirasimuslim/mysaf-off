@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Animated, Easing, Platform, Pressable, Text, View, type TextStyle } from 'react-native';
 
 import { PosterCarousel, type PosterItem } from '@/components/poster-carousel';
+import { BIRTHDAY_GOLD } from '@/constants/theme';
 import { ScreenHeader } from '@/components/screen-header';
 import { UsrahStrip } from '@/components/usrah-strip';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -184,7 +185,9 @@ export default function DashboardScreen() {
           Tidak wujud langsung dalam pokok komponen bila tiada sesiapa lahir hari
           ini — tiada tajuk kosong, tiada teks "Tiada".
         */}
-        {birthdays.length ? <BirthdayGreeting rows={birthdays} /> : null}
+        {birthdays.length ? (
+          <BirthdayGreeting rows={birthdays} onPress={() => router.push('/(app)/hari-jadi-bulan')} />
+        ) : null}
 
         {/*
           Dua carousel, kedua-duanya hilang sepenuhnya bila kosong. Skrin Utama
@@ -216,14 +219,6 @@ export default function DashboardScreen() {
   );
 }
 
-/*
-  Aksen emas untuk ucapan hari lahir. Ditulis terus dan bukan diambil dari token
-  kerana palet asas tiada warna meraikan — `warn` yang paling hampir membawa
-  makna amaran. Nilai ini duduk di sebelah `warn` (#EA580C) supaya ia masih
-  kelihatan sekeluarga, cuma lebih ke arah emas.
-*/
-const BIRTHDAY_GOLD = '#D97706';
-
 /** Piksel sesaat. Cukup perlahan untuk dibaca, cukup laju untuk kelihatan hidup. */
 const MARQUEE_SPEED = 32;
 
@@ -233,6 +228,10 @@ const MARQUEE_SPEED = 32;
   di telefon dan jatuh ke thread JS di web.
 */
 const NATIVE_DRIVER = Platform.OS !== 'web';
+
+/** Had percubaan membaca lebar, dan jarak antara percubaan dalam milisaat. */
+const MEASURE_ATTEMPTS = 20;
+const MEASURE_INTERVAL = 100;
 
 /**
  * Ucapan hari lahir — tajuk dan satu baris nama yang bergerak sendiri.
@@ -249,12 +248,67 @@ const NATIVE_DRIVER = Platform.OS !== 'web';
  * bertemu permulaan salinan kedua tanpa celah, dan gelung kembali ke 0 pada
  * kedudukan yang kelihatan serupa.
  */
-function BirthdayGreeting({ rows }: { rows: BirthdayToday[] }) {
+function BirthdayGreeting({ rows, onPress }: { rows: BirthdayToday[]; onPress: () => void }) {
   const [viewWidth, setViewWidth] = useState(0);
   const [trackWidth, setTrackWidth] = useState(0);
+  const clipRef = useRef<View>(null);
+  const trackRef = useRef<View>(null);
   const offset = useRef(new Animated.Value(0)).current;
 
   const moving = viewWidth > 0 && trackWidth > viewWidth;
+
+  /*
+    Dua sumber lebar, dan kedua-duanya perlu.
+
+    `onLayout` menangkap perubahan kemudian — putaran skrin, tetingkap web yang
+    diubah saiz — tetapi ia bergantung pada kitaran susun atur, jadi ia tidak
+    boleh dijamin tiba sebaik komponen dipasang. `measure()` di bawah membaca
+    terus selepas pemasangan dan mencuba semula sehingga kedua-dua lebar
+    diperoleh, kerana bacaan pertama boleh berlaku sebelum teks selesai disusun.
+    Percubaan berhenti sebaik siap, atau selepas had percubaan supaya ia tidak
+    menjadi gelung tanpa penghujung.
+
+    Nilai SIFAR tidak pernah disimpan, dari mana-mana sumber: skrin Utama kekal
+    terpasang di belakang skrin lain dan melaporkan sifar semasa tersembunyi,
+    yang akan menghentikan animasi dan membekukan baris ini apabila pengguna
+    menekan back.
+  */
+  const keepWidth = useCallback((next: number, apply: (value: number) => void) => {
+    if (next > 0) apply(next);
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      let attempt = 0;
+
+      const read = () => {
+        if (!active) return;
+        attempt += 1;
+
+        let done = 0;
+        clipRef.current?.measure((_x, _y, width) => {
+          if (!active || width <= 0) return;
+          keepWidth(width, setViewWidth);
+          done += 1;
+        });
+        trackRef.current?.measure((_x, _y, width) => {
+          if (!active || width <= 0) return;
+          keepWidth(width, setTrackWidth);
+          done += 1;
+        });
+
+        if (done < 2 && attempt < MEASURE_ATTEMPTS) timer = setTimeout(read, MEASURE_INTERVAL);
+      };
+
+      let timer = setTimeout(read, 0);
+
+      return () => {
+        active = false;
+        clearTimeout(timer);
+      };
+    }, [keepWidth]),
+  );
 
   useEffect(() => {
     offset.setValue(0);
@@ -275,10 +329,13 @@ function BirthdayGreeting({ rows }: { rows: BirthdayToday[] }) {
     return () => animation.stop();
   }, [moving, offset, trackWidth]);
 
-  const names = rows.map((row, index) => (
-    <BirthdayName key={row.full_name + ':' + index} row={row} />
-  ));
-
+  /*
+    Butang diletakkan DI ATAS seksyen sebagai lapisan penuh, bukan sebagai
+    pembalut. Nama yang bergerak tidak boleh disasarkan dengan jari, jadi
+    kawasan ketukan mesti seluas kawasan yang kelihatan. Ketukan TIDAK
+    menghentikan animasi — lapisan ini tidak menyentuh `Animated.Value`, ia
+    cuma menavigasi.
+  */
   return (
     <View>
       <View className="mb-2 flex-row items-center gap-2">
@@ -286,16 +343,21 @@ function BirthdayGreeting({ rows }: { rows: BirthdayToday[] }) {
         <Text className="text-base font-bold" style={{ color: BIRTHDAY_GOLD }}>
           Selamat Hari Lahir!
         </Text>
+        <Ionicons name="chevron-forward" size={14} color={BIRTHDAY_GOLD} />
       </View>
 
       <View
+        ref={clipRef}
         style={{ overflow: 'hidden' }}
-        onLayout={(event) => setViewWidth(event.nativeEvent.layout.width)}>
+        onLayout={(event) => keepWidth(event.nativeEvent.layout.width, setViewWidth)}>
         <Animated.View style={{ flexDirection: 'row', transform: [{ translateX: offset }] }}>
           <View
+            ref={trackRef}
             style={{ flexDirection: 'row' }}
-            onLayout={(event) => setTrackWidth(event.nativeEvent.layout.width)}>
-            {names}
+            onLayout={(event) => keepWidth(event.nativeEvent.layout.width, setTrackWidth)}>
+            {rows.map((row, index) => (
+              <BirthdayName key={row.full_name + ':' + index} row={row} />
+            ))}
           </View>
 
           {/*
@@ -311,6 +373,14 @@ function BirthdayGreeting({ rows }: { rows: BirthdayToday[] }) {
           ) : null}
         </Animated.View>
       </View>
+
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Lihat hari jadi bulan ini"
+        onPress={onPress}
+        style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 }}
+        className="active:opacity-70"
+      />
     </View>
   );
 }

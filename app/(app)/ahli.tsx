@@ -10,7 +10,7 @@ import { MemberAvatar } from '@/components/ui/member-avatar';
 import { Notice } from '@/components/ui/notice';
 import { Screen } from '@/components/ui/screen';
 import { TextField } from '@/components/ui/text-field';
-import { Colors } from '@/constants/theme';
+import { BIRTHDAY_GOLD, Colors } from '@/constants/theme';
 import { useMemberAccess } from '@/lib/department-access';
 import { toMalayError } from '@/lib/errors';
 import { fetchMemberDirectory, fetchMembers } from '@/lib/members';
@@ -173,6 +173,25 @@ export default function AhliScreen() {
             <Text className="text-sm font-semibold leading-5 text-ink">Organisasi 2025/2027</Text>
           </Pressable>
         </View>
+
+        {/*
+          Pintu ketiga, selebar baris penuh dan bukan sebahagian daripada
+          pasangan di atas: dua yang itu membuka data ahli, yang ini ucapan.
+          Ikonnya emas atas sebab yang sama seperti ucapan di skrin Utama.
+        */}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Hari Jadi Bulan Ini"
+          onPress={() => router.push('/(app)/hari-jadi-bulan')}
+          className="flex-row items-center gap-4 rounded-card border border-line bg-surface p-4 active:opacity-70">
+          <View
+            className="h-11 w-11 items-center justify-center rounded-pill"
+            style={{ backgroundColor: BIRTHDAY_GOLD + '1A' }}>
+            <Ionicons name="gift" size={20} color={BIRTHDAY_GOLD} />
+          </View>
+          <Text className="flex-1 text-sm font-semibold leading-5 text-ink">Hari Jadi Bulan Ini</Text>
+          <Ionicons name="chevron-forward" size={18} color={Colors.inkFaint} />
+        </Pressable>
 
         <TextField
           label="Cari"

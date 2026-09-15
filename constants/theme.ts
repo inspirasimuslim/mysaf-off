@@ -41,4 +41,14 @@ export const Spacing = {
   card: 20,
 } as const;
 
+/*
+  Aksen emas untuk hari jadi — ucapan di skrin Utama dan skrin Hari Jadi Bulan.
+
+  Berasingan daripada `Colors` kerana ia bukan sebahagian daripada palet asas:
+  palet itu tiada warna meraikan, dan `warn` (#EA580C) yang paling hampir
+  membawa makna amaran. Nilai ini duduk di sebelahnya supaya masih sekeluarga,
+  cuma lebih ke arah emas.
+*/
+export const BIRTHDAY_GOLD = '#D97706';
+
 export type ColorName = keyof typeof Colors;
