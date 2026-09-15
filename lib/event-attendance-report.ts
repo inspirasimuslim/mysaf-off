@@ -32,6 +32,7 @@ type AttendanceRow = {
   generasi: string | null;
   scanned_at: string;
   method: string;
+  attendance_mode: 'bersemuka' | 'online';
 };
 
 export type EventAttendanceReport = {
@@ -72,6 +73,7 @@ export async function downloadEventAttendance(
       // Waktu tempatan peranti — fail ini dibaca oleh orang yang berada di acara itu.
       'Masa Hadir': new Date(row.scanned_at).toLocaleString('ms-MY'),
       Method: METHOD_LABEL[row.method] ?? row.method,
+      'Mod Kehadiran': row.attendance_mode === 'online' ? 'Online' : 'Bersemuka',
     })),
   );
   const book = XLSX.utils.book_new();

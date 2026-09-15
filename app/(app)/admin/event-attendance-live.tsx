@@ -289,7 +289,13 @@ function AttendeeRow({ row, fresh }: { row: LiveAttendee; fresh: boolean }) {
             new Date(row.scanned_at).toLocaleTimeString('ms-MY', { hour: '2-digit', minute: '2-digit' })}
         </Text>
       </View>
-      {fresh ? <Badge label="Baru" tone="positive" /> : row.method === 'upload' ? <Badge label="Galeri" tone="neutral" /> : null}
+      <View className="items-end gap-1">
+        <Badge
+          label={row.attendance_mode === 'online' ? 'Online' : 'Bersemuka'}
+          tone={row.attendance_mode === 'online' ? 'info' : 'primary'}
+        />
+        {fresh ? <Badge label="Baru" tone="positive" /> : row.method === 'upload' ? <Badge label="Galeri" tone="neutral" /> : null}
+      </View>
     </View>
   );
 }

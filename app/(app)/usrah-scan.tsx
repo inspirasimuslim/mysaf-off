@@ -228,8 +228,8 @@ export default function UsrahScanScreen() {
             />
 
             <Text className="text-center text-xs leading-5 text-ink-muted">
-              Kehadiran hanya diterima di dalam kawasan program dan sebelum tempohnya tamat. Pastikan GPS
-              dihidupkan.
+              Kod QR bersemuka hanya diterima di dalam kawasan program dan sebelum tempohnya tamat — pastikan
+              GPS dihidupkan. Kod QR online boleh diimbas dari mana-mana lokasi dalam tempoh sahnya.
             </Text>
           </>
         ) : null}
@@ -248,7 +248,12 @@ export default function UsrahScanScreen() {
             <Card tone="primary">
               <View className="items-center gap-3">
                 <Ionicons name="checkmark-circle" size={44} color={Colors.white} />
-                <Text className="text-lg font-bold text-white">Kehadiran Direkodkan</Text>
+                {/* Mod datang daripada pelayan — ditentukan oleh kod QR yang diimbas. */}
+                <Text className="text-lg font-bold text-white">
+                  {phase.result.attendance_mode === 'online'
+                    ? 'Kehadiran Online Direkodkan'
+                    : 'Kehadiran Bersemuka Direkodkan'}
+                </Text>
                 <Text className="text-center text-base text-white/90">{phase.result.event_name}</Text>
                 <Text className="text-sm text-white/70">
                   {EVENT_TYPE_LABEL[phase.result.event_type] +

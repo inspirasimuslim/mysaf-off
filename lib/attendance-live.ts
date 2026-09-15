@@ -17,6 +17,7 @@ export type LiveAttendee = {
   avatar_url: string | null;
   scanned_at: string;
   method: 'scan' | 'upload';
+  attendance_mode: 'bersemuka' | 'online';
 };
 
 export async function fetchLiveAttendance(eventId: string): Promise<LiveAttendee[]> {

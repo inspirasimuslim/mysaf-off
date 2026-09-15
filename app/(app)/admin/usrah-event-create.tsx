@@ -22,10 +22,13 @@ import { pickImage } from '@/lib/image-upload';
 import { useGoBack } from '@/lib/navigation';
 import { createUsrahEvent, uploadEventPoster } from '@/lib/usrah-events';
 import {
+  EVENT_MODE_OPTIONS,
   EVENT_TYPE_OPTIONS,
   KAWASAN_USRAH_OPTIONS,
   MONTH_OPTIONS,
+  mytTimestamp,
   usrahEventName,
+  type EventMode,
   type EventType,
 } from '@/types/database';
 
@@ -85,6 +88,28 @@ export default function UsrahEventCreateScreen() {
   const [coords, setCoords] = useState<{ latitude: number; longitude: number } | null>(null);
   const [radius, setRadius] = useState(DEFAULT_RADIUS);
 
+  // --- Jenis kehadiran --------------------------------------------------------
+  /** Lalai bersemuka — sama seperti setiap acara sebelum mod hibrid wujud. */
+  const [eventMode, setEventMode] = useState<EventMode>('bersemuka');
+  const [onlineStartDate, setOnlineStartDate] = useState(today());
+  const [onlineStartTime, setOnlineStartTime] = useState('20:00');
+  const [onlineEndDate, setOnlineEndDate] = useState(today());
+  const [onlineEndTime, setOnlineEndTime] = useState('22:00');
+
+  /** Memilih Hibrid mengisi tempoh online dengan tarikh & masa acara sebagai titik mula. */
+  const chooseMode = useCallback(
+    (next: EventMode) => {
+      if (next === 'hibrid' && eventMode !== 'hibrid') {
+        setOnlineStartDate(startDate);
+        setOnlineStartTime(startTime);
+        setOnlineEndDate(endDate);
+        setOnlineEndTime(endTime);
+      }
+      setEventMode(next);
+    },
+    [endDate, endTime, eventMode, startDate, startTime],
+  );
+
   /** URI tempatan; poster hanya dimuat naik SELEPAS acara wujud. */
   const [posterUri, setPosterUri] = useState<string | null>(null);
 
@@ -115,7 +140,15 @@ export default function UsrahEventCreateScreen() {
   const timeValid = /^\d{2}:\d{2}$/.test(startTime) && /^\d{2}:\d{2}$/.test(endTime);
 
   const nameValid = eventType === 'usrah' ? Boolean(kawasan) && yearValid && parsedMonth !== null : name.length > 0;
-  const ready = nameValid && rangeValid && timeValid;
+  /** Rentetan 'YYYY-MM-DD HH:MM' boleh dibandingkan terus sebagai teks. */
+  const onlineValid =
+    eventMode === 'bersemuka' ||
+    (/^\d{4}-\d{2}-\d{2}$/.test(onlineStartDate) &&
+      /^\d{4}-\d{2}-\d{2}$/.test(onlineEndDate) &&
+      /^\d{2}:\d{2}$/.test(onlineStartTime) &&
+      /^\d{2}:\d{2}$/.test(onlineEndTime) &&
+      onlineEndDate + ' ' + onlineEndTime > onlineStartDate + ' ' + onlineStartTime);
+  const ready = nameValid && rangeValid && timeValid && onlineValid;
 
   const choosePoster = useCallback(async () => {
     setBanner(null);
@@ -149,6 +182,10 @@ export default function UsrahEventCreateScreen() {
         latitude: coords?.latitude ?? null,
         longitude: coords?.longitude ?? null,
         geofence_radius_meters: radius,
+        // Waktu Malaysia secara eksplisit — bukan zon masa peranti.
+        event_mode: eventMode,
+        online_valid_from: eventMode === 'hibrid' ? mytTimestamp(onlineStartDate, onlineStartTime) : null,
+        online_valid_until: eventMode === 'hibrid' ? mytTimestamp(onlineEndDate, onlineEndTime) : null,
       });
 
       /*
@@ -183,9 +220,14 @@ export default function UsrahEventCreateScreen() {
     coords,
     endDate,
     endTime,
+    eventMode,
     eventType,
     kawasan,
     locationText,
+    onlineEndDate,
+    onlineEndTime,
+    onlineStartDate,
+    onlineStartTime,
     name,
     parsedMonth,
     parsedYear,
@@ -402,6 +444,71 @@ export default function UsrahEventCreateScreen() {
 
             {dateValid && !rangeValid ? (
               <Notice tone="negative" message="Tarikh tamat tidak boleh lebih awal daripada tarikh mula." />
+            ) : null}
+          </View>
+        </View>
+
+        {/*
+          --- Jenis kehadiran ------------------------------------------------
+          Hibrid menambah kod QR KEDUA untuk ahli yang sertai secara maya. Kod
+          itu tidak disemak lokasinya, jadi tempohnya ditetapkan berasingan dan
+          bukan mewarisi `valid_until` acara.
+        */}
+        <View>
+          <SectionTitle
+            title="Jenis Kehadiran"
+            caption="Hibrid menjana dua kod QR: bersemuka (geofence) dan online (tempoh sahaja, tanpa semakan lokasi)."
+          />
+          <View className="gap-3">
+            <Segmented value={eventMode} options={EVENT_MODE_OPTIONS} onChange={chooseMode} disabled={saving} />
+
+            {eventMode === 'hibrid' ? (
+              <>
+                <Text className="pt-1 text-sm font-semibold text-ink">Tempoh QR Online (waktu Malaysia)</Text>
+                <View className="flex-row items-start gap-3">
+                  <View className="flex-1">
+                    <DateTimeField
+                      label="Tarikh mula"
+                      mode="date"
+                      value={onlineStartDate}
+                      onChange={setOnlineStartDate}
+                      disabled={saving}
+                    />
+                  </View>
+                  <View className="flex-1">
+                    <DateTimeField
+                      label="Masa mula"
+                      mode="time"
+                      value={onlineStartTime}
+                      onChange={setOnlineStartTime}
+                      disabled={saving}
+                    />
+                  </View>
+                </View>
+                <View className="flex-row items-start gap-3">
+                  <View className="flex-1">
+                    <DateTimeField
+                      label="Tarikh tamat"
+                      mode="date"
+                      value={onlineEndDate}
+                      onChange={setOnlineEndDate}
+                      disabled={saving}
+                    />
+                  </View>
+                  <View className="flex-1">
+                    <DateTimeField
+                      label="Masa tamat"
+                      mode="time"
+                      value={onlineEndTime}
+                      onChange={setOnlineEndTime}
+                      disabled={saving}
+                    />
+                  </View>
+                </View>
+                {!onlineValid ? (
+                  <Notice tone="negative" message="Masa tamat QR online mesti selepas masa mulanya." />
+                ) : null}
+              </>
             ) : null}
           </View>
         </View>

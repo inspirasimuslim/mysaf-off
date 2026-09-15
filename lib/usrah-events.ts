@@ -1,4 +1,4 @@
-import type { EventType, UpcomingEvent, UsrahEvent } from '@/types/database';
+import type { EventMode, EventType, UpcomingEvent, UsrahEvent } from '@/types/database';
 
 import { uploadImage } from './image-upload';
 import { supabase } from './supabase';
@@ -31,6 +31,13 @@ export type CreateUsrahEventInput = {
   latitude: number | null;
   longitude: number | null;
   geofence_radius_meters: number;
+  /**
+   * 'hibrid' memerlukan tempoh online (timestamptz). `online_qr_token` TIDAK
+   * dihantar — trigger menjananya, dan nilai dari app diabaikan.
+   */
+  event_mode: EventMode;
+  online_valid_from: string | null;
+  online_valid_until: string | null;
 };
 
 export type UpdateUsrahEventInput = Partial<

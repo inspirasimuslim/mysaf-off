@@ -1,6 +1,6 @@
 import * as Location from 'expo-location';
 
-import type { EventType } from '@/types/database';
+import type { AttendanceMode, EventType } from '@/types/database';
 
 import { toMalayError } from './errors';
 import { supabase } from './supabase';
@@ -33,8 +33,15 @@ export type ScannedEvent = {
   geofence_radius_meters: number;
   valid_until: string;
   is_active: boolean;
-  /** Acara tanpa pin tidak boleh disemak jaraknya — kehadirannya diterima tanpa GPS. */
+  /**
+   * Sama ada lokasi akan disemak bagi TOKEN ini. Acara tanpa pin, dan setiap
+   * token online, mendapat `false` — kehadirannya diterima tanpa GPS.
+   */
   has_pin: boolean;
+  /** Token mana yang sepadan: `qr_token` (bersemuka) atau `online_qr_token` (online). */
+  attendance_mode: AttendanceMode;
+  online_valid_from: string | null;
+  online_valid_until: string | null;
 };
 
 export type AttendanceResult = {
@@ -44,8 +51,9 @@ export type AttendanceResult = {
   end_date: string;
   start_time: string;
   end_time: string;
-  /** `null` bagi acara tanpa pin lokasi. */
+  /** `null` bagi acara tanpa pin lokasi dan bagi kehadiran online. */
   distance_meters: number | null;
+  attendance_mode: AttendanceMode;
 };
 
 /**
