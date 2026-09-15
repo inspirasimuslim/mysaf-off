@@ -13,6 +13,7 @@ import { DateTimeField } from '@/components/ui/date-time-field';
 import { EmptyState } from '@/components/ui/empty-state';
 import { LoadingScreen } from '@/components/ui/loading-screen';
 import { Notice } from '@/components/ui/notice';
+import { PickerField } from '@/components/ui/picker-field';
 import { Screen } from '@/components/ui/screen';
 import { SectionTitle } from '@/components/ui/section-title';
 import { Segmented } from '@/components/ui/segmented';
@@ -31,6 +32,7 @@ import {
   EVENT_MODE_OPTIONS,
   EVENT_TYPE_LABEL,
   MONTH_NAMES,
+  MONTH_OPTIONS,
   USRAH_EVENT_STATUS_LABEL,
   dateRangeLabel,
   timeLabel,
@@ -74,6 +76,8 @@ export default function UsrahEventDetailScreen() {
   const [locationText, setLocationText] = useState('');
   const [eventMode, setEventMode] = useState<EventMode>('bersemuka');
   const [gantiUsrah, setGantiUsrah] = useState(false);
+  const [gantiYear, setGantiYear] = useState('');
+  const [gantiMonth, setGantiMonth] = useState<string | null>(null);
 
   const hydrate = useCallback((row: UsrahEvent) => {
     setEvent(row);
@@ -85,6 +89,8 @@ export default function UsrahEventDetailScreen() {
     setLocationText(row.location_text ?? '');
     setEventMode(row.event_mode);
     setGantiUsrah(row.ganti_usrah);
+    setGantiYear(row.ganti_usrah_year ? String(row.ganti_usrah_year) : '');
+    setGantiMonth(row.ganti_usrah_month ? String(row.ganti_usrah_month) : null);
   }, []);
 
   useEffect(() => {
@@ -126,7 +132,13 @@ export default function UsrahEventDetailScreen() {
           // Pelayan membaca nilai TERKINI pada setiap imbasan — tukar berkesan serta-merta.
           event_mode: eventMode,
           // Program sahaja. Kehadiran yang SUDAH direkod tidak berubah bila ini ditukar.
-          ...(event.event_type === 'program' ? { ganti_usrah: gantiUsrah } : {}),
+          ...(event.event_type === 'program'
+            ? {
+                ganti_usrah: gantiUsrah,
+                ganti_usrah_year: gantiUsrah ? Number.parseInt(gantiYear, 10) : null,
+                ganti_usrah_month: gantiUsrah && gantiMonth ? Number.parseInt(gantiMonth, 10) : null,
+              }
+            : {}),
         }),
       );
       setBanner({ tone: 'positive', message: 'Perubahan telah disimpan.' });
@@ -135,7 +147,29 @@ export default function UsrahEventDetailScreen() {
     } finally {
       setBusy(false);
     }
-  }, [busy, endDate, endTime, event, eventMode, gantiUsrah, hydrate, locationText, name, startDate, startTime]);
+  }, [
+    busy,
+    endDate,
+    endTime,
+    event,
+    eventMode,
+    gantiMonth,
+    gantiUsrah,
+    gantiYear,
+    hydrate,
+    locationText,
+    name,
+    startDate,
+    startTime,
+  ]);
+
+  /** Program ganti usrah wajib tahun (2000–2100) DAN bulan — butang Simpan dikunci selagi tidak lengkap. */
+  const parsedGantiYear = Number.parseInt(gantiYear, 10);
+  const gantiValid =
+    !event ||
+    event.event_type !== 'program' ||
+    !gantiUsrah ||
+    (Number.isFinite(parsedGantiYear) && parsedGantiYear >= 2000 && parsedGantiYear <= 2100 && gantiMonth !== null);
 
   /** Togol status program (`is_active`) atau kod QR (`qr_enabled`) — satu laluan kemas kini. */
   const toggleFlag = useCallback(
@@ -302,7 +336,14 @@ export default function UsrahEventDetailScreen() {
                 tone={event.event_mode === 'hibrid' ? 'info' : 'primary'}
               />
               {event.event_type === 'program' ? (
-                <Badge label={'Ganti Usrah: ' + (event.ganti_usrah ? 'Ya' : 'Tidak')} tone={event.ganti_usrah ? 'warn' : 'neutral'} />
+                <Badge
+                  label={
+                    event.ganti_usrah && event.ganti_usrah_month && event.ganti_usrah_year
+                      ? 'Ganti Usrah: Ya (' + (MONTH_NAMES[event.ganti_usrah_month - 1] ?? '') + ' ' + event.ganti_usrah_year + ')'
+                      : 'Ganti Usrah: Tidak'
+                  }
+                  tone={event.ganti_usrah ? 'warn' : 'neutral'}
+                />
               ) : null}
               {!event.qr_enabled ? <Badge label="Kod QR dimatikan" tone="warn" /> : null}
             </View>
@@ -477,20 +518,51 @@ export default function UsrahEventDetailScreen() {
                   </View>
                 </View>
                 {event.event_type === 'program' ? (
-                  <ToggleRow
-                    icon="swap-horizontal-outline"
-                    title="Ganti Usrah"
-                    subtitle={
-                      'Kehadiran turut dikira sebagai Usrah bulan ' +
-                      (MONTH_NAMES[Number(startDate.slice(5, 7)) - 1] ?? '—') +
-                      ' ' +
-                      startDate.slice(0, 4) +
-                      '. Kehadiran yang sudah direkod tidak berubah.'
-                    }
-                    value={gantiUsrah}
-                    onValueChange={setGantiUsrah}
-                    disabled={busy}
-                  />
+                  <>
+                    <ToggleRow
+                      icon="swap-horizontal-outline"
+                      title="Ganti Usrah"
+                      subtitle={
+                        !gantiUsrah
+                          ? 'Kehadiran program ini boleh dikira sebagai kehadiran Usrah bagi bulan yang dipilih.'
+                          : gantiValid && gantiMonth
+                            ? 'Dikira sebagai kehadiran Usrah bulan ' +
+                              (MONTH_NAMES[Number.parseInt(gantiMonth, 10) - 1] ?? '') +
+                              ' ' +
+                              parsedGantiYear +
+                              '. Kehadiran yang sudah direkod tidak berubah.'
+                            : 'Pilih tahun dan bulan usrah yang digantikan.'
+                      }
+                      value={gantiUsrah}
+                      onValueChange={setGantiUsrah}
+                      disabled={busy}
+                    />
+                    {gantiUsrah ? (
+                      <View className="flex-row items-start gap-3">
+                        <View className="flex-1">
+                          <TextField
+                            label="Tahun"
+                            placeholder="Contoh: 2026"
+                            value={gantiYear}
+                            onChangeText={(value) => setGantiYear(value.replace(/[^\d]/g, '').slice(0, 4))}
+                            editable={!busy}
+                            keyboardType="number-pad"
+                            error={gantiYear.length > 0 && !gantiValid ? 'Antara 2000 dan 2100.' : null}
+                          />
+                        </View>
+                        <View className="flex-1">
+                          <PickerField
+                            label="Bulan"
+                            value={gantiMonth}
+                            options={MONTH_OPTIONS}
+                            onChange={setGantiMonth}
+                            disabled={busy}
+                            clearable={false}
+                          />
+                        </View>
+                      </View>
+                    ) : null}
+                  </>
                 ) : null}
                 <Segmented
                   label="Jenis kehadiran"
@@ -515,7 +587,7 @@ export default function UsrahEventDetailScreen() {
                 <Button
                   label="Simpan Perubahan"
                   loading={busy}
-                  disabled={busy || !name.trim()}
+                  disabled={busy || !name.trim() || !gantiValid}
                   onPress={() => void save()}
                 />
               </View>

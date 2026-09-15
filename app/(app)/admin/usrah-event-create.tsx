@@ -92,6 +92,9 @@ export default function UsrahEventCreateScreen() {
   const [eventMode, setEventMode] = useState<EventMode>('bersemuka');
   /** Program sahaja. Lalai OFF — admin sengaja menandanya. */
   const [gantiUsrah, setGantiUsrah] = useState(false);
+  /** Bulan usrah yang diganti — dipilih eksplisit, kosong sehingga admin memilih. */
+  const [gantiYear, setGantiYear] = useState('');
+  const [gantiMonth, setGantiMonth] = useState<string | null>(null);
 
   /** URI tempatan; poster hanya dimuat naik SELEPAS acara wujud. */
   const [posterUri, setPosterUri] = useState<string | null>(null);
@@ -123,7 +126,11 @@ export default function UsrahEventCreateScreen() {
   const timeValid = /^\d{2}:\d{2}$/.test(startTime) && /^\d{2}:\d{2}$/.test(endTime);
 
   const nameValid = eventType === 'usrah' ? Boolean(kawasan) && yearValid && parsedMonth !== null : name.length > 0;
-  const ready = nameValid && rangeValid && timeValid;
+  // Program ganti usrah wajib memilih tahun DAN bulan — kekangan pangkalan data yang sama.
+  const parsedGantiYear = Number.parseInt(gantiYear, 10);
+  const gantiYearValid = Number.isFinite(parsedGantiYear) && parsedGantiYear >= 2000 && parsedGantiYear <= 2100;
+  const gantiValid = eventType !== 'program' || !gantiUsrah || (gantiYearValid && gantiMonth !== null);
+  const ready = nameValid && rangeValid && timeValid && gantiValid;
 
   const choosePoster = useCallback(async () => {
     setBanner(null);
@@ -160,6 +167,10 @@ export default function UsrahEventCreateScreen() {
         event_mode: eventMode,
         // Usrah sendiri memang usrah — penanda ini bermakna untuk program sahaja.
         ganti_usrah: eventType === 'program' && gantiUsrah,
+        // Bulan yang diganti dipilih admin — tiada kaitan dengan tarikh mula program.
+        ganti_usrah_year: eventType === 'program' && gantiUsrah ? parsedGantiYear : null,
+        ganti_usrah_month:
+          eventType === 'program' && gantiUsrah && gantiMonth ? Number.parseInt(gantiMonth, 10) : null,
       });
 
       /*
@@ -196,8 +207,10 @@ export default function UsrahEventCreateScreen() {
     endTime,
     eventMode,
     eventType,
+    gantiMonth,
     gantiUsrah,
     kawasan,
+    parsedGantiYear,
     locationText,
     name,
     parsedMonth,
@@ -318,24 +331,53 @@ export default function UsrahEventCreateScreen() {
                   autoCorrect={false}
                 />
                 {/*
-                  Program sahaja. Bulan dibaca terus dari Tarikh Mula di bawah,
-                  jadi ayat ini berubah serta-merta bila tarikh ditukar — sama
-                  seperti pelayan, yang memilih bulan dari start_date acara.
+                  Program sahaja. Bulan yang diganti DIPILIH admin — tiada kaitan
+                  dengan Tarikh Mula, yang kekal tarikh sebenar program (QR,
+                  geofence, tempoh sah). Ayat di bawah mengikut pilihan itu.
                 */}
                 <ToggleRow
                   icon="swap-horizontal-outline"
                   title="Ganti Usrah"
                   subtitle={
-                    'Kehadiran program ini turut dikira sebagai kehadiran Usrah bulan ' +
-                    (MONTH_NAMES[Number(startDate.slice(5, 7)) - 1] ?? '—') +
-                    ' ' +
-                    startDate.slice(0, 4) +
-                    '.'
+                    !gantiUsrah
+                      ? 'Kehadiran program ini boleh dikira sebagai kehadiran Usrah bagi bulan yang dipilih.'
+                      : gantiYearValid && gantiMonth
+                        ? 'Kehadiran program ini akan dikira sebagai kehadiran Usrah bulan ' +
+                          (MONTH_NAMES[Number.parseInt(gantiMonth, 10) - 1] ?? '') +
+                          ' ' +
+                          parsedGantiYear +
+                          '.'
+                        : 'Pilih tahun dan bulan usrah yang digantikan.'
                   }
                   value={gantiUsrah}
                   onValueChange={setGantiUsrah}
                   disabled={saving}
                 />
+                {gantiUsrah ? (
+                  <View className="flex-row items-start gap-3">
+                    <View className="flex-1">
+                      <TextField
+                        label="Tahun"
+                        placeholder="Contoh: 2026"
+                        value={gantiYear}
+                        onChangeText={(value) => setGantiYear(value.replace(/[^\d]/g, '').slice(0, 4))}
+                        editable={!saving}
+                        keyboardType="number-pad"
+                        error={gantiYear.length > 0 && !gantiYearValid ? 'Antara 2000 dan 2100.' : null}
+                      />
+                    </View>
+                    <View className="flex-1">
+                      <PickerField
+                        label="Bulan"
+                        value={gantiMonth}
+                        options={MONTH_OPTIONS}
+                        onChange={setGantiMonth}
+                        disabled={saving}
+                        clearable={false}
+                      />
+                    </View>
+                  </View>
+                ) : null}
               </>
             )}
           </View>

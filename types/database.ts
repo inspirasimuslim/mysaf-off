@@ -366,6 +366,9 @@ export type UsrahEvent = {
    * tarikh mula program. Lihat `20260915000036_ganti_usrah.sql`.
    */
   ganti_usrah: boolean;
+  /** Bulan usrah yang diganti — dipilih admin, wajib bila `ganti_usrah`. Bukan dari start_date. */
+  ganti_usrah_year: number | null;
+  ganti_usrah_month: number | null;
   /** Ditetapkan bila "Padam" diarkibkan kerana acara ada rekod kehadiran/RSVP. */
   archived_at: string | null;
   created_by: string | null;

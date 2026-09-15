@@ -35,6 +35,9 @@ export type CreateUsrahEventInput = {
   event_mode: EventMode;
   /** Program sahaja — kehadiran turut dikira sebagai Usrah bulan tarikh mula. */
   ganti_usrah: boolean;
+  /** Wajib bila `ganti_usrah` (kekangan pangkalan data); NULL selainnya. */
+  ganti_usrah_year: number | null;
+  ganti_usrah_month: number | null;
 };
 
 export type UpdateUsrahEventInput = Partial<
