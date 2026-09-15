@@ -14,12 +14,3 @@ export async function fetchBirthdaysToday(): Promise<BirthdayToday[]> {
   if (error) throw error;
   return (data as BirthdayToday[] | null) ?? [];
 }
-
-/**
- * 'Muhammad Hafiz bin Ali' → 'Muhammad'.
- *
- * Perkataan pertama sahaja, buat sementara sehingga kolum nama pendek wujud.
- */
-export function shortName(fullName: string): string {
-  return fullName.trim().split(/\s+/)[0] ?? fullName;
-}

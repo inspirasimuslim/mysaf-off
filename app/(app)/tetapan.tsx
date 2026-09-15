@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { View } from 'react-native';
 
@@ -70,6 +71,7 @@ type Banner = { tone: 'positive' | 'info' | 'negative'; message: string } | null
  */
 export default function TetapanScreen() {
   const { user } = useAuth();
+  const router = useRouter();
   const goBack = useGoBack();
 
   const [banner, setBanner] = useState<Banner>(null);
@@ -359,6 +361,31 @@ export default function TetapanScreen() {
                 title="Tukar Kata Laluan"
                 subtitle={'Minimum ' + MIN_PASSWORD_LENGTH + ' aksara'}
                 onPress={openPasswordModal}
+              />
+            </View>
+          </View>
+
+          {/*
+            Album dan Komen tinggal di sini dan bukan pada bar tab. Tujuh ikon
+            tidak muat dengan selesa pada lebar telefon, dan kedua-duanya belum
+            dibina — bar tab dikhaskan untuk lima destinasi yang benar-benar
+            digunakan setiap hari.
+          */}
+          <View>
+            <SectionTitle title="Lain-lain" />
+            <View className="gap-4">
+              <ActionRow
+                icon="images-outline"
+                title="Album"
+                subtitle="Galeri gambar program"
+                onPress={() => router.push('/(app)/album')}
+              />
+
+              <ActionRow
+                icon="chatbubble-ellipses-outline"
+                title="Komen"
+                subtitle="Maklum balas dan cadangan"
+                onPress={() => router.push('/(app)/komen')}
               />
             </View>
           </View>

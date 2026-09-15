@@ -1,21 +1,20 @@
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useRef, useState, type ReactNode } from 'react';
-import { Pressable, ScrollView, Text, View, type TextStyle } from 'react-native';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { Animated, Easing, Platform, Pressable, Text, View, type TextStyle } from 'react-native';
 
-import { PosterCarousel, useWebMouseScroll, type PosterItem } from '@/components/poster-carousel';
+import { PosterCarousel, type PosterItem } from '@/components/poster-carousel';
 import { ScreenHeader } from '@/components/screen-header';
 import { UsrahStrip } from '@/components/usrah-strip';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { MemberAvatar } from '@/components/ui/member-avatar';
 import { Notice } from '@/components/ui/notice';
 import { Screen } from '@/components/ui/screen';
-import { SectionTitle } from '@/components/ui/section-title';
 import { useAndroidExitPrompt } from '@/lib/android-back';
 import { fetchVisibleAnnouncements } from '@/lib/announcements';
 import { displayName, useAuth } from '@/lib/auth-context';
-import { fetchBirthdaysToday, shortName, type BirthdayToday } from '@/lib/birthdays';
+import { fetchBirthdaysToday, type BirthdayToday } from '@/lib/birthdays';
 import { fetchMyMemberLinked } from '@/lib/members';
 import { PIPIS_TARGET, fetchPipisSummary, peratusLabel, ringgitBulat, type PipisSummary } from '@/lib/pipis';
 import { fetchUpcomingEvents } from '@/lib/usrah-events';
@@ -185,7 +184,7 @@ export default function DashboardScreen() {
           Tidak wujud langsung dalam pokok komponen bila tiada sesiapa lahir hari
           ini — tiada tajuk kosong, tiada teks "Tiada".
         */}
-        {birthdays.length ? <BirthdayRow rows={birthdays} /> : null}
+        {birthdays.length ? <BirthdayGreeting rows={birthdays} /> : null}
 
         {/*
           Dua carousel, kedua-duanya hilang sepenuhnya bila kosong. Skrin Utama
@@ -217,30 +216,114 @@ export default function DashboardScreen() {
   );
 }
 
+/*
+  Aksen emas untuk ucapan hari lahir. Ditulis terus dan bukan diambil dari token
+  kerana palet asas tiada warna meraikan — `warn` yang paling hampir membawa
+  makna amaran. Nilai ini duduk di sebelah `warn` (#EA580C) supaya ia masih
+  kelihatan sekeluarga, cuma lebih ke arah emas.
+*/
+const BIRTHDAY_GOLD = '#D97706';
+
+/** Piksel sesaat. Cukup perlahan untuk dibaca, cukup laju untuk kelihatan hidup. */
+const MARQUEE_SPEED = 32;
+
+/*
+  `useNativeDriver` tiada pelaksanaan pada react-native-web dan hanya
+  mengeluarkan amaran di konsol. Animasi transform ini berjalan pada thread UI
+  di telefon dan jatuh ke thread JS di web.
+*/
+const NATIVE_DRIVER = Platform.OS !== 'web';
+
 /**
- * Ahli yang lahir hari ini — satu baris chip teks, "Hafiz i12".
+ * Ucapan hari lahir — tajuk dan satu baris nama yang bergerak sendiri.
  *
- * Sengaja paling ringkas: tiada avatar, tiada kad. Ia ucapan kecil di tengah
- * skrin Utama, bukan seksyen yang bersaing dengan program dan yuran. Baris
- * ditatal ke tepi bila tidak muat; di web tetikus boleh menyeret atau memusing
- * roda, sama seperti carousel poster.
+ * Sengaja TIADA kad, garis atau latar berlainan: ia terapung terus di atas
+ * latar skrin Utama supaya terasa seperti ucapan dan bukan satu lagi panel
+ * data. Seksyen ini tidak wujud langsung bila tiada sesiapa lahir hari itu —
+ * pemanggil yang menentukannya.
+ *
+ * Baris bergerak HANYA apabila senarai lebih panjang daripada lebar skrin.
+ * Senarai pendek duduk diam; menatal tiga nama yang sudah muat hanya menyukarkan
+ * pembacaan. Bila ia bergerak, senarai dilukis DUA KALI berturut-turut dan
+ * translasi diulang sepanjang satu salinan — jadi hujung salinan pertama
+ * bertemu permulaan salinan kedua tanpa celah, dan gelung kembali ke 0 pada
+ * kedudukan yang kelihatan serupa.
  */
-function BirthdayRow({ rows }: { rows: BirthdayToday[] }) {
-  const scrollRef = useRef<ScrollView>(null);
-  useWebMouseScroll(scrollRef, true);
+function BirthdayGreeting({ rows }: { rows: BirthdayToday[] }) {
+  const [viewWidth, setViewWidth] = useState(0);
+  const [trackWidth, setTrackWidth] = useState(0);
+  const offset = useRef(new Animated.Value(0)).current;
+
+  const moving = viewWidth > 0 && trackWidth > viewWidth;
+
+  useEffect(() => {
+    offset.setValue(0);
+    if (!moving) return;
+
+    const animation = Animated.loop(
+      Animated.timing(offset, {
+        toValue: -trackWidth,
+        duration: (trackWidth / MARQUEE_SPEED) * 1000,
+        easing: Easing.linear,
+        useNativeDriver: NATIVE_DRIVER,
+      }),
+    );
+    animation.start();
+
+    // Dihentikan bila senarai berubah atau skrin dilepaskan; tanpa ini gelung
+    // kekal berjalan pada Animated.Value yang sudah tiada penonton.
+    return () => animation.stop();
+  }, [moving, offset, trackWidth]);
+
+  const names = rows.map((row, index) => (
+    <BirthdayName key={row.full_name + ':' + index} row={row} />
+  ));
 
   return (
     <View>
-      <SectionTitle title="Ahli yang lahir hari ini" />
-      <ScrollView ref={scrollRef} horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-        {rows.map((row, index) => (
-          <View key={row.full_name + ':' + index} className="rounded-pill bg-primary-soft px-3 py-1.5">
-            <Text className="text-sm font-semibold text-primary">
-              {shortName(row.full_name) + (row.generasi ? ' ' + row.generasi : '')}
-            </Text>
+      <View className="mb-2 flex-row items-center gap-2">
+        <Ionicons name="gift" size={18} color={BIRTHDAY_GOLD} />
+        <Text className="text-base font-bold" style={{ color: BIRTHDAY_GOLD }}>
+          Selamat Hari Lahir!
+        </Text>
+      </View>
+
+      <View
+        style={{ overflow: 'hidden' }}
+        onLayout={(event) => setViewWidth(event.nativeEvent.layout.width)}>
+        <Animated.View style={{ flexDirection: 'row', transform: [{ translateX: offset }] }}>
+          <View
+            style={{ flexDirection: 'row' }}
+            onLayout={(event) => setTrackWidth(event.nativeEvent.layout.width)}>
+            {names}
           </View>
-        ))}
-      </ScrollView>
+
+          {/*
+            Salinan kedua wujud hanya semasa bergerak, dan `aria-hidden` supaya
+            pembaca skrin tidak membacakan senarai yang sama dua kali.
+          */}
+          {moving ? (
+            <View style={{ flexDirection: 'row' }} aria-hidden>
+              {rows.map((row, index) => (
+                <BirthdayName key={'ulang:' + row.full_name + ':' + index} row={row} />
+              ))}
+            </View>
+          ) : null}
+        </Animated.View>
+      </View>
+    </View>
+  );
+}
+
+/** Satu nama penuh dan generasinya, diasingkan daripada yang berikutnya oleh titik emas. */
+function BirthdayName({ row }: { row: BirthdayToday }) {
+  return (
+    <View className="flex-row items-center gap-2 pr-3">
+      <Text className="text-sm font-semibold text-ink" numberOfLines={1}>
+        {row.full_name}
+        {row.generasi ? <Text className="font-normal text-ink-muted">{' · ' + row.generasi}</Text> : null}
+      </Text>
+      <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: BIRTHDAY_GOLD }} />
     </View>
   );
 }

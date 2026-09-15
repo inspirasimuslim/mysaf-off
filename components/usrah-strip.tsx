@@ -105,10 +105,14 @@ export function UsrahStrip({ userId }: { userId: string | null }) {
 
   if (!state.ready) return null;
 
-  const hasGanti = state.months.some((month) => month.attended === true && month.source === 'program_ganti');
-
   return (
-    <View>
+    /*
+      Garis nipis sahaja, tiada bayang dan tiada latar berlainan: jalur ini
+      duduk antara dua kad gradient dan dua carousel, jadi ia perlu sempadan
+      untuk dibaca sebagai satu seksyen — tetapi bukan berat yang menjadikannya
+      kad ketiga.
+    */
+    <View className="rounded-card border border-line p-card">
       <Text className="text-sm font-semibold text-ink">Kehadiran Usrah {year}</Text>
 
       <View className="mt-3 flex-row items-start justify-between">
@@ -139,14 +143,6 @@ export function UsrahStrip({ userId }: { userId: string | null }) {
           </View>
         ))}
       </View>
-
-      {/* Petunjuk hanya bila ada bulan program ganti — jalur biasa kekal tanpa hiasan. */}
-      {hasGanti ? (
-        <View className="mt-2 flex-row items-center gap-1.5">
-          <MonthDot month={{ attended: true, source: 'program_ganti' }} />
-          <Text className="text-[11px] text-ink-muted">Hadir melalui program ganti usrah</Text>
-        </View>
-      ) : null}
     </View>
   );
 }
