@@ -6,7 +6,7 @@ import {
   GatewayStatusBadge,
   OnlinePaymentForm,
   PendingActions,
-  pendingReferences,
+  pendingPayments,
   useOnlinePayment,
 } from '@/components/online-payment';
 import { ScreenHeader } from '@/components/screen-header';
@@ -99,7 +99,7 @@ export default function PipisScreen() {
           setState({ step: 'sedia', summary, history });
 
           // Bil pending mungkin sudah selesai di ToyyibPay sejak kali terakhir dibuka.
-          void autoCheck(pendingReferences(history));
+          void autoCheck(pendingPayments(history).map((item) => item.reference));
         } catch (caught) {
           if (active) {
             setState({ step: 'gagal', message: toMalayError(caught, 'Gagal memuatkan rekod sumbangan.') });
@@ -143,7 +143,7 @@ export default function PipisScreen() {
 
   const { summary, history } = state;
   const reached = summary.jumlah >= summary.sasaran;
-  const pendingReference = pendingReferences(history)[0] ?? null;
+  const pending = pendingPayments(history);
 
   return (
     <Screen padTop={false}>
@@ -197,7 +197,7 @@ export default function PipisScreen() {
         <OnlinePaymentForm
           payment={payment}
           caption="FPX atau kad. Masukkan sebarang amaun, minimum RM1."
-          pendingReference={pendingReference}
+          pending={pending}
         />
 
         <View className="pb-8">

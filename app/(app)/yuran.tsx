@@ -6,7 +6,7 @@ import {
   GatewayStatusBadge,
   OnlinePaymentForm,
   PendingActions,
-  pendingReferences,
+  pendingPayments,
   useOnlinePayment,
 } from '@/components/online-payment';
 import { ScreenHeader } from '@/components/screen-header';
@@ -97,7 +97,7 @@ export default function YuranScreen() {
           setState({ step: 'sedia', summary, payments });
 
           // Bil pending mungkin sudah selesai di ToyyibPay sejak kali terakhir dibuka.
-          void autoCheck(pendingReferences(payments));
+          void autoCheck(pendingPayments(payments).map((item) => item.reference));
         } catch (caught) {
           if (active) {
             setState({ step: 'gagal', message: toMalayError(caught, 'Gagal memuatkan rekod yuran.') });
@@ -142,7 +142,7 @@ export default function YuranScreen() {
   const { tertunggak, kredit, years } = state.summary;
   const { payments } = state;
   const settled = tertunggak === 0;
-  const pendingReference = pendingReferences(payments)[0] ?? null;
+  const pending = pendingPayments(payments);
 
   return (
     <Screen padTop={false}>
@@ -190,7 +190,7 @@ export default function YuranScreen() {
               ? 'FPX atau kad. Tunggakan anda ' + ringgit(tertunggak) + ' — bayar sebahagian atau semua, minimum RM1.'
               : 'FPX atau kad. Minimum RM1; lebihan menjadi kredit untuk caj akan datang.'
           }
-          pendingReference={pendingReference}
+          pending={pending}
         />
 
         <View>

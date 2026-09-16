@@ -13,9 +13,11 @@ import { toMalayError } from '@/lib/errors';
 import {
   cancelGatewayPayment,
   createGatewayBill,
+  displayAmount,
   paymentStatusLabel,
   paymentStatusTone,
   refreshGatewayPayment,
+  type GatewayAwareRow,
   type GatewayKind,
   type GatewayStatus,
 } from '@/lib/toyyibpay';
@@ -31,10 +33,30 @@ import {
 
 type PaymentNotice = { tone: 'positive' | 'negative' | 'warn' | 'info'; message: string };
 
-export const PENDING_MESSAGE = 'Bayaran sedang diproses. Semak semula sebentar lagi.';
-
 /** Had semakan automatik setiap kali skrin dibuka — setiap satu memanggil ToyyibPay. */
 const AUTO_CHECK_LIMIT = 5;
+
+/** Had masa setiap panggilan rangkaian — tiada spinner yang boleh berputar selama-lamanya. */
+const NETWORK_TIMEOUT_MS = 20000;
+
+function withTimeout<T>(promise: Promise<T>, label: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(
+      () => reject(new Error(label + ' mengambil masa terlalu lama. Semak sambungan internet dan cuba lagi.')),
+      NETWORK_TIMEOUT_MS,
+    );
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timer);
+        reject(error);
+      },
+    );
+  });
+}
 
 export function useOnlinePayment({
   kind,
@@ -53,7 +75,9 @@ export function useOnlinePayment({
   const [checking, setChecking] = useState<string | null>(null);
   const [notice, setNotice] = useState<PaymentNotice | null>(null);
   const [confirmCancel, setConfirmCancel] = useState<string | null>(null);
-  const [cancelling, setCancelling] = useState(false);
+  /** Rujukan yang sedang dibatalkan — dipapar pada baris itu, bukan dalam dialog. */
+  const [cancelling, setCancelling] = useState<string | null>(null);
+  const cancellingRef = useRef(false);
   const autoChecking = useRef(false);
 
   const parsedAmount = Math.round(Number.parseFloat(amount) * 100) / 100;
@@ -64,11 +88,11 @@ export function useOnlinePayment({
     async (reference: string) => {
       let status: GatewayStatus | 'unknown' = 'unknown';
       try {
-        status = await refreshGatewayPayment(reference);
+        status = await withTimeout(refreshGatewayPayment(reference), 'Semakan status');
       } catch {
         // Webhook masih boleh menyelesaikannya — paparan tetap dimuat semula.
       }
-      await reload();
+      await withTimeout(reload(), 'Muat semula');
       return status;
     },
     [reload],
@@ -155,21 +179,29 @@ export function useOnlinePayment({
     }
   }
 
-  async function cancel() {
-    const reference = confirmCancel;
-    if (!reference || cancelling) return;
-    setCancelling(true);
+  /*
+    Dialog DITUTUP SEBELUM sebarang panggilan rangkaian. Versi asal menutupnya
+    dalam `finally` — selepas RPC DAN muat semula — sambil mengunci "Kembali"
+    (busy). Mana-mana panggilan yang lambat atau tergantung meninggalkan dialog
+    terbuka tanpa jalan keluar. Kemajuan kini dipapar pada baris itu sendiri
+    ("Membatalkan…"), dan setiap panggilan dihadkan masa.
+  */
+  async function cancel(reference: string | null = confirmCancel) {
+    setConfirmCancel(null);
+    if (!reference || cancellingRef.current) return;
+    cancellingRef.current = true;
+    setCancelling(reference);
     try {
-      await cancelGatewayPayment(kind, reference);
-      await reload();
+      await withTimeout(cancelGatewayPayment(kind, reference), 'Pembatalan');
       setNotice({ tone: 'info', message: 'Bayaran dibatalkan.' });
     } catch (caught) {
-      // Mungkin baru sahaja disahkan oleh webhook — muat semula supaya paparan jujur.
-      await reload().catch(() => {});
+      console.error('Batal bayaran gagal', reference, caught);
       setNotice({ tone: 'negative', message: toMalayError(caught, 'Gagal membatalkan bayaran.') });
     } finally {
-      setCancelling(false);
-      setConfirmCancel(null);
+      // Muat semula dalam kedua-dua kes: bil itu mungkin baru sahaja disahkan oleh webhook.
+      await withTimeout(reload(), 'Muat semula').catch((caught) => console.error('Muat semula gagal', caught));
+      cancellingRef.current = false;
+      setCancelling(null);
     }
   }
 
@@ -194,25 +226,36 @@ export function useOnlinePayment({
 
 export type OnlinePayment = ReturnType<typeof useOnlinePayment>;
 
-/** Rujukan bil pending, terbaharu dahulu — untuk banner dan semakan automatik. */
-export function pendingReferences(
-  rows: { method: string; status: GatewayStatus; gateway_reference: string | null }[],
-): string[] {
+type PendingSource = GatewayAwareRow & {
+  method: string;
+  gateway_reference: string | null;
+  created_at: string;
+};
+
+export type PendingPayment = { reference: string; amount: number; created_at: string };
+
+/** Bil pending, terbaharu dahulu — untuk banner dan semakan automatik. */
+export function pendingPayments(rows: PendingSource[]): PendingPayment[] {
   return rows
     .filter((row) => row.method === 'gateway' && row.status === 'pending' && row.gateway_reference)
-    .map((row) => row.gateway_reference as string);
+    .map((row) => ({
+      reference: row.gateway_reference as string,
+      amount: displayAmount(row),
+      created_at: row.created_at,
+    }));
 }
 
 export function OnlinePaymentForm({
   payment,
   caption,
-  pendingReference,
+  pending,
 }: {
   payment: OnlinePayment;
   caption: string;
-  /** Bil pending terbaharu, jika ada. */
-  pendingReference: string | null;
+  /** Semua bil pending, terbaharu dahulu. */
+  pending: PendingPayment[];
 }) {
+  const latest = pending[0] ?? null;
   const { amount, setAmount, parsedAmount, amountValid, paying, notice, pay, formatAmount } = payment;
 
   return (
@@ -221,10 +264,25 @@ export function OnlinePaymentForm({
       <View className="gap-4">
         {notice ? <Notice tone={notice.tone} message={notice.message} /> : null}
 
-        {pendingReference ? (
+        {latest ? (
           <View>
-            <Notice tone="warn" message={PENDING_MESSAGE} />
-            <PendingActions payment={payment} method="gateway" status="pending" reference={pendingReference} />
+            {/*
+              Amaun, tarikh dan bilangan dinyatakan. Tanpanya, membatalkan satu bil
+              sementara bil pending yang lebih lama masih wujud memaparkan banner
+              yang SAMA semula — kelihatan seperti pembatalan tidak berlaku.
+            */}
+            <Notice
+              tone="warn"
+              message={
+                'Bayaran ' +
+                formatAmount(latest.amount) +
+                ' (' +
+                new Date(latest.created_at).toLocaleDateString('ms-MY') +
+                ') sedang diproses. Semak semula sebentar lagi.' +
+                (pending.length > 1 ? ' ' + (pending.length - 1) + ' lagi bil belum selesai dalam sejarah di bawah.' : '')
+              }
+            />
+            <PendingActions payment={payment} method="gateway" status="pending" reference={latest.reference} />
           </View>
         ) : null}
 
@@ -253,8 +311,7 @@ export function OnlinePaymentForm({
         confirmLabel="Batalkan"
         cancelLabel="Kembali"
         destructive
-        busy={payment.cancelling}
-        onConfirm={payment.cancel}
+        onConfirm={() => void payment.cancel()}
         onCancel={() => payment.requestCancel(null)}
       />
     </View>
@@ -281,7 +338,7 @@ export function PendingActions({
 }) {
   if (method !== 'gateway' || status !== 'pending' || !reference) return null;
 
-  const busy = payment.checking !== null || payment.cancelling;
+  const busy = payment.checking !== null || payment.cancelling !== null;
 
   return (
     <View className="mt-2 flex-row items-center gap-5">
@@ -291,7 +348,9 @@ export function PendingActions({
         </Text>
       </Pressable>
       <Pressable onPress={() => payment.requestCancel(reference)} disabled={busy} hitSlop={8}>
-        <Text className="text-sm font-semibold text-negative">Batalkan</Text>
+        <Text className="text-sm font-semibold text-negative">
+          {payment.cancelling === reference ? 'Membatalkan…' : 'Batalkan'}
+        </Text>
       </Pressable>
     </View>
   );
