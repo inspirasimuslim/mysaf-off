@@ -37,6 +37,45 @@ function splitImports(source) {
   return { imports: imports.map((line) => line.trim()), body };
 }
 
+const NAMED_IMPORT = /^import\s*\{([\s\S]*?)\}\s*from\s*(['"])([^'"]+)\2;?$/;
+
+/**
+ * Satukan import bernama daripada sumber yang sama.
+ *
+ * Deduplikasi teks sahaja tidak cukup: `_shared/admin.ts` mengimport
+ * `{ createClient, type SupabaseClient }` dan fungsi itu sendiri
+ * `{ createClient }` daripada modul yang sama — dua baris berbeza, dan dalam
+ * satu fail ia menjadi "Identifier 'createClient' has already been declared".
+ * Import lain (default, namespace) dikekalkan, hanya diduplikasi mengikut teks.
+ */
+function mergeImports(lines) {
+  const named = new Map();
+  const others = [];
+
+  for (const line of lines) {
+    const match = NAMED_IMPORT.exec(line);
+    if (!match) {
+      if (!others.includes(line)) others.push(line);
+      continue;
+    }
+    const source = match[3];
+    const specifiers = named.get(source) ?? new Map();
+    for (const raw of match[1].split(',')) {
+      const spec = raw.trim().replace(/\s+/g, ' ');
+      if (!spec) continue;
+      const bare = spec.replace(/^type\s+/, '');
+      // Import nilai menang atas `type` untuk nama yang sama.
+      if (!specifiers.has(bare) || specifiers.get(bare).startsWith('type ')) specifiers.set(bare, spec);
+    }
+    named.set(source, specifiers);
+  }
+
+  return [
+    ...[...named].map(([source, specs]) => `import { ${[...specs.values()].join(', ')} } from '${source}';`),
+    ...others,
+  ];
+}
+
 const shared = splitImports(readFileSync(SHARED_FILE, 'utf8'));
 // `export` dibuang: dalam satu fail, helper hanya perlu wujud, bukan dieksport.
 const sharedBody = shared.body.replace(/^export\s+(?=(?:async\s+)?(?:const|let|function|class|type|interface)\b)/gm, '');
@@ -57,7 +96,7 @@ for (const name of names) {
   const own = splitImports(readFileSync(indexPath, 'utf8'));
   const usesShared = own.imports.some((line) => SHARED_IMPORT.test(line));
   const ownImports = own.imports.filter((line) => !SHARED_IMPORT.test(line));
-  const imports = [...new Set([...(usesShared ? shared.imports : []), ...ownImports])];
+  const imports = mergeImports([...(usesShared ? shared.imports : []), ...ownImports]);
 
   const output = [
     '// DIJANA oleh scripts/build-deploy.mjs — jangan sunting terus.',
