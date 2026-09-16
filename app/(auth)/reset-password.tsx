@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Linking from 'expo-linking';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { KeyboardAvoidingView, Platform, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -190,7 +190,7 @@ export default function ResetPasswordScreen() {
   if (phase.step === 'menyemak') return <LoadingScreen />;
 
   return (
-    <KeyboardAvoidingView className="flex-1 bg-background" behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <View className="flex-1 bg-background">
       <Screen>
         <View className="gap-6 px-gutter">
           <View className="items-center pb-2 pt-12">
@@ -245,6 +245,6 @@ export default function ResetPasswordScreen() {
           )}
         </View>
       </Screen>
-    </KeyboardAvoidingView>
+    </View>
   );
 }

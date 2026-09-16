@@ -1,8 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Pressable, Text, TextInput, View, type TextInputProps } from 'react-native';
 
 import { Colors } from '@/constants/theme';
+import { useKeyboardAwareField } from '@/lib/keyboard-aware';
 
 type Props = Omit<TextInputProps, 'style' | 'className'> & {
   label: string;
@@ -11,9 +12,24 @@ type Props = Omit<TextInputProps, 'style' | 'className'> & {
   secure?: boolean;
 };
 
-export function TextField({ label, error, secure = false, ...rest }: Props) {
+export function TextField({
+  label,
+  error,
+  secure = false,
+  onFocus,
+  onBlur,
+  onContentSizeChange,
+  ...rest
+}: Props) {
   const [hidden, setHidden] = useState(true);
   const [focused, setFocused] = useState(false);
+  /*
+    Seluruh medan (label + kotak + ralat) yang didaftarkan, bukan TextInput
+    sahaja — supaya bekas menatal sehingga BAWAH medan kelihatan, termasuk
+    medan multiline yang tinggi dan mesej ralat di bawahnya.
+  */
+  const containerRef = useRef<View>(null);
+  const keyboard = useKeyboardAwareField();
 
   const borderClass = error ? 'border-negative' : focused ? 'border-primary' : 'border-line';
 
@@ -32,7 +48,7 @@ export function TextField({ label, error, secure = false, ...rest }: Props) {
     : 'h-14 flex-row items-center rounded-field border px-4';
 
   return (
-    <View className="gap-2">
+    <View ref={containerRef} className="gap-2">
       <Text className="text-sm font-medium text-ink-muted">{label}</Text>
 
       <View className={`${boxClass} ${surfaceClass} ${borderClass}`}>
@@ -41,9 +57,22 @@ export function TextField({ label, error, secure = false, ...rest }: Props) {
           placeholderTextColor={Colors.inkFaint}
           secureTextEntry={secure && hidden}
           textAlignVertical={rest.multiline ? 'top' : undefined}
-          onFocus={() => setFocused(true)}
-          onBlur={() => setFocused(false)}
           {...rest}
+          onFocus={(event) => {
+            setFocused(true);
+            keyboard?.focus(containerRef.current);
+            onFocus?.(event);
+          }}
+          onBlur={(event) => {
+            setFocused(false);
+            keyboard?.blur(containerRef.current);
+            onBlur?.(event);
+          }}
+          onContentSizeChange={(event) => {
+            // Medan multiline membesar semasa menaip — kekalkan bawahnya kelihatan.
+            if (focused && rest.multiline) keyboard?.focus(containerRef.current);
+            onContentSizeChange?.(event);
+          }}
         />
 
         {secure ? (

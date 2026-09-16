@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useCallback, useEffect, useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
 import { ContactAdminLink } from '@/components/contact-admin';
 import { ForgotPasswordSheet } from '@/components/forgot-password';
@@ -100,7 +100,7 @@ export default function LoginScreen() {
   }, []);
 
   return (
-    <KeyboardAvoidingView className="flex-1 bg-background" behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <View className="flex-1 bg-background">
       <Screen>
         <View className="px-gutter">
           {/*
@@ -199,6 +199,6 @@ export default function LoginScreen() {
       </Screen>
 
       <ForgotPasswordSheet visible={forgotOpen} initialEmail={email} onClose={() => setForgotOpen(false)} />
-    </KeyboardAvoidingView>
+    </View>
   );
 }

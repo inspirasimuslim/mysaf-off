@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useState } from 'react';
-import { KeyboardAvoidingView, Platform, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -81,7 +81,7 @@ export function ForcePasswordChange({ onDone }: { onDone: () => void }) {
   }, [busy, confirm, onDone, password]);
 
   return (
-    <KeyboardAvoidingView className="flex-1 bg-background" behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <View className="flex-1 bg-background">
       <Screen>
         <View className="gap-6 px-gutter pt-6">
           <View className="items-center pb-2 pt-6">
@@ -130,6 +130,6 @@ export function ForcePasswordChange({ onDone }: { onDone: () => void }) {
           <Button label="Log Keluar" variant="ghost" disabled={busy} onPress={() => void signOutEverywhere()} />
         </View>
       </Screen>
-    </KeyboardAvoidingView>
+    </View>
   );
 }

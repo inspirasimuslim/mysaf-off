@@ -1,9 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
-import type { ReactNode } from 'react';
-import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import { useRef, type ReactNode } from 'react';
+import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Colors } from '@/constants/theme';
+import { KeyboardAwareProvider, useKeyboardAware } from '@/lib/keyboard-aware';
 
 const MAX_SHEET_WIDTH = 560;
 
@@ -26,6 +27,15 @@ type Props = {
 /** Helaian ringkas untuk borang pendek (tukar emel / kata laluan). */
 export function FormModal({ visible, title, description, onClose, dismissable = true, footer, children }: Props) {
   const insets = useSafeAreaInsets();
+  const rootRef = useRef<View>(null);
+  const scrollRef = useRef<ScrollView>(null);
+  /*
+    Modal ialah tetingkap berasingan; ia mengurus papan kekuncinya sendiri.
+    Tindihan diukur pada akar skrin penuh dan dikenakan sebagai padding di situ,
+    jadi helaian naik tepat di atas papan kekunci pada iOS DAN Android
+    (KeyboardAvoidingView lama hanya aktif pada iOS).
+  */
+  const keyboard = useKeyboardAware(scrollRef, rootRef);
 
   const close = () => {
     if (dismissable) onClose();
@@ -33,7 +43,7 @@ export function FormModal({ visible, title, description, onClose, dismissable = 
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={close}>
-      <View className="flex-1 justify-end bg-black/40">
+      <View ref={rootRef} className="flex-1 justify-end bg-black/40" style={{ paddingBottom: keyboard.inset }}>
         {/* Ketuk di luar helaian untuk tutup. */}
         <Pressable
           accessibilityRole="button"
@@ -44,9 +54,7 @@ export function FormModal({ visible, title, description, onClose, dismissable = 
           onPress={close}
         />
 
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          style={{ maxHeight: '90%' }}>
+        <View style={{ maxHeight: '90%', flexShrink: 1 }}>
           {/*
             flexShrink WAJIB di sini. Tanpanya helaian mengambil tinggi penuh
             kandungannya dan melimpah keluar dari had 90% di atas — bahagian
@@ -78,15 +86,20 @@ export function FormModal({ visible, title, description, onClose, dismissable = 
 
             {/* flexShrink membenarkan senarai mengecil bila ruang skrin terhad. */}
             <ScrollView
+              ref={scrollRef}
               style={{ flexShrink: 1 }}
               keyboardShouldPersistTaps="handled"
+              onScroll={keyboard.onScroll}
+              scrollEventThrottle={16}
               showsVerticalScrollIndicator={false}>
-              <View className="gap-4 pb-1">{children}</View>
+              <KeyboardAwareProvider value={keyboard.api}>
+                <View className="gap-4 pb-1">{children}</View>
+              </KeyboardAwareProvider>
             </ScrollView>
 
             {footer ? <View className="pt-4">{footer}</View> : null}
           </View>
-        </KeyboardAvoidingView>
+        </View>
       </View>
     </Modal>
   );
