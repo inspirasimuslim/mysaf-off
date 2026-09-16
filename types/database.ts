@@ -258,6 +258,25 @@ export const KAWASAN_USRAH_OPTIONS: Option<string>[] = [
   { value: 'UA', label: 'Usrah Antarabangsa' },
 ];
 
+/**
+ * Sekolah — senarai TETAP, dengan ejaan yang SAMA persis seperti padanan dalam
+ * `member_statistics()`. Dropdown memastikan nilai baharu sentiasa padan;
+ * sebelum ini teks bebas menghasilkan pelbagai variasi ejaan.
+ *
+ * 'Lain-lain' disimpan terus sebagai nilai (tiada medan teks tambahan) dan
+ * dikira dalam baldi "Lain-lain / Tiada Rekod" oleh Rumusan Ahli.
+ */
+export const SEKOLAH_OPTIONS: Option<string>[] = [
+  { value: 'SMKA FALAHIAH', label: 'SMKA FALAHIAH' },
+  { value: 'SMKA NAIM LILBANAT', label: 'SMKA NAIM LILBANAT' },
+  { value: 'SMKA TOK BACHOK', label: 'SMKA TOK BACHOK' },
+  { value: 'MAAHAD MUHAMMADI PASIR MAS', label: 'MAAHAD MUHAMMADI PASIR MAS' },
+  { value: 'MAAHAD AMIR INDERA PETRA', label: 'MAAHAD AMIR INDERA PETRA' },
+  { value: 'SMA TG AMALIN AISYAH', label: 'SMA TG AMALIN AISYAH' },
+  { value: 'SMK KOTA DAMANSARA', label: 'SMK KOTA DAMANSARA' },
+  { value: 'Lain-lain', label: 'Lain-lain' },
+];
+
 export const JANTINA_OPTIONS: Option<string>[] = [
   { value: 'Muslimin', label: 'Muslimin' },
   { value: 'Muslimat', label: 'Muslimat' },

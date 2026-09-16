@@ -17,6 +17,7 @@ import {
   JANTINA_OPTIONS,
   KAWASAN_USRAH_OPTIONS,
   PENDAPATAN_RANGE_OPTIONS,
+  SEKOLAH_OPTIONS,
   STATUS_PEKERJAAN_OPTIONS,
   STATUS_PENGAJIAN_OPTIONS,
   STATUS_PERKAHWINAN_OPTIONS,
@@ -132,6 +133,12 @@ function countFilled(member: Member, keys: readonly (keyof Member)[]): number {
   }).length;
 }
 
+/** Pilihan rasmi, ditambah nilai semasa sebagai "(tidak dikenali)" jika ia di luar senarai. */
+function withUnrecognised(options: Option<string>[], current: string | null): Option<string>[] {
+  if (!current || options.some((option) => option.value === current)) return options;
+  return [...options, { value: current, label: current + ' (tidak dikenali)' }];
+}
+
 function usrahLabel(code: string | null): string | null {
   if (!code) return null;
   return KAWASAN_USRAH_OPTIONS.find((option) => option.value === code)?.label ?? code;
@@ -197,17 +204,16 @@ export function MemberForm({
   );
 
   /*
-    Rekod yang kawasan usrahnya belum dinormalkan akan hilang nilainya bila
-    dropdown tidak mengenali kod itu. Nilai asing ditambah sebagai pilihan
-    supaya ia kekal terpapar sehingga admin memilih penggantinya.
+    Rekod yang nilainya belum dinormalkan (kawasan usrah, sekolah) akan hilang
+    nilainya bila dropdown tidak mengenalinya. Nilai asing ditambah sebagai
+    pilihan supaya ia kekal terpapar sehingga ahli atau admin memilih
+    penggantinya — data tidak ditukar atau dikosongkan secara senyap.
   */
-  const usrahOptions = useMemo<Option<string>[]>(() => {
-    const current = draft.kawasan_usrah;
-    if (!current || KAWASAN_USRAH_OPTIONS.some((option) => option.value === current)) {
-      return KAWASAN_USRAH_OPTIONS;
-    }
-    return [...KAWASAN_USRAH_OPTIONS, { value: current, label: current + ' (tidak dikenali)' }];
-  }, [draft.kawasan_usrah]);
+  const usrahOptions = useMemo(
+    () => withUnrecognised(KAWASAN_USRAH_OPTIONS, draft.kawasan_usrah),
+    [draft.kawasan_usrah],
+  );
+  const sekolahOptions = useMemo(() => withUnrecognised(SEKOLAH_OPTIONS, draft.sekolah), [draft.sekolah]);
 
   /**
    * Medan yang berubah sahaja — mengelak menulis semula kolum yang tidak disentuh.
@@ -392,7 +398,13 @@ export function MemberForm({
   const pendidikanFields = (
     <>
       {field('Tahap pendidikan tertinggi', 'tahap_pendidikan')}
-      {field('Sekolah', 'sekolah')}
+      <PickerField
+        label="Sekolah"
+        value={draft.sekolah}
+        options={sekolahOptions}
+        onChange={(next) => set('sekolah', next)}
+        disabled={locked}
+      />
 
       <PickerField
         label="Status pengajian"
