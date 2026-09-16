@@ -1,5 +1,5 @@
-import { edgeMessage } from './members';
 import { supabase } from './supabase';
+import { toNumberOrNull, type GatewayStatus } from './toyyibpay';
 
 /**
  * Operasi pangkalan data untuk sumbangan PIPIS ASET.
@@ -24,8 +24,6 @@ export type PipisSummary = {
   status: PipisStatus;
 };
 
-export type PipisPaymentStatus = 'pending' | 'success' | 'failed';
-
 export type PipisContribution = {
   id: string;
   member_id: string;
@@ -33,7 +31,7 @@ export type PipisContribution = {
   amount: number;
   method: 'import' | 'manual_adjustment' | 'gateway';
   /** Import dan pelarasan sentiasa 'success'; hanya 'gateway' boleh lain. */
-  status: PipisPaymentStatus;
+  status: GatewayStatus;
   /** Amaun yang ahli pilih sebelum membayar online. */
   requested_amount: number | null;
   gateway_reference: string | null;
@@ -86,60 +84,9 @@ export async function fetchPipisHistory(memberId: string): Promise<PipisContribu
   return ((data as PipisContribution[] | null) ?? []).map((row) => ({
     ...row,
     amount: toNumber(row.amount),
-    requested_amount: row.requested_amount === null ? null : toNumber(row.requested_amount),
+    requested_amount: toNumberOrNull(row.requested_amount),
     status: row.status ?? 'success',
   }));
-}
-
-// --- Bayaran online (ToyyibPay) ----------------------------------------------
-
-export type PipisBill = {
-  bill_code: string;
-  payment_url: string;
-  reference: string;
-  amount: number;
-};
-
-/**
- * Cipta bil ToyyibPay. Amaun disahkan semula di pelayan (minimum RM1) — nilai
- * di sini hanya cadangan ahli.
- *
- * `returnUrl` ialah deep link app; Edge Function hanya menerima skema app
- * sendiri, jadi ia tidak boleh dijadikan pengalihan ke laman lain.
- */
-export async function createPipisBill(amount: number, returnUrl: string): Promise<PipisBill> {
-  const { data, error } = await supabase.functions.invoke('create-pipis-bill', {
-    body: { amount, return_url: returnUrl },
-  });
-  if (error) throw new Error(await edgeMessage(error, 'Gagal mencipta bil bayaran.'));
-  if (data?.error) throw new Error(String(data.error));
-  return data as PipisBill;
-}
-
-/**
- * Minta pelayan menyemak semula status satu bayaran terus dengan ToyyibPay.
- *
- * Untuk bila webhook ToyyibPay lewat. Keputusan tetap dibuat oleh pelayan
- * selepas bertanya kepada ToyyibPay — app tidak menentukan apa-apa status.
- */
-export async function refreshPipisPayment(reference: string): Promise<PipisPaymentStatus | 'unknown'> {
-  const { data, error } = await supabase.functions.invoke('toyyibpay-callback', {
-    body: { order_id: reference },
-  });
-  if (error) throw new Error(await edgeMessage(error, 'Gagal menyemak status bayaran.'));
-  const status = data?.status;
-  return status === 'success' || status === 'pending' || status === 'failed' ? status : 'unknown';
-}
-
-/** Amaun untuk dipapar: amaun sebenar bila sah, amaun dipilih bila belum. */
-export function displayAmount(row: PipisContribution): number {
-  return row.status === 'success' ? row.amount : (row.requested_amount ?? row.amount);
-}
-
-export function paymentStatusLabel(status: PipisPaymentStatus): string {
-  if (status === 'pending') return 'Sedang diproses';
-  if (status === 'failed') return 'Tidak berjaya';
-  return 'Berjaya';
 }
 
 export type PipisAdjustmentInput = {

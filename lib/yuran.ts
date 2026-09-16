@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { toNumberOrNull, type GatewayStatus } from './toyyibpay';
 
 /**
  * Operasi pangkalan data untuk yuran keahlian.
@@ -62,6 +63,51 @@ export async function fetchYuranSummary(memberId: string): Promise<YuranSummary>
     kredit: Math.max(-net, 0),
     years: rows.filter((row) => row.year !== TOTAL_ROW_YEAR),
   };
+}
+
+export type YuranPayment = {
+  id: string;
+  year: number;
+  /** Kekal 0 bagi bayaran online yang belum disahkan — lihat `displayAmount`. */
+  amount: number;
+  method: 'import_opening' | 'import' | 'manual_adjustment' | 'gateway';
+  /** Import dan pelarasan sentiasa 'success'; hanya 'gateway' boleh lain. */
+  status: GatewayStatus;
+  requested_amount: number | null;
+  gateway_reference: string | null;
+  note: string | null;
+  created_at: string;
+};
+
+/**
+ * Sejarah bayaran seorang ahli, terbaharu dahulu.
+ *
+ * Bacaan terus pada table: RLS sudah membenarkan ahli melihat bayarannya
+ * sendiri. Baris pending/gagal DIPAPAR di sini tetapi tidak dikira dalam baki —
+ * itu tugas `yuran_member_summary()`.
+ */
+export async function fetchYuranPayments(memberId: string): Promise<YuranPayment[]> {
+  const { data, error } = await supabase
+    .from('yuran_payments')
+    .select('id, year, amount, method, status, requested_amount, gateway_reference, note, created_at')
+    .eq('member_id', memberId)
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+
+  return ((data as YuranPayment[] | null) ?? []).map((row) => ({
+    ...row,
+    year: toNumber(row.year),
+    amount: toNumber(row.amount),
+    requested_amount: toNumberOrNull(row.requested_amount),
+    status: row.status ?? 'success',
+  }));
+}
+
+export function yuranMethodLabel(method: YuranPayment['method']): string {
+  if (method === 'gateway') return 'Bayaran online';
+  if (method === 'manual_adjustment') return 'Pelarasan';
+  return 'Rekod lejar';
 }
 
 /** Bilangan baris baharu yang dicipta — 0 bermakna tahun itu sudah dijana. */

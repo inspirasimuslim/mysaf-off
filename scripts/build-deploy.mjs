@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Gabungkan setiap Edge Function dengan `_shared/admin.ts` menjadi SATU fail.
+// Gabungkan setiap Edge Function dengan fail `_shared/*.ts` yang diimportnya menjadi SATU fail.
 //
 // Editor Edge Functions dalam Dashboard Supabase tidak nampak folder `_shared`,
 // jadi `import ... from '../_shared/admin.ts'` gagal bila kod ditampal di sana.
@@ -24,12 +24,13 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 
 import { join } from 'node:path';
 
 const FUNCTIONS_DIR = join('supabase', 'functions');
-const SHARED_FILE = join(FUNCTIONS_DIR, '_shared', 'admin.ts');
+const SHARED_DIR = join(FUNCTIONS_DIR, '_shared');
 const OUT_DIR = join('scratchpad', 'deploy');
 
 /** Satu pernyataan import (boleh berbilang baris), dari awal baris hingga `from '...'`. */
 const IMPORT_STATEMENT = /^import\s[\s\S]*?\sfrom\s*['"][^'"]+['"];?[ \t]*$/gm;
-const SHARED_IMPORT = /from\s*['"]\.\.\/_shared\/admin\.ts['"]/;
+/** `../_shared/x.ts` dari fungsi, atau `./x.ts` dari satu fail _shared ke yang lain. */
+const SHARED_IMPORT = /from\s*['"](?:\.\.\/_shared\/|\.\/)([\w-]+\.ts)['"]/;
 
 function splitImports(source) {
   const imports = source.match(IMPORT_STATEMENT) ?? [];
@@ -76,9 +77,31 @@ function mergeImports(lines) {
   ];
 }
 
-const shared = splitImports(readFileSync(SHARED_FILE, 'utf8'));
-// `export` dibuang: dalam satu fail, helper hanya perlu wujud, bukan dieksport.
-const sharedBody = shared.body.replace(/^export\s+(?=(?:async\s+)?(?:const|let|function|class|type|interface)\b)/gm, '');
+const sharedCache = new Map();
+
+/** Satu fail _shared: import luarnya, fail _shared yang diimportnya, dan badannya. */
+function loadShared(file) {
+  if (!sharedCache.has(file)) {
+    const parts = splitImports(readFileSync(join(SHARED_DIR, file), 'utf8'));
+    sharedCache.set(file, {
+      deps: parts.imports.map((line) => SHARED_IMPORT.exec(line)?.[1]).filter(Boolean),
+      imports: parts.imports.filter((line) => !SHARED_IMPORT.test(line)),
+      // `export` dibuang: dalam satu fail, helper hanya perlu wujud, bukan dieksport.
+      body: parts.body.replace(/^export\s+(?=(?:async\s+)?(?:const|let|function|class|type|interface)\b)/gm, ''),
+    });
+  }
+  return sharedCache.get(file);
+}
+
+/** Fail _shared yang diperlukan, kebergantungan dahulu (admin.ts sebelum toyyibpay.ts). */
+function sharedOrder(files, order = []) {
+  for (const file of files) {
+    if (order.includes(file)) continue;
+    sharedOrder(loadShared(file).deps, order);
+    if (!order.includes(file)) order.push(file);
+  }
+  return order;
+}
 
 mkdirSync(OUT_DIR, { recursive: true });
 
@@ -94,25 +117,30 @@ for (const name of names) {
   if (!existsSync(indexPath)) continue;
 
   const own = splitImports(readFileSync(indexPath, 'utf8'));
-  const usesShared = own.imports.some((line) => SHARED_IMPORT.test(line));
+  const sharedFiles = sharedOrder(own.imports.map((line) => SHARED_IMPORT.exec(line)?.[1]).filter(Boolean));
   const ownImports = own.imports.filter((line) => !SHARED_IMPORT.test(line));
-  const imports = mergeImports([...(usesShared ? shared.imports : []), ...ownImports]);
+  const imports = mergeImports([...sharedFiles.flatMap((file) => loadShared(file).imports), ...ownImports]);
 
   const output = [
     '// DIJANA oleh scripts/build-deploy.mjs — jangan sunting terus.',
-    '// Sumber: supabase/functions/' + name + '/index.ts' + (usesShared ? ' + supabase/functions/_shared/admin.ts' : ''),
+    '// Sumber: supabase/functions/' + name + '/index.ts' + sharedFiles.map((file) => ' + _shared/' + file).join(''),
     '// Tampal ke Dashboard Supabase > Edge Functions > ' + name + ' > Code, kemudian Deploy.',
     '',
     ...imports,
     '',
-    ...(usesShared ? ['// --- _shared/admin.ts ' + '-'.repeat(56), '', sharedBody, ''] : []),
+    ...sharedFiles.flatMap((file) => [
+      '// --- _shared/' + file + ' ' + '-'.repeat(Math.max(4, 68 - file.length)),
+      '',
+      loadShared(file).body,
+      '',
+    ]),
     '// --- ' + name + '/index.ts ' + '-'.repeat(Math.max(4, 64 - name.length)),
     '',
     own.body,
     '',
   ].join('\n');
 
-  if (/['"]\.\.\/_shared\//.test(output)) {
+  if (/from\s*['"](?:\.\.\/_shared\/|\.\/)/.test(output)) {
     console.error('GAGAL ' + name + ': import _shared masih tertinggal.');
     failed = true;
     continue;

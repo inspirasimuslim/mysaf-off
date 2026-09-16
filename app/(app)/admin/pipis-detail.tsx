@@ -2,6 +2,7 @@ import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Text, View } from 'react-native';
 
+import { GatewayStatusBadge } from '@/components/online-payment';
 import { ScreenHeader } from '@/components/screen-header';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -18,16 +19,15 @@ import { toMalayError } from '@/lib/errors';
 import { useGoBack } from '@/lib/navigation';
 import {
   addPipisAdjustment,
-  displayAmount,
   fetchPipisHistory,
   fetchPipisSummary,
   methodLabel,
-  paymentStatusLabel,
   peratusLabel,
   ringgitPipis,
   type PipisContribution,
   type PipisSummary,
 } from '@/lib/pipis';
+import { displayAmount } from '@/lib/toyyibpay';
 
 type Banner = { tone: 'positive' | 'negative'; message: string } | null;
 
@@ -191,12 +191,7 @@ export default function PipisDetailScreen() {
                       {ringgitPipis(displayAmount(row))}
                     </Text>
                     <View className="flex-1" />
-                    {row.method === 'gateway' ? (
-                      <Badge
-                        label={paymentStatusLabel(row.status)}
-                        tone={row.status === 'success' ? 'positive' : row.status === 'failed' ? 'negative' : 'warn'}
-                      />
-                    ) : null}
+                    <GatewayStatusBadge method={row.method} status={row.status} />
                     <Badge
                       label={methodLabel(row.method)}
                       tone={row.method === 'import' ? 'info' : 'warn'}

@@ -1,7 +1,8 @@
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { Text, View } from 'react-native';
 
+import { CheckStatusLink, GatewayStatusBadge, OnlinePaymentForm, useOnlinePayment } from '@/components/online-payment';
 import { ScreenHeader } from '@/components/screen-header';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
@@ -14,7 +15,15 @@ import { useAuth } from '@/lib/auth-context';
 import { toMalayError } from '@/lib/errors';
 import { fetchMyMemberLinked } from '@/lib/members';
 import { useGoBack } from '@/lib/navigation';
-import { fetchYuranSummary, ringgit, type YuranSummary } from '@/lib/yuran';
+import { displayAmount } from '@/lib/toyyibpay';
+import {
+  fetchYuranPayments,
+  fetchYuranSummary,
+  ringgit,
+  yuranMethodLabel,
+  type YuranPayment,
+  type YuranSummary,
+} from '@/lib/yuran';
 
 /**
  * Yuran keahlian, seperti dilihat oleh ahli sendiri.
@@ -23,11 +32,14 @@ import { fetchYuranSummary, ringgit, type YuranSummary } from '@/lib/yuran';
  * itu ialah baki KESELURUHAN dan bukan baki tahun semasa: hutang tidak berhenti
  * di sempadan tahun, dan seseorang yang berhutang RM120 tidak terbantu dengan
  * skrin yang berkata RM30.
+ *
+ * Bayaran online direkod bagi tahun semasa dan hanya mengurangkan baki selepas
+ * pelayan mengesahkannya dengan ToyyibPay — aliran yang sama seperti PIPIS.
  */
 
 type State =
   | { step: 'memuat' }
-  | { step: 'sedia'; summary: YuranSummary }
+  | { step: 'sedia'; summary: YuranSummary; payments: YuranPayment[] }
   | { step: 'tiada-rekod' }
   | { step: 'gagal'; message: string };
 
@@ -36,6 +48,16 @@ export default function YuranScreen() {
   const goBack = useGoBack();
 
   const [state, setState] = useState<State>({ step: 'memuat' });
+  const memberIdRef = useRef<string | null>(null);
+
+  const reload = useCallback(async () => {
+    const memberId = memberIdRef.current;
+    if (!memberId) return;
+    const [summary, payments] = await Promise.all([fetchYuranSummary(memberId), fetchYuranPayments(memberId)]);
+    setState({ step: 'sedia', summary, payments });
+  }, []);
+
+  const payment = useOnlinePayment({ kind: 'yuran', returnPath: 'yuran', reload, formatAmount: ringgit });
 
   useFocusEffect(
     useCallback(() => {
@@ -59,8 +81,12 @@ export default function YuranScreen() {
             return;
           }
 
-          const summary = await fetchYuranSummary(member.id);
-          if (active) setState({ step: 'sedia', summary });
+          memberIdRef.current = member.id;
+          const [summary, payments] = await Promise.all([
+            fetchYuranSummary(member.id),
+            fetchYuranPayments(member.id),
+          ]);
+          if (active) setState({ step: 'sedia', summary, payments });
         } catch (caught) {
           if (active) {
             setState({ step: 'gagal', message: toMalayError(caught, 'Gagal memuatkan rekod yuran.') });
@@ -103,7 +129,9 @@ export default function YuranScreen() {
   }
 
   const { tertunggak, kredit, years } = state.summary;
+  const { payments } = state;
   const settled = tertunggak === 0;
+  const hasPending = payments.some((row) => row.method === 'gateway' && row.status === 'pending');
 
   return (
     <Screen padTop={false}>
@@ -144,7 +172,17 @@ export default function YuranScreen() {
           )}
         </Card>
 
-        <View className="pb-8">
+        <OnlinePaymentForm
+          payment={payment}
+          caption={
+            tertunggak > 0
+              ? 'FPX atau kad. Tunggakan anda ' + ringgit(tertunggak) + ' — bayar sebahagian atau semua, minimum RM1.'
+              : 'FPX atau kad. Minimum RM1; lebihan menjadi kredit untuk caj akan datang.'
+          }
+          hasPending={hasPending}
+        />
+
+        <View>
           <SectionTitle
             title="Pecahan Tahun"
             caption="Baris 2025 ialah baki permulaan — hutang terkumpul sebelum sistem ini."
@@ -180,6 +218,48 @@ export default function YuranScreen() {
                   </View>
                 );
               })}
+            </View>
+          )}
+        </View>
+
+        <View className="pb-8">
+          <SectionTitle title="Sejarah Bayaran" caption="Terbaharu dahulu." />
+
+          {payments.length === 0 ? (
+            <EmptyState
+              icon="receipt-outline"
+              title="Tiada bayaran lagi"
+              description="Bayaran anda akan muncul di sini sebaik ia direkodkan."
+            />
+          ) : (
+            <View className="gap-2">
+              {payments.map((row) => (
+                <View key={row.id} className="rounded-field border border-line bg-surface p-4">
+                  <View className="flex-row items-center gap-2">
+                    <Text
+                      className={`text-base font-bold ${row.status === 'success' ? 'text-ink' : 'text-ink-muted'} ${
+                        row.status === 'failed' ? 'line-through' : ''
+                      }`}>
+                      {ringgit(displayAmount(row))}
+                    </Text>
+                    <View className="flex-1" />
+                    <GatewayStatusBadge method={row.method} status={row.status} />
+                    <Badge label={yuranMethodLabel(row.method)} tone={row.amount < 0 ? 'warn' : 'info'} />
+                  </View>
+
+                  <Text className="mt-2 text-xs text-ink-muted">
+                    {'Tahun ' + row.year + ' · ' + new Date(row.created_at).toLocaleDateString('ms-MY')}
+                    {row.note ? ' · ' + row.note : ''}
+                  </Text>
+
+                  <CheckStatusLink
+                    payment={payment}
+                    method={row.method}
+                    status={row.status}
+                    reference={row.gateway_reference}
+                  />
+                </View>
+              ))}
             </View>
           )}
         </View>
