@@ -1,11 +1,11 @@
-import * as Location from 'expo-location';
-import { useCallback, useMemo, useState } from 'react';
+import { createElement, useCallback, useEffect, useMemo, useState } from 'react';
 import { Platform, Text, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 
 import { Button } from '@/components/ui/button';
 import { Notice } from '@/components/ui/notice';
 import { TextField } from '@/components/ui/text-field';
+import { LocationError, readCurrentCoords } from '@/lib/geolocation';
 
 /**
  * Pemilih lokasi program.
@@ -15,10 +15,15 @@ import { TextField } from '@/components/ui/text-field';
  * sejajar dengan kekangan kos projek ini.
  *
  * `react-native-webview` tiada pelaksanaan untuk react-native-web, jadi web
- * mendapat medan koordinat manual dan bukan peta. Butang "Guna Lokasi Semasa"
- * berfungsi pada KEDUA-DUA platform (`expo-location` menggunakan geolokasi
- * pelayar di web), jadi laluan yang paling lazim tidak hilang di mana-mana.
+ * melukis HTML peta yang SAMA dalam `<iframe srcdoc>`; pin dihantar balik
+ * melalui `window.parent.postMessage`. Medan koordinat manual kekal di web
+ * sebagai sandaran (jubin peta disekat, atau koordinat disalin dari Google
+ * Maps). Butang "Guna Lokasi Semasa" berfungsi pada kedua-dua platform —
+ * lihat `geolocation.ts`.
  */
+
+/** Penanda mesej iframe peta — mesej `message` lain pada tetingkap diabaikan. */
+const MAP_MESSAGE_SOURCE = 'mysaff-location-picker';
 
 const DEFAULT_CENTER = { latitude: 3.139, longitude: 101.6869 }; // Kuala Lumpur
 
@@ -49,7 +54,7 @@ function mapHtml(latitude: number, longitude: number, radius: number, hasPin: bo
 </head>
 <body>
   <div id="map"></div>
-  <div class="hint">Ketuk pada peta untuk meletakkan pin lokasi</div>
+  <div class="hint">Ketuk/klik pada peta untuk meletakkan pin lokasi</div>
   <script>
     var map = L.map('map').setView([${latitude}, ${longitude}], ${hasPin ? 16 : 11});
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -71,10 +76,12 @@ function mapHtml(latitude: number, longitude: number, radius: number, hasPin: bo
 
     map.on('click', function (event) {
       place(event.latlng.lat, event.latlng.lng);
-      window.ReactNativeWebView.postMessage(JSON.stringify({
-        latitude: event.latlng.lat,
-        longitude: event.latlng.lng
-      }));
+      var payload = { source: '${MAP_MESSAGE_SOURCE}', latitude: event.latlng.lat, longitude: event.latlng.lng };
+      if (window.ReactNativeWebView) {
+        window.ReactNativeWebView.postMessage(JSON.stringify(payload));
+      } else if (window.parent && window.parent !== window) {
+        window.parent.postMessage(payload, '*');
+      }
     });
   </script>
 </body>
@@ -104,58 +111,128 @@ export function LocationPicker({ latitude, longitude, radiusMeters, onChange, di
     setError(null);
     setLocating(true);
     try {
-      const permission = await Location.requestForegroundPermissionsAsync();
-      if (!permission.granted) {
-        setError('Kebenaran lokasi diperlukan untuk menggunakan lokasi semasa.');
-        return;
-      }
-
-      const position = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
-      onChange({ latitude: position.coords.latitude, longitude: position.coords.longitude });
-    } catch {
-      setError('Gagal membaca lokasi semasa. Pastikan GPS dihidupkan dan cuba lagi.');
+      const position = await readCurrentCoords();
+      onChange({ latitude: position.latitude, longitude: position.longitude });
+    } catch (caught) {
+      setError(
+        caught instanceof LocationError
+          ? caught.message
+          : 'Gagal membaca lokasi semasa. Pastikan GPS dihidupkan dan cuba lagi.',
+      );
     } finally {
       setLocating(false);
     }
   }, [disabled, locating, onChange]);
 
+  /*
+    Teks medan manual dipegang secara tempatan. Medan terkawal yang terus
+    memaparkan `String(latitude)` menelan titik perpuluhan semasa menaip
+    ("3." → 3) dan tidak boleh dikosongkan — koordinat manual praktikalnya
+    mustahil ditaip. Nilai dihantar ke atas hanya bila KEDUA-DUA medan sah.
+  */
+  const [latText, setLatText] = useState(latitude === null ? '' : String(latitude));
+  const [lngText, setLngText] = useState(longitude === null ? '' : String(longitude));
+
+  // Pin dari luar (peta, lokasi semasa, rekod dimuatkan) menulis semula medan.
+  useEffect(() => {
+    setLatText((current) => (latitude === null || Number(current.trim()) === latitude ? current : String(latitude)));
+    setLngText((current) => (longitude === null || Number(current.trim()) === longitude ? current : String(longitude)));
+  }, [latitude, longitude]);
+
+  const latValue = Number(latText.trim());
+  const lngValue = Number(lngText.trim());
+  const latValid = latText.trim() !== '' && Number.isFinite(latValue) && Math.abs(latValue) <= 90;
+  const lngValid = lngText.trim() !== '' && Number.isFinite(lngValue) && Math.abs(lngValue) <= 180;
+
   const setCoordinate = useCallback(
-    (key: 'latitude' | 'longitude') => (value: string) => {
-      const parsed = Number.parseFloat(value);
-      if (!Number.isFinite(parsed)) return;
-      onChange({
-        latitude: key === 'latitude' ? parsed : (latitude ?? DEFAULT_CENTER.latitude),
-        longitude: key === 'longitude' ? parsed : (longitude ?? DEFAULT_CENTER.longitude),
-      });
+    (key: 'latitude' | 'longitude') => (raw: string) => {
+      const value = raw.replace(/[^\d.,\-\s]/g, '').slice(0, 40);
+
+      // Tampal "3.1390, 101.6869" dari Google Maps ke mana-mana medan.
+      const pair = /^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/.exec(value);
+      if (pair) {
+        setLatText(pair[1] ?? '');
+        setLngText(pair[2] ?? '');
+        const lat = Number(pair[1]);
+        const lng = Number(pair[2]);
+        if (Math.abs(lat) <= 90 && Math.abs(lng) <= 180) onChange({ latitude: lat, longitude: lng });
+        return;
+      }
+
+      const nextLat = key === 'latitude' ? value : latText;
+      const nextLng = key === 'longitude' ? value : lngText;
+      if (key === 'latitude') setLatText(value);
+      else setLngText(value);
+
+      const lat = Number(nextLat.trim());
+      const lng = Number(nextLng.trim());
+      if (
+        nextLat.trim() !== '' &&
+        nextLng.trim() !== '' &&
+        Number.isFinite(lat) &&
+        Number.isFinite(lng) &&
+        Math.abs(lat) <= 90 &&
+        Math.abs(lng) <= 180 &&
+        (lat !== latitude || lng !== longitude)
+      ) {
+        onChange({ latitude: lat, longitude: lng });
+      }
     },
-    [latitude, longitude, onChange],
+    [latText, lngText, latitude, longitude, onChange],
   );
+
+  // Web: pin dari iframe peta.
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof window === 'undefined') return undefined;
+    const listener = (event: MessageEvent) => {
+      const data = event.data as { source?: unknown; latitude?: unknown; longitude?: unknown } | null;
+      if (!data || data.source !== MAP_MESSAGE_SOURCE || disabled) return;
+      if (
+        typeof data.latitude === 'number' &&
+        typeof data.longitude === 'number' &&
+        Number.isFinite(data.latitude) &&
+        Number.isFinite(data.longitude)
+      ) {
+        onChange({ latitude: data.latitude, longitude: data.longitude });
+      }
+    };
+    window.addEventListener('message', listener);
+    return () => window.removeEventListener('message', listener);
+  }, [disabled, onChange]);
 
   return (
     <View className="gap-3">
       {Platform.OS === 'web' ? (
         <>
-          <Notice
-            tone="info"
-            message="Peta interaktif hanya tersedia dalam app telefon. Di pelayar, gunakan butang lokasi semasa atau masukkan koordinat secara manual."
-          />
+          <View className="h-64 overflow-hidden rounded-card border border-line">
+            {createElement('iframe', {
+              title: 'Peta lokasi program',
+              srcDoc: html,
+              style: { border: 0, width: '100%', height: '100%', pointerEvents: disabled ? 'none' : 'auto' },
+            })}
+          </View>
+          <Text className="text-xs text-ink-muted">
+            Atau masukkan koordinat secara manual (boleh tampal terus dari Google Maps, cth. 3.139, 101.6869):
+          </Text>
           <View className="flex-row gap-3">
             <View className="flex-1">
               <TextField
                 label="Latitud"
-                value={latitude === null ? '' : String(latitude)}
+                value={latText}
                 onChangeText={setCoordinate('latitude')}
                 editable={!disabled}
                 keyboardType="numbers-and-punctuation"
+                error={latText.trim() !== '' && !latValid ? 'Antara -90 dan 90.' : null}
               />
             </View>
             <View className="flex-1">
               <TextField
                 label="Longitud"
-                value={longitude === null ? '' : String(longitude)}
+                value={lngText}
                 onChangeText={setCoordinate('longitude')}
                 editable={!disabled}
                 keyboardType="numbers-and-punctuation"
+                error={lngText.trim() !== '' && !lngValid ? 'Antara -180 dan 180.' : null}
               />
             </View>
           </View>

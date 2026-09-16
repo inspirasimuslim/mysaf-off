@@ -1,7 +1,8 @@
 import * as Linking from 'expo-linking';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
-import { useCallback, useRef, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Platform, Pressable, Text, View } from 'react-native';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -70,6 +71,9 @@ export function useOnlinePayment({
   reload: () => Promise<void>;
   formatAmount: (amount: number) => string;
 }) {
+  const router = useRouter();
+  /** Web sahaja: `toyyibpay-callback` mengalihkan pelayar kembali dengan `?payment=…&ref=…`. */
+  const returned = useLocalSearchParams<{ payment?: string; ref?: string }>();
   const [amount, setAmount] = useState('');
   const [paying, setPaying] = useState(false);
   const [checking, setChecking] = useState<string | null>(null);
@@ -132,10 +136,26 @@ export function useOnlinePayment({
     if (!amountValid || paying) return;
     setPaying(true);
     setNotice(null);
+    /** Web: halaman sedang beralih ke ToyyibPay — butang kekal dikunci. */
+    let leaving = false;
 
     try {
+      // Web: `https://<origin>/pipis`; native: `mysafoff://pipis`.
       const returnUrl = Linking.createURL(returnPath);
       const bill = await createGatewayBill(kind, parsedAmount, returnUrl);
+
+      /*
+        Web: tab yang SAMA dialihkan ke ToyyibPay. `openAuthSessionAsync` di web
+        membuka popup SELEPAS panggilan rangkaian di atas — pelayar mudah alih
+        menyekatnya kerana ia bukan lagi sebahagian daripada ketikan. Selepas
+        membayar, `toyyibpay-callback` mengesahkan status dan mengalihkan
+        pelayar kembali ke skrin ini; kesan `returned` di atas menyambung.
+      */
+      if (Platform.OS === 'web') {
+        leaving = true;
+        window.location.assign(bill.payment_url);
+        return;
+      }
 
       /*
         Sesi auth dan bukan pelayar biasa: ia menutup sendiri bila ToyyibPay
@@ -156,9 +176,38 @@ export function useOnlinePayment({
     } catch (caught) {
       setNotice({ tone: 'negative', message: toMalayError(caught, 'Gagal memulakan bayaran online.') });
     } finally {
-      setPaying(false);
+      if (!leaving) setPaying(false);
     }
   }
+
+  /*
+    Web: kembali daripada ToyyibPay (muat semula penuh halaman). Status disemak
+    semula dengan pelayan — parameter URL hanya petunjuk rujukan, bukan bukti —
+    dan kemudian dibuang dari URL supaya muat semula tidak mengulang mesej.
+  */
+  const returnedRef = Platform.OS === 'web' && typeof returned.ref === 'string' ? returned.ref : null;
+  const handledReturn = useRef<string | null>(null);
+  useEffect(() => {
+    if (!returnedRef || handledReturn.current === returnedRef) return;
+    handledReturn.current = returnedRef;
+    router.setParams({ payment: undefined, ref: undefined });
+
+    void (async () => {
+      setNotice({ tone: 'info', message: 'Menyemak status bayaran anda…' });
+      try {
+        const status = await verifyAndReload(returnedRef);
+        setNotice(
+          status === 'success'
+            ? { tone: 'positive', message: 'Terima kasih! Bayaran anda telah diterima.' }
+            : status === 'failed'
+              ? { tone: 'negative', message: 'Bayaran tidak berjaya. Tiada amaun direkodkan.' }
+              : { tone: 'warn', message: 'Bayaran belum disahkan oleh ToyyibPay. Tekan "Semak status" sebentar lagi.' },
+        );
+      } catch (caught) {
+        setNotice({ tone: 'negative', message: toMalayError(caught, 'Gagal menyemak status bayaran.') });
+      }
+    })();
+  }, [returnedRef, router, verifyAndReload]);
 
   async function check(reference: string) {
     if (checking) return;

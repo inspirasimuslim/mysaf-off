@@ -159,7 +159,9 @@ export function EventQrCard({ token, eventName, subtitle, dimmed = false, childr
                   <QRCode value={token} size={qrSize} color={Colors.ink} backgroundColor={Colors.white} />
                   {/* Nama acara ikut dalam imej supaya kod dalam galeri boleh dikenal pasti. */}
                   <Text
-                    style={{ marginTop: 12, color: Colors.ink }}
+                    // `lineHeight` + ruang bawah eksplisit: tangkapan html2canvas (web) memotong
+                    // separuh bawah teks bila tinggi baris dibiar kepada pelayar.
+                    style={{ marginTop: 12, paddingBottom: 4, lineHeight: 20, color: Colors.ink }}
                     className="text-center text-sm font-semibold"
                     numberOfLines={2}>
                     {eventName}

@@ -1,5 +1,5 @@
 import { CORS_HEADERS, json } from '../_shared/admin.ts';
-import { APP_RETURN_PATTERN, fromBase64Url, reconcileGatewayPayment, type Outcome } from '../_shared/toyyibpay.ts';
+import { fromBase64Url, isAllowedReturn, reconcileGatewayPayment, type Outcome } from '../_shared/toyyibpay.ts';
 
 /**
  * Penerima status bayaran ToyyibPay — SATU fungsi untuk setiap jenis bayaran
@@ -9,7 +9,7 @@ import { APP_RETURN_PATTERN, fromBase64Url, reconcileGatewayPayment, type Outcom
  * TIGA pintu masuk, SATU pengesahan:
  *   - POST borang daripada pelayan ToyyibPay (billCallbackUrl / webhook).
  *   - GET  daripada pelayar ahli selepas membayar (billReturnUrl), laluan
- *     `/return/<deep link base64url>` — disahkan, kemudian dialihkan ke app.
+ *     `/return/<deep link atau URL web, base64url>` — disahkan, kemudian dialihkan ke app.
  *   - POST JSON `{ order_id }` daripada app ("Semak status"), untuk bil yang
  *     webhooknya lewat atau tidak pernah tiba.
  *
@@ -67,7 +67,7 @@ Deno.serve(async (request) => {
     const encoded = /\/return\/([A-Za-z0-9_-]+)/.exec(url.pathname)?.[1];
     const appUrl = encoded ? fromBase64Url(encoded) : null;
 
-    if (appUrl && APP_RETURN_PATTERN.test(appUrl)) {
+    if (appUrl && isAllowedReturn(appUrl)) {
       const target =
         appUrl +
         (appUrl.includes('?') ? '&' : '?') +

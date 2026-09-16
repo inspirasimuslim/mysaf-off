@@ -36,9 +36,18 @@ export function webDownload(blob: Blob, fileName: string): void {
   const anchor = document.createElement('a');
   anchor.href = url;
   anchor.download = fileName;
+  anchor.rel = 'noopener';
+  anchor.style.display = 'none';
+  // Dilekatkan pada dokumen: Firefox (dan WebView lama) mengabaikan klik pada pautan yang terapung.
+  document.body.appendChild(anchor);
   anchor.click();
-  // Dilepaskan kemudian: sesetengah pelayar belum mula membaca blob ketika `click()` pulang.
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  anchor.remove();
+  /*
+    Dilepaskan LAMBAT. Safari iOS bertanya "Muat turun fail?" dahulu dan hanya
+    membaca blob selepas pengguna menekan Muat Turun — URL yang sudah
+    dilepaskan dalam 1 saat menghasilkan "Muat turun gagal".
+  */
+  setTimeout(() => URL.revokeObjectURL(url), 60 * 1000);
 }
 
 /** Tulis ke cache app — sumber untuk share sheet. Nama sama ditimpa. */

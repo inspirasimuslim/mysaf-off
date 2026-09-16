@@ -19,6 +19,7 @@ import {
   recordAttendance,
   type AttendanceResult,
   type ScanMethod,
+  type ScannedEvent,
 } from '@/lib/usrah-scan';
 import { EVENT_TYPE_LABEL, dateRangeLabel, timeRangeLabel } from '@/types/database';
 
@@ -33,8 +34,14 @@ import { EVENT_TYPE_LABEL, dateRangeLabel, timeRangeLabel } from '@/types/databa
  * berlaku" di sini.
  */
 
+const WEB_CAMERA_BLOCKED =
+  'Kamera tidak dapat dibuka — sama ada disekat oleh pelayar, atau tiada kamera pada peranti ini. Benarkan Kamera melalui ikon gembok/tetapan laman di sebelah alamat dan muat semula halaman, atau ambil gambar kod QR dan tekan Upload dari Galeri di bawah.';
+
 /** Bingkai sasaran di tengah suapan kamera. */
 const FRAME = 240;
+
+/** Kod yang sudah dipadankan dengan acara, menunggu lokasi. */
+type PendingScan = { event: ScannedEvent; token: string; method: ScanMethod };
 
 type Phase =
   /** Kamera hidup, menunggu kod QR. */
@@ -43,6 +50,8 @@ type Phase =
   /** `hint`: peraturan lokasi acara yang baru dipadankan — hanya bila acara berpin. */
   | { step: 'proses'; note: string; hint?: string }
   | { step: 'berjaya'; result: AttendanceResult }
+  /** Acara berpin tetapi lokasi gagal dibaca — ahli memilih langkah seterusnya. */
+  | { step: 'lokasi'; target: PendingScan; message: string }
   | { step: 'gagal'; message: string; tone: 'negative' | 'warn' };
 
 export default function UsrahScanScreen() {
@@ -58,6 +67,23 @@ export default function UsrahScanScreen() {
 
   const [phase, setPhase] = useState<Phase>({ step: 'imbas' });
   const [picking, setPicking] = useState(false);
+  /*
+    Web: pelayar tidak membuka dialog kamera kali kedua selepas ditolak, dan
+    expo-camera web sentiasa melapor `canAskAgain: true`. Tanpa ini butang
+    "Benarkan Kamera" diam sahaja bila ditekan semula. `cameraError` juga
+    menangkap kamera yang gagal dibuka (tiada kamera, digunakan app lain).
+  */
+  const [cameraAsked, setCameraAsked] = useState(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
+
+  const askCamera = useCallback(async () => {
+    setCameraError(null);
+    const response = await requestPermission();
+    setCameraAsked(true);
+    if (!response.granted && Platform.OS === 'web') {
+      setCameraError(WEB_CAMERA_BLOCKED);
+    }
+  }, [requestPermission]);
 
   /*
     `onBarcodeScanned` menembak berkali-kali sesaat selagi kod berada dalam
@@ -68,47 +94,61 @@ export default function UsrahScanScreen() {
   */
   const busy = useRef(false);
 
-  const handleToken = useCallback(async (token: string, method: ScanMethod) => {
+  /**
+   * Lokasi → rekod, bagi acara yang sudah dipadankan.
+   *
+   * `allowNoLocation` hanya benar bila ahli sendiri memilih "Teruskan sebagai
+   * Online" selepas lokasi gagal dibaca pada acara hibrid.
+   */
+  const submit = useCallback(async (target: PendingScan, allowNoLocation: boolean) => {
+    const { event, token, method } = target;
+
+    // Program tanpa pin lokasi tidak boleh disemak jaraknya, jadi GPS
+    // langsung tidak diminta — meminta kebenaran yang tidak akan digunakan
+    // hanya melatih pengguna menolaknya.
+    //
+    // Bagi program berpin, `event_mode` menentukan peranan lokasi: acara
+    // bersemuka MENOLAK luar kawasan, hibrid melabelnya online. Petunjuk
+    // dipapar sebelum GPS dibaca.
+    const hint = event.has_pin
+      ? event.event_mode === 'hibrid'
+        ? 'Kehadiran dari luar kawasan akan direkod sebagai Online.'
+        : 'Anda mesti berada dalam kawasan program untuk rekod kehadiran.'
+      : undefined;
+
+    let coords: { latitude: number; longitude: number } | null = null;
+    if (event.has_pin && !allowNoLocation) {
+      setPhase({ step: 'proses', note: 'Membaca lokasi anda...', hint });
+      try {
+        coords = await currentCoords();
+      } catch (caught) {
+        /*
+          Lokasi gagal TIDAK lagi dihantar senyap sebagai "tiada lokasi". Dahulu
+          acara hibrid terus merekod Online — ahli yang berdiri dalam dewan
+          (lazim di pelayar: kebenaran lokasi ditolak) tidak tahu kenapa.
+          Kini sebabnya dipapar, dan ahli memilih: cuba lagi, atau (hibrid
+          sahaja) teruskan sebagai Online.
+        */
+        setPhase({
+          step: 'lokasi',
+          target,
+          message: caught instanceof ScanError ? caught.message : 'Gagal membaca lokasi semasa.',
+        });
+        return;
+      }
+    }
+
+    setPhase({ step: 'proses', note: 'Merekod kehadiran...', hint });
+    const result = await recordAttendance(event.id, token, coords, method);
+    setPhase({ step: 'berjaya', result });
+  }, []);
+
+  const run = useCallback(async (work: () => Promise<void>) => {
     if (busy.current) return;
     busy.current = true;
 
     try {
-      setPhase({ step: 'proses', note: 'Mencari program...' });
-
-      const event = await findEventByQrToken(token.trim());
-      if (!event) {
-        setPhase({
-          step: 'gagal',
-          tone: 'negative',
-          message: 'Kod QR ini bukan kod kehadiran yang sah.',
-        });
-        return;
-      }
-
-      // Program tanpa pin lokasi tidak boleh disemak jaraknya, jadi GPS
-      // langsung tidak diminta — meminta kebenaran yang tidak akan digunakan
-      // hanya melatih pengguna menolaknya.
-      //
-      // Bagi program berpin, `event_mode` menentukan peranan lokasi: acara
-      // bersemuka MENOLAK luar kawasan, hibrid melabelnya online. Petunjuk
-      // dipapar sebelum GPS dibaca. GPS yang ditolak atau gagal dihantar
-      // sebagai tiada lokasi — pelayan yang memutuskan dan memberi mesejnya.
-      const hint = event.has_pin
-        ? event.event_mode === 'hibrid'
-          ? 'Kehadiran dari luar kawasan akan direkod sebagai Online.'
-          : 'Anda mesti berada dalam kawasan program untuk rekod kehadiran.'
-        : undefined;
-
-      let coords: { latitude: number; longitude: number } | null = null;
-      if (event.has_pin) {
-        setPhase({ step: 'proses', note: 'Membaca lokasi anda...', hint });
-        coords = await currentCoords().catch(() => null);
-      }
-
-      setPhase({ step: 'proses', note: 'Merekod kehadiran...', hint });
-      const result = await recordAttendance(event.id, token.trim(), coords, method);
-
-      setPhase({ step: 'berjaya', result });
+      await work();
     } catch (caught) {
       const message =
         caught instanceof ScanError ? caught.message : 'Kehadiran tidak dapat direkodkan. Sila cuba lagi.';
@@ -123,6 +163,27 @@ export default function UsrahScanScreen() {
       busy.current = false;
     }
   }, []);
+
+  const handleToken = useCallback(
+    (rawToken: string, method: ScanMethod) =>
+      run(async () => {
+        const token = rawToken.trim();
+        setPhase({ step: 'proses', note: 'Mencari program...' });
+
+        const event = await findEventByQrToken(token);
+        if (!event) {
+          setPhase({
+            step: 'gagal',
+            tone: 'negative',
+            message: 'Kod QR ini bukan kod kehadiran yang sah.',
+          });
+          return;
+        }
+
+        await submit({ event, token, method }, false);
+      }),
+    [run, submit],
+  );
 
   const scanAgain = useCallback(() => {
     busy.current = false;
@@ -183,7 +244,7 @@ export default function UsrahScanScreen() {
       <View className="gap-6 px-gutter pt-6">
         {phase.step === 'imbas' ? (
           <>
-            {permission?.granted ? (
+            {permission?.granted && !cameraError ? (
               <View
                 className="overflow-hidden rounded-card border border-line bg-ink"
                 style={{ height: 340 }}>
@@ -192,6 +253,13 @@ export default function UsrahScanScreen() {
                   facing="back"
                   barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
                   onBarcodeScanned={({ data }) => void handleToken(data, 'scan')}
+                  onMountError={() =>
+                    setCameraError(
+                      Platform.OS === 'web'
+                        ? WEB_CAMERA_BLOCKED
+                        : 'Kamera gagal dibuka. Tutup app lain yang menggunakan kamera, atau muat naik gambar kod QR dari galeri.',
+                    )
+                  }
                 />
 
                 {/* Bingkai sasaran — hiasan semata-mata; pengesan membaca seluruh bingkai. */}
@@ -215,15 +283,17 @@ export default function UsrahScanScreen() {
                     <Ionicons name="camera-outline" size={28} color={Colors.primary} />
                   </View>
                   <Text className="text-center text-sm leading-5 text-ink-muted">
-                    {permission?.canAskAgain === false
-                      ? 'Capaian kamera telah ditolak. Benarkannya dalam tetapan peranti, atau muat naik gambar kod QR dari galeri.'
-                      : 'Kamera diperlukan untuk mengimbas kod QR program.'}
+                    {cameraError ??
+                      (permission?.canAskAgain === false
+                        ? 'Capaian kamera telah ditolak. Benarkannya dalam tetapan peranti, atau muat naik gambar kod QR dari galeri.'
+                        : 'Kamera diperlukan untuk mengimbas kod QR program.')}
                   </Text>
                   {permission?.canAskAgain === false ? null : (
                     <Button
-                      label="Benarkan Kamera"
+                      label={cameraAsked || cameraError ? 'Cuba Buka Kamera Lagi' : 'Benarkan Kamera'}
+                      variant={cameraError ? 'secondary' : 'primary'}
                       className="w-full"
-                      onPress={() => void requestPermission()}
+                      onPress={() => void askCamera()}
                     />
                   )}
                 </View>
@@ -290,6 +360,31 @@ export default function UsrahScanScreen() {
           </>
         ) : null}
 
+        {phase.step === 'lokasi' ? (
+          <>
+            <Card>
+              <View className="gap-2">
+                <Text className="text-base font-semibold text-ink">{phase.target.event.name}</Text>
+                <Text className="text-sm leading-5 text-ink-muted">
+                  {phase.target.event.event_mode === 'hibrid'
+                    ? 'Lokasi anda tidak dapat dibaca. Tanpa lokasi, kehadiran hanya boleh direkod sebagai Online.'
+                    : 'Program ini memerlukan lokasi anda untuk mengesahkan anda berada dalam kawasan.'}
+                </Text>
+              </View>
+            </Card>
+            <Notice tone="warn" message={phase.message} />
+            <Button label="Cuba Baca Lokasi Lagi" onPress={() => void run(() => submit(phase.target, false))} />
+            {phase.target.event.event_mode === 'hibrid' ? (
+              <Button
+                label="Teruskan sebagai Online"
+                variant="secondary"
+                onPress={() => void run(() => submit(phase.target, true))}
+              />
+            ) : null}
+            <Button label="Batal" variant="ghost" onPress={scanAgain} />
+          </>
+        ) : null}
+
         {phase.step === 'gagal' ? (
           <>
             <Notice tone={phase.tone} message={phase.message} />
@@ -301,7 +396,7 @@ export default function UsrahScanScreen() {
         {Platform.OS === 'web' ? (
           <Notice
             tone="info"
-            message="Di pelayar, kamera dan lokasi hanya berfungsi melalui HTTPS atau localhost, dan ketepatan GPS jauh lebih rendah daripada telefon. Gunakan app telefon untuk kehadiran sebenar."
+            message="Di pelayar, benarkan Kamera dan Lokasi bila diminta. Jika kamera tidak dapat dibuka, ambil gambar kod QR dan tekan Upload dari Galeri. Ketepatan lokasi pelayar komputer riba lebih rendah daripada telefon."
           />
         ) : null}
       </View>

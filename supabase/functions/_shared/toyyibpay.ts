@@ -21,7 +21,10 @@ export type Outcome = GatewayStatus | 'unknown';
 type GatewayKind = {
   table: 'pipis_contributions' | 'yuran_payments';
   billName: string;
+  /** Deep link app native. */
   defaultReturn: string;
+  /** Laluan app web (tanpa origin), cth. '/pipis'. */
+  webPath: string;
   /** Kolum tambahan khusus table ini untuk baris pending. */
   extraRow: () => Record<string, unknown>;
   pendingNote: string | null;
@@ -37,6 +40,7 @@ export const GATEWAY_KINDS = {
     table: 'pipis_contributions',
     billName: 'Sumbangan PIPIS ASET',
     defaultReturn: 'mysafoff://pipis',
+    webPath: '/pipis',
     extraRow: () => ({}),
     pendingNote: 'Bayaran online ToyyibPay',
   },
@@ -44,6 +48,7 @@ export const GATEWAY_KINDS = {
     table: 'yuran_payments',
     billName: 'Bayaran Yuran Tahunan',
     defaultReturn: 'mysafoff://yuran',
+    webPath: '/yuran',
     extraRow: () => ({ year: malaysiaYear() }),
     pendingNote: null,
   },
@@ -62,6 +67,40 @@ const BILL_EXPIRY_DAYS = 3;
 
 /** Deep link yang dibenarkan untuk kembali ke app — bukan pengalihan terbuka. */
 export const APP_RETURN_PATTERN = /^(mysafoff|exp|exps):\/\/[^\s]{0,250}$/;
+
+/** App web yang dihos. Pelayar tidak boleh "kembali" ke deep link `mysafoff://`. */
+const DEFAULT_WEB_ORIGIN = 'https://mysaff.vercel.app';
+
+/**
+ * Origin web yang dibenarkan sebagai destinasi kembali — senarai tetap, bukan
+ * pengalihan terbuka. `APP_WEB_ORIGINS` (dipisah koma) menambah origin lain,
+ * cth. domain sendiri kelak. localhost dibenarkan untuk `expo start --web`.
+ */
+function webOrigins(): string[] {
+  const extra = (Deno.env.get('APP_WEB_ORIGINS') ?? '')
+    .split(',')
+    .map((origin) => origin.trim().replace(/\/+$/, ''))
+    .filter(Boolean);
+  return [DEFAULT_WEB_ORIGIN, ...extra];
+}
+
+function isWebReturn(value: string): boolean {
+  if (value.length > 300 || /\s/.test(value)) return false;
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    return false;
+  }
+  if (url.username || url.password) return false;
+  if (url.protocol === 'http:' && (url.hostname === 'localhost' || url.hostname === '127.0.0.1')) return true;
+  return url.protocol === 'https:' && webOrigins().includes(url.origin);
+}
+
+/** Destinasi kembali yang selamat untuk dialihkan: deep link app ATAU URL app web yang disenarai. */
+export function isAllowedReturn(value: string): boolean {
+  return APP_RETURN_PATTERN.test(value) || isWebReturn(value);
+}
 
 export function toyyibpayBaseUrl(): string {
   return (Deno.env.get('TOYYIBPAY_BASE_URL') ?? 'https://dev.toyyibpay.com').replace(/\/+$/, '');
@@ -142,9 +181,21 @@ export async function serveCreateBill(request: Request, kind: GatewayKind): Prom
     if (amount > MAX_AMOUNT) throw new RequestError('Amaun maksimum satu bayaran online ialah RM30,000.');
     const amountSen = Math.round(amount * 100);
 
+    /*
+      Platform pemanggil menentukan ke mana pelayar kembali selepas membayar:
+      native → deep link app; web → URL sebenar app web (pelayar tidak boleh
+      membuka `mysafoff://`). Nilai yang tidak disenarai jatuh ke lalai platform.
+    */
+    const platform = text(body.platform) === 'web' ? 'web' : 'native';
     const requestedReturn = text(body.return_url);
     const appReturn =
-      requestedReturn && APP_RETURN_PATTERN.test(requestedReturn) ? requestedReturn : kind.defaultReturn;
+      platform === 'web'
+        ? requestedReturn && isWebReturn(requestedReturn)
+          ? requestedReturn
+          : DEFAULT_WEB_ORIGIN + kind.webPath
+        : requestedReturn && APP_RETURN_PATTERN.test(requestedReturn)
+          ? requestedReturn
+          : kind.defaultReturn;
 
     const admin = adminClient();
 
@@ -217,7 +268,7 @@ export async function serveCreateBill(request: Request, kind: GatewayKind): Prom
       billPayorInfo: '1',
       billAmount: String(amountSen),
       // Kembali melalui toyyibpay-callback: ia mengesahkan status dahulu, kemudian
-      // mengalihkan ke deep link app. Deep link dikodkan dalam laluan dan bukan
+      // mengalihkan ke deep link app (atau URL app web). Destinasi dikodkan dalam laluan dan bukan
       // query kerana ToyyibPay menambah `?status_id=...` sendiri.
       billReturnUrl: functionsUrl + '/toyyibpay-callback/return/' + base64Url(appReturn),
       billCallbackUrl: functionsUrl + '/toyyibpay-callback',

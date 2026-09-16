@@ -1,8 +1,7 @@
-import * as Location from 'expo-location';
-
 import type { EventType } from '@/types/database';
 
 import { toMalayError } from './errors';
+import { LocationError, readCurrentCoords, type Coords } from './geolocation';
 import { supabase } from './supabase';
 
 /**
@@ -144,32 +143,19 @@ export async function recordAttendance(
 }
 
 /**
- * Koordinat semasa peranti.
+ * Koordinat semasa peranti untuk kehadiran.
  *
- * `Accuracy.High` dan bukan `Balanced`: geofence program biasanya berpuluh
- * meter, dan ketepatan yang lebih longgar boleh menolak seseorang yang berdiri
- * betul-betul di dalam kawasan. Kebenaran yang ditolak melontar `ScanError`
- * dengan arahan yang boleh dituruti, bukan mesej sistem.
+ * `Accuracy.High` (native) / `enableHighAccuracy` + bacaan segar (web):
+ * geofence program biasanya berpuluh meter, dan ketepatan yang lebih longgar
+ * boleh menolak seseorang yang berdiri betul-betul di dalam kawasan. Lihat
+ * `geolocation.ts`. Kegagalan melontar `ScanError` dengan arahan yang boleh
+ * dituruti, bukan mesej sistem.
  */
-export async function currentCoords(): Promise<{ latitude: number; longitude: number }> {
-  let permission: Location.LocationPermissionResponse;
+export async function currentCoords(): Promise<Coords> {
   try {
-    permission = await Location.requestForegroundPermissionsAsync();
-  } catch {
-    throw new ScanError('Perkhidmatan lokasi tidak tersedia pada peranti ini.', 'location_unavailable');
-  }
-
-  if (!permission.granted) {
-    throw new ScanError(
-      'Kebenaran lokasi diperlukan untuk merekod kehadiran. Benarkan capaian lokasi dalam tetapan peranti dan cuba lagi.',
-      'location_denied',
-    );
-  }
-
-  try {
-    const position = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
-    return { latitude: position.coords.latitude, longitude: position.coords.longitude };
-  } catch {
+    return await readCurrentCoords();
+  } catch (caught) {
+    if (caught instanceof LocationError) throw new ScanError(caught.message, caught.code);
     throw new ScanError('Gagal membaca lokasi semasa. Pastikan GPS dihidupkan dan cuba lagi.', 'location_failed');
   }
 }

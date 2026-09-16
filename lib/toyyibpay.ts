@@ -1,3 +1,5 @@
+import { Platform } from 'react-native';
+
 import { edgeMessage } from './members';
 import { supabase } from './supabase';
 
@@ -35,12 +37,14 @@ const CREATE_FUNCTION: Record<GatewayKind, string> = {
  * Cipta bil ToyyibPay. Amaun disahkan semula di pelayan (minimum RM1) — nilai
  * di sini hanya cadangan ahli.
  *
- * `returnUrl` ialah deep link app; Edge Function hanya menerima skema app
- * sendiri, jadi ia tidak boleh dijadikan pengalihan ke laman lain.
+ * `returnUrl` ialah deep link app (native) atau URL app web (web). `platform`
+ * memberitahu Edge Function yang mana satu dijangka: pelayar tidak boleh
+ * kembali ke `mysafoff://`. Pelayan hanya menerima skema app sendiri atau
+ * origin web yang disenarai, jadi ia tidak boleh dijadikan pengalihan terbuka.
  */
 export async function createGatewayBill(kind: GatewayKind, amount: number, returnUrl: string): Promise<GatewayBill> {
   const { data, error } = await supabase.functions.invoke(CREATE_FUNCTION[kind], {
-    body: { amount, return_url: returnUrl },
+    body: { amount, return_url: returnUrl, platform: Platform.OS === 'web' ? 'web' : 'native' },
   });
   if (error) throw new Error(await edgeMessage(error, 'Gagal mencipta bil bayaran.'));
   if (data?.error) throw new Error(String(data.error));

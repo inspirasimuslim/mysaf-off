@@ -131,8 +131,26 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   });
 }
 
+/**
+ * Web: tab lain dalam pelayar yang sama berkongsi SATU sesi (localStorage), dan
+ * log keluar di satu tab disebarkan ke semua tab oleh Supabase. Tanpa ini, tab
+ * yang dibiarkan terbuka di belakang akan tamat tempoh dan melog keluar tab
+ * yang sedang digunakan. Setiap tab yang aktif menulis cap masa sekurang-
+ * kurangnya sekali seminit, jadi cap masa tersimpan yang LEBIH BARU daripada
+ * ingatan tab ini ialah aktiviti di tab lain.
+ */
+function adoptOtherTabActivity(now: number): void {
+  if (Platform.OS !== 'web' || !loaded) return;
+  const stored = readStored();
+  if (stored !== null && stored > lastActivity && stored <= now) {
+    log('aktiviti di tab lain: ' + stamp(stored));
+    lastActivity = stored;
+  }
+}
+
 export function reportActivity(): void {
   const now = Date.now();
+  if (now - lastActivity >= IDLE_TIMEOUT_MS) adoptOtherTabActivity(now);
 
   // Tempoh sudah tamat: sentuhan ini tidak boleh memanjangkan sesi yang sepatutnya sudah ditutup.
   if (loaded && !freshSession && now - lastActivity >= IDLE_TIMEOUT_MS) {
@@ -216,6 +234,7 @@ export function useIdleTimeout(active: boolean): void {
       timer = null;
       if (cancelled) return;
 
+      adoptOtherTabActivity(Date.now());
       const elapsed = Date.now() - lastActivity;
       log(
         'semak [' + reason + ']: aktiviti terakhir ' + stamp(lastActivity) +
@@ -251,6 +270,8 @@ export function useIdleTimeout(active: boolean): void {
     writeStored(lastActivity, 'pasang');
     check('pasang');
 
+    // Web: react-native-web memetakan AppState kepada `document.visibilitychange` —
+    // tab di latar = 'background', kembali ke tab = 'active'.
     const appState = AppState.addEventListener('change', (state) => {
       log('AppState -> ' + state);
       if (state === 'active') check('kembali-aktif');
