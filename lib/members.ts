@@ -213,7 +213,7 @@ export async function deleteMemberAccount(memberId: string): Promise<void> {
  * `FunctionsHttpError` hanya membawa "non-2xx status code". Tanpa membaca
  * badan itu, admin akan melihat mesej generik dan bukan sebab sebenar.
  */
-async function edgeMessage(error: unknown, fallback: string): Promise<string> {
+export async function edgeMessage(error: unknown, fallback: string): Promise<string> {
   const context = (error as { context?: Response })?.context;
   if (context && typeof context.json === 'function') {
     try {

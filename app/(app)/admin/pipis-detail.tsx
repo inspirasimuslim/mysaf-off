@@ -18,9 +18,11 @@ import { toMalayError } from '@/lib/errors';
 import { useGoBack } from '@/lib/navigation';
 import {
   addPipisAdjustment,
+  displayAmount,
   fetchPipisHistory,
   fetchPipisSummary,
   methodLabel,
+  paymentStatusLabel,
   peratusLabel,
   ringgitPipis,
   type PipisContribution,
@@ -183,10 +185,18 @@ export default function PipisDetailScreen() {
                 <View key={row.id} className="rounded-field border border-line bg-surface p-4">
                   <View className="flex-row items-center gap-3">
                     <Text
-                      className={`text-base font-bold ${row.amount < 0 ? 'text-negative' : 'text-ink'}`}>
-                      {ringgitPipis(row.amount)}
+                      className={`text-base font-bold ${
+                        row.status !== 'success' ? 'text-ink-muted' : row.amount < 0 ? 'text-negative' : 'text-ink'
+                      }`}>
+                      {ringgitPipis(displayAmount(row))}
                     </Text>
                     <View className="flex-1" />
+                    {row.method === 'gateway' ? (
+                      <Badge
+                        label={paymentStatusLabel(row.status)}
+                        tone={row.status === 'success' ? 'positive' : row.status === 'failed' ? 'negative' : 'warn'}
+                      />
+                    ) : null}
                     <Badge
                       label={methodLabel(row.method)}
                       tone={row.method === 'import' ? 'info' : 'warn'}

@@ -384,6 +384,11 @@ deno_version = 2
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
 
+# Dipanggil oleh pelayan ToyyibPay dan pelayar ahli — tiada JWT Supabase.
+# Selamat kerana fungsi ini hanya membaca status semula daripada ToyyibPay.
+[functions.toyyibpay-callback]
+verify_jwt = false
+
 [analytics]
 enabled = true
 port = 54327
