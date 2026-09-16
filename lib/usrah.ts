@@ -129,3 +129,108 @@ export async function importUsrahAttendance(
 
   return done;
 }
+
+// --- Butiran kehadiran (kawasan, lokasi, tarikh) -------------------------------
+
+/** 'system' = imbasan QR; 'admin' = direkod atau dibetulkan secara manual. */
+export type UsrahRecordedBy = 'system' | 'admin';
+
+/** Satu bulan dengan butirannya. Bulan tanpa baris: semua nilai `null`. */
+export type UsrahMonthRecord = {
+  month: number;
+  attended: boolean | null;
+  source: UsrahAttendanceSource | null;
+  kawasanAttended: string | null;
+  locationText: string | null;
+  /** 'YYYY-MM-DD' */
+  attendedDate: string | null;
+  recordedBy: UsrahRecordedBy | null;
+};
+
+type RecordRow = {
+  month: number;
+  attended: boolean | null;
+  attendance_source: UsrahAttendanceSource;
+  kawasan_attended: string | null;
+  location_text: string | null;
+  attended_date: string | null;
+  recorded_by: UsrahRecordedBy;
+};
+
+/**
+ * 12 bulan setahun beserta butiran — untuk Sejarah Kehadiran ahli dan skrin
+ * pembetulan admin. RLS yang sama: ahli membaca barisnya sendiri, admin
+ * LAJNAH TARBIAH membaca semua.
+ */
+export async function fetchUsrahYearRecords(memberId: string, year: number): Promise<UsrahMonthRecord[]> {
+  const { data, error } = await supabase
+    .from('usrah_monthly_attendance')
+    .select('month, attended, attendance_source, kawasan_attended, location_text, attended_date, recorded_by')
+    .eq('member_id', memberId)
+    .eq('year', year);
+
+  if (error) throw error;
+
+  const months: UsrahMonthRecord[] = Array.from({ length: 12 }, (_, index) => ({
+    month: index + 1,
+    attended: null,
+    source: null,
+    kawasanAttended: null,
+    locationText: null,
+    attendedDate: null,
+    recordedBy: null,
+  }));
+
+  ((data as RecordRow[] | null) ?? []).forEach((row) => {
+    if (row.month < 1 || row.month > 12) return;
+    months[row.month - 1] = {
+      month: row.month,
+      attended: row.attended,
+      source: row.attendance_source,
+      kawasanAttended: row.kawasan_attended,
+      locationText: row.location_text,
+      attendedDate: row.attended_date,
+      recordedBy: row.recorded_by,
+    };
+  });
+
+  return months;
+}
+
+export type AdminUsrahAttendanceInput = {
+  memberId: string;
+  year: number;
+  month: number;
+  attended: boolean;
+  kawasanAttended: string | null;
+  locationText: string | null;
+  /** 'YYYY-MM-DD' atau null */
+  attendedDate: string | null;
+};
+
+/**
+ * Rekod atau betulkan satu bulan. Kebenaran disemak di pelayan
+ * (`admin_set_usrah_attendance` — LAJNAH TARBIAH sunting / Super Admin).
+ */
+export async function adminSetUsrahAttendance(input: AdminUsrahAttendanceInput): Promise<void> {
+  const { error } = await supabase.rpc('admin_set_usrah_attendance', {
+    p_member_id: input.memberId,
+    p_year: input.year,
+    p_month: input.month,
+    p_attended: input.attended,
+    p_kawasan_attended: input.kawasanAttended,
+    p_location_text: input.locationText,
+    p_attended_date: input.attendedDate,
+  });
+  if (error) throw new Error(error.message);
+}
+
+/** Tahun untuk pemilih: tahun depan hingga tahun data terawal (2025). */
+export function usrahYearOptions(): { value: string; label: string }[] {
+  const current = new Date().getFullYear();
+  const years: { value: string; label: string }[] = [];
+  for (let year = current + 1; year >= Math.min(2025, current); year -= 1) {
+    years.push({ value: String(year), label: String(year) });
+  }
+  return years;
+}

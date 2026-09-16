@@ -30,7 +30,7 @@ export type ActivityCategory = 'ahli' | 'organisasi' | 'program' | 'kewangan';
 const CATEGORY_TABLES: Record<ActivityCategory, string[]> = {
   ahli: ['members'],
   organisasi: ['departments', 'generations', 'admin_assignments', 'profiles', 'org_positions'],
-  program: ['usrah_events', 'announcements'],
+  program: ['usrah_events', 'announcements', 'usrah_monthly_attendance'],
   kewangan: ['yuran_payments', 'pipis_contributions', 'adhoc_payment_types'],
 };
 
@@ -49,6 +49,7 @@ export const TARGET_TYPE_LABEL: Record<string, string> = {
   profiles: 'Peranan',
   org_positions: 'Carta Organisasi',
   usrah_events: 'Program/Usrah',
+  usrah_monthly_attendance: 'Kehadiran Usrah',
   announcements: 'Pengumuman',
   yuran_payments: 'Yuran',
   pipis_contributions: 'PIPIS',

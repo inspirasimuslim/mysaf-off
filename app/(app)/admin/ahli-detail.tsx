@@ -1,9 +1,10 @@
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
 
 import { MemberForm } from '@/components/member-form';
 import { ScreenHeader } from '@/components/screen-header';
+import { ActionRow } from '@/components/ui/action-row';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { FormModal } from '@/components/ui/form-modal';
@@ -13,7 +14,7 @@ import { Notice } from '@/components/ui/notice';
 import { Screen } from '@/components/ui/screen';
 import { TextField } from '@/components/ui/text-field';
 import { pickAvatar, uploadAvatar } from '@/lib/avatar';
-import { useMemberAccess } from '@/lib/department-access';
+import { useMemberAccess, useUsrahAccess } from '@/lib/department-access';
 import { toMalayError } from '@/lib/errors';
 import { deleteMemberAccount, fetchGenerations, fetchMember, updateMember } from '@/lib/members';
 import { useGoBack } from '@/lib/navigation';
@@ -27,6 +28,9 @@ export default function AhliDetailScreen() {
   const goBack = useGoBack();
   const { id } = useLocalSearchParams<{ id?: string }>();
   const { loading: accessLoading, canView, canEdit } = useMemberAccess();
+  const router = useRouter();
+  // Kebenaran BERASINGAN: kehadiran usrah milik LAJNAH TARBIAH, bukan pemilik rekod ahli.
+  const usrahAccess = useUsrahAccess();
   const { isSuperAdmin } = usePermissions();
 
   const [member, setMember] = useState<Member | null>(null);
@@ -253,6 +257,20 @@ export default function AhliDetailScreen() {
             memberi seseorang tiga hari untuk log masuk dengan kata laluan yang
             diketahui umum. Itu perbezaan jenis, bukan darjah.
           */}
+          {usrahAccess.canView ? (
+            <ActionRow
+              icon="people-outline"
+              title="Rekod / Betulkan Kehadiran Usrah"
+              subtitle="Kehadiran bulanan dengan kawasan, tempat dan tarikh"
+              onPress={() =>
+                router.push({
+                  pathname: '/(app)/admin/ahli-usrah-history',
+                  params: { id: member.id, nama: member.full_name, nombor: member.nombor_ahli ?? '' },
+                })
+              }
+            />
+          ) : null}
+
           {isSuperAdmin() ? (
             <View className="gap-3 pt-2">
               <Button

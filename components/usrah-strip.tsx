@@ -1,6 +1,7 @@
-import { useFocusEffect } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
 import { Colors } from '@/constants/theme';
 import { fetchMyMemberLinked } from '@/lib/members';
@@ -69,6 +70,7 @@ function MonthDot({ month }: { month: UsrahMonthDetail | undefined }) {
 }
 
 export function UsrahStrip({ userId }: { userId: string | null }) {
+  const router = useRouter();
   const year = new Date().getFullYear();
   const [state, setState] = useState<State>({ ready: false });
 
@@ -112,8 +114,16 @@ export function UsrahStrip({ userId }: { userId: string | null }) {
       untuk dibaca sebagai satu seksyen — tetapi bukan berat yang menjadikannya
       kad ketiga.
     */
-    <View className="rounded-card border border-line p-card">
-      <Text className="text-sm font-semibold text-ink">Kehadiran Usrah {year}</Text>
+    // Seluruh kad boleh diketik — membuka Sejarah Kehadiran dengan kawasan, tempat dan tarikh.
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={'Kehadiran Usrah ' + year + '. Ketik untuk lihat sejarah kehadiran.'}
+      onPress={() => router.push('/(app)/usrah-sejarah')}
+      className="rounded-card border border-line p-card active:opacity-70">
+      <View className="flex-row items-center">
+        <Text className="flex-1 text-sm font-semibold text-ink">Kehadiran Usrah {year}</Text>
+        <Ionicons name="chevron-forward" size={16} color={Colors.inkFaint} />
+      </View>
 
       <View className="mt-3 flex-row items-start justify-between">
         {MONTH_LABELS.map((label, index) => (
@@ -143,6 +153,6 @@ export function UsrahStrip({ userId }: { userId: string | null }) {
           </View>
         ))}
       </View>
-    </View>
+    </Pressable>
   );
 }
