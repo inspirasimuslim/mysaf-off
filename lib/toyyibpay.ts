@@ -62,6 +62,25 @@ export async function refreshGatewayPayment(reference: string): Promise<GatewayS
   return status === 'success' || status === 'pending' || status === 'failed' ? status : 'unknown';
 }
 
+const TABLE: Record<GatewayKind, string> = {
+  pipis: 'pipis_contributions',
+  yuran: 'yuran_payments',
+};
+
+/**
+ * Ahli membatalkan bil pending miliknya sendiri — status menjadi 'failed'.
+ *
+ * Hanya kemudahan paparan. Jika bil itu dibayar juga selepas dibatalkan,
+ * pelayan tetap menukarnya kepada 'success' bila ToyyibPay mengesahkannya.
+ */
+export async function cancelGatewayPayment(kind: GatewayKind, reference: string): Promise<void> {
+  const { error } = await supabase.rpc('cancel_pending_gateway_payment', {
+    p_table: TABLE[kind],
+    p_reference: reference,
+  });
+  if (error) throw new Error(error.message);
+}
+
 /** Amaun untuk dipapar: amaun sebenar bila sah, amaun dipilih bila belum. */
 export function displayAmount(row: GatewayAwareRow): number {
   return row.status === 'success' ? row.amount : (row.requested_amount ?? row.amount);

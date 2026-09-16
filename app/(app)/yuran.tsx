@@ -2,7 +2,13 @@ import { useFocusEffect } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
 import { Text, View } from 'react-native';
 
-import { CheckStatusLink, GatewayStatusBadge, OnlinePaymentForm, useOnlinePayment } from '@/components/online-payment';
+import {
+  GatewayStatusBadge,
+  OnlinePaymentForm,
+  PendingActions,
+  pendingReferences,
+  useOnlinePayment,
+} from '@/components/online-payment';
 import { ScreenHeader } from '@/components/screen-header';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
@@ -58,6 +64,7 @@ export default function YuranScreen() {
   }, []);
 
   const payment = useOnlinePayment({ kind: 'yuran', returnPath: 'yuran', reload, formatAmount: ringgit });
+  const { autoCheck } = payment;
 
   useFocusEffect(
     useCallback(() => {
@@ -86,7 +93,11 @@ export default function YuranScreen() {
             fetchYuranSummary(member.id),
             fetchYuranPayments(member.id),
           ]);
-          if (active) setState({ step: 'sedia', summary, payments });
+          if (!active) return;
+          setState({ step: 'sedia', summary, payments });
+
+          // Bil pending mungkin sudah selesai di ToyyibPay sejak kali terakhir dibuka.
+          void autoCheck(pendingReferences(payments));
         } catch (caught) {
           if (active) {
             setState({ step: 'gagal', message: toMalayError(caught, 'Gagal memuatkan rekod yuran.') });
@@ -97,7 +108,7 @@ export default function YuranScreen() {
       return () => {
         active = false;
       };
-    }, [user?.id]),
+    }, [user?.id, autoCheck]),
   );
 
   if (state.step === 'memuat') return <LoadingScreen />;
@@ -131,7 +142,7 @@ export default function YuranScreen() {
   const { tertunggak, kredit, years } = state.summary;
   const { payments } = state;
   const settled = tertunggak === 0;
-  const hasPending = payments.some((row) => row.method === 'gateway' && row.status === 'pending');
+  const pendingReference = pendingReferences(payments)[0] ?? null;
 
   return (
     <Screen padTop={false}>
@@ -179,7 +190,7 @@ export default function YuranScreen() {
               ? 'FPX atau kad. Tunggakan anda ' + ringgit(tertunggak) + ' — bayar sebahagian atau semua, minimum RM1.'
               : 'FPX atau kad. Minimum RM1; lebihan menjadi kredit untuk caj akan datang.'
           }
-          hasPending={hasPending}
+          pendingReference={pendingReference}
         />
 
         <View>
@@ -252,7 +263,7 @@ export default function YuranScreen() {
                     {row.note ? ' · ' + row.note : ''}
                   </Text>
 
-                  <CheckStatusLink
+                  <PendingActions
                     payment={payment}
                     method={row.method}
                     status={row.status}

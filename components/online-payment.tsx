@@ -1,15 +1,17 @@
 import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Notice } from '@/components/ui/notice';
 import { SectionTitle } from '@/components/ui/section-title';
 import { TextField } from '@/components/ui/text-field';
 import { toMalayError } from '@/lib/errors';
 import {
+  cancelGatewayPayment,
   createGatewayBill,
   paymentStatusLabel,
   paymentStatusTone,
@@ -21,15 +23,18 @@ import {
 /**
  * Bayaran online ToyyibPay — satu aliran untuk PIPIS dan Yuran.
  *
- * `useOnlinePayment` memegang keadaan (amaun, sedang membayar, mesej) supaya
- * borang di atas dan butang "Semak status" dalam sejarah di bawah berkongsi
+ * `useOnlinePayment` memegang keadaan (amaun, sedang membayar, mesej, dialog
+ * batal) supaya borang di atas dan tindakan dalam sejarah di bawah berkongsi
  * satu mesej. Skrin hanya membekalkan jenis bayaran, route deep link, dan cara
  * memuat semula datanya sendiri.
  */
 
-type PaymentNotice = { tone: 'positive' | 'negative' | 'warn'; message: string };
+type PaymentNotice = { tone: 'positive' | 'negative' | 'warn' | 'info'; message: string };
 
 export const PENDING_MESSAGE = 'Bayaran sedang diproses. Semak semula sebentar lagi.';
+
+/** Had semakan automatik setiap kali skrin dibuka — setiap satu memanggil ToyyibPay. */
+const AUTO_CHECK_LIMIT = 5;
 
 export function useOnlinePayment({
   kind,
@@ -47,6 +52,9 @@ export function useOnlinePayment({
   const [paying, setPaying] = useState(false);
   const [checking, setChecking] = useState<string | null>(null);
   const [notice, setNotice] = useState<PaymentNotice | null>(null);
+  const [confirmCancel, setConfirmCancel] = useState<string | null>(null);
+  const [cancelling, setCancelling] = useState(false);
+  const autoChecking = useRef(false);
 
   const parsedAmount = Math.round(Number.parseFloat(amount) * 100) / 100;
   const amountValid = Number.isFinite(parsedAmount) && parsedAmount >= 1;
@@ -62,6 +70,36 @@ export function useOnlinePayment({
       }
       await reload();
       return status;
+    },
+    [reload],
+  );
+
+  /**
+   * Semak semua bil pending secara senyap bila skrin dibuka.
+   *
+   * Bil yang sudah dibayar atau gagal di ToyyibPay (webhook lewat) terus
+   * dikemas kini tanpa ahli menekan apa-apa. Bil yang ditinggalkan kekal
+   * pending — itu yang butang "Batalkan" selesaikan.
+   */
+  const autoCheck = useCallback(
+    async (references: string[]) => {
+      if (autoChecking.current || references.length === 0) return;
+      autoChecking.current = true;
+      try {
+        const results = await Promise.all(
+          references.slice(0, AUTO_CHECK_LIMIT).map((reference) => refreshGatewayPayment(reference).catch(() => 'unknown' as const)),
+        );
+        if (results.some((status) => status === 'success' || status === 'failed')) {
+          await reload();
+        }
+        if (results.includes('success')) {
+          setNotice({ tone: 'positive', message: 'Bayaran online anda telah disahkan. Terima kasih!' });
+        }
+      } catch {
+        // Semakan senyap — kegagalan tidak patut mengganggu paparan.
+      } finally {
+        autoChecking.current = false;
+      }
     },
     [reload],
   );
@@ -89,7 +127,7 @@ export function useOnlinePayment({
       } else if (status === 'failed') {
         setNotice({ tone: 'negative', message: 'Bayaran tidak berjaya. Tiada amaun direkodkan.' });
       } else {
-        setNotice({ tone: 'warn', message: PENDING_MESSAGE });
+        setNotice(null);
       }
     } catch (caught) {
       setNotice({ tone: 'negative', message: toMalayError(caught, 'Gagal memulakan bayaran online.') });
@@ -108,7 +146,7 @@ export function useOnlinePayment({
           ? { tone: 'positive', message: 'Bayaran disahkan. Terima kasih!' }
           : status === 'failed'
             ? { tone: 'negative', message: 'Bayaran ini tidak berjaya.' }
-            : { tone: 'warn', message: PENDING_MESSAGE },
+            : { tone: 'info', message: 'Tiada bayaran diterima untuk bil ini lagi.' },
       );
     } catch (caught) {
       setNotice({ tone: 'negative', message: toMalayError(caught, 'Gagal menyemak status bayaran.') });
@@ -117,19 +155,63 @@ export function useOnlinePayment({
     }
   }
 
-  return { amount, setAmount, parsedAmount, amountValid, paying, checking, notice, pay, check, formatAmount };
+  async function cancel() {
+    const reference = confirmCancel;
+    if (!reference || cancelling) return;
+    setCancelling(true);
+    try {
+      await cancelGatewayPayment(kind, reference);
+      await reload();
+      setNotice({ tone: 'info', message: 'Bayaran dibatalkan.' });
+    } catch (caught) {
+      // Mungkin baru sahaja disahkan oleh webhook — muat semula supaya paparan jujur.
+      await reload().catch(() => {});
+      setNotice({ tone: 'negative', message: toMalayError(caught, 'Gagal membatalkan bayaran.') });
+    } finally {
+      setCancelling(false);
+      setConfirmCancel(null);
+    }
+  }
+
+  return {
+    amount,
+    setAmount,
+    parsedAmount,
+    amountValid,
+    paying,
+    checking,
+    notice,
+    pay,
+    check,
+    autoCheck,
+    formatAmount,
+    confirmCancel,
+    requestCancel: setConfirmCancel,
+    cancelling,
+    cancel,
+  };
 }
 
 export type OnlinePayment = ReturnType<typeof useOnlinePayment>;
 
+/** Rujukan bil pending, terbaharu dahulu — untuk banner dan semakan automatik. */
+export function pendingReferences(
+  rows: { method: string; status: GatewayStatus; gateway_reference: string | null }[],
+): string[] {
+  return rows
+    .filter((row) => row.method === 'gateway' && row.status === 'pending' && row.gateway_reference)
+    .map((row) => row.gateway_reference as string);
+}
+
 export function OnlinePaymentForm({
   payment,
   caption,
-  hasPending,
+  pendingReference,
 }: {
   payment: OnlinePayment;
   caption: string;
-  hasPending: boolean;
+  /** Bil pending terbaharu, jika ada. */
+  pendingReference: string | null;
 }) {
   const { amount, setAmount, parsedAmount, amountValid, paying, notice, pay, formatAmount } = payment;
 
@@ -138,7 +220,13 @@ export function OnlinePaymentForm({
       <SectionTitle title="Bayar Online (ToyyibPay)" caption={caption} />
       <View className="gap-4">
         {notice ? <Notice tone={notice.tone} message={notice.message} /> : null}
-        {!notice && hasPending ? <Notice tone="warn" message={PENDING_MESSAGE} /> : null}
+
+        {pendingReference ? (
+          <View>
+            <Notice tone="warn" message={PENDING_MESSAGE} />
+            <PendingActions payment={payment} method="gateway" status="pending" reference={pendingReference} />
+          </View>
+        ) : null}
 
         <TextField
           label="Amaun (RM)"
@@ -157,6 +245,18 @@ export function OnlinePaymentForm({
           disabled={!amountValid || paying}
         />
       </View>
+
+      <ConfirmDialog
+        visible={payment.confirmCancel !== null}
+        title="Batalkan bayaran ini?"
+        message="Bil ini akan ditanda tidak berjaya. Jika anda sebenarnya sudah membayar, ia tetap akan direkodkan sebaik ToyyibPay mengesahkannya."
+        confirmLabel="Batalkan"
+        cancelLabel="Kembali"
+        destructive
+        busy={payment.cancelling}
+        onConfirm={payment.cancel}
+        onCancel={() => payment.requestCancel(null)}
+      />
     </View>
   );
 }
@@ -167,8 +267,8 @@ export function GatewayStatusBadge({ method, status }: { method: string; status:
   return <Badge label={paymentStatusLabel(status)} tone={paymentStatusTone(status)} />;
 }
 
-/** Pautan "Semak status" untuk baris gateway yang masih pending. */
-export function CheckStatusLink({
+/** "Semak status · Batalkan" untuk baris gateway yang masih pending. */
+export function PendingActions({
   payment,
   method,
   status,
@@ -181,11 +281,18 @@ export function CheckStatusLink({
 }) {
   if (method !== 'gateway' || status !== 'pending' || !reference) return null;
 
+  const busy = payment.checking !== null || payment.cancelling;
+
   return (
-    <Pressable onPress={() => payment.check(reference)} disabled={payment.checking !== null} className="mt-2 self-start">
-      <Text className="text-sm font-semibold text-primary">
-        {payment.checking === reference ? 'Menyemak…' : 'Semak status'}
-      </Text>
-    </Pressable>
+    <View className="mt-2 flex-row items-center gap-5">
+      <Pressable onPress={() => payment.check(reference)} disabled={busy} hitSlop={8}>
+        <Text className="text-sm font-semibold text-primary">
+          {payment.checking === reference ? 'Menyemak…' : 'Semak status'}
+        </Text>
+      </Pressable>
+      <Pressable onPress={() => payment.requestCancel(reference)} disabled={busy} hitSlop={8}>
+        <Text className="text-sm font-semibold text-negative">Batalkan</Text>
+      </Pressable>
+    </View>
   );
 }

@@ -2,7 +2,13 @@ import { useFocusEffect } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
 import { Text, View } from 'react-native';
 
-import { CheckStatusLink, GatewayStatusBadge, OnlinePaymentForm, useOnlinePayment } from '@/components/online-payment';
+import {
+  GatewayStatusBadge,
+  OnlinePaymentForm,
+  PendingActions,
+  pendingReferences,
+  useOnlinePayment,
+} from '@/components/online-payment';
 import { ScreenHeader } from '@/components/screen-header';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
@@ -60,6 +66,7 @@ export default function PipisScreen() {
   }, []);
 
   const payment = useOnlinePayment({ kind: 'pipis', returnPath: 'pipis', reload, formatAmount: ringgitPipis });
+  const { autoCheck } = payment;
 
   useFocusEffect(
     useCallback(() => {
@@ -88,7 +95,11 @@ export default function PipisScreen() {
             fetchPipisSummary(member.id),
             fetchPipisHistory(member.id),
           ]);
-          if (active) setState({ step: 'sedia', summary, history });
+          if (!active) return;
+          setState({ step: 'sedia', summary, history });
+
+          // Bil pending mungkin sudah selesai di ToyyibPay sejak kali terakhir dibuka.
+          void autoCheck(pendingReferences(history));
         } catch (caught) {
           if (active) {
             setState({ step: 'gagal', message: toMalayError(caught, 'Gagal memuatkan rekod sumbangan.') });
@@ -99,7 +110,7 @@ export default function PipisScreen() {
       return () => {
         active = false;
       };
-    }, [user?.id]),
+    }, [user?.id, autoCheck]),
   );
 
   if (state.step === 'memuat') return <LoadingScreen />;
@@ -132,7 +143,7 @@ export default function PipisScreen() {
 
   const { summary, history } = state;
   const reached = summary.jumlah >= summary.sasaran;
-  const hasPending = history.some((row) => row.method === 'gateway' && row.status === 'pending');
+  const pendingReference = pendingReferences(history)[0] ?? null;
 
   return (
     <Screen padTop={false}>
@@ -186,7 +197,7 @@ export default function PipisScreen() {
         <OnlinePaymentForm
           payment={payment}
           caption="FPX atau kad. Masukkan sebarang amaun, minimum RM1."
-          hasPending={hasPending}
+          pendingReference={pendingReference}
         />
 
         <View className="pb-8">
@@ -222,7 +233,7 @@ export default function PipisScreen() {
                     {row.note ? ' · ' + row.note : ''}
                   </Text>
 
-                  <CheckStatusLink
+                  <PendingActions
                     payment={payment}
                     method={row.method}
                     status={row.status}

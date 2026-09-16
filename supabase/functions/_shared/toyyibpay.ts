@@ -57,6 +57,8 @@ const MIN_AMOUNT = 1;
 const MAX_AMOUNT = 30000;
 /** Halang ahli (atau skrip) menimbun bil yang tidak dibayar. */
 const MAX_PENDING_PER_HOUR = 10;
+/** Tempoh bil sah di ToyyibPay. Selepas ini bil pending tanpa bayaran ditanda gagal. */
+const BILL_EXPIRY_DAYS = 3;
 
 /** Deep link yang dibenarkan untuk kembali ke app — bukan pengalihan terbuka. */
 export const APP_RETURN_PATTERN = /^(mysafoff|exp|exps):\/\/[^\s]{0,250}$/;
@@ -225,7 +227,7 @@ export async function serveCreateBill(request: Request, kind: GatewayKind): Prom
       billPhone: String(member.no_tel ?? '').replace(/\D/g, ''),
       billPaymentChannel: '2',
       billChargeToCustomer: '',
-      billExpiryDays: '3',
+      billExpiryDays: String(BILL_EXPIRY_DAYS),
     });
 
     let billCode: string | null = null;
@@ -285,6 +287,7 @@ type GatewayRow = {
   id: string;
   status: GatewayStatus;
   requested_amount: number | string | null;
+  created_at: string;
   gateway_bill_code: string | null;
 };
 
@@ -330,7 +333,7 @@ export async function reconcileGatewayPayment(
   for (const candidate of GATEWAY_TABLES) {
     const { data, error } = await admin
       .from(candidate)
-      .select('id, status, requested_amount, gateway_bill_code')
+      .select('id, status, requested_amount, gateway_bill_code, created_at')
       .eq('method', 'gateway')
       .eq('gateway_reference', orderId)
       .maybeSingle();
@@ -418,13 +421,24 @@ export async function reconcileGatewayPayment(
   /*
     Tiada transaksi langsung = ahli belum membayar (atau menutup halaman).
     Itu kekal pending — bil ToyyibPay masih boleh dibayar sehingga tamat tempoh.
-    Hanya kegagalan yang DIREKOD ToyyibPay menjadikannya 'failed', dan 'failed'
-    masih boleh menjadi 'success' jika ahli mencuba semula bil yang sama.
+    Hanya kegagalan yang DIREKOD ToyyibPay, atau bil yang sudah melepasi tempoh
+    sahnya (dengan sehari kelonggaran), menjadikannya 'failed'.
+
+    'failed' — termasuk yang dibatalkan oleh ahli dalam app — BUKAN muktamad:
+    cabang `paid` di atas tetap menukarnya kepada 'success' bila ToyyibPay
+    mengesahkan bayaran. Data ToyyibPay ialah punca kebenaran terakhir.
   */
-  if (failed && !stillPending && row.status === 'pending') {
+  const expired =
+    Date.now() - new Date(row.created_at).getTime() > (BILL_EXPIRY_DAYS + 1) * 24 * 60 * 60 * 1000;
+
+  if ((failed || expired) && !stillPending && row.status === 'pending') {
     const { error: updateError } = await admin
       .from(table)
-      .update({ status: 'failed', gateway_bill_code: billCode })
+      .update({
+        status: 'failed',
+        gateway_bill_code: billCode,
+        ...(failed ? {} : { note: 'Bil tamat tempoh' }),
+      })
       .eq('id', row.id)
       .eq('status', 'pending');
     if (updateError) console.error('Gagal mengemas kini failed', table, orderId, updateError.message);
