@@ -4,7 +4,7 @@
     "slug": "mysaf-off",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/mysaff-logo-square.png",
+    "icon": "./assets/images/mysaff-icon-white.png",
     "scheme": "mysafoff",
     "userInterfaceStyle": "light",
     "backgroundColor": "#FAFAFA",
@@ -16,15 +16,15 @@
       "package": "com.sakuradigital.mysafoff",
       "adaptiveIcon": {
         "backgroundColor": "#FFFFFF",
-        "foregroundImage": "./assets/images/mysaff-adaptive-foreground.png",
-        "monochromeImage": "./assets/images/mysaff-adaptive-monochrome.png"
+        "foregroundImage": "./assets/images/mysaff-adaptive-foreground-v3.png",
+        "monochromeImage": "./assets/images/mysaff-adaptive-monochrome-v3.png"
       },
       "predictiveBackGestureEnabled": false
     },
     "web": {
       "output": "static",
       "bundler": "metro",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/mysaff-icon-transparent.png"
     },
     "plugins": [
       "expo-router",
