@@ -69,9 +69,12 @@ export default function OrganisasiScreen() {
               title={section.bahagian}
               count={section.positions.length}
               defaultOpen>
-              {section.positions.map((position) => (
-                <OrgPositionRow key={position.id} position={position} />
-              ))}
+              {/* Jarak antara jawatan lebih rapat daripada jarak lalai seksyen. */}
+              <View className="gap-3">
+                {section.positions.map((position) => (
+                  <OrgPositionRow key={position.id} position={position} />
+                ))}
+              </View>
             </CollapsibleSection>
           ))
         ) : error ? null : (

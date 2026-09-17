@@ -1,10 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
-import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, Switch, Text, View } from 'react-native';
 
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { CollapsibleSection } from '@/components/ui/collapsible-section';
 import { MemberAvatar } from '@/components/ui/member-avatar';
 import { Notice } from '@/components/ui/notice';
 import { PickerField } from '@/components/ui/picker-field';
@@ -78,60 +77,32 @@ type Props = {
   onPickAvatar?: () => void;
   avatarBusy?: boolean;
   /**
-   * Bila diberi, borang dipapar sebagai kepala profil diikuti tab — susun atur
-   * skrin Profil ahli. Tanpanya semua seksyen dipapar serentak (panel Admin).
+   * Tab aktif — skrin Profil dan panel Admin memakai susun atur tab yang sama.
    *
    * Tab dikawal oleh pemanggil kerana borang dipasang semula selepas setiap
    * simpanan; keadaan dalaman akan melontar pengguna kembali ke tab pertama.
    */
-  tabs?: { value: ProfileTab; onChange: (next: ProfileTab) => void };
+  tabs: { value: ProfileTab; onChange: (next: ProfileTab) => void };
+  /**
+   * Bila diberi, butang Simpan dan suis Sekat TIDAK dilukis di tempat asalnya;
+   * kedua-duanya diserahkan kepada pemanggil untuk disusun dalam panel
+   * tindakannya bersama butang lain. Kedua-duanya tetap terikat pada draf
+   * borang ini — sekatan masih berkuat kuasa hanya selepas Simpan.
+   */
+  actions?: (parts: { save: ReactNode; sekat: ReactNode }) => ReactNode;
   /** Hanya medan yang benar-benar berubah dihantar. */
   onSave: (patch: Partial<Member>) => void;
 };
 
 const AVATAR_SIZE = 96;
 
-/*
-  Medan setiap seksyen yang boleh ditutup. Kiraan medan berisi dipapar pada
-  kepala seksyen supaya keadaan tertutup masih memberitahu ada apa di dalam —
-  tanpa itu, empat seksyen tertutup kelihatan sama sahaja walau satu penuh dan
-  satu lagi kosong.
-*/
-const PENDIDIKAN_FIELDS = [
-  'tahap_pendidikan', 'sekolah', 'status_pengajian', 'nama_institusi', 'alamat_institusi',
-  'tahun_pengajian', 'jurusan_pengajian', 'sumber_pembiayaan', 'pembiayaan_lain',
-] as const satisfies readonly (keyof Member)[];
-
-const PEKERJAAN_FIELDS = [
-  'status_pekerjaan', 'sektor_pekerjaan', 'jawatan_pekerjaan', 'nama_majikan',
-  'alamat_tempat_kerja', 'anggaran_pendapatan_range', 'jenis_perniagaan',
-] as const satisfies readonly (keyof Member)[];
-
-const KELUARGA_FIELDS = [
-  'status_perkahwinan', 'nama_pasangan', 'tahun_berkahwin', 'bil_anak',
-  'anggaran_pendapatan_isi_rumah_range', 'bil_tanggungan_selain_keluarga',
-  'pekerjaan_ibu', 'pekerjaan_bapa', 'bil_tanggungan_ibu_bapa',
-] as const satisfies readonly (keyof Member)[];
-
-const JAWATAN_FIELDS = [
-  'jawatan_ikhwan_1', 'jawatan_ikhwan_2', 'jawatan_ikhwan_3',
-  'jawatan_pas_1', 'jawatan_pas_2', 'jawatan_pas_3', 'no_keahlian_pas',
-] as const satisfies readonly (keyof Member)[];
-
-/** Kapsyen seksyen — sama ada dipapar sebagai seksyen boleh tutup atau sebagai tab. */
+/** Kapsyen di bawah tab bagi setiap seksyen selain Maklumat Diri. */
 const CAPTIONS = {
   pendidikan: 'Butiran institusi muncul selepas status pengajian dipilih.',
   pekerjaan: 'Butiran tambahan muncul mengikut status pekerjaan yang dipilih.',
   keluarga: 'Butiran pasangan muncul selepas status berkahwin dipilih.',
   jawatan: 'Jawatan dalam Ikhwan dan PAS, jika ada.',
 } as const;
-
-function countFilled(member: Member, keys: readonly (keyof Member)[]): number {
-  return keys.filter((key) => {
-    const value = member[key];
-    return value !== null && value !== undefined && value !== '';
-  }).length;
-}
 
 /** Pilihan rasmi, ditambah nilai semasa sebagai "(tidak dikenali)" jika ia di luar senarai. */
 function withUnrecognised(options: Option<string>[], current: string | null): Option<string>[] {
@@ -164,6 +135,7 @@ export function MemberForm({
   headerNote,
   avatarBusy = false,
   tabs,
+  actions,
   onSave,
 }: Props) {
   const [draft, setDraft] = useState<Member>(member);
@@ -273,8 +245,8 @@ export function MemberForm({
   const canPickAvatar = !readOnly && Boolean(onPickAvatar);
 
   /* --- Kepingan borang -------------------------------------------------------
-     Setiap kepingan dibina sekali dan disusun oleh dua susun atur di bawah,
-     supaya medan, syarat paparan dan logik simpan tidak berpecah dua. */
+     Setiap kepingan dibina sekali dan disusun oleh susun atur tab di bawah;
+     tab memilih kepingan mana yang dipapar. */
 
   const avatar = (
     <View className="items-center">
@@ -350,7 +322,7 @@ export function MemberForm({
           </>
         )}
 
-        {canEditAdminColumns ? (
+        {canEditAdminColumns && !actions ? (
           <ToggleRow
             icon="ban-outline"
             title="Sekat ahli"
@@ -510,6 +482,30 @@ export function MemberForm({
     </>
   );
 
+  /* Versi padat suis Sekat untuk panel tindakan — muat separuh lebar. */
+  const sekatCompact = canEditAdminColumns ? (
+    <View
+      className={`h-11 flex-row items-center gap-2 rounded-field border pl-3 pr-2 ${
+        draft.disekat ? 'border-negative bg-negative-soft' : 'border-line bg-surface'
+      } ${locked ? 'opacity-60' : ''}`}>
+      <Ionicons name="ban-outline" size={16} color={draft.disekat ? Colors.negative : Colors.inkMuted} />
+      <Text
+        className={`flex-1 text-sm font-semibold ${draft.disekat ? 'text-negative' : 'text-ink'}`}
+        numberOfLines={1}>
+        {draft.disekat ? 'Disekat' : 'Sekat Ahli'}
+      </Text>
+      <Switch
+        accessibilityLabel="Sekat ahli"
+        value={draft.disekat}
+        onValueChange={(next) => set('disekat', next)}
+        disabled={locked}
+        trackColor={{ false: Colors.line, true: Colors.negative }}
+        thumbColor={Colors.white}
+        ios_backgroundColor={Colors.line}
+      />
+    </View>
+  ) : null;
+
   /*
     Tiada butang Simpan langsung bila borang dikunci — memaparkannya sebagai
     "disabled" masih mengisyaratkan simpanan mungkin berjaya suatu ketika,
@@ -518,6 +514,15 @@ export function MemberForm({
   const saveButton = readOnly ? null : (
     <>
       {!draft.full_name.trim() ? <Notice tone="negative" message="Nama penuh tidak boleh dikosongkan." /> : null}
+      {/* Suis Sekat dalam panel tindakan jauh dari medan lain — ingatkan ia belum berkuat kuasa. */}
+      {actions && draft.disekat !== member.disekat ? (
+        <Notice
+          tone="info"
+          message={
+            (draft.disekat ? 'Sekatan' : 'Buka sekatan') + ' belum disimpan — tekan Simpan Perubahan untuk berkuat kuasa.'
+          }
+        />
+      ) : null}
 
       <Button
         label="Simpan Perubahan"
@@ -528,98 +533,65 @@ export function MemberForm({
     </>
   );
 
-  /* --- Susun atur Profil: kepala tetap + tab ----------------------------------
+  /* --- Kepala tetap + tab -------------------------------------------------------
      Satu draf untuk semua tab: suntingan di "Pendidikan" tidak hilang bila
      pengguna beralih ke "Keluarga", dan satu butang Simpan menghantar kesemuanya.
      Kepala dibaca daripada rekod tersimpan, bukan draf, supaya ia tidak berubah
      sebelum simpanan berjaya. */
-  if (tabs) {
-    const caption = tabs.value === 'diri' ? null : CAPTIONS[tabs.value];
+  const caption = tabs.value === 'diri' ? null : CAPTIONS[tabs.value];
 
-    return (
-      <View className="gap-6">
-        <View className="gap-3">
-          {avatar}
-          <Text className="text-center text-xl font-bold text-ink">{member.full_name}</Text>
-        </View>
+  return (
+    <View className="gap-6">
+      <View className="gap-3">
+        {avatar}
+        <Text className="text-center text-xl font-bold text-ink">{member.full_name}</Text>
+      </View>
 
-        {/*
-          Dua lajur bila ada lencana, satu lajur bila tiada. Nisbah 57/43
-          memberi kad maklumat ruang untuk tiga baris teksnya dan meninggalkan
-          lencana cukup lebar untuk nombor kedudukan serta lima labelnya.
-          `items-stretch` supaya lencana setinggi kad di sebelahnya, bukan
-          setinggi kandungannya sendiri.
-        */}
-        {headerAside ? (
-          <View className="flex-row items-stretch gap-3">
-            <Card className="gap-4" style={{ flex: 57 }}>
-              <InfoRow icon="layers-outline" label="Generasi" value={generationLabel(member.generasi)} />
-              <InfoRow icon="mail-outline" label="Emel" value={member.email} />
-              <InfoRow icon="location-outline" label="Kawasan usrah" value={usrahLabel(member.kawasan_usrah)} />
-            </Card>
-            <View style={{ flex: 43 }}>{headerAside}</View>
-          </View>
-        ) : (
-          <Card className="gap-4">
+      {/*
+        Dua lajur bila ada lencana, satu lajur bila tiada. Nisbah 57/43
+        memberi kad maklumat ruang untuk tiga baris teksnya dan meninggalkan
+        lencana cukup lebar untuk nombor kedudukan serta lima labelnya.
+        `items-stretch` supaya lencana setinggi kad di sebelahnya, bukan
+        setinggi kandungannya sendiri.
+      */}
+      {headerAside ? (
+        <View className="flex-row items-stretch gap-3">
+          <Card className="gap-4" style={{ flex: 57 }}>
             <InfoRow icon="layers-outline" label="Generasi" value={generationLabel(member.generasi)} />
             <InfoRow icon="mail-outline" label="Emel" value={member.email} />
             <InfoRow icon="location-outline" label="Kawasan usrah" value={usrahLabel(member.kawasan_usrah)} />
           </Card>
-        )}
-
-        {headerNote}
-
-        <View className="gap-2">
-          <TabBar value={tabs.value} options={PROFILE_TABS} onChange={tabs.onChange} />
-          {caption ? <Text className="text-sm text-ink-muted">{caption}</Text> : null}
+          <View style={{ flex: 43 }}>{headerAside}</View>
         </View>
+      ) : (
+        <Card className="gap-4">
+          <InfoRow icon="layers-outline" label="Generasi" value={generationLabel(member.generasi)} />
+          <InfoRow icon="mail-outline" label="Emel" value={member.email} />
+          <InfoRow icon="location-outline" label="Kawasan usrah" value={usrahLabel(member.kawasan_usrah)} />
+        </Card>
+      )}
 
-        <View className="gap-4">
-          {tabs.value === 'diri' ? (
-            <>
-              {canEditAdminColumns ? keahlian : null}
-              {peribadiFields}
-            </>
-          ) : null}
-          {tabs.value === 'pendidikan' ? pendidikanFields : null}
-          {tabs.value === 'pekerjaan' ? pekerjaanFields : null}
-          {tabs.value === 'keluarga' ? keluargaFields : null}
-          {tabs.value === 'jawatan' ? jawatanFields : null}
-        </View>
+      {headerNote}
 
-        {saveButton}
-      </View>
-    );
-  }
-
-  /* --- Susun atur Admin: semua seksyen serentak ------------------------------- */
-  return (
-    <View className="gap-6">
-      {avatar}
-      {keahlian}
-
-      <View>
-        <SectionTitle title="Maklumat Peribadi" />
-        <View className="gap-4">{peribadiFields}</View>
+      <View className="gap-2">
+        <TabBar value={tabs.value} options={PROFILE_TABS} onChange={tabs.onChange} />
+        {caption ? <Text className="text-sm text-ink-muted">{caption}</Text> : null}
       </View>
 
-      <CollapsibleSection title="Pendidikan" caption={CAPTIONS.pendidikan} count={countFilled(draft, PENDIDIKAN_FIELDS)}>
-        {pendidikanFields}
-      </CollapsibleSection>
+      <View className="gap-4">
+        {tabs.value === 'diri' ? (
+          <>
+            {canEditAdminColumns ? keahlian : null}
+            {peribadiFields}
+          </>
+        ) : null}
+        {tabs.value === 'pendidikan' ? pendidikanFields : null}
+        {tabs.value === 'pekerjaan' ? pekerjaanFields : null}
+        {tabs.value === 'keluarga' ? keluargaFields : null}
+        {tabs.value === 'jawatan' ? jawatanFields : null}
+      </View>
 
-      <CollapsibleSection title="Pekerjaan" caption={CAPTIONS.pekerjaan} count={countFilled(draft, PEKERJAAN_FIELDS)}>
-        {pekerjaanFields}
-      </CollapsibleSection>
-
-      <CollapsibleSection title="Keluarga" caption={CAPTIONS.keluarga} count={countFilled(draft, KELUARGA_FIELDS)}>
-        {keluargaFields}
-      </CollapsibleSection>
-
-      <CollapsibleSection title="Jawatan" caption={CAPTIONS.jawatan} count={countFilled(draft, JAWATAN_FIELDS)}>
-        {jawatanFields}
-      </CollapsibleSection>
-
-      {saveButton}
+      {actions ? actions({ save: saveButton, sekat: sekatCompact }) : saveButton}
     </View>
   );
 }

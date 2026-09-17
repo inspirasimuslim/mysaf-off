@@ -1,14 +1,18 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Text, View } from 'react-native';
 
+import { GenerationChip } from '@/components/ui/generation-chip';
 import { MemberAvatar } from '@/components/ui/member-avatar';
 import { Colors } from '@/constants/theme';
 import type { OrgPosition } from '@/lib/org-chart';
 
-const AVATAR_SIZE = 44;
+const AVATAR_SIZE = 38;
 
 /**
  * Satu jawatan dalam carta organisasi: avatar, label jawatan, nama.
+ *
+ * Padat: nama satu baris (dipotong "...") dengan kod generasi sebaris, jadi
+ * setiap jawatan sama tinggi walau nama pemegangnya panjang.
  *
  * Jawatan kosong tetap dipapar dengan avatar kelabu dan "Kosong" — struktur
  * carta mesti kelihatan lengkap walaupun ada kekosongan. Dikongsi oleh skrin
@@ -23,7 +27,7 @@ export function OrgPositionRow({ position }: { position: OrgPosition }) {
         <View
           style={{ width: AVATAR_SIZE, height: AVATAR_SIZE, borderRadius: AVATAR_SIZE / 2 }}
           className="items-center justify-center bg-background">
-          <Ionicons name="person-outline" size={20} color={Colors.inkFaint} />
+          <Ionicons name="person-outline" size={18} color={Colors.inkFaint} />
         </View>
       ) : (
         <MemberAvatar fullName={position.full_name as string} avatarUrl={position.avatar_url} size={AVATAR_SIZE} />
@@ -32,17 +36,14 @@ export function OrgPositionRow({ position }: { position: OrgPosition }) {
       <View className="flex-1">
         <Text className="text-xs font-semibold uppercase tracking-wide text-primary">{position.jawatan}</Text>
         {vacant ? (
-          <Text className="mt-0.5 text-base italic text-ink-faint">Kosong</Text>
+          <Text className="text-base italic text-ink-faint">Kosong</Text>
         ) : (
-          <>
-            <Text className="mt-0.5 text-base font-semibold text-ink" numberOfLines={2}>
+          <View className="flex-row items-center gap-2">
+            <Text className="shrink text-base font-semibold text-ink" numberOfLines={1} ellipsizeMode="tail">
               {position.full_name}
             </Text>
-            {/* Bentuk sama seperti kepala kumpulan di Direktori Ahli. */}
-            {position.generasi ? (
-              <Text className="mt-0.5 text-sm text-ink-muted">{'Generasi ' + position.generasi}</Text>
-            ) : null}
-          </>
+            <GenerationChip code={position.generasi} />
+          </View>
         )}
       </View>
     </View>

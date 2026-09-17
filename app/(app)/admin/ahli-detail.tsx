@@ -1,10 +1,10 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { Ionicons } from '@expo/vector-icons';
 import { Text, View } from 'react-native';
 
-import { MemberForm } from '@/components/member-form';
+import { MemberForm, type ProfileTab } from '@/components/member-form';
 import { ScreenHeader } from '@/components/screen-header';
-import { ActionRow } from '@/components/ui/action-row';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { FormModal } from '@/components/ui/form-modal';
@@ -13,6 +13,7 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Notice } from '@/components/ui/notice';
 import { Screen } from '@/components/ui/screen';
 import { TextField } from '@/components/ui/text-field';
+import { Colors } from '@/constants/theme';
 import { pickAvatar, uploadAvatar } from '@/lib/avatar';
 import { useMemberAccess, useUsrahAccess } from '@/lib/department-access';
 import { toMalayError } from '@/lib/errors';
@@ -20,7 +21,7 @@ import { deleteMemberAccount, fetchGenerations, fetchMember, updateMember } from
 import { useGoBack } from '@/lib/navigation';
 import { usePermissions } from '@/lib/permissions';
 import { TEMP_PASSWORD, resetMemberPassword } from '@/lib/temp-password';
-import { generationLabel, type Generation, type Member } from '@/types/database';
+import { type Generation, type Member } from '@/types/database';
 
 type Banner = { tone: 'positive' | 'negative'; message: string } | null;
 
@@ -40,6 +41,8 @@ export default function AhliDetailScreen() {
   const [saving, setSaving] = useState(false);
   /** Dinaikkan selepas setiap simpanan berjaya untuk memaksa borang dibina semula. */
   const [version, setVersion] = useState(0);
+  // Di sini dan bukan dalam borang: borang dipasang semula selepas setiap simpanan.
+  const [tab, setTab] = useState<ProfileTab>('diri');
 
   useEffect(() => {
     if (accessLoading || !canView || !id) return;
@@ -217,14 +220,15 @@ export default function AhliDetailScreen() {
   return (
     <>
       <Screen padTop={false}>
+        {/* Nama, generasi dan emel sudah dalam kepala borang — kepala skrin cukup nombor ahli. */}
         <ScreenHeader
-          eyebrow={(member.nombor_ahli ?? 'Tiada nombor') + ' · ' + generationLabel(member.generasi)}
-          title={member.full_name}
-          subtitle={member.email ?? 'Tiada emel'}
+          eyebrow="Panel Admin"
+          title="Butiran Ahli"
+          subtitle={member.nombor_ahli ?? 'Tiada nombor ahli'}
           onBackPress={goBack}
         />
 
-        <View className="gap-6 px-gutter pt-6">
+        <View className="gap-6 px-gutter pb-8 pt-6">
           {banner ? <Notice tone={banner.tone} message={banner.message} /> : null}
 
           {!canEdit ? (
@@ -247,58 +251,63 @@ export default function AhliDetailScreen() {
             busy={saving}
             onPickAvatar={() => void changeAvatar()}
             avatarBusy={avatarBusy}
+            tabs={{ value: tab, onChange: setTab }}
             onSave={(patch) => void save(patch)}
-          />
-
-          {/*
-            `isSuperAdmin()` dan BUKAN `canEdit`, dengan sengaja — sepadan dengan
-            semakan dalam `reset_member_login_window()` itu sendiri. Kebenaran
-            department membenarkan seseorang menyunting rekod; butang ini pula
-            memberi seseorang tiga hari untuk log masuk dengan kata laluan yang
-            diketahui umum. Itu perbezaan jenis, bukan darjah.
-          */}
-          {usrahAccess.canView ? (
-            <ActionRow
-              icon="people-outline"
-              title="Rekod / Betulkan Kehadiran Usrah"
-              subtitle="Kehadiran bulanan dengan kawasan, tempat dan tarikh"
-              onPress={() =>
-                router.push({
-                  pathname: '/(app)/admin/ahli-usrah-history',
-                  params: { id: member.id, nama: member.full_name, nombor: member.nombor_ahli ?? '' },
-                })
-              }
-            />
-          ) : null}
-
-          {isSuperAdmin() ? (
-            <View className="gap-3 pt-2">
-              <Button
-                label="Reset Kata Laluan Ahli"
-                variant="secondary"
-                loading={resetBusy}
-                disabled={resetBusy}
-                onPress={() => setResetDialog(true)}
+            actions={({ save: saveNode, sekat }) => (
+              <ActionPanel
+                save={saveNode}
+                /*
+                  `isSuperAdmin()` dan BUKAN `canEdit`, dengan sengaja — sepadan
+                  dengan semakan dalam `reset_member_login_window()` itu sendiri.
+                  Kebenaran department membenarkan seseorang menyunting rekod;
+                  butang ini pula memberi seseorang tiga hari untuk log masuk
+                  dengan kata laluan yang diketahui umum. Itu perbezaan jenis,
+                  bukan darjah.
+                */
+                reset={
+                  isSuperAdmin() ? (
+                    <Button
+                      label="Reset Kata Laluan"
+                      variant="secondary"
+                      size="sm"
+                      loading={resetBusy}
+                      disabled={resetBusy}
+                      onPress={() => setResetDialog(true)}
+                    />
+                  ) : null
+                }
+                sekat={sekat}
+                // Kebenaran BERASINGAN: kehadiran usrah milik LAJNAH TARBIAH, bukan pemilik rekod ahli.
+                usrah={
+                  usrahAccess.canView ? (
+                    <Button
+                      label="Rekod / Betulkan Kehadiran Usrah"
+                      variant="secondary"
+                      size="sm"
+                      icon={<Ionicons name="people-outline" size={16} color={Colors.primary} />}
+                      onPress={() =>
+                        router.push({
+                          pathname: '/(app)/admin/ahli-usrah-history',
+                          params: { id: member.id, nama: member.full_name, nombor: member.nombor_ahli ?? '' },
+                        })
+                      }
+                    />
+                  ) : null
+                }
+                padam={
+                  canEdit ? (
+                    <Button
+                      label="Padam Ahli"
+                      variant="danger"
+                      size="sm"
+                      icon={<Ionicons name="trash-outline" size={16} color={Colors.negative} />}
+                      onPress={openDelete}
+                    />
+                  ) : null
+                }
               />
-              <Text className="text-center text-sm text-ink-muted">
-                Menetapkan semula kata laluan kepada kata laluan sementara dan memaksa ahli menukarnya.
-              </Text>
-            </View>
-          ) : null}
-
-          {/*
-          Memadam ahli membuang rekod DAN akaun log masuknya, tanpa pemulihan.
-          Kerana itu ia terletak di hujung skrin, dipisahkan daripada borang,
-          dan memerlukan perkataan disahkan sebelum butang terakhir hidup.
-        */}
-          {canEdit ? (
-            <View className="gap-3 pb-8 pt-2">
-              <Button label="Padam Ahli" variant="danger" onPress={openDelete} />
-              <Text className="text-center text-sm text-ink-muted">
-                Rekod dan akaun log masuk ahli ini akan dipadam kekal.
-              </Text>
-            </View>
-          ) : null}
+            )}
+          />
         </View>
       </Screen>
 
@@ -351,5 +360,63 @@ export default function AhliDetailScreen() {
         />
       </FormModal>
     </>
+  );
+}
+
+/**
+ * Semua tindakan ke atas rekod dalam satu panel di bawah borang.
+ *
+ * Susunan ikut kekerapan dan risiko: Simpan (paling kerap) di atas dan paling
+ * menonjol; alat pentadbir berpasangan di tengah; Padam (musnah, tidak boleh
+ * dibatalkan) terpencil di hujung selepas garis pemisah, bersaiz labelnya
+ * sahaja supaya tidak tertekan ketika menuju butang lain.
+ */
+function ActionPanel({
+  save,
+  reset,
+  sekat,
+  usrah,
+  padam,
+}: {
+  save: ReactNode;
+  reset: ReactNode;
+  sekat: ReactNode;
+  usrah: ReactNode;
+  padam: ReactNode;
+}) {
+  const hasTools = Boolean(reset || sekat || usrah);
+  if (!save && !hasTools && !padam) return null;
+
+  return (
+    <View className="gap-4 rounded-card border border-line bg-surface p-4">
+      {save ? <View className="gap-3">{save}</View> : null}
+
+      {hasTools ? (
+        <View className="gap-2">
+          <Text className="text-xs font-semibold uppercase tracking-wide text-ink-muted">Tindakan Admin</Text>
+          {/* Satu baris dua lajur; yang tinggal seorang mengambil lebar penuh. */}
+          {reset || sekat ? (
+            <View className="flex-row gap-2">
+              {reset ? <View className="flex-1">{reset}</View> : null}
+              {sekat ? <View className="flex-1">{sekat}</View> : null}
+            </View>
+          ) : null}
+          {usrah}
+        </View>
+      ) : null}
+
+      {/*
+        Memadam ahli membuang rekod DAN akaun log masuknya, tanpa pemulihan.
+        Butang terakhir dalam FormModal masih memerlukan "PADAM" ditaip.
+      */}
+      {padam ? (
+        <View className="flex-row items-center gap-3 border-t border-line pt-4">
+          <Text className="flex-1 text-xs leading-4 text-ink-muted">
+            Rekod dan akaun log masuk ahli ini dipadam kekal.
+          </Text>
+          {padam}
+        </View>
+      ) : null}
+    </View>
   );
 }

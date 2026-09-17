@@ -4,6 +4,7 @@ import { Text, View } from 'react-native';
 
 import { ScreenHeader } from '@/components/screen-header';
 import { EmptyState } from '@/components/ui/empty-state';
+import { GenerationChip } from '@/components/ui/generation-chip';
 import { LoadingScreen } from '@/components/ui/loading-screen';
 import { Notice } from '@/components/ui/notice';
 import { Screen } from '@/components/ui/screen';
@@ -148,11 +149,7 @@ function BirthdayCard({ row }: { row: BirthdayThisMonth }) {
         <Text className="shrink text-base font-semibold text-ink" numberOfLines={1} ellipsizeMode="tail">
           {row.full_name}
         </Text>
-        {row.generasi ? (
-          <View className="rounded-pill bg-primary-soft px-2 py-0.5">
-            <Text className="text-xs font-semibold text-primary">{row.generasi}</Text>
-          </View>
-        ) : null}
+        <GenerationChip code={row.generasi} />
       </View>
 
       <Ionicons name="gift-outline" size={15} color={BIRTHDAY_GOLD} />
