@@ -81,7 +81,7 @@ export default function HariJadiBulanScreen() {
     }
 
     return (
-      <View className="gap-3 px-gutter pb-8 pt-6">
+      <View className="gap-2 px-gutter pb-8 pt-4">
         {state.rows.map((row, index) => (
           <BirthdayCard key={row.full_name + ':' + index} row={row} />
         ))}
@@ -109,31 +109,53 @@ export default function HariJadiBulanScreen() {
   );
 }
 
+/** Singkatan tiga huruf, selari dengan `MONTH_NAMES`. */
+const MONTH_SHORT = ['Jan', 'Feb', 'Mac', 'Apr', 'Mei', 'Jun', 'Jul', 'Ogo', 'Sep', 'Okt', 'Nov', 'Dis'] as const;
+
 /**
- * Satu baris: hari dalam bulatan emas di kiri, nama dan generasi di kanan.
+ * Bulan dibaca daripada `tarikh_lahir` ('15 September') yang dibina oleh
+ * pangkalan data dalam waktu Malaysia — bukan jam peranti — supaya kotak
+ * tarikh tidak tersasar sebulan pada malam pertukaran bulan.
+ */
+function shortMonth(tarikh: string): string {
+  const index = MONTH_NAMES.findIndex((name) => tarikh.endsWith(name));
+  return MONTH_SHORT[index >= 0 ? index : new Date().getMonth()] ?? '';
+}
+
+/**
+ * Satu baris padat: kotak tarikh emas di kiri, nama dan generasi sebaris.
  *
- * Nombor hari dipaparkan besar dan berulang supaya mata boleh menyusuri
- * lajur kiri untuk mencari tarikh, tanpa membaca setiap nama.
+ * Kotak tarikh sahaja membawa tarikh — tiada ulangan "15 September" di bawah
+ * nama — dan lajur kotak yang sekata membolehkan mata menyusuri tarikh tanpa
+ * membaca setiap nama. Nama dipotong pada satu baris supaya setiap baris sama
+ * tinggi dan lebih banyak nama muat dalam satu skrin.
  */
 function BirthdayCard({ row }: { row: BirthdayThisMonth }) {
   return (
-    <View className="flex-row items-center gap-4 rounded-card border border-line bg-surface p-card">
+    <View className="flex-row items-center gap-3 rounded-field border border-line bg-surface px-3 py-2">
       <View
-        className="h-12 w-12 items-center justify-center rounded-pill"
+        className="w-11 items-center justify-center rounded-lg py-1"
         style={{ backgroundColor: BIRTHDAY_GOLD + '1A' }}>
-        <Text className="text-lg font-bold" style={{ color: BIRTHDAY_GOLD }}>
+        <Text className="text-base font-bold leading-5" style={{ color: BIRTHDAY_GOLD }}>
           {row.hari}
         </Text>
-      </View>
-
-      <View className="flex-1">
-        <Text className="text-base font-semibold text-ink">{row.full_name}</Text>
-        <Text className="mt-0.5 text-sm text-ink-muted">
-          {row.tarikh_lahir + (row.generasi ? ' · Generasi ' + row.generasi : '')}
+        <Text className="text-xs font-semibold leading-4" style={{ color: BIRTHDAY_GOLD }}>
+          {shortMonth(row.tarikh_lahir)}
         </Text>
       </View>
 
-      <Ionicons name="gift-outline" size={18} color={BIRTHDAY_GOLD} />
+      <View className="flex-1 flex-row items-center gap-2">
+        <Text className="shrink text-base font-semibold text-ink" numberOfLines={1} ellipsizeMode="tail">
+          {row.full_name}
+        </Text>
+        {row.generasi ? (
+          <View className="rounded-pill bg-primary-soft px-2 py-0.5">
+            <Text className="text-xs font-semibold text-primary">{row.generasi}</Text>
+          </View>
+        ) : null}
+      </View>
+
+      <Ionicons name="gift-outline" size={15} color={BIRTHDAY_GOLD} />
     </View>
   );
 }
