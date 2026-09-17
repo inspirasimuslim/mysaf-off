@@ -168,7 +168,7 @@ export default function LoginScreen() {
           {biometricAvailable ? (
             <View className="mt-5">
               <Button
-                label="Log Masuk dengan Fingerprint atau Face ID"
+                label="Fingerprint / Face ID"
                 variant="ghost"
                 loading={biometricBusy}
                 disabled={busy}
