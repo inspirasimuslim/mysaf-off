@@ -70,6 +70,24 @@ export const AHLI_COLUMNS = [
 ] as const;
 
 /**
+ * Lajur di HUJUNG fail eksport, tiada dalam fail asal dan tiada dalam template.
+ *
+ * Ketiga-tiganya bacaan sahaja — import tidak pernah menulisnya, jadi fail
+ * eksport yang disunting dan dimuat naik semula tidak akan merosakkan apa-apa
+ * walaupun admin mengubah nilainya.
+ *
+ * `StatusPengajian` berada di sini dan bukan dalam `AHLI_COLUMNS` kerana fail
+ * asal tidak pernah memilikinya: import menyimpulkannya daripada status
+ * pekerjaan dan maklumat institusi. Menambahnya ke tengah fail akan menukar
+ * susunan lajur yang admin sudah biasa membacanya.
+ */
+export const MEMBER_READONLY_COLUMNS = [
+  'StatusPengajian',
+  'Kemaskini Terakhir Oleh Ahli',
+  'Tarikh Daftar',
+] as const;
+
+/**
  * Lajur di hadapan fail eksport, tiada dalam fail asal.
  *
  * Nombor ahli ialah kunci kemas kini import. Tanpanya, fail eksport yang
@@ -80,8 +98,30 @@ export const MEMBER_NUMBER_COLUMN = 'NomborAhli';
 
 export type SheetCell = string | number;
 
-/** Hasil `members_full_export()` — setiap kolum `members` kecuali pautan akaun dan avatar. */
-export type MemberExportRow = Omit<Member, 'id' | 'user_id' | 'avatar_url'>;
+/**
+ * Hasil `members_full_export()`.
+ *
+ * Setiap kolum `members` kecuali pautan akaun, avatar dan keadaan kata laluan
+ * (`must_change_password`, `temp_password_expires_at`) — yang terakhir itu
+ * keadaan akaun dan bukan data keahlian, jadi ia tidak pernah keluar.
+ *
+ * `created_at` ditambah di sini dan bukan pada `Member`: skrin lain membaca
+ * `members` tanpa memilih kolum itu, jadi meletakkannya pada jenis kongsi akan
+ * menjanjikan medan yang tidak selalu ada.
+ */
+export type MemberExportRow = Omit<Member, 'id' | 'user_id' | 'avatar_url'> & { created_at: string | null };
+
+/**
+ * Cap masa → tarikh yang boleh dibaca, atau kosong.
+ *
+ * Tarikh sahaja dan bukan jam: soalannya ialah "bila kali terakhir dia
+ * menyentuh profilnya", dan jawapan kepada itu tidak pernah memerlukan minit.
+ */
+function dateOnly(value: string | null): string {
+  if (!value) return '';
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? '' : parsed.toLocaleDateString('ms-MY');
+}
 
 /**
  * Satu rekod ahli → satu baris fail.
@@ -145,5 +185,15 @@ export function memberToSheetRow(member: MemberExportRow): Record<string, SheetC
     JawatanPas2: text(member.jawatan_pas_2),
     JawatanPas3: text(member.jawatan_pas_3),
     NoKeahlianPas: text(member.no_keahlian_pas),
+
+    /*
+      Tiga lajur bacaan sahaja di hujung fail. `status_pengajian` datang terus
+      daripada pangkalan data: sebelum ini ia dibuang di sini dan import
+      menyimpulkannya semula, jadi nilai yang admin tetapkan secara manual
+      hilang tanpa sesiapa menyedarinya.
+    */
+    StatusPengajian: text(member.status_pengajian),
+    'Kemaskini Terakhir Oleh Ahli': dateOnly(member.self_updated_at),
+    'Tarikh Daftar': dateOnly(member.created_at),
   };
 }

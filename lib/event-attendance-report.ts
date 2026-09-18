@@ -33,7 +33,21 @@ type AttendanceRow = {
   scanned_at: string;
   method: string;
   attendance_mode: 'bersemuka' | 'online';
+  /** Jarak dari pin acara. Kosong bagi acara tanpa pin dan bagi kehadiran online. */
+  distance_meters: number | string | null;
 };
+
+/**
+ * Jarak sebagai nombor bulat, atau '-' bila tiada.
+ *
+ * PostgREST memulangkan `numeric` sebagai nombor ATAU rentetan bergantung pada
+ * saiznya, jadi nilai ditukar secara eksplisit dan bukan diandaikan.
+ */
+function distanceCell(value: number | string | null): number | string {
+  if (value === null || value === undefined || value === '') return '-';
+  const meters = Number(value);
+  return Number.isFinite(meters) ? Math.round(meters) : '-';
+}
 
 export type EventAttendanceReport = {
   rows: number;
@@ -74,6 +88,9 @@ export async function downloadEventAttendance(
       'Masa Hadir': new Date(row.scanned_at).toLocaleString('ms-MY'),
       Method: METHOD_LABEL[row.method] ?? row.method,
       'Mod Kehadiran': row.attendance_mode === 'online' ? 'Online' : 'Bersemuka',
+      // '-' dan bukan sel kosong: kosong dibaca sebagai "jarak sifar" oleh
+      // orang yang mengimbas lajur, dan sifar bermaksud tepat di atas pin.
+      'Jarak (meter)': distanceCell(row.distance_meters),
     })),
   );
   const book = XLSX.utils.book_new();

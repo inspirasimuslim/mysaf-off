@@ -16,6 +16,7 @@ import { Segmented } from '@/components/ui/segmented';
 import { TextField } from '@/components/ui/text-field';
 import { Colors } from '@/constants/theme';
 import {
+  downloadGenerationRanking,
   downloadInactiveMembers,
   fetchActivityRanking,
   fetchInactiveMembers,
@@ -405,6 +406,30 @@ function GenerationRanking({ result }: { result: ActivityRanking }) {
   const rows = result.generations;
   const maxTotal = Math.max(1, ...rows.map((row) => row.jumlah_markah_generasi));
 
+  const [saving, setSaving] = useState<DeliveryMode | null>(null);
+  const [notice, setNotice] = useState<{ tone: 'positive' | 'info' | 'negative'; message: string } | null>(null);
+
+  const save = useCallback(
+    async (mode: DeliveryMode) => {
+      if (saving) return;
+
+      setNotice(null);
+      setSaving(mode);
+      try {
+        const report = await downloadGenerationRanking(result, mode);
+        setNotice({
+          tone: report.result === 'cancelled' ? 'info' : 'positive',
+          message: deliveryMessage(report.result, report.fileName, report.rows + ' generasi'),
+        });
+      } catch (caught) {
+        setNotice({ tone: 'negative', message: toMalayError(caught, 'Gagal memuat turun penarafan.') });
+      } finally {
+        setSaving(null);
+      }
+    },
+    [result, saving],
+  );
+
   // Lajur mengikut URUTAN generasi (i01 → i27), bukan kedudukan — bentuk merentas zaman.
   const columns = useMemo(
     () =>
@@ -432,6 +457,18 @@ function GenerationRanking({ result }: { result: ActivityRanking }) {
           <GenerationColumns slices={columns} formatLabel={(code) => generationLabel(code)} unit="markah" />
         </StatCard>
       ) : null}
+
+      {notice ? <Notice tone={notice.tone} message={notice.message} /> : null}
+
+      <SaveShareButtons
+        kind="file"
+        variant="secondary"
+        webLabel="Muat Turun (.xlsx)"
+        nativeCaption="Penarafan Generasi (.xlsx)"
+        busy={saving}
+        disabled={rows.length === 0}
+        onPress={(mode) => void save(mode)}
+      />
     </View>
   );
 }

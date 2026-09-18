@@ -1,6 +1,11 @@
+import * as XLSX from 'xlsx';
+
 import type { Option } from '@/types/database';
 
+import { UserError } from './errors';
+import type { DeliveryMode, DeliveryResult } from './file-delivery';
 import { supabase } from './supabase';
+import { deliverWorkbook } from './xlsx-download';
 
 /**
  * Log Aktiviti Admin — bacaan sahaja.
@@ -69,12 +74,16 @@ export async function fetchAdminActivity(params: {
   search: string;
   category: ActivityCategory | null;
   offset: number;
+  /** Lalai `ACTIVITY_PAGE_SIZE` — eksport meminta halaman lebih besar. */
+  pageSize?: number;
 }): Promise<AdminActivity[]> {
+  const size = params.pageSize ?? ACTIVITY_PAGE_SIZE;
+
   let query = supabase
     .from('admin_activity_log')
     .select('id, actor_id, actor_name, action, target_type, target_id, details, created_at')
     .order('created_at', { ascending: false })
-    .range(params.offset, params.offset + ACTIVITY_PAGE_SIZE - 1);
+    .range(params.offset, params.offset + size - 1);
 
   if (params.category) query = query.in('target_type', CATEGORY_TABLES[params.category]);
 
@@ -90,4 +99,85 @@ export async function fetchAdminActivity(params: {
   const { data, error } = await query;
   if (error) throw error;
   return (data as AdminActivity[] | null) ?? [];
+}
+
+/**
+ * Log sebagai .xlsx — mengikut carian dan kategori yang sedang dipapar.
+ *
+ * Fail mengambil tapisan yang SAMA seperti skrin, tetapi bukan halaman yang
+ * sama: skrin memuat 50 baris setiap kali "Muat lagi" ditekan, manakala fail
+ * mengambil keseluruhan hasil tapisan itu. Memuat turun "apa yang saya nampak"
+ * dan mendapat separuh daripadanya ialah cara paling mudah untuk tersalah
+ * percaya bahawa sesuatu tindakan tidak pernah berlaku.
+ */
+const EXPORT_PAGE_SIZE = 1000;
+
+/** Had keras supaya log yang sudah bertahun tidak menarik seluruh table ke dalam ingatan telefon. */
+const EXPORT_MAX_ROWS = 20000;
+
+export async function fetchAdminActivityAll(params: {
+  search: string;
+  category: ActivityCategory | null;
+}): Promise<AdminActivity[]> {
+  const all: AdminActivity[] = [];
+
+  for (let offset = 0; offset < EXPORT_MAX_ROWS; offset += EXPORT_PAGE_SIZE) {
+    const page = await fetchAdminActivity({ ...params, offset, pageSize: EXPORT_PAGE_SIZE });
+    all.push(...page);
+    if (page.length < EXPORT_PAGE_SIZE) break;
+  }
+
+  return all;
+}
+
+/**
+ * Medan yang diubah oleh satu tindakan, sebagai teks.
+ *
+ * Trigger audit menyimpannya sebagai array nama kolum dalam `details.diubah`.
+ * Tindakan yang bukan kemas kini (cipta, padam) tiada senarai itu langsung.
+ */
+function changedFields(details: AdminActivity['details']): string {
+  const changed = details?.diubah;
+  return Array.isArray(changed) ? changed.join(', ') : '';
+}
+
+/** Label sasaran: nama table ditukar kepada istilah yang admin guna. */
+function targetLabel(row: AdminActivity): string {
+  const type = TARGET_TYPE_LABEL[row.target_type] ?? row.target_type;
+  const label = typeof row.details?.label === 'string' ? row.details.label : null;
+  return label ? type + ' — ' + label : type;
+}
+
+export async function downloadAdminActivityLog(
+  params: { search: string; category: ActivityCategory | null },
+  mode: DeliveryMode,
+): Promise<{ rows: number; fileName: string; result: DeliveryResult }> {
+  const rows = await fetchAdminActivityAll(params);
+  if (!rows.length) throw new UserError('Tiada log aktiviti untuk tapisan ini.');
+
+  const sheet = XLSX.utils.json_to_sheet(
+    rows.map((row) => ({
+      'Nama Admin': row.actor_name,
+      Tindakan: row.action,
+      Sasaran: targetLabel(row),
+      'Medan Diubah': changedFields(row.details),
+      // Waktu tempatan peranti — log dibaca oleh orang yang berada di zon sama.
+      'Tarikh & Masa': new Date(row.created_at).toLocaleString('ms-MY'),
+    })),
+  );
+  const book = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(book, sheet, 'Log Aktiviti');
+
+  const today = new Date();
+  const stamp =
+    today.getFullYear() +
+    '-' +
+    String(today.getMonth() + 1).padStart(2, '0') +
+    '-' +
+    String(today.getDate()).padStart(2, '0');
+
+  const fileName = 'log-aktiviti-admin-' + stamp + '.xlsx';
+  const result = await deliverWorkbook(book, fileName, 'Log Aktiviti Admin', mode);
+
+  return { rows: rows.length, fileName, result };
 }

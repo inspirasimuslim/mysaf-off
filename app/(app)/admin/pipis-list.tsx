@@ -19,6 +19,7 @@ import { deliveryMessage, type DeliveryMode } from '@/lib/file-delivery';
 import { useGoBack } from '@/lib/navigation';
 import { fetchPipisReport, peratusLabel, ringgitPipis, type PipisReportRow } from '@/lib/pipis';
 import { downloadPipisReport } from '@/lib/pipis-report';
+import { downloadPipisTransactions } from '@/lib/transactions-report';
 import { generationLabel } from '@/types/database';
 
 type Banner = { tone: 'positive' | 'info' | 'negative'; message: string } | null;
@@ -50,6 +51,7 @@ export default function PipisListScreen() {
 
   const [search, setSearch] = useState('');
   const [exporting, setExporting] = useState<DeliveryMode | null>(null);
+  const [exportingTrx, setExportingTrx] = useState<DeliveryMode | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -113,6 +115,33 @@ export default function PipisListScreen() {
     [exporting],
   );
 
+  /**
+   * Transaksi mentah — SEMUA status, termasuk sumbangan gateway yang gagal.
+   *
+   * Laporan agregat di atas mengira sumbangan berjaya sahaja, jadi sumbangan
+   * yang gagal atau tersangkut tidak muncul di situ langsung.
+   */
+  const exportTransactions = useCallback(
+    async (mode: DeliveryMode) => {
+      if (exportingTrx) return;
+
+      setBanner(null);
+      setExportingTrx(mode);
+      try {
+        const report = await downloadPipisTransactions(mode);
+        setBanner({
+          tone: report.result === 'cancelled' ? 'info' : 'positive',
+          message: deliveryMessage(report.result, report.fileName, report.rows + ' transaksi'),
+        });
+      } catch (caught) {
+        setBanner({ tone: 'negative', message: toMalayError(caught, 'Gagal menjana senarai transaksi.') });
+      } finally {
+        setExportingTrx(null);
+      }
+    },
+    [exportingTrx],
+  );
+
   if (accessLoading || loading) return <LoadingScreen />;
 
   if (!canView) {
@@ -163,6 +192,15 @@ export default function PipisListScreen() {
             nativeCaption="Laporan PIPIS ASET (.xlsx)"
             busy={exporting}
             onPress={(mode) => void exportReport(mode)}
+          />
+
+          <SaveShareButtons
+            kind="file"
+            variant="ghost"
+            webLabel="Eksport Transaksi (Semua Status)"
+            nativeCaption="Transaksi PIPIS — semua status (.xlsx)"
+            busy={exportingTrx}
+            onPress={(mode) => void exportTransactions(mode)}
           />
 
           {canEdit ? (

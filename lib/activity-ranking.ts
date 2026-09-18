@@ -175,3 +175,35 @@ export function ringgit(value: number): string {
     })
   );
 }
+
+/** Penarafan Generasi yang DIPAPAR, sebagai .xlsx. */
+export async function downloadGenerationRanking(
+  ranking: ActivityRanking,
+  mode: DeliveryMode,
+): Promise<{ rows: number; fileName: string; result: DeliveryResult }> {
+  if (!ranking.generations.length) throw new UserError('Tiada generasi dalam penarafan untuk dimuat turun.');
+
+  /*
+    Kedudukan dikira MENGIKUT susunan pulangan RPC (markah menurun, seri
+    dipecahkan oleh jumlah PIPIS) dan bukan dikira semula di sini — dua tempat
+    yang menyusun perkara sama ialah dua tempat yang boleh tidak bersetuju.
+  */
+  const sheet = XLSX.utils.json_to_sheet(
+    ranking.generations.map((row, index) => ({
+      Kedudukan: index + 1,
+      Generasi: row.generasi ? generationLabel(row.generasi) : 'Tanpa generasi',
+      'Kod Generasi': row.generasi ?? '',
+      'Jumlah Markah': row.jumlah_markah_generasi,
+      'Bilangan Ahli': row.jumlah_ahli_generasi,
+      'Purata Markah': row.purata_markah,
+      'Jumlah PIPIS (RM)': row.jumlah_pipis_generasi,
+    })),
+  );
+  const book = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(book, sheet, 'Penarafan Generasi');
+
+  const fileName = 'penarafan-generasi-' + ranking.startDate + '-hingga-' + ranking.endDate + '.xlsx';
+  const result = await deliverWorkbook(book, fileName, 'Penarafan Generasi', mode);
+
+  return { rows: ranking.generations.length, fileName, result };
+}

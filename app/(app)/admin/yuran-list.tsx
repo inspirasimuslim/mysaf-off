@@ -17,6 +17,7 @@ import { useYuranAccess } from '@/lib/department-access';
 import { toMalayError } from '@/lib/errors';
 import { deliveryMessage, type DeliveryMode } from '@/lib/file-delivery';
 import { useGoBack } from '@/lib/navigation';
+import { downloadYuranTransactions } from '@/lib/transactions-report';
 import { downloadYuranReport } from '@/lib/yuran-report';
 import { fetchYuranReport, generateYuranYear, ringgit, type YuranReportRow } from '@/lib/yuran';
 import { generationLabel } from '@/types/database';
@@ -52,6 +53,7 @@ export default function YuranListScreen() {
   const [search, setSearch] = useState('');
   const [busy, setBusy] = useState(false);
   const [exporting, setExporting] = useState<DeliveryMode | null>(null);
+  const [exportingTrx, setExportingTrx] = useState<DeliveryMode | null>(null);
 
   const parsedYear = Number.parseInt(year, 10);
   const yearValid = Number.isFinite(parsedYear) && parsedYear >= 2000 && parsedYear <= 2100;
@@ -151,6 +153,36 @@ export default function YuranListScreen() {
     [exporting, parsedYear, yearValid],
   );
 
+  /**
+   * Transaksi mentah — SEMUA status, termasuk bayaran gateway yang gagal atau
+   * tersangkut pada 'pending'.
+   *
+   * Laporan agregat di atas mengira bayaran berjaya sahaja, jadi bayaran yang
+   * tersangkut tidak muncul di situ langsung. `null` dan bukan `parsedYear`:
+   * bayaran tersangkut tidak semestinya berada dalam tahun yang sedang dilihat,
+   * dan fail inilah tempat mencarinya.
+   */
+  const exportTransactions = useCallback(
+    async (mode: DeliveryMode) => {
+      if (exportingTrx) return;
+
+      setBanner(null);
+      setExportingTrx(mode);
+      try {
+        const report = await downloadYuranTransactions(null, mode);
+        setBanner({
+          tone: report.result === 'cancelled' ? 'info' : 'positive',
+          message: deliveryMessage(report.result, report.fileName, report.rows + ' transaksi'),
+        });
+      } catch (caught) {
+        setBanner({ tone: 'negative', message: toMalayError(caught, 'Gagal menjana senarai transaksi.') });
+      } finally {
+        setExportingTrx(null);
+      }
+    },
+    [exportingTrx],
+  );
+
   if (accessLoading || loading) return <LoadingScreen />;
 
   if (!canView) {
@@ -222,6 +254,15 @@ export default function YuranListScreen() {
               busy={exporting}
               disabled={!yearValid}
               onPress={(mode) => void exportReport(mode)}
+            />
+
+            <SaveShareButtons
+              kind="file"
+              variant="ghost"
+              webLabel="Eksport Transaksi (Semua Status)"
+              nativeCaption="Transaksi Yuran — semua status (.xlsx)"
+              busy={exportingTrx}
+              onPress={(mode) => void exportTransactions(mode)}
             />
           </View>
         </View>

@@ -120,12 +120,16 @@ export const TEMPLATES: Record<TemplateKind, Template> = {
     fileName: 'template-pipis.xlsx',
     sheetName: 'Sheet1',
     title: 'Template Sumbangan PIPIS',
-    columns: ['NAMA', 'GENERASI', 'KAWASAN', 'STATUS', 'JUMLAH_SUMBANGAN'],
+    /*
+      KAWASAN dan STATUS pernah berada di sini dan TIDAK pernah dibaca oleh
+      `pipis-import` — admin yang menyunting STATUS dalam fail menyangka ia
+      disimpan, sedangkan status dikira daripada jumlah sumbangan di pelayan.
+      Lajur yang tidak membawa kesan lebih buruk daripada lajur yang tiada.
+    */
+    columns: ['NAMA', 'GENERASI', 'JUMLAH_SUMBANGAN'],
     example: {
       NAMA: TEMPLATE_EXAMPLE_NAME,
       GENERASI: EXAMPLE_GENERATION,
-      KAWASAN: 'ULK',
-      STATUS: 'Belum Cukup',
       JUMLAH_SUMBANGAN: 1500,
     },
   },

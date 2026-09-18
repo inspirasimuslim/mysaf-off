@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 
 import { NoAccessScreen, SUPER_ADMIN_ONLY } from '@/components/no-access';
+import { SaveShareButtons } from '@/components/save-share-buttons';
 import { ScreenHeader } from '@/components/screen-header';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -17,6 +18,7 @@ import {
   ACTIVITY_CATEGORY_OPTIONS,
   ACTIVITY_PAGE_SIZE,
   TARGET_TYPE_LABEL,
+  downloadAdminActivityLog,
   fetchAdminActivity,
   type ActivityCategory,
   type AdminActivity,
@@ -24,6 +26,7 @@ import {
 import { groupActivity, type ActivityGroup } from '@/lib/activity-group';
 import { fetchAssignments, fetchDepartments, fetchProfiles } from '@/lib/admin';
 import { toMalayError } from '@/lib/errors';
+import { deliveryMessage, type DeliveryMode } from '@/lib/file-delivery';
 import { useGoBack } from '@/lib/navigation';
 import { usePermissions } from '@/lib/permissions';
 import { MONTH_NAMES, ROLE_LABEL } from '@/types/database';
@@ -70,6 +73,10 @@ export default function ActivityLogScreen() {
   const [search, setSearch] = useState('');
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState<ActivityCategory | null>(null);
+  const [exporting, setExporting] = useState<DeliveryMode | null>(null);
+  const [exportNotice, setExportNotice] = useState<{ tone: 'positive' | 'info' | 'negative'; message: string } | null>(
+    null,
+  );
 
   // Tunggu pengguna berhenti menaip sebelum menyoal pelayan.
   useEffect(() => {
@@ -123,6 +130,33 @@ export default function ActivityLogScreen() {
       active = false;
     };
   }, [allowed]);
+
+  /**
+   * Muat turun log mengikut tapisan yang sedang dipapar.
+   *
+   * `query` dan bukan `search`: fail patut sepadan dengan senarai di skrin, dan
+   * senarai itu menunggu pengguna berhenti menaip sebelum menyoal pelayan.
+   */
+  const exportLog = useCallback(
+    async (mode: DeliveryMode) => {
+      if (exporting) return;
+
+      setExportNotice(null);
+      setExporting(mode);
+      try {
+        const report = await downloadAdminActivityLog({ search: query, category }, mode);
+        setExportNotice({
+          tone: report.result === 'cancelled' ? 'info' : 'positive',
+          message: deliveryMessage(report.result, report.fileName, report.rows + ' tindakan'),
+        });
+      } catch (caught) {
+        setExportNotice({ tone: 'negative', message: toMalayError(caught, 'Gagal memuat turun log.') });
+      } finally {
+        setExporting(null);
+      }
+    },
+    [category, exporting, query],
+  );
 
   // Nombor permintaan terkini — jawapan carian lama yang tiba lewat dibuang.
   const requestRef = useRef(0);
@@ -182,6 +216,7 @@ export default function ActivityLogScreen() {
 
       <View className="gap-6 px-gutter pt-6">
         {error ? <Notice tone="negative" message={error} /> : null}
+        {exportNotice ? <Notice tone={exportNotice.tone} message={exportNotice.message} /> : null}
 
         <View className="gap-4">
           <TextField
@@ -200,6 +235,20 @@ export default function ActivityLogScreen() {
             options={ACTIVITY_CATEGORY_OPTIONS}
             onChange={setCategory}
             clearable
+          />
+
+          {/*
+            Fail mengambil tapisan yang sedang dipapar — bukan halaman yang
+            sedang dipapar. Lihat `downloadAdminActivityLog`.
+          */}
+          <SaveShareButtons
+            kind="file"
+            variant="secondary"
+            webLabel="Muat Turun Log (.xlsx)"
+            nativeCaption="Log Aktiviti Admin (.xlsx)"
+            busy={exporting}
+            disabled={loading || rows.length === 0}
+            onPress={(mode) => void exportLog(mode)}
           />
         </View>
 
