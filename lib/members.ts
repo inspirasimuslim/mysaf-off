@@ -1,4 +1,4 @@
-import type { DirectoryMember, Generation, Member, MemberSummary } from '@/types/database';
+import type { DirectoryMember, Generation, Member, MemberPickerRow, MemberSummary } from '@/types/database';
 
 import type { ParsedMember } from './ahli-import';
 import { supabase } from './supabase';
@@ -48,6 +48,18 @@ export async function fetchMemberDirectory(): Promise<DirectoryMember[]> {
   const { data, error } = await supabase.rpc('list_members_directory');
   if (error) throw error;
   return (data as DirectoryMember[] | null) ?? [];
+}
+
+/**
+ * Senarai carian untuk pemilih pasangan (borang, tab Keluarga) — dibaca oleh
+ * SEMUA ahli, sama seperti direktori. Berbeza daripada `fetchMemberDirectory`
+ * kerana ia mendedahkan `id`: lihat nota keselamatan pada
+ * `list_members_picker()` dalam `20260920000049_mbm_couples.sql`.
+ */
+export async function fetchMembersForPicker(): Promise<MemberPickerRow[]> {
+  const { data, error } = await supabase.rpc('list_members_picker');
+  if (error) throw error;
+  return (data as MemberPickerRow[] | null) ?? [];
 }
 
 // --- Senarai ahli ------------------------------------------------------------

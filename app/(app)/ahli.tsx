@@ -147,8 +147,9 @@ export default function AhliScreen() {
         {error ? <Notice tone="negative" message={error} /> : null}
 
         {/*
-          Dua pintu bersebelahan, kedua-duanya dibuka kepada semua ahli: rumusan
-          agregat (tiada data individu) dan carta organisasi (maklumat terbuka).
+          Tiga pintu, kesemuanya dibuka kepada semua ahli: rumusan agregat
+          (tiada data individu), carta organisasi (maklumat terbuka), dan
+          senarai pasangan Ahli MBM (lapan field terhad, lihat `ahli-mbm.tsx`).
         */}
         <View className="flex-row gap-3">
           <Pressable
@@ -173,6 +174,18 @@ export default function AhliScreen() {
             <Text className="text-sm font-semibold leading-5 text-ink">Organisasi 2025/2027</Text>
           </Pressable>
         </View>
+
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Ahli MBM"
+          onPress={() => router.push('/(app)/ahli-mbm')}
+          className="flex-row items-center gap-4 rounded-card border border-line bg-surface p-4 active:opacity-70">
+          <View className="h-11 w-11 items-center justify-center rounded-pill bg-primary-soft">
+            <Ionicons name="heart" size={20} color={Colors.primary} />
+          </View>
+          <Text className="flex-1 text-sm font-semibold leading-5 text-ink">Ahli MBM</Text>
+          <Ionicons name="chevron-forward" size={18} color={Colors.inkFaint} />
+        </Pressable>
 
         {/*
           Pintu ketiga, selebar baris penuh dan bukan sebahagian daripada

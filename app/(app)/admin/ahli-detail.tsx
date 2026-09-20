@@ -17,11 +17,11 @@ import { Colors } from '@/constants/theme';
 import { pickAvatar, uploadAvatar } from '@/lib/avatar';
 import { useMemberAccess, useUsrahAccess } from '@/lib/department-access';
 import { toMalayError } from '@/lib/errors';
-import { deleteMemberAccount, fetchGenerations, fetchMember, updateMember } from '@/lib/members';
+import { deleteMemberAccount, fetchGenerations, fetchMember, fetchMembersForPicker, updateMember } from '@/lib/members';
 import { useGoBack } from '@/lib/navigation';
 import { usePermissions } from '@/lib/permissions';
 import { TEMP_PASSWORD, resetMemberPassword } from '@/lib/temp-password';
-import { type Generation, type Member } from '@/types/database';
+import { type Generation, type Member, type MemberPickerRow } from '@/types/database';
 
 type Banner = { tone: 'positive' | 'negative'; message: string } | null;
 
@@ -36,6 +36,7 @@ export default function AhliDetailScreen() {
 
   const [member, setMember] = useState<Member | null>(null);
   const [generations, setGenerations] = useState<Generation[]>([]);
+  const [spouseCandidates, setSpouseCandidates] = useState<MemberPickerRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [banner, setBanner] = useState<Banner>(null);
   const [saving, setSaving] = useState(false);
@@ -55,6 +56,15 @@ export default function AhliDetailScreen() {
         if (!active) return;
         setMember(row);
         setGenerations(gens);
+
+        // Kegagalan di sini tidak boleh menyekat paparan rekod ahli — kesannya
+        // hanya pemilih pasangan turun kepada senarai kosong.
+        try {
+          const candidates = await fetchMembersForPicker();
+          if (active) setSpouseCandidates(candidates);
+        } catch {
+          if (active) setSpouseCandidates([]);
+        }
       } catch (caught) {
         if (active)
           setBanner({ tone: 'negative', message: toMalayError(caught, 'Gagal memuatkan rekod ahli.') });
@@ -244,6 +254,7 @@ export default function AhliDetailScreen() {
             key={member.id + ':' + version}
             member={member}
             generations={generations}
+            spouseCandidates={spouseCandidates}
             /* Panel Admin sentiasa berurusan dengan kolum keahlian; yang
              menentukan sama ada ia boleh disunting ialah `readOnly` di bawah. */
             canEditAdminColumns

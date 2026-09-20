@@ -15,8 +15,8 @@ import { fetchMyActivityRank, type MyActivityRank } from '@/lib/activity-rank';
 import { pickAvatar, uploadAvatar } from '@/lib/avatar';
 import { displayName, useAuth } from '@/lib/auth-context';
 import { toMalayError } from '@/lib/errors';
-import { fetchGenerations, fetchMyMember, fetchMyMemberLinked, updateMember } from '@/lib/members';
-import { MONTH_NAMES, type Generation, type Member } from '@/types/database';
+import { fetchGenerations, fetchMembersForPicker, fetchMyMember, fetchMyMemberLinked, updateMember } from '@/lib/members';
+import { MONTH_NAMES, type Generation, type Member, type MemberPickerRow } from '@/types/database';
 
 type Banner = { tone: 'positive' | 'negative'; message: string } | null;
 
@@ -34,6 +34,7 @@ export default function ProfilScreen() {
 
   const [member, setMember] = useState<Member | null>(null);
   const [generations, setGenerations] = useState<Generation[]>([]);
+  const [spouseCandidates, setSpouseCandidates] = useState<MemberPickerRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [banner, setBanner] = useState<Banner>(null);
@@ -85,6 +86,15 @@ export default function ProfilScreen() {
         setMember(row);
         setGenerations(gens);
         setError(null);
+
+        // Kegagalan di sini tidak boleh menyekat paparan profil — kesannya
+        // hanya pemilih pasangan turun kepada senarai kosong.
+        try {
+          const candidates = await fetchMembersForPicker();
+          if (active) setSpouseCandidates(candidates);
+        } catch {
+          if (active) setSpouseCandidates([]);
+        }
       } catch (caught) {
         if (active) setError(toMalayError(caught, 'Gagal memuatkan profil anda.'));
       } finally {
@@ -193,6 +203,7 @@ export default function ProfilScreen() {
           key={member.id + ':' + version}
           member={member}
           generations={generations}
+          spouseCandidates={spouseCandidates}
           canEditAdminColumns={false}
           busy={saving}
           headerAside={rank ? <AchievementBadge rank={rank} /> : undefined}

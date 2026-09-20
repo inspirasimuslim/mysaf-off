@@ -274,8 +274,12 @@ function mapRow(raw: RawRow): ParsedMember {
     // --- Keluarga ---
     status_perkahwinan: toStatusPerkahwinan(raw.StatusPerkahwinan),
     nama_pasangan: text(raw.NyatakanJikaMBM),
+    // Fail Excel tidak membawa pautan pasangan atau nama anak — kedua-duanya
+    // diisi kemudian dalam borang profil, bukan oleh import.
+    spouse_member_id: null,
     tahun_berkahwin: text(raw.TahunBerkahwin),
     bil_anak: int(raw.BilAnak),
+    nama_anak: null,
     anggaran_pendapatan_isi_rumah_range: toPendapatanRange(raw.AnggaranPendapatanIsiRumah),
     bil_tanggungan_selain_keluarga: int(raw.BilTanggunganSelainKeluarga),
     pekerjaan_ibu: text(raw.PekerjaanIbu),

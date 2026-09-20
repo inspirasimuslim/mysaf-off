@@ -5,6 +5,7 @@ import { ActivityIndicator, Pressable, Switch, Text, View } from 'react-native';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { MemberAvatar } from '@/components/ui/member-avatar';
+import { MemberPickerField } from '@/components/ui/member-picker-field';
 import { Notice } from '@/components/ui/notice';
 import { PickerField } from '@/components/ui/picker-field';
 import { SectionTitle } from '@/components/ui/section-title';
@@ -23,6 +24,7 @@ import {
   generationLabel,
   type Generation,
   type Member,
+  type MemberPickerRow,
   type Option,
 } from '@/types/database';
 
@@ -61,6 +63,8 @@ const PROFILE_TABS: Option<ProfileTab>[] = [
 type Props = {
   member: Member;
   generations: Generation[];
+  /** Calon pemilih pasangan (tab Keluarga, status 'berkahwin_mbm') — daripada `list_members_picker()`. */
+  spouseCandidates: MemberPickerRow[];
   canEditAdminColumns: boolean;
   /** Kunci SELURUH borang: pengguna boleh melihat rekod tetapi bukan menyuntingnya. */
   readOnly?: boolean;
@@ -127,6 +131,7 @@ type TextFieldKey = {
 export function MemberForm({
   member,
   generations,
+  spouseCandidates,
   canEditAdminColumns,
   readOnly = false,
   busy = false,
@@ -186,6 +191,18 @@ export function MemberForm({
     [draft.kawasan_usrah],
   );
   const sekolahOptions = useMemo(() => withUnrecognised(SEKOLAH_OPTIONS, draft.sekolah), [draft.sekolah]);
+
+  /*
+    Ahli sendiri dibuang (seseorang tidak boleh jadi pasangan dirinya — dikuat
+    kuasa juga oleh constraint `members_spouse_not_self`), dan calon disempitkan
+    kepada jantina BERLAWANAN bila diketahui — pilihan yang lebih pantas dicari
+    dalam senarai 300+ ahli. Jantina tidak diketahui tidak menyekat carian.
+  */
+  const spousePool = useMemo(() => {
+    const others = spouseCandidates.filter((candidate) => candidate.id !== member.id);
+    if (!draft.jantina) return others;
+    return others.filter((candidate) => !candidate.jantina || candidate.jantina !== draft.jantina);
+  }, [draft.jantina, member.id, spouseCandidates]);
 
   /**
    * Medan yang berubah sahaja — mengelak menulis semula kolum yang tidak disentuh.
@@ -444,15 +461,42 @@ export function MemberForm({
         label="Status perkahwinan"
         value={draft.status_perkahwinan}
         options={STATUS_PERKAHWINAN_OPTIONS}
-        onChange={(next) => set('status_perkahwinan', next)}
+        onChange={(next) =>
+          setDraft((current) => ({
+            ...current,
+            status_perkahwinan: next,
+            // Pasangan ahli hanya bermakna bila status MBM — tukar keluar
+            // daripada MBM melepaskan pautan supaya ia tidak tersangkut senyap.
+            spouse_member_id: next === 'berkahwin_mbm' ? current.spouse_member_id : null,
+          }))
+        }
         disabled={locked}
       />
 
       {married ? (
         <>
-          {field('Nama pasangan', 'nama_pasangan')}
+          {draft.status_perkahwinan === 'berkahwin_mbm' ? (
+            <MemberPickerField
+              label="Pasangan (Ahli)"
+              value={draft.spouse_member_id}
+              candidates={spousePool}
+              onChange={(next) => set('spouse_member_id', next)}
+              disabled={locked}
+            />
+          ) : (
+            field('Nama pasangan', 'nama_pasangan')
+          )}
           {field('Tahun berkahwin', 'tahun_berkahwin')}
           {numberField('Bilangan anak', 'bil_anak')}
+          <TextField
+            label="Nama anak"
+            value={draft.nama_anak ?? ''}
+            onChangeText={setText('nama_anak')}
+            editable={!locked}
+            autoCapitalize="sentences"
+            autoCorrect={false}
+            multiline
+          />
         </>
       ) : null}
 

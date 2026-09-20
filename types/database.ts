@@ -122,9 +122,13 @@ export type Member = {
 
   // --- Keluarga ---
   status_perkahwinan: StatusPerkahwinan | null;
+  /** Teks bebas — pasangan BUKAN ahli sahaja. Pasangan ahli guna `spouse_member_id`. */
   nama_pasangan: string | null;
+  /** Rekod ahli PASANGAN, hanya bila pasangan turut ahli ('berkahwin_mbm'). Dua hala — lihat trigger `sync_spouse_link`. */
+  spouse_member_id: string | null;
   tahun_berkahwin: string | null;
   bil_anak: number | null;
+  nama_anak: string | null;
   anggaran_pendapatan_isi_rumah_range: PendapatanRange | null;
   bil_tanggungan_selain_keluarga: number | null;
   pekerjaan_ibu: string | null;
@@ -160,6 +164,31 @@ export type DirectoryMember = {
   avatar_url: string | null;
   status_pekerjaan: StatusPekerjaan | null;
   status_perkahwinan: StatusPerkahwinan | null;
+};
+
+/**
+ * Baris pemilih pasangan — hasil `list_members_picker()`.
+ *
+ * Mendedahkan `id`, tidak seperti `DirectoryMember`: borang perlu menyimpan
+ * RUJUKAN kepada ahli lain (`spouse_member_id`), bukan sekadar memaparkannya.
+ * Lihat nota keselamatan dalam `20260920000049_mbm_couples.sql`.
+ */
+export type MemberPickerRow = {
+  id: string;
+  full_name: string;
+  generasi: string | null;
+  jantina: string | null;
+};
+
+/** Satu pasangan MBM — hasil `list_mbm_couples()`. Field terhad, bukan `Member` penuh. */
+export type MbmCouple = {
+  nama_suami: string;
+  generasi_suami: string | null;
+  nama_isteri: string;
+  generasi_isteri: string | null;
+  tahun_berkahwin: string | null;
+  bil_anak: number | null;
+  nama_anak: string | null;
 };
 
 /**
