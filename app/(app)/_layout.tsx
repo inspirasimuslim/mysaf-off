@@ -293,6 +293,7 @@ function AppGate() {
       <Tabs.Screen name="komen" options={{ href: null }} />
       <Tabs.Screen name="tetapan" options={{ href: null }} />
       <Tabs.Screen name="ahli-view" options={{ href: null }} />
+      <Tabs.Screen name="ahli-mbm" options={{ href: null }} />
       <Tabs.Screen name="ahli-rumusan" options={{ href: null }} />
       <Tabs.Screen name="hari-jadi-bulan" options={{ href: null }} />
       <Tabs.Screen name="organisasi" options={{ href: null }} />
