@@ -302,6 +302,7 @@ function AppGate() {
       <Tabs.Screen name="usrah-sejarah" options={{ href: null }} />
       <Tabs.Screen name="adhoc-payment-info" options={{ href: null }} />
       <Tabs.Screen name="event-info" options={{ href: null }} />
+      <Tabs.Screen name="event-album" options={{ href: null }} />
       <Tabs.Screen name="announcement-info" options={{ href: null }} />
     </Tabs>
   );
