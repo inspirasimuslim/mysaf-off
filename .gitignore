@@ -45,6 +45,9 @@ example
 # env files (jangan commit secret)
 .env
 
+# credential Google Service Account (Album Gambar Event) — JANGAN commit
+assets/*.json
+
 # data peribadi ahli — JANGAN commit (fail import mentah, 300+ rekod peribadi)
 seed-data/
 *.xlsx
