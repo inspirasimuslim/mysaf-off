@@ -77,6 +77,125 @@ function mergeImports(lines) {
   ];
 }
 
+/** Deklarasi top-level (kolum 0) sahaja — bukan pembolehubah tempatan dalam fungsi. */
+const TOP_LEVEL_DECL = /^(export\s+)?(async\s+)?(function\*?|class|const|let|var)\s+([A-Za-z_$][\w$]*)/;
+/** Nama pengikat import bernama/lalai — untuk kesan langgar dengan deklarasi tempatan. */
+const IMPORT_BINDING = /^import\s+(?:([\w$]+)\s*,?\s*)?(?:\{([\s\S]*?)\})?\s*from/;
+
+/**
+ * Kira perubahan kedalaman kurungan `{([` bagi SATU baris, abaikan kandungan
+ * string/template/komen — perlu supaya kurungan dalam literal rentetan
+ * (cth "Tamat masa {label}") tidak mengelirukan pengesanan hujung deklarasi.
+ * `state` disimpan merentasi panggilan untuk komen blok `/* ... *\/` berbilang baris.
+ */
+function braceDelta(line, state) {
+  let delta = 0;
+  let i = 0;
+  while (i < line.length) {
+    if (state.inBlockComment) {
+      const end = line.indexOf('*/', i);
+      if (end === -1) return delta;
+      i = end + 2;
+      state.inBlockComment = false;
+      continue;
+    }
+    const ch = line[i];
+    if (ch === '/' && line[i + 1] === '/') break;
+    if (ch === '/' && line[i + 1] === '*') {
+      state.inBlockComment = true;
+      i += 2;
+      continue;
+    }
+    if (ch === "'" || ch === '"' || ch === '`') {
+      const quote = ch;
+      i++;
+      while (i < line.length && line[i] !== quote) {
+        if (line[i] === '\\') i++;
+        i++;
+      }
+      i++;
+      continue;
+    }
+    if (ch === '{' || ch === '(' || ch === '[') delta++;
+    else if (ch === '}' || ch === ')' || ch === ']') delta--;
+    i++;
+  }
+  return delta;
+}
+
+/** Senarai { name, start, end } bagi setiap deklarasi top-level dalam `lines`. */
+function extractTopLevelDecls(lines) {
+  const decls = [];
+  const state = { inBlockComment: false };
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i];
+    const match = !state.inBlockComment && /^\S/.test(line) ? TOP_LEVEL_DECL.exec(line) : null;
+    if (match) {
+      const start = i;
+      let depth = 0;
+      let j = i;
+      do {
+        depth += braceDelta(lines[j], state);
+        j++;
+      } while (depth > 0 && j < lines.length);
+      decls.push({ name: match[4], start, end: j - 1 });
+      i = j;
+    } else {
+      braceDelta(line, state);
+      i++;
+    }
+  }
+  return decls;
+}
+
+/** Nama pengikat (import bernama/lalai) yang dihasilkan oleh satu baris import gabungan. */
+function importBindingNames(importLines) {
+  const names = [];
+  for (const line of importLines) {
+    const match = IMPORT_BINDING.exec(line);
+    if (!match) continue;
+    if (match[1]) names.push(match[1]);
+    if (match[2]) {
+      for (const raw of match[2].split(',')) {
+        const spec = raw.trim().replace(/^type\s+/, '');
+        if (!spec) continue;
+        const alias = spec.split(/\s+as\s+/).pop().trim();
+        if (alias) names.push(alias);
+      }
+    }
+  }
+  return names;
+}
+
+/**
+ * Buang deklarasi top-level yang NAMANYA berulang merentasi berbilang fail
+ * yang digabungkan (cth `LOG_TAG` diisytiharkan berasingan dalam
+ * `_shared/google-drive.ts` DAN dalam `index.ts` fungsi yang mengimportnya —
+ * "Identifier ... has already been declared" bila digabung jadi satu skop).
+ * Deklarasi PERTAMA yang muncul (ikut susunan `sections`) dikekalkan; yang
+ * berulang dibuang SEPENUHNYA (bukan sekadar baris pertama).
+ */
+function dedupeDeclarations(sections, seen) {
+  return sections.map(({ label, lines }) => {
+    const decls = extractTopLevelDecls(lines);
+    const toRemove = [];
+    for (const decl of decls) {
+      if (seen.has(decl.name)) {
+        toRemove.push(decl);
+      } else {
+        seen.add(decl.name);
+      }
+    }
+    if (toRemove.length === 0) return { label, lines };
+    const kept = lines.slice();
+    for (const decl of toRemove) {
+      for (let i = decl.start; i <= decl.end; i++) kept[i] = null;
+    }
+    return { label, lines: kept.filter((line) => line !== null) };
+  });
+}
+
 const sharedCache = new Map();
 
 /** Satu fail _shared: import luarnya, fail _shared yang diimportnya, dan badannya. */
@@ -121,6 +240,19 @@ for (const name of names) {
   const ownImports = own.imports.filter((line) => !SHARED_IMPORT.test(line));
   const imports = mergeImports([...sharedFiles.flatMap((file) => loadShared(file).imports), ...ownImports]);
 
+  // Deklarasi top-level yang berulang nama (cth LOG_TAG dalam _shared DAN
+  // dalam index.ts) dibuang — yang pertama muncul (susunan output di bawah:
+  // import, _shared ikut kebergantungan, index.ts sendiri) dikekalkan.
+  const seenNames = new Set(importBindingNames(imports));
+  const sections = dedupeDeclarations(
+    [
+      ...sharedFiles.map((file) => ({ label: file, lines: loadShared(file).body.split('\n') })),
+      { label: name + '/index.ts', lines: own.body.split('\n') },
+    ],
+    seenNames,
+  );
+  const dedupedBodies = new Map(sections.map((section) => [section.label, section.lines.join('\n')]));
+
   const output = [
     '// DIJANA oleh scripts/build-deploy.mjs — jangan sunting terus.',
     '// Sumber: supabase/functions/' + name + '/index.ts' + sharedFiles.map((file) => ' + _shared/' + file).join(''),
@@ -131,17 +263,28 @@ for (const name of names) {
     ...sharedFiles.flatMap((file) => [
       '// --- _shared/' + file + ' ' + '-'.repeat(Math.max(4, 68 - file.length)),
       '',
-      loadShared(file).body,
+      dedupedBodies.get(file),
       '',
     ]),
     '// --- ' + name + '/index.ts ' + '-'.repeat(Math.max(4, 64 - name.length)),
     '',
-    own.body,
+    dedupedBodies.get(name + '/index.ts'),
     '',
   ].join('\n');
 
   if (/from\s*['"](?:\.\.\/_shared\/|\.\/)/.test(output)) {
     console.error('GAGAL ' + name + ': import _shared masih tertinggal.');
+    failed = true;
+    continue;
+  }
+
+  const dupeNames = extractTopLevelDecls(output.split('\n')).reduce((counts, decl) => {
+    counts.set(decl.name, (counts.get(decl.name) ?? 0) + 1);
+    return counts;
+  }, new Map());
+  const stillDuplicated = [...dupeNames].filter(([, count]) => count > 1).map(([n]) => n);
+  if (stillDuplicated.length > 0) {
+    console.error('GAGAL ' + name + ': deklarasi berulang tidak dibetulkan: ' + stillDuplicated.join(', '));
     failed = true;
     continue;
   }
