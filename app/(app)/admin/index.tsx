@@ -1,12 +1,14 @@
-import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { View } from 'react-native';
 
 import { ScreenHeader } from '@/components/screen-header';
 import { ActionRow } from '@/components/ui/action-row';
 import { CollapsibleSection } from '@/components/ui/collapsible-section';
 import { EmptyState } from '@/components/ui/empty-state';
+import { FormModal } from '@/components/ui/form-modal';
 import { Screen } from '@/components/ui/screen';
+import { SelectRow } from '@/components/ui/select-row';
 import {
   useDepartmentAccess,
   useGenerasiAccess,
@@ -61,21 +63,45 @@ export default function AdminHubScreen() {
   const [myGroups, setMyGroups] = useState<UsrahGroup[]>([]);
   const [myGroupsLoading, setMyGroupsLoading] = useState(true);
 
-  useEffect(() => {
-    if (permissionsLoading || !naqib) {
-      setMyGroupsLoading(false);
+  /*
+    `useFocusEffect` dan bukan `useEffect` sahaja — React Navigation TIDAK
+    memasang semula Hub selepas naqib mencipta kumpulan/sesi di skrin lain
+    dan menekan "kembali" (Hub kekal dalam stack). `useEffect` biasa hanya
+    berjalan SEKALI semasa Hub pertama dibuka, jadi ia sentiasa memaparkan
+    senarai LAPUK — punca bug "sentiasa landing ke Cipta Kumpulan Baru":
+    naqib yang baru sahaja mencipta kumpulan pertamanya kembali ke Hub dan
+    masih dipaparkan seolah-olah tiada kumpulan langsung, lalu cipta
+    kumpulan KEDUA yang tidak perlu.
+  */
+  useFocusEffect(
+    useCallback(() => {
+      if (permissionsLoading || !naqib) {
+        setMyGroupsLoading(false);
+        return;
+      }
+      let active = true;
+      setMyGroupsLoading(true);
+      fetchMyGroups()
+        .then((rows) => active && setMyGroups(rows))
+        .catch(() => active && setMyGroups([]))
+        .finally(() => active && setMyGroupsLoading(false));
+      return () => {
+        active = false;
+      };
+    }, [naqib, permissionsLoading]),
+  );
+
+  // --- "Tambah Sesi" — pilih kumpulan dahulu bila naqib pegang >1 kumpulan ---
+  const [pickingGroupForSession, setPickingGroupForSession] = useState(false);
+
+  const addSession = useCallback(() => {
+    const onlyGroup = myGroups.length === 1 ? myGroups[0] : undefined;
+    if (onlyGroup) {
+      router.push({ pathname: '/(app)/admin/usrah-session-form', params: { groupId: onlyGroup.id } });
       return;
     }
-    let active = true;
-    setMyGroupsLoading(true);
-    fetchMyGroups()
-      .then((rows) => active && setMyGroups(rows))
-      .catch(() => active && setMyGroups([]))
-      .finally(() => active && setMyGroupsLoading(false));
-    return () => {
-      active = false;
-    };
-  }, [naqib, permissionsLoading]);
+    setPickingGroupForSession(true);
+  }, [myGroups, router]);
 
   /*
     Setiap department dimuat berasingan. Seksyen dipasang hanya selepas
@@ -104,6 +130,7 @@ export default function AdminHubScreen() {
   const openByDefault = visibleSections === 1;
 
   return (
+    <>
     <Screen padTop={false}>
       <ScreenHeader
         eyebrow="Panel Pentadbiran"
@@ -385,6 +412,7 @@ export default function AdminHubScreen() {
             count={myGroups.length || 1}
             defaultOpen={openByDefault}>
             {myGroups.length === 0 ? (
+              // Naqib baharu — tiada apa untuk "tambah sesi" pun, terus ke Cipta.
               <ActionRow
                 icon="add-circle-outline"
                 title="Cipta Kumpulan Usrah"
@@ -392,15 +420,38 @@ export default function AdminHubScreen() {
                 onPress={() => router.push('/(app)/admin/usrah-group-create')}
               />
             ) : (
-              myGroups.map((group) => (
+              <>
+                {/*
+                  Sekurang-kurangnya SATU kumpulan sedia ada — dua pilihan jelas
+                  dahulu (bukan terus paksa Cipta Kumpulan Baru), kemudian senarai
+                  kumpulan sedia ada di bawah untuk diurus terus.
+                */}
                 <ActionRow
-                  key={group.id}
-                  icon="school-outline"
-                  title={group.group_name}
-                  subtitle={group.sekolah}
-                  onPress={() => router.push({ pathname: '/(app)/admin/perkaderan-group-detail', params: { id: group.id } })}
+                  icon="calendar-outline"
+                  title="Tambah Sesi"
+                  subtitle={
+                    myGroups.length === 1
+                      ? 'Sesi baharu untuk kumpulan sedia ada anda'
+                      : 'Pilih kumpulan, kemudian sesi baharu'
+                  }
+                  onPress={addSession}
                 />
-              ))
+                <ActionRow
+                  icon="add-circle-outline"
+                  title="Cipta Kumpulan Baru"
+                  subtitle="Untuk sekolah/kumpulan LAIN, jika anda pegang lebih daripada satu"
+                  onPress={() => router.push('/(app)/admin/usrah-group-create')}
+                />
+                {myGroups.map((group) => (
+                  <ActionRow
+                    key={group.id}
+                    icon="school-outline"
+                    title={group.group_name}
+                    subtitle={group.sekolah}
+                    onPress={() => router.push({ pathname: '/(app)/admin/perkaderan-group-detail', params: { id: group.id } })}
+                  />
+                ))}
+              </>
             )}
           </CollapsibleSection>
         ) : null}
@@ -488,5 +539,27 @@ export default function AdminHubScreen() {
         )}
       </View>
     </Screen>
+
+    <FormModal
+      visible={pickingGroupForSession}
+      title="Pilih Kumpulan"
+      description="Kumpulan mana yang mahu ditambah sesi baharu?"
+      onClose={() => setPickingGroupForSession(false)}>
+      <View className="gap-3">
+        {myGroups.map((group) => (
+          <SelectRow
+            key={group.id}
+            title={group.group_name}
+            subtitle={group.sekolah}
+            selected={false}
+            onPress={() => {
+              setPickingGroupForSession(false);
+              router.push({ pathname: '/(app)/admin/usrah-session-form', params: { groupId: group.id } });
+            }}
+          />
+        ))}
+      </View>
+    </FormModal>
+    </>
   );
 }

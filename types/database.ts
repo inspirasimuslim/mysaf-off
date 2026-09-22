@@ -306,6 +306,13 @@ export const SEKOLAH_OPTIONS: Option<string>[] = [
   { value: 'Lain-lain', label: 'Lain-lain' },
 ];
 
+/** Tingkatan mad'u Usrah Sekolah — senarai TETAP, 3 pilihan sahaja. */
+export const TINGKATAN_OPTIONS: Option<string>[] = [
+  { value: 'Tingkatan 3', label: 'Tingkatan 3' },
+  { value: 'Tingkatan 4', label: 'Tingkatan 4' },
+  { value: 'Tingkatan 5', label: 'Tingkatan 5' },
+];
+
 export const JANTINA_OPTIONS: Option<string>[] = [
   { value: 'Muslimin', label: 'Muslimin' },
   { value: 'Muslimat', label: 'Muslimat' },
@@ -669,6 +676,8 @@ export type UsrahGroup = {
   sekolah: string;
   /** Dijana automatik oleh trigger DB — bukan diedit terus. */
   group_name: string;
+  /** Cadangan sahaja — pra-isi borang sesi baharu. Tidak menjejaskan sesi sedia ada. */
+  default_partner_naqib_member_id: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -701,6 +710,9 @@ export type UsrahSession = {
   session_date: string;
   location_text: string | null;
   topik: string | null;
+  /** Untuk SESI INI sahaja — menukarnya tidak menjejaskan kumpulan atau sesi lain. */
+  partner_naqib_member_id: string | null;
+  partner_naqib_hadir: boolean;
   recorded_by: string | null;
   created_at: string;
   updated_at: string;
@@ -722,6 +734,9 @@ export type PerkaderanExportRow = {
   lokasi: string | null;
   topik: string | null;
   bilangan_hadir: number;
+  partner_naqib: string | null;
+  /** `null` bila tiada partner untuk sesi ini — berbeza daripada `false` (partner ada, tak hadir). */
+  partner_hadir: boolean | null;
 };
 
 export type PerkaderanExportDetailRow = {

@@ -7,6 +7,7 @@ import type {
   UsrahSession,
 } from '@/types/database';
 
+import { UserError } from './errors';
 import { supabase } from './supabase';
 
 /**
@@ -99,20 +100,30 @@ export async function fetchGroup(id: string): Promise<UsrahGroup | null> {
  * belum mempunyai kumpulan langsung. Mad'u belum wujud pada peringkat ini,
  * jadi sesi pertama tercipta tanpa sebarang kehadiran; naqib menambah mad'u
  * dan merekod kehadiran bermula sesi kedua.
+ *
+ * `defaultPartnerNaqibMemberId` disimpan pada KEDUA-DUA kumpulan (cadangan
+ * untuk sesi akan datang) DAN sesi pertama ini (nilai sebenar sesi itu) —
+ * selepas ini, setiap sesi menyimpan pilihannya sendiri secara berasingan.
  */
 export async function createGroupWithFirstSession(
   sekolah: string,
+  defaultPartnerNaqibMemberId: string | null,
   firstSession: { session_date: string; location_text: string | null; topik: string | null },
 ): Promise<{ group: UsrahGroup; session: UsrahSession }> {
   const { data: session } = await supabase.auth.getUser();
   const uid = session.user?.id ?? null;
 
   const memberId = await fetchMyMemberId();
-  if (!memberId) throw new Error('Rekod ahli untuk akaun ini tidak dijumpai.');
+  if (!memberId) {
+    throw new UserError(
+      'Rekod ahli untuk akaun ini tidak dijumpai atau akaun masih memerlukan tukar kata laluan sementara. ' +
+        'Log masuk semula dan tukar kata laluan dahulu jika masih diminta.',
+    );
+  }
 
   const { data: group, error: groupError } = await supabase
     .from('sekolah_usrah_groups')
-    .insert({ naqib_member_id: memberId, sekolah })
+    .insert({ naqib_member_id: memberId, sekolah, default_partner_naqib_member_id: defaultPartnerNaqibMemberId })
     .select('*')
     .single();
   if (groupError) throw groupError;
@@ -124,6 +135,7 @@ export async function createGroupWithFirstSession(
       session_date: firstSession.session_date,
       location_text: firstSession.location_text,
       topik: firstSession.topik,
+      partner_naqib_member_id: defaultPartnerNaqibMemberId,
       recorded_by: uid,
     })
     .select('*')
@@ -183,7 +195,14 @@ export async function fetchSession(id: string): Promise<UsrahSession | null> {
   return (data as UsrahSession | null) ?? null;
 }
 
-export type SessionInput = { session_date: string; location_text: string | null; topik: string | null };
+export type SessionInput = {
+  session_date: string;
+  location_text: string | null;
+  topik: string | null;
+  partner_naqib_member_id: string | null;
+  /** Diabaikan bila `partner_naqib_member_id` null — DB kekalkan `true` sebagai lalai. */
+  partner_naqib_hadir: boolean;
+};
 
 export async function createSession(groupId: string, input: SessionInput): Promise<UsrahSession> {
   const { data: session } = await supabase.auth.getUser();

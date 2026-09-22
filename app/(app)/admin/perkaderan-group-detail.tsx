@@ -1,5 +1,5 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import { ScreenHeader } from '@/components/screen-header';
@@ -11,15 +11,17 @@ import { FormModal } from '@/components/ui/form-modal';
 import { IconButton } from '@/components/ui/icon-button';
 import { LoadingScreen } from '@/components/ui/loading-screen';
 import { Notice } from '@/components/ui/notice';
+import { PickerField } from '@/components/ui/picker-field';
 import { Screen } from '@/components/ui/screen';
 import { SectionTitle } from '@/components/ui/section-title';
 import { TextField } from '@/components/ui/text-field';
 import { usePerkaderanAccess } from '@/lib/department-access';
 import { toMalayErrorVerbose } from '@/lib/errors';
+import { fetchMembersForPicker } from '@/lib/members';
 import { useGoBack } from '@/lib/navigation';
 import { addMadU, fetchGroup, fetchMadU, fetchMyMemberId, fetchSessions, removeMadU } from '@/lib/perkaderan';
 import { usePermissions } from '@/lib/permissions';
-import type { UsrahGroup, UsrahMadU, UsrahSession } from '@/types/database';
+import { TINGKATAN_OPTIONS, type MemberPickerRow, type Option, type UsrahGroup, type UsrahMadU, type UsrahSession } from '@/types/database';
 
 type Banner = { tone: 'positive' | 'info' | 'negative'; message: string } | null;
 
@@ -28,6 +30,12 @@ function dateLabel(value: string): string {
   const parsed = new Date(value + 'T00:00:00');
   if (Number.isNaN(parsed.getTime())) return value;
   return parsed.toLocaleDateString('ms-MY', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+/** Pilihan rasmi, ditambah nilai semasa sebagai "(tidak dikenali)" jika ia di luar senarai. */
+function withUnrecognised(options: Option<string>[], current: string | null): Option<string>[] {
+  if (!current || options.some((option) => option.value === current)) return options;
+  return [...options, { value: current, label: current + ' (tidak dikenali)' }];
 }
 
 export default function PerkaderanGroupDetailScreen() {
@@ -40,6 +48,7 @@ export default function PerkaderanGroupDetailScreen() {
   const [group, setGroup] = useState<UsrahGroup | null>(null);
   const [madU, setMadU] = useState<UsrahMadU[]>([]);
   const [sessions, setSessions] = useState<UsrahSession[]>([]);
+  const [memberCandidates, setMemberCandidates] = useState<MemberPickerRow[]>([]);
   const [isOwner, setIsOwner] = useState(false);
   const [loading, setLoading] = useState(true);
   const [banner, setBanner] = useState<Banner>(null);
@@ -48,15 +57,17 @@ export default function PerkaderanGroupDetailScreen() {
     if (!id) return;
     setLoading(true);
     try {
-      const [groupRow, madURows, sessionRows, myMemberId] = await Promise.all([
+      const [groupRow, madURows, sessionRows, myMemberId, pickerRows] = await Promise.all([
         fetchGroup(id),
         fetchMadU(id),
         fetchSessions(id),
         fetchMyMemberId(),
+        fetchMembersForPicker(),
       ]);
       setGroup(groupRow);
       setMadU(madURows);
       setSessions(sessionRows);
+      setMemberCandidates(pickerRows);
       setIsOwner(Boolean(groupRow && myMemberId && groupRow.naqib_member_id === myMemberId));
     } catch (caught) {
       setBanner({ tone: 'negative', message: toMalayErrorVerbose(caught, 'Gagal memuatkan kumpulan.') });
@@ -65,23 +76,37 @@ export default function PerkaderanGroupDetailScreen() {
     }
   }, [id]);
 
-  useEffect(() => {
-    if (permissionsLoading || accessLoading) return;
-    void load();
-  }, [accessLoading, load, permissionsLoading]);
+  /*
+    `useFocusEffect` dan bukan `useEffect` sahaja — skrin ini kembali fokus
+    selepas naqib mencipta sesi/mad'u di skrin lain dan menekan "kembali".
+    React Navigation TIDAK memasang semula komponen ini (ia kekal dalam
+    stack), jadi `useEffect` biasa hanya berjalan SEKALI dan tidak pernah
+    tahu data sudah berubah — memaparkan senarai lapuk selama-lamanya.
+  */
+  useFocusEffect(
+    useCallback(() => {
+      if (permissionsLoading || accessLoading) return;
+      void load();
+    }, [accessLoading, load, permissionsLoading]),
+  );
 
   const canEdit = isSuperAdmin() || departmentCanEdit || isOwner;
+
+  const partnerName = useCallback(
+    (memberId: string | null) => (memberId ? memberCandidates.find((row) => row.id === memberId)?.full_name ?? 'Ahli' : null),
+    [memberCandidates],
+  );
 
   // --- Tambah mad'u ----------------------------------------------------------
   const [addingMadU, setAddingMadU] = useState(false);
   const [madUNama, setMadUNama] = useState('');
-  const [madUTingkatan, setMadUTingkatan] = useState('');
+  const [madUTingkatan, setMadUTingkatan] = useState<string | null>(null);
   const [madUBusy, setMadUBusy] = useState(false);
 
   const openAddMadU = useCallback(() => {
     setBanner(null);
     setMadUNama('');
-    setMadUTingkatan('');
+    setMadUTingkatan(null);
     setAddingMadU(true);
   }, []);
 
@@ -90,7 +115,7 @@ export default function PerkaderanGroupDetailScreen() {
 
     setMadUBusy(true);
     try {
-      await addMadU(group.id, madUNama, madUTingkatan || null);
+      await addMadU(group.id, madUNama, madUTingkatan);
       setAddingMadU(false);
       await load();
       setBanner({ tone: 'positive', message: madUNama.trim() + " ditambah ke senarai mad'u." });
@@ -146,6 +171,17 @@ export default function PerkaderanGroupDetailScreen() {
 
         <View className="gap-6 px-gutter pt-6">
           {banner ? <Notice tone={banner.tone} message={banner.message} /> : null}
+
+          {/* --- Butiran kumpulan ------------------------------------------- */}
+          <View>
+            <SectionTitle title="Butiran Kumpulan" />
+            <Card>
+              <View className="gap-2">
+                <Line label="Sekolah" value={group.sekolah} />
+                <Line label="Partner Naqib (cadangan)" value={partnerName(group.default_partner_naqib_member_id) ?? 'Tiada'} />
+              </View>
+            </Card>
+          </View>
 
           {/* --- Mad'u ------------------------------------------------------- */}
           <View>
@@ -216,6 +252,11 @@ export default function PerkaderanGroupDetailScreen() {
                       {s.topik || 'Tiada topik'}
                       {s.location_text ? ' · ' + s.location_text : ''}
                     </Text>
+                    {s.partner_naqib_member_id ? (
+                      <Text className="mt-0.5 text-xs text-ink-faint">
+                        Partner Naqib: {partnerName(s.partner_naqib_member_id)} · {s.partner_naqib_hadir ? 'Hadir' : 'Tidak Hadir'}
+                      </Text>
+                    ) : null}
                   </Pressable>
                 ))}
               </View>
@@ -233,12 +274,12 @@ export default function PerkaderanGroupDetailScreen() {
           <Button label="Tambah" loading={madUBusy} disabled={madUBusy || !madUNama.trim()} onPress={() => void submitMadU()} />
         }>
         <TextField label="Nama" value={madUNama} onChangeText={setMadUNama} editable={!madUBusy} autoCapitalize="words" />
-        <TextField
-          label="Tingkatan (pilihan)"
+        <PickerField
+          label="Tingkatan"
           value={madUTingkatan}
-          onChangeText={setMadUTingkatan}
-          editable={!madUBusy}
-          placeholder="Contoh: Tingkatan 4"
+          options={withUnrecognised(TINGKATAN_OPTIONS, madUTingkatan)}
+          onChange={setMadUTingkatan}
+          disabled={madUBusy}
         />
       </FormModal>
 
@@ -253,5 +294,14 @@ export default function PerkaderanGroupDetailScreen() {
         onCancel={() => setPendingRemoveMadU(null)}
       />
     </>
+  );
+}
+
+function Line({ label, value }: { label: string; value: string }) {
+  return (
+    <View className="flex-row items-center justify-between gap-4">
+      <Text className="flex-1 text-sm text-ink-muted">{label}</Text>
+      <Text className="text-base font-semibold text-ink">{value}</Text>
+    </View>
   );
 }

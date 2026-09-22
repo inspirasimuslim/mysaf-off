@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useFocusEffect } from 'expo-router';
+import { useCallback, useMemo, useState } from 'react';
 import { Text, View } from 'react-native';
 
 import { ScreenHeader } from '@/components/screen-header';
@@ -43,10 +44,12 @@ export default function NaqibAssignmentsScreen() {
     }
   }, []);
 
-  useEffect(() => {
-    if (accessLoading || !canEdit) return;
-    void load();
-  }, [accessLoading, canEdit, load]);
+  useFocusEffect(
+    useCallback(() => {
+      if (accessLoading || !canEdit) return;
+      void load();
+    }, [accessLoading, canEdit, load]),
+  );
 
   // --- Lantik naqib baharu -----------------------------------------------
   const [picking, setPicking] = useState(false);

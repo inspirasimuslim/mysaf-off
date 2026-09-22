@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import { SaveShareButtons } from '@/components/save-share-buttons';
@@ -42,10 +42,14 @@ export default function PerkaderanGroupsScreen() {
     }
   }, []);
 
-  useEffect(() => {
-    if (accessLoading || !canView) return;
-    void load();
-  }, [accessLoading, canView, load]);
+  // `useFocusEffect` — senarai perlu segar semula selepas admin kembali dari
+  // skrin butiran kumpulan (tambah/buang mad'u, sesi baharu), bukan sekali sahaja.
+  useFocusEffect(
+    useCallback(() => {
+      if (accessLoading || !canView) return;
+      void load();
+    }, [accessLoading, canView, load]),
+  );
 
   const exportAll = useCallback(
     async (mode: DeliveryMode) => {
