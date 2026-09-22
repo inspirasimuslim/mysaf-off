@@ -432,6 +432,8 @@ export type UsrahEvent = {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+  /** Subfolder Album Gambar dalam Google Drive Shared Drive — dicipta pada muat naik PERTAMA. */
+  drive_folder_id: string | null;
 };
 
 /**

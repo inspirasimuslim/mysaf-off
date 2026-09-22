@@ -75,6 +75,32 @@ export async function logAdminActivity(
 }
 
 /**
+ * Klien yang bertindak SEBAGAI pemanggil (bukan `service_role`) — RPC yang
+ * dipanggil melaluinya menilai `auth.uid()` sebenar pemanggil. Dikongsi oleh
+ * setiap fungsi `require*` di bawah supaya bentuk "sahkan Bearer token, cipta
+ * klien, `auth.getUser()`" wujud SATU kali sahaja.
+ */
+async function callerClient(request: Request): Promise<{ client: SupabaseClient; userId: string }> {
+  const authorization = request.headers.get('Authorization') ?? '';
+  if (!authorization.startsWith('Bearer ')) {
+    throw new RequestError('Token akses tiada. Sila log masuk semula.', 401);
+  }
+
+  const client = createClient(
+    Deno.env.get('SUPABASE_URL') ?? '',
+    Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+    { global: { headers: { Authorization: authorization } }, auth: { persistSession: false } },
+  );
+
+  const { data: userData, error: userError } = await client.auth.getUser();
+  if (userError || !userData.user) {
+    throw new RequestError('Sesi tidak sah. Sila log masuk semula.', 401);
+  }
+
+  return { client, userId: userData.user.id };
+}
+
+/**
  * Sahkan pemanggil ialah admin yang boleh menyunting rekod ahli.
  *
  * Semakan dibuat dengan MEMANGGIL SEMULA pangkalan data sebagai pemanggil
@@ -82,23 +108,9 @@ export async function logAdminActivity(
  * hanya wujud di satu tempat — migration — dan bukan disalin ke dalam Deno.
  */
 export async function requireMemberEditor(request: Request): Promise<string> {
-  const authorization = request.headers.get('Authorization') ?? '';
-  if (!authorization.startsWith('Bearer ')) {
-    throw new RequestError('Token akses tiada. Sila log masuk semula.', 401);
-  }
+  const { client, userId } = await callerClient(request);
 
-  const caller = createClient(
-    Deno.env.get('SUPABASE_URL') ?? '',
-    Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-    { global: { headers: { Authorization: authorization } }, auth: { persistSession: false } },
-  );
-
-  const { data: userData, error: userError } = await caller.auth.getUser();
-  if (userError || !userData.user) {
-    throw new RequestError('Sesi tidak sah. Sila log masuk semula.', 401);
-  }
-
-  const { data: allowed, error: permissionError } = await caller.rpc('can_edit_members');
+  const { data: allowed, error: permissionError } = await client.rpc('can_edit_members');
   if (permissionError) {
     throw new RequestError('Gagal mengesahkan kebenaran akaun.', 500);
   }
@@ -106,7 +118,7 @@ export async function requireMemberEditor(request: Request): Promise<string> {
     throw new RequestError('Anda tiada kebenaran menyunting rekod ahli.', 403);
   }
 
-  return userData.user.id;
+  return userId;
 }
 
 /**
@@ -117,23 +129,9 @@ export async function requireMemberEditor(request: Request): Promise<string> {
  * patut dibuka kepada kebenaran department.
  */
 export async function requireSuperAdmin(request: Request): Promise<string> {
-  const authorization = request.headers.get('Authorization') ?? '';
-  if (!authorization.startsWith('Bearer ')) {
-    throw new RequestError('Token akses tiada. Sila log masuk semula.', 401);
-  }
+  const { client, userId } = await callerClient(request);
 
-  const caller = createClient(
-    Deno.env.get('SUPABASE_URL') ?? '',
-    Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-    { global: { headers: { Authorization: authorization } }, auth: { persistSession: false } },
-  );
-
-  const { data: userData, error: userError } = await caller.auth.getUser();
-  if (userError || !userData.user) {
-    throw new RequestError('Sesi tidak sah. Sila log masuk semula.', 401);
-  }
-
-  const { data: allowed, error: permissionError } = await caller.rpc('is_super_admin');
+  const { data: allowed, error: permissionError } = await client.rpc('is_super_admin');
   if (permissionError) {
     throw new RequestError('Gagal mengesahkan kebenaran akaun.', 500);
   }
@@ -141,7 +139,34 @@ export async function requireSuperAdmin(request: Request): Promise<string> {
     throw new RequestError('Tindakan ini khusus untuk Super Admin.', 403);
   }
 
-  return userData.user.id;
+  return userId;
+}
+
+/** Sahkan pemanggil mempunyai sesi sah sahaja — TIADA semakan kebenaran tambahan di atasnya. */
+export async function requireAuthenticatedUser(request: Request): Promise<string> {
+  const { userId } = await callerClient(request);
+  return userId;
+}
+
+/**
+ * Sahkan pemanggil ialah AHLI SAH — akaun aktif, tidak disekat, dan bukan
+ * kata laluan sementara yang belum ditukar. `can_read_shared()` sedia ada
+ * (`20260913000017_security_hardening.sql`) ialah pintasan rasmi projek ini
+ * untuk semakan "boleh baca data dikongsi", jadi digunakan terus di sini
+ * dan bukan ditulis semula.
+ */
+export async function requireActiveMember(request: Request): Promise<string> {
+  const { client, userId } = await callerClient(request);
+
+  const { data: allowed, error: permissionError } = await client.rpc('can_read_shared');
+  if (permissionError) {
+    throw new RequestError('Gagal mengesahkan status akaun.', 500);
+  }
+  if (allowed !== true) {
+    throw new RequestError('Akaun ini disekat atau belum aktif.', 403);
+  }
+
+  return userId;
 }
 
 /**

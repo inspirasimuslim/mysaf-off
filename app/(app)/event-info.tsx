@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
 
@@ -38,6 +38,7 @@ import {
  */
 export default function EventInfoScreen() {
   const goBack = useGoBack();
+  const router = useRouter();
   const { id } = useLocalSearchParams<{ id?: string }>();
 
   const [event, setEvent] = useState<UpcomingEvent | null>(null);
@@ -144,6 +145,14 @@ export default function EventInfoScreen() {
           token={event.qr_token}
           eventName={event.name}
           subtitle="Simpan atau screenshot kod ni untuk scan semasa program."
+        />
+
+        {/* --- Album Gambar: crowd-sourced, semua ahli boleh sumbang -------------- */}
+        <Button
+          label="Lihat Album Gambar"
+          variant="secondary"
+          icon={<Ionicons name="images-outline" size={18} color={Colors.primary} />}
+          onPress={() => router.push({ pathname: '/(app)/event-album', params: { event_id: event.id } })}
         />
 
         {/*

@@ -93,6 +93,27 @@ export async function readJpegBytes(uri: string, maxWidth: number): Promise<Uint
 }
 
 /**
+ * Sama seperti `readJpegBytes`, tetapi pulangkan base64 terus daripada
+ * `ImageManipulator` (bukan bait diikuti pembacaan fail berasingan) — untuk
+ * pemanggil yang menghantar imej sebagai JSON (Edge Function), bukan
+ * `Uint8Array` mentah ke Supabase Storage.
+ *
+ * `quality` berasingan daripada `QUALITY` sedia ada (avatar/poster) supaya
+ * setiap pemanggil boleh memilih mampatan sendiri tanpa menjejaskan yang lain.
+ */
+export async function readJpegBase64(uri: string, maxWidth: number, quality: number = QUALITY): Promise<string> {
+  const context = ImageManipulator.manipulate(uri).resize({ width: maxWidth });
+  const image = await context.renderAsync();
+  const saved = await image.saveAsync({ compress: quality, format: SaveFormat.JPEG, base64: true });
+
+  if (!saved.base64) {
+    throw new ImageUploadError('Gambar yang diproses tidak sah. Sila cuba gambar lain.');
+  }
+
+  return saved.base64;
+}
+
+/**
  * Muat naik imej dan pulangkan URL awamnya.
  *
  * Yang dihantar ialah `Uint8Array`, dan itu PENTING. `storage-js` memilih cara

@@ -384,6 +384,13 @@ export default function UsrahEventDetailScreen() {
             variant="secondary"
             onPress={() => router.push({ pathname: '/(app)/admin/event-attendance-live', params: { id: event.id } })}
           />
+
+          {/* Album Gambar: crowd-sourced (semua ahli boleh sumbang), bukan admin sahaja. */}
+          <Button
+            label="Lihat Album Gambar"
+            variant="secondary"
+            onPress={() => router.push({ pathname: '/(app)/event-album', params: { event_id: event.id } })}
+          />
         </View>
 
         {/* --- RSVP ---------------------------------------------------------- */}
