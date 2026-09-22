@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
 import { EventQrCard } from '@/components/event-qr-card';
 import { ScreenHeader } from '@/components/screen-header';
@@ -17,12 +17,12 @@ import { Colors } from '@/constants/theme';
 import { toMalayError } from '@/lib/errors';
 import { useGoBack } from '@/lib/navigation';
 import { RSVP_LABEL, fetchMyRsvp, rsvpOpen, setMyRsvp, type RsvpResponse } from '@/lib/rsvp';
-import { fetchUpcomingEvents } from '@/lib/usrah-events';
+import { fetchAllEventsDirectory } from '@/lib/usrah-events';
 import {
   EVENT_TYPE_LABEL,
   dateRangeLabel,
   timeRangeLabel,
-  type UpcomingEvent,
+  type EventDirectoryRow,
 } from '@/types/database';
 
 /**
@@ -33,15 +33,18 @@ import {
  * melalui "Upload dari Galeri" di tab Scan. Lihat
  * `20260913000025_event_qr_for_members.sql` dan `components/event-qr-card.tsx`.
  *
- * Data datang daripada `event_upcoming_directory()`: acara aktif sahaja, tanpa
- * koordinat pin atau tetapan geofence.
+ * Data datang daripada `event_directory_all()`: SEMUA acara (termasuk lampau)
+ * supaya skrin ini masih boleh dibuka untuk acara yang dah tamat — butang
+ * Album digantikan pautan ke Album global untuk acara begitu (lihat di bawah),
+ * bukan skrin terus jatuh ke "tidak dijumpai". Tiada koordinat pin atau
+ * tetapan geofence didedahkan.
  */
 export default function EventInfoScreen() {
   const goBack = useGoBack();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id?: string }>();
 
-  const [event, setEvent] = useState<UpcomingEvent | null>(null);
+  const [event, setEvent] = useState<EventDirectoryRow | null>(null);
   const [loading, setLoading] = useState(true);
 
   // --- RSVP -------------------------------------------------------------------
@@ -82,7 +85,7 @@ export default function EventInfoScreen() {
           parameter yang dihantar akan kosong di situ.
         */
         const [rows, mine] = await Promise.all([
-          fetchUpcomingEvents(),
+          fetchAllEventsDirectory(),
           // Jawapan sedia ada tidak kritikal: gagal dibaca bermakna butang tidak disorot, bukan skrin rosak.
           fetchMyRsvp(id).catch(() => null),
         ]);
@@ -147,13 +150,26 @@ export default function EventInfoScreen() {
           subtitle="Simpan atau screenshot kod ni untuk scan semasa program."
         />
 
-        {/* --- Album Gambar: crowd-sourced, semua ahli boleh sumbang -------------- */}
-        <Button
-          label="Lihat Album Gambar"
-          variant="secondary"
-          icon={<Ionicons name="images-outline" size={18} color={Colors.primary} />}
-          onPress={() => router.push({ pathname: '/(app)/event-album', params: { event_id: event.id } })}
-        />
+        {/*
+          --- Album Gambar: crowd-sourced, semua ahli boleh sumbang --------------
+          Acara tamat (`!is_upcoming`, definisi SAMA seperti carousel Dashboard —
+          `event_directory_all()`) tak lagi papar butang terus di sini; album
+          acara lama tetap boleh diakses selama-lamanya melalui Album global.
+        */}
+        {event.is_upcoming ? (
+          <Button
+            label="Lihat Album Gambar"
+            variant="secondary"
+            icon={<Ionicons name="images-outline" size={18} color={Colors.primary} />}
+            onPress={() => router.push({ pathname: '/(app)/event-album', params: { event_id: event.id } })}
+          />
+        ) : (
+          <Pressable onPress={() => router.push('/(app)/album')} className="items-center py-1">
+            <Text className="text-sm text-ink-muted underline">
+              Album acara ini boleh diakses melalui Tetapan &gt; Lain-lain &gt; Album
+            </Text>
+          </Pressable>
+        )}
 
         {/*
           --- RSVP ----------------------------------------------------------------

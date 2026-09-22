@@ -596,6 +596,18 @@ export type UpcomingEvent = {
   location_text: string | null;
 };
 
+/**
+ * Satu baris `event_directory_all()` — SEMUA acara (lampau + semasa + akan
+ * datang), bukan setakat `UpcomingEvent` yang tertapis `end_date >=
+ * current_date`. `is_upcoming` mengulang syarat tapisan SAMA itu (dikira di
+ * pelayan, bukan di JS, supaya tiada risiko longgar zon waktu) — skrin ahli
+ * (event-info.tsx) guna ia untuk sekat butang Album pada acara tamat.
+ */
+export type EventDirectoryRow = UpcomingEvent & {
+  is_upcoming: boolean;
+  photo_count: number;
+};
+
 /** Satu baris `announcements`. */
 export type Announcement = {
   id: string;

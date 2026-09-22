@@ -24,7 +24,7 @@ import {
   uploadEventPhoto,
   type EventPhoto,
 } from '@/lib/event-photos';
-import { pickImage } from '@/lib/image-upload';
+import { pickImages } from '@/lib/image-upload';
 import { useGoBack } from '@/lib/navigation';
 import { usePermissions } from '@/lib/permissions';
 import { fetchUsrahEvent } from '@/lib/usrah-events';
@@ -133,25 +133,48 @@ export default function EventAlbumScreen() {
     isSuperAdmin() || (event ? (event.event_type === 'usrah' ? usrahAccess.canEdit : programAccess.canEdit) : false);
 
   // --- Muat naik ---------------------------------------------------------------
+  /** Had munasabah untuk satu batch — elak payload keseluruhan terlalu besar. */
+  const MAX_UPLOAD_SELECTION = 10;
+
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(null);
 
   const addPhoto = useCallback(async () => {
     if (!eventId || uploading) return;
 
     setBanner(null);
     try {
-      const uri = await pickImage();
-      if (!uri) return; // Dibatalkan.
+      const uris = await pickImages(MAX_UPLOAD_SELECTION);
+      if (uris.length === 0) return; // Dibatalkan.
 
       setUploading(true);
-      await uploadEventPhoto(eventId, uri);
-      setBanner({ tone: 'positive', message: 'Gambar berjaya dimuat naik.' });
+      let success = 0;
+      let failed = 0;
+      // Berurutan (bukan Promise.all) — elak spike beban Edge Function bila
+      // ramai gambar dipilih sekali gus.
+      for (const [i, uri] of uris.entries()) {
+        setUploadProgress({ done: i, total: uris.length });
+        try {
+          await uploadEventPhoto(eventId, uri);
+          success++;
+        } catch (caught) {
+          failed++;
+          console.error(LOG_TAG, 'gagal muat naik gambar ' + (i + 1) + '/' + uris.length + ':', caught);
+        }
+      }
+
+      setBanner(
+        failed === 0
+          ? { tone: 'positive', message: success + ' gambar berjaya dimuat naik.' }
+          : { tone: 'negative', message: success + ' berjaya, ' + failed + ' gagal dimuat naik.' },
+      );
       await load();
     } catch (caught) {
-      console.error(LOG_TAG, 'gagal muat naik gambar:', caught);
+      console.error(LOG_TAG, 'gagal memilih/muat naik gambar:', caught);
       setBanner({ tone: 'negative', message: toMalayErrorVerbose(caught, 'Gagal memuat naik gambar.') });
     } finally {
       setUploading(false);
+      setUploadProgress(null);
     }
   }, [eventId, load, uploading]);
 
@@ -204,7 +227,13 @@ export default function EventAlbumScreen() {
           ) : null}
 
           <Button
-            label={uploading ? 'Memuat naik…' : '+ Tambah Gambar'}
+            label={
+              uploadProgress
+                ? 'Memuat naik ' + (uploadProgress.done + 1) + ' dari ' + uploadProgress.total + '…'
+                : uploading
+                  ? 'Memuat naik…'
+                  : '+ Tambah Gambar'
+            }
             loading={uploading}
             disabled={uploading}
             onPress={() => void addPhoto()}

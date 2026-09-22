@@ -1,4 +1,4 @@
-import type { EventMode, EventType, UpcomingEvent, UsrahEvent } from '@/types/database';
+import type { EventDirectoryRow, EventMode, EventType, UpcomingEvent, UsrahEvent } from '@/types/database';
 
 import { uploadImage } from './image-upload';
 import { supabase } from './supabase';
@@ -172,4 +172,19 @@ export async function fetchUpcomingEvents(): Promise<UpcomingEvent[]> {
   const { data, error } = await supabase.rpc('event_upcoming_directory');
   if (error) throw error;
   return (data as UpcomingEvent[] | null) ?? [];
+}
+
+/**
+ * SEMUA acara (lampau + semasa + akan datang) seperti dilihat oleh AHLI, dengan
+ * bilangan gambar album setiap satu — lihat `event_directory_all()`.
+ *
+ * Untuk skrin Album global (Tetapan > Lain-lain > Album) dan event-info.tsx —
+ * yang kedua perlu ini (bukan `fetchUpcomingEvents`) supaya butiran acara LAMA
+ * masih boleh dipaparkan untuk sekat/gantikan butang Album, bukan terus jatuh
+ * ke "Acara tidak dijumpai".
+ */
+export async function fetchAllEventsDirectory(): Promise<EventDirectoryRow[]> {
+  const { data, error } = await supabase.rpc('event_directory_all');
+  if (error) throw error;
+  return (data as EventDirectoryRow[] | null) ?? [];
 }

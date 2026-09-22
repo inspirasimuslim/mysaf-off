@@ -35,6 +35,28 @@ export async function pickImage(aspect?: [number, number]): Promise<string | nul
 }
 
 /**
+ * Sama seperti `pickImage`, tetapi benarkan pilih BERBILANG gambar sekali gus
+ * — untuk Album Gambar Event, bukan avatar/poster (yang kekal satu gambar,
+ * `pickImage`). `[]` bermakna pengguna membatalkan pemilihan.
+ */
+export async function pickImages(selectionLimit: number): Promise<string[]> {
+  const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+  if (!permission.granted) {
+    throw new ImageUploadError('Kebenaran capaian galeri diperlukan untuk memilih gambar.');
+  }
+
+  const result = await ImagePicker.launchImageLibraryAsync({
+    mediaTypes: ['images'],
+    allowsMultipleSelection: true,
+    selectionLimit,
+    quality: 1,
+  });
+
+  if (result.canceled || !result.assets.length) return [];
+  return result.assets.map((asset) => asset.uri);
+}
+
+/**
  * Baca bait fail hasil, ikut cara yang betul bagi platform.
  *
  * Dua platform, dua jenis URI, dan tiada satu pembaca yang memahami kedua-dua:
