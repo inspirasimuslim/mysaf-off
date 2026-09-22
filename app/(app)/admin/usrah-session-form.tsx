@@ -1,4 +1,4 @@
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { View } from 'react-native';
 
@@ -50,6 +50,7 @@ function withUnrecognised(options: Option<string>[], current: string | null): Op
 
 export default function UsrahSessionFormScreen() {
   const goBack = useGoBack();
+  const router = useRouter();
   const { groupId, id } = useLocalSearchParams<{ groupId: string; id?: string }>();
   const { loading: permissionsLoading, isSuperAdmin } = usePermissions();
   const { loading: accessLoading, canEdit: departmentCanEdit } = usePerkaderanAccess();
@@ -119,6 +120,13 @@ export default function UsrahSessionFormScreen() {
     });
   }, []);
 
+  /*
+    Kekal pada skrin ini selepas simpan (bukan `goBack()` serta-merta) —
+    admin/naqib patut nampak notis kejayaan yang jelas dengan mata sendiri.
+    Sesi BAHARU: `router.setParams` menukar skrin ini kepada mod SUNTING bagi
+    sesi yang baru dicipta (tanpa navigasi), supaya tekan "Simpan" sekali lagi
+    mengemas kini baris SAMA dan bukan mencipta pendua.
+  */
   const save = useCallback(async () => {
     if (!groupId || saving) return;
 
@@ -132,15 +140,17 @@ export default function UsrahSessionFormScreen() {
         partner_naqib_member_id: partnerNaqibId,
         partner_naqib_hadir: partnerHadir,
       };
+      const wasCreate = !id;
       const savedSession = id ? await updateSession(id, input) : await createSession(groupId, input);
       await saveAttendance(savedSession.id, [...present]);
-      goBack();
+      if (wasCreate) router.setParams({ id: savedSession.id });
+      setBanner({ tone: 'positive', message: wasCreate ? 'Sesi berjaya direkod.' : 'Perubahan berjaya disimpan.' });
     } catch (caught) {
       setBanner({ tone: 'negative', message: toMalayErrorVerbose(caught, 'Gagal menyimpan sesi.') });
     } finally {
       setSaving(false);
     }
-  }, [goBack, groupId, id, locationText, partnerHadir, partnerNaqibId, present, saving, sessionDate, topik]);
+  }, [groupId, id, locationText, partnerHadir, partnerNaqibId, present, router, saving, sessionDate, topik]);
 
   // --- Tambah mad'u baharu terus dalam borang sesi ----------------------------
   const [addingMadU, setAddingMadU] = useState(false);
@@ -164,6 +174,7 @@ export default function UsrahSessionFormScreen() {
       setAddingMadU(false);
       setMadUNama('');
       setMadUTingkatan(null);
+      setBanner({ tone: 'positive', message: created.nama + " berjaya ditambah ke senarai mad'u." });
     } catch (caught) {
       setBanner({ tone: 'negative', message: toMalayErrorVerbose(caught, "Gagal menambah mad'u.") });
     } finally {

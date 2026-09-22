@@ -1,6 +1,6 @@
 import { Image } from 'expo-image';
-import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import { ScreenHeader } from '@/components/screen-header';
@@ -44,6 +44,7 @@ const THUMB = 56;
 export default function AnnouncementsScreen() {
   const router = useRouter();
   const goBack = useGoBack();
+  const { created } = useLocalSearchParams<{ created?: string }>();
   const { loading: accessLoading, canView, canEdit } = useProgramAccess();
 
   const [rows, setRows] = useState<Announcement[]>([]);
@@ -77,6 +78,14 @@ export default function AnnouncementsScreen() {
       void load();
     }, [accessLoading, canView, load]),
   );
+
+  // `created=1` dihantar oleh skrin cipta — dibaca SEKALI dan parameter dibuang
+  // serta-merta supaya notis tidak muncul semula setiap kali senarai kembali fokus.
+  useEffect(() => {
+    if (created !== '1') return;
+    setBanner({ tone: 'positive', message: 'Pengumuman berjaya dicipta.' });
+    router.setParams({ created: undefined });
+  }, [created, router]);
 
   const patch = useCallback(
     async (row: Announcement, changes: Parameters<typeof updateAnnouncement>[1], message: string) => {

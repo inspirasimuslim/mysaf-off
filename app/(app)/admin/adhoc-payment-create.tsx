@@ -71,7 +71,9 @@ export default function AdhocPaymentCreateScreen() {
         is_active: isActive,
       });
 
-      router.replace('/(app)/admin/adhoc-payment-list');
+      // `created=1`: senarai memapar notis "Pembayaran berjaya dicipta." — banner di
+      // skrin INI tidak berguna kerana `router.replace` menutupnya serta-merta.
+      router.replace({ pathname: '/(app)/admin/adhoc-payment-list', params: { created: '1' } });
     } catch (caught) {
       setBanner(toMalayError(caught, 'Gagal mencipta pembayaran.'));
     } finally {

@@ -116,6 +116,9 @@ export function NaqibHubSection({ defaultOpen }: { defaultOpen: boolean }) {
   const [deleteSessionBusy, setDeleteSessionBusy] = useState(false);
   const [deleteSessionError, setDeleteSessionError] = useState<string | null>(null);
 
+  /** Notis seksyen ini sendiri — modal butiran sesi tertutup selepas padam, jadi notis ralatnya sendiri tidak lagi kelihatan. */
+  const [sectionBanner, setSectionBanner] = useState<{ tone: 'positive' | 'negative'; message: string } | null>(null);
+
   const confirmDeleteSession = useCallback(async () => {
     if (!viewingSessionId || deleteSessionBusy) return;
 
@@ -125,6 +128,7 @@ export function NaqibHubSection({ defaultOpen }: { defaultOpen: boolean }) {
       await deleteSession(viewingSessionId);
       setConfirmingDeleteSession(false);
       setViewingSessionId(null);
+      setSectionBanner({ tone: 'positive', message: 'Sesi berjaya dipadam.' });
       load();
     } catch (caught) {
       setDeleteSessionError(toMalayErrorVerbose(caught, 'Gagal memadam sesi.'));
@@ -152,6 +156,12 @@ export function NaqibHubSection({ defaultOpen }: { defaultOpen: boolean }) {
         caption="Kumpulan usrah sekolah yang anda naqibkan."
         count={hasGroups ? myGroups.length : 1}
         defaultOpen={defaultOpen}>
+        {sectionBanner ? (
+          <View className="mb-3">
+            <Notice tone={sectionBanner.tone} message={sectionBanner.message} />
+          </View>
+        ) : null}
+
         {!hasGroups ? (
           // Naqib baharu — tiada apa untuk diurus pun, terus ke Cipta.
           <ActionRow

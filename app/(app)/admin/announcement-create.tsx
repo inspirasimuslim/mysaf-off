@@ -87,7 +87,9 @@ export default function AnnouncementCreateScreen() {
         end_date: endDate || null,
       });
 
-      router.replace('/(app)/admin/announcements');
+      // `created=1`: senarai memapar notis "Pengumuman berjaya dicipta." — banner di
+      // skrin INI tidak berguna kerana `router.replace` menutupnya serta-merta.
+      router.replace({ pathname: '/(app)/admin/announcements', params: { created: '1' } });
     } catch (caught) {
       setBanner(toMalayError(caught, 'Gagal mencipta pengumuman.'));
     } finally {

@@ -1,5 +1,5 @@
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import { ScreenHeader } from '@/components/screen-header';
@@ -52,7 +52,7 @@ function withUnrecognised(options: Option<string>[], current: string | null): Op
 export default function PerkaderanGroupDetailScreen() {
   const router = useRouter();
   const goBack = useGoBack();
-  const { id } = useLocalSearchParams<{ id?: string }>();
+  const { id, created } = useLocalSearchParams<{ id?: string; created?: string }>();
   const { loading: permissionsLoading, isSuperAdmin } = usePermissions();
   const { loading: accessLoading, canEdit: departmentCanEdit } = usePerkaderanAccess();
 
@@ -101,6 +101,17 @@ export default function PerkaderanGroupDetailScreen() {
     }, [accessLoading, load, permissionsLoading]),
   );
 
+  /*
+    `created=1` dihantar oleh `usrah-group-create.tsx` — dibaca SEKALI sahaja
+    (bukan `useFocusEffect`) dan parameter dibuang serta-merta selepas itu,
+    supaya notis tidak muncul semula setiap kali skrin ini kembali fokus.
+  */
+  useEffect(() => {
+    if (created !== '1') return;
+    setBanner({ tone: 'positive', message: 'Kumpulan berjaya dicipta.' });
+    router.setParams({ created: undefined });
+  }, [created, router]);
+
   const canEdit = isSuperAdmin() || departmentCanEdit || isOwner;
 
   const partnerName = useCallback(
@@ -119,6 +130,7 @@ export default function PerkaderanGroupDetailScreen() {
       try {
         await updateGroupDefaultPartner(group.id, nextPartnerId);
         setGroup({ ...group, default_partner_naqib_member_id: nextPartnerId });
+        setBanner({ tone: 'positive', message: 'Partner Naqib berjaya dikemaskini.' });
       } catch (caught) {
         setBanner({ tone: 'negative', message: toMalayErrorVerbose(caught, 'Gagal menukar Partner Naqib.') });
       } finally {
@@ -149,7 +161,7 @@ export default function PerkaderanGroupDetailScreen() {
       await addMadU(group.id, madUNama, madUTingkatan);
       setAddingMadU(false);
       await load();
-      setBanner({ tone: 'positive', message: madUNama.trim() + " ditambah ke senarai mad'u." });
+      setBanner({ tone: 'positive', message: madUNama.trim() + " berjaya ditambah ke senarai mad'u." });
     } catch (caught) {
       setBanner({ tone: 'negative', message: toMalayErrorVerbose(caught, "Gagal menambah mad'u.") });
     } finally {
@@ -169,7 +181,7 @@ export default function PerkaderanGroupDetailScreen() {
       await removeMadU(target.id);
       setPendingRemoveMadU(null);
       await load();
-      setBanner({ tone: 'positive', message: target.nama + ' telah dibuang daripada senarai aktif.' });
+      setBanner({ tone: 'positive', message: target.nama + ' berjaya dibuang daripada senarai aktif.' });
     } catch (caught) {
       setPendingRemoveMadU(null);
       setBanner({ tone: 'negative', message: toMalayErrorVerbose(caught, "Gagal membuang mad'u.") });
@@ -190,7 +202,7 @@ export default function PerkaderanGroupDetailScreen() {
       await deleteSession(pendingRemoveSession.id);
       setPendingRemoveSession(null);
       await load();
-      setBanner({ tone: 'positive', message: 'Sesi telah dipadam.' });
+      setBanner({ tone: 'positive', message: 'Sesi berjaya dipadam.' });
     } catch (caught) {
       setPendingRemoveSession(null);
       setBanner({ tone: 'negative', message: toMalayErrorVerbose(caught, 'Gagal memadam sesi.') });
@@ -202,24 +214,47 @@ export default function PerkaderanGroupDetailScreen() {
   // --- Padam/Arkib kumpulan ----------------------------------------------------
   const [confirmingRemoveGroup, setConfirmingRemoveGroup] = useState(false);
   const [removeGroupBusy, setRemoveGroupBusy] = useState(false);
+  /*
+    Kumpulan itu sendiri hilang/berubah selepas tindakan ini — teruskan
+    memapar mad'u/sesi lampau tidak masuk akal. Papar keadaan pengesahan
+    khusus dengan notis JELAS dan biarkan pengguna sendiri tekan kembali,
+    dan bukan `goBack()` serta-merta (yang menghilangkan notis sebelum
+    sempat dilihat).
+  */
+  const [groupRemoved, setGroupRemoved] = useState<'deleted' | 'archived' | null>(null);
 
   const confirmRemoveGroup = useCallback(async () => {
     if (!group || removeGroupBusy) return;
 
     setRemoveGroupBusy(true);
     try {
-      await deleteOrArchiveGroup(group.id);
+      const result = await deleteOrArchiveGroup(group.id);
       setConfirmingRemoveGroup(false);
-      goBack();
+      setGroupRemoved(result.outcome);
     } catch (caught) {
       setConfirmingRemoveGroup(false);
       setBanner({ tone: 'negative', message: toMalayErrorVerbose(caught, 'Gagal memadam/mengarkibkan kumpulan.') });
     } finally {
       setRemoveGroupBusy(false);
     }
-  }, [goBack, group, removeGroupBusy]);
+  }, [group, removeGroupBusy]);
 
   if (permissionsLoading || accessLoading || loading) return <LoadingScreen />;
+
+  if (groupRemoved) {
+    return (
+      <Screen padTop={false}>
+        <ScreenHeader title="Kumpulan Usrah" onBackPress={goBack} />
+        <View className="gap-6 px-gutter">
+          <Notice
+            tone="positive"
+            message={groupRemoved === 'deleted' ? 'Kumpulan berjaya dipadam.' : 'Kumpulan berjaya diarkibkan.'}
+          />
+          <Button label="Kembali" onPress={goBack} />
+        </View>
+      </Screen>
+    );
+  }
 
   if (!group) {
     return (

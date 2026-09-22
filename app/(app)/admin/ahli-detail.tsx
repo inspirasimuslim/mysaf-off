@@ -180,15 +180,21 @@ export default function AhliDetailScreen() {
     try {
       await deleteMemberAccount(member.id);
       setDeleteModal(false);
-      // Rekod sudah tiada — kekal di skrin ini akan memapar borang hantu.
-      goBack();
+      /*
+        `goBack()` serta-merta menutup skrin sebelum notis kejayaan sempat
+        dilihat. Set `member` kepada `null` sebaliknya — cabang "!member"
+        sedia ada di bawah (asalnya untuk rekod tidak dijumpai) sudah memapar
+        `banner` di atas `EmptyState`, jadi ia dikongsi terus di sini.
+      */
+      setMember(null);
+      setBanner({ tone: 'positive', message: 'Ahli berjaya dipadam.' });
     } catch (caught) {
       setDeleteModal(false);
       setBanner({ tone: 'negative', message: toMalayError(caught, 'Gagal memadam ahli.') });
     } finally {
       setDeleteBusy(false);
     }
-  }, [deleteBusy, goBack, member]);
+  }, [deleteBusy, member]);
 
   if (accessLoading || loading) return <LoadingScreen />;
 

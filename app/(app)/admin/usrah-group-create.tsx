@@ -68,7 +68,9 @@ export default function UsrahGroupCreateScreen() {
     setBusy(true);
     try {
       const group = await createGroupWithMadU(sekolah, partnerNaqibId, pendingMadU);
-      router.replace({ pathname: '/(app)/admin/perkaderan-group-detail', params: { id: group.id } });
+      // `created=1`: skrin butiran memapar notis "Kumpulan berjaya dicipta." — banner
+      // di skrin INI tidak berguna kerana `router.replace` menutupnya serta-merta.
+      router.replace({ pathname: '/(app)/admin/perkaderan-group-detail', params: { id: group.id, created: '1' } });
     } catch (caught) {
       setError(toMalayErrorVerbose(caught, 'Gagal mencipta kumpulan usrah.'));
     } finally {
