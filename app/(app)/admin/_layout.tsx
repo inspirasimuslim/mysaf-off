@@ -37,13 +37,17 @@ function NoAccess() {
  * kebenaran department melalui `useMemberAccess()`. Menguatkuasakan
  * Super Admin di sini akan menutup pintu kepada admin department yang sah.
  *
+ * `isActiveNaqib()` turut dibenarkan masuk: naqib boleh jadi bukan admin
+ * department mana-mana pun, tetapi masih memerlukan Hub Admin untuk sampai ke
+ * "Kumpulan Usrah Saya" (`admin/index.tsx`) dan skrin kumpulannya sendiri.
+ *
  * Ini kawalan UI sahaja — RLS di Supabase tetap penentu muktamad.
  */
 export default function AdminLayout() {
-  const { loading, isAdmin } = usePermissions();
+  const { loading, isAdmin, isActiveNaqib } = usePermissions();
 
   if (loading) return <LoadingScreen />;
-  if (!isAdmin()) return <NoAccess />;
+  if (!isAdmin() && !isActiveNaqib()) return <NoAccess />;
 
   return <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: Colors.background } }} />;
 }

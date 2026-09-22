@@ -31,6 +31,13 @@ export type PermissionsState = {
   isAdmin: () => boolean;
   canView: (departmentId: string) => boolean;
   canEdit: (departmentId: string) => boolean;
+  /**
+   * Wujud lantikan naqib AKTIF (`perkaderan_naqib_assignments`) untuk akaun
+   * semasa — merentasi department, bukan `admin_assignments`. Naqib yang
+   * bukan admin lain masih perlu membuka Panel Admin untuk Panel Naqibnya
+   * sendiri; lihat `_layout.tsx` dan `screen-header.tsx`.
+   */
+  isActiveNaqib: () => boolean;
 };
 
 const EMPTY: PermissionsState = {
@@ -44,6 +51,7 @@ const EMPTY: PermissionsState = {
   isAdmin: () => false,
   canView: () => false,
   canEdit: () => false,
+  isActiveNaqib: () => false,
 };
 
 const PermissionsContext = createContext<PermissionsState>(EMPTY);
@@ -54,6 +62,7 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
 
   const [profile, setProfile] = useState<Profile | null>(null);
   const [assignments, setAssignments] = useState<AdminAssignment[]>([]);
+  const [activeNaqib, setActiveNaqib] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -66,6 +75,7 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
     if (!uid) {
       setProfile(null);
       setAssignments([]);
+      setActiveNaqib(false);
       setError(null);
       setLoading(false);
       return;
@@ -73,9 +83,15 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
 
     setLoading(true);
     try {
-      const [profileResult, assignmentResult] = await Promise.all([
+      const [profileResult, assignmentResult, naqibResult] = await Promise.all([
         supabase.from('profiles').select('id, email, full_name, role').eq('id', uid).maybeSingle(),
         supabase.from('admin_assignments').select('id, user_id, department_id, can_view, can_edit').eq('user_id', uid),
+        // Kegagalan RPC ini tidak boleh menggagalkan keseluruhan bacaan kebenaran —
+        // ia hanya menambah SATU keupayaan, bukan asas identiti akaun.
+        supabase.rpc('is_active_naqib').then(
+          (result) => result,
+          () => ({ data: false, error: null }),
+        ),
       ]);
 
       // Sesi sudah bertukar semasa query berjalan — abaikan hasil lapuk ini.
@@ -86,11 +102,13 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
 
       setProfile((profileResult.data as Profile | null) ?? null);
       setAssignments((assignmentResult.data as AdminAssignment[] | null) ?? []);
+      setActiveNaqib(Boolean(naqibResult.data));
       setError(null);
     } catch (caught) {
       if (activeUser.current !== uid) return;
       setProfile(null);
       setAssignments([]);
+      setActiveNaqib(false);
       setError(toMalayError(caught, 'Gagal membaca kebenaran akaun.'));
     } finally {
       if (activeUser.current === uid) setLoading(false);
@@ -125,8 +143,9 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
       isAdmin: () => role === 'admin' || superAdmin,
       canView: (departmentId: string) => superAdmin || Boolean(find(departmentId)?.can_view),
       canEdit: (departmentId: string) => superAdmin || Boolean(find(departmentId)?.can_edit),
+      isActiveNaqib: () => activeNaqib,
     };
-  }, [assignments, error, loading, profile, refresh]);
+  }, [activeNaqib, assignments, error, loading, profile, refresh]);
 
   return <PermissionsContext.Provider value={value}>{children}</PermissionsContext.Provider>;
 }

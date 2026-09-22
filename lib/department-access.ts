@@ -143,3 +143,18 @@ export const PEMBANGUNAN_GENERASI_DEPARTMENT = 'LAJNAH PEMBANGUNAN GENERASI';
 export function useGenerasiAccess(): DepartmentAccess {
   return useDepartmentAccess(PEMBANGUNAN_GENERASI_DEPARTMENT);
 }
+
+/**
+ * Department yang memiliki modul Usrah Sekolah (Naqib/Naqibah).
+ *
+ * Mesti sepadan dengan `can_view_perkaderan()` / `can_edit_perkaderan()`
+ * dalam `20260922000050_sekolah_usrah.sql`. Naqib aktif mendapat akses
+ * berasingan kepada kumpulan SENDIRI sahaja — lihat `isActiveNaqib()` dalam
+ * `usePermissions()` — tanpa perlu memegang department ini.
+ */
+export const PERKADERAN_DEPARTMENT = 'LAJNAH PERKADERAN';
+
+/** Pintasan untuk modul Usrah Sekolah (Naqib/Naqibah). */
+export function usePerkaderanAccess(): DepartmentAccess {
+  return useDepartmentAccess(PERKADERAN_DEPARTMENT);
+}

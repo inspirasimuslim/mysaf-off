@@ -40,7 +40,7 @@ type Props = {
 export function ScreenHeader({ title, eyebrow, subtitle, leading, onBackPress }: Props) {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { isAdmin } = usePermissions();
+  const { isAdmin, isActiveNaqib } = usePermissions();
 
   return (
     <View className="rounded-b-[28px] bg-primary px-gutter pb-7" style={{ paddingTop: insets.top + 18 }}>
@@ -64,11 +64,14 @@ export function ScreenHeader({ title, eyebrow, subtitle, leading, onBackPress }:
         <View className="flex-row items-center gap-2">
           {/*
             Perisai tidak wujud langsung dalam pokok komponen untuk ahli biasa —
-            bukan sekadar disembunyikan. `isAdmin()` merangkumi Super Admin. Ikon
-            perisai sengaja berbeza daripada gear supaya dua pintu itu tidak
-            dikelirukan.
+            bukan sekadar disembunyikan. `isAdmin()` merangkumi Super Admin.
+            `isActiveNaqib()` turut dibenarkan: naqib yang bukan admin lain
+            masih perlukan pintu ini untuk sampai ke Panel Naqibnya sendiri
+            (Hub Admin memaparkan seksyen "Kumpulan Usrah Saya" sahaja
+            baginya — lihat `admin/index.tsx`). Ikon perisai sengaja berbeza
+            daripada gear supaya dua pintu itu tidak dikelirukan.
           */}
-          {isAdmin() ? (
+          {isAdmin() || isActiveNaqib() ? (
             <HeaderIcon icon="shield-half-outline" label="Hub Admin" onPress={() => router.navigate('/(app)/admin')} />
           ) : null}
           <HeaderIcon icon="settings-outline" label="Tetapan" onPress={() => router.navigate('/(app)/tetapan')} />

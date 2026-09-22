@@ -1,4 +1,5 @@
 import { useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 
 import { ScreenHeader } from '@/components/screen-header';
@@ -10,6 +11,7 @@ import {
   useDepartmentAccess,
   useGenerasiAccess,
   useMemberAccess,
+  usePerkaderanAccess,
   usePipisAccess,
   useProgramAccess,
   useUsrahAccess,
@@ -17,7 +19,9 @@ import {
 } from '@/lib/department-access';
 import { useGoBack } from '@/lib/navigation';
 import { ORG_CHART_DEPARTMENT } from '@/lib/org-chart';
+import { fetchMyGroups } from '@/lib/perkaderan';
 import { usePermissions } from '@/lib/permissions';
+import type { UsrahGroup } from '@/types/database';
 
 /**
  * Hub Admin — satu-satunya pintu masuk ke panel pentadbiran.
@@ -39,7 +43,7 @@ import { usePermissions } from '@/lib/permissions';
 export default function AdminHubScreen() {
   const router = useRouter();
   const goBack = useGoBack();
-  const { isSuperAdmin, loading: permissionsLoading } = usePermissions();
+  const { isSuperAdmin, isActiveNaqib, loading: permissionsLoading } = usePermissions();
   const memberAccess = useMemberAccess();
   const usrahAccess = useUsrahAccess();
   const programAccess = useProgramAccess();
@@ -48,8 +52,31 @@ export default function AdminHubScreen() {
   // SETIAUSAHA — bukan JABATAN SETIAUSAHA (`programAccess`). Dua department.
   const orgChartAccess = useDepartmentAccess(ORG_CHART_DEPARTMENT);
   const generasiAccess = useGenerasiAccess();
+  const perkaderanAccess = usePerkaderanAccess();
 
   const superAdmin = isSuperAdmin();
+  const naqib = isActiveNaqib();
+
+  // --- "Kumpulan Usrah Saya" — kumpulan milik naqib sendiri ------------------
+  const [myGroups, setMyGroups] = useState<UsrahGroup[]>([]);
+  const [myGroupsLoading, setMyGroupsLoading] = useState(true);
+
+  useEffect(() => {
+    if (permissionsLoading || !naqib) {
+      setMyGroupsLoading(false);
+      return;
+    }
+    let active = true;
+    setMyGroupsLoading(true);
+    fetchMyGroups()
+      .then((rows) => active && setMyGroups(rows))
+      .catch(() => active && setMyGroups([]))
+      .finally(() => active && setMyGroupsLoading(false));
+    return () => {
+      active = false;
+    };
+  }, [naqib, permissionsLoading]);
+
   /*
     Setiap department dimuat berasingan. Seksyen dipasang hanya selepas
     kesemuanya selesai — jika tidak, seksyen pertama yang siap dipasang ketika
@@ -57,7 +84,8 @@ export default function AdminHubScreen() {
   */
   const accessLoading =
     permissionsLoading ||
-    [memberAccess, usrahAccess, programAccess, yuranAccess, pipisAccess, orgChartAccess, generasiAccess].some(
+    (naqib && myGroupsLoading) ||
+    [memberAccess, usrahAccess, programAccess, yuranAccess, pipisAccess, orgChartAccess, generasiAccess, perkaderanAccess].some(
       (access) => access.loading,
     );
   const visibleSections = [
@@ -69,6 +97,8 @@ export default function AdminHubScreen() {
     pipisAccess.canView,
     orgChartAccess.canEdit,
     generasiAccess.canView,
+    perkaderanAccess.canView,
+    naqib,
   ].filter(Boolean).length;
   const nothingAvailable = visibleSections === 0;
   const openByDefault = visibleSections === 1;
@@ -305,6 +335,73 @@ export default function AdminHubScreen() {
               subtitle="Ahli paling aktif, generasi terbaik dan ahli paling tidak aktif mengikut tempoh"
               onPress={() => router.push('/(app)/admin/aktiviti-terbaik')}
             />
+          </CollapsibleSection>
+        ) : null}
+
+        {/*
+          Usrah Sekolah (Naqib/Naqibah) dimiliki oleh LAJNAH PERKADERAN.
+          "Naqib/Naqibah" (lantikan) perlukan can_edit; "Pantauan Usrah
+          Sekolah" (semak semua kumpulan + eksport) cukup dengan can_view.
+        */}
+        {perkaderanAccess.canView ? (
+          <CollapsibleSection
+            variant="plain"
+            title="Perkaderan"
+            caption="Usrah sekolah — naqib/naqibah, mad'u dan sesi."
+            count={perkaderanAccess.canEdit ? 2 : 1}
+            defaultOpen={openByDefault}>
+            {perkaderanAccess.canEdit ? (
+              <ActionRow
+                icon="ribbon-outline"
+                title="Naqib/Naqibah"
+                subtitle="Lantik naqib dan urus lantikan sedia ada"
+                onPress={() => router.push('/(app)/admin/naqib-assignments')}
+              />
+            ) : null}
+            <ActionRow
+              icon="school-outline"
+              title="Pantauan Usrah Sekolah"
+              subtitle={
+                perkaderanAccess.canEdit
+                  ? 'Semak semua kumpulan dan muat turun laporan kehadiran'
+                  : 'Semak semua kumpulan dan muat turun laporan (paparan sahaja)'
+              }
+              onPress={() => router.push('/(app)/admin/perkaderan-groups')}
+            />
+          </CollapsibleSection>
+        ) : null}
+
+        {/*
+          Panel Naqib — BUKAN kebenaran department. Naqib aktif yang bukan
+          admin department mana-mana pun tetap perlukan pintu ini supaya Hub
+          tidak kosong; naqib yang turut memegang department lain tetap
+          melihatnya sebagai laluan pantas ke kumpulan sendiri.
+        */}
+        {naqib ? (
+          <CollapsibleSection
+            variant="plain"
+            title="Kumpulan Usrah Saya"
+            caption="Kumpulan usrah sekolah yang anda naqibkan."
+            count={myGroups.length || 1}
+            defaultOpen={openByDefault}>
+            {myGroups.length === 0 ? (
+              <ActionRow
+                icon="add-circle-outline"
+                title="Cipta Kumpulan Usrah"
+                subtitle="Pilih sekolah dan key in sesi pertama"
+                onPress={() => router.push('/(app)/admin/usrah-group-create')}
+              />
+            ) : (
+              myGroups.map((group) => (
+                <ActionRow
+                  key={group.id}
+                  icon="school-outline"
+                  title={group.group_name}
+                  subtitle={group.sekolah}
+                  onPress={() => router.push({ pathname: '/(app)/admin/perkaderan-group-detail', params: { id: group.id } })}
+                />
+              ))
+            )}
           </CollapsibleSection>
         ) : null}
 

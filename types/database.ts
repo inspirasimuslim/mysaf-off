@@ -638,3 +638,101 @@ export type AdhocPaymentType = {
   created_at: string;
   updated_at: string;
 };
+
+// =============================================================================
+// Usrah Sekolah (Naqib/Naqibah) — LAJNAH PERKADERAN
+// Selari dengan `supabase/migrations/20260922000050_sekolah_usrah.sql`.
+// =============================================================================
+
+/** Satu lantikan naqib — `is_active=false` ialah SEJARAH, bukan dibuang. */
+export type NaqibAssignment = {
+  id: string;
+  member_id: string;
+  assigned_by: string | null;
+  assigned_at: string;
+  is_active: boolean;
+};
+
+/** Hasil `perkaderan_naqib_list()` — naqib aktif digabung dengan nama ahlinya. */
+export type NaqibAssignmentWithMember = {
+  id: string;
+  member_id: string;
+  member_full_name: string;
+  member_generasi: string | null;
+  assigned_at: string;
+  is_active: boolean;
+};
+
+export type UsrahGroup = {
+  id: string;
+  naqib_member_id: string;
+  sekolah: string;
+  /** Dijana automatik oleh trigger DB — bukan diedit terus. */
+  group_name: string;
+  created_at: string;
+  updated_at: string;
+};
+
+/** Hasil `perkaderan_groups_summary()` — kumpulan digabung dengan nama naqib & kiraan. */
+export type UsrahGroupSummary = {
+  id: string;
+  naqib_member_id: string;
+  naqib_full_name: string;
+  sekolah: string;
+  group_name: string;
+  mad_u_count: number;
+  session_count: number;
+  created_at: string;
+};
+
+export type UsrahMadU = {
+  id: string;
+  group_id: string;
+  nama: string;
+  tingkatan: string | null;
+  /** Soft-remove sahaja — JANGAN hard delete (RLS pun tidak membenarkannya). */
+  is_active: boolean;
+  added_at: string;
+};
+
+export type UsrahSession = {
+  id: string;
+  group_id: string;
+  session_date: string;
+  location_text: string | null;
+  topik: string | null;
+  recorded_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+/** Satu baris kehadiran = HADIR. Tiada baris = tidak hadir. */
+export type UsrahAttendanceRow = {
+  id: string;
+  session_id: string;
+  mad_u_id: string;
+};
+
+/** Hasil `perkaderan_export()` — dua helaian laporan .xlsx. */
+export type PerkaderanExportRow = {
+  kumpulan: string;
+  naqib: string;
+  sekolah: string;
+  tarikh: string;
+  lokasi: string | null;
+  topik: string | null;
+  bilangan_hadir: number;
+};
+
+export type PerkaderanExportDetailRow = {
+  kumpulan: string;
+  nama_mad_u: string;
+  tingkatan: string | null;
+  tarikh_sesi: string;
+  hadir: boolean;
+};
+
+export type PerkaderanExport = {
+  ringkasan_sesi: PerkaderanExportRow[];
+  kehadiran_terperinci: PerkaderanExportDetailRow[];
+};
