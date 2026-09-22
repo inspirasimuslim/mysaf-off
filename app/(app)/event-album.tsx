@@ -96,9 +96,15 @@ export default function EventAlbumScreen() {
   }, []);
 
   const load = useCallback(async () => {
-    if (!eventId) return;
     setLoading(true);
     setBanner(null);
+    if (!eventId) {
+      // Jangan biarkan spinner berputar selama-lamanya bila param tiada — lihat nota `withTimeout`.
+      console.error(LOG_TAG, 'event_id tiada dalam route params — album tidak boleh dimuatkan');
+      setLoading(false);
+      setBanner({ tone: 'negative', message: 'Acara tidak dijumpai.' });
+      return;
+    }
     try {
       const [eventRow, photoRows] = await withTimeout(
         Promise.all([fetchUsrahEvent(eventId), fetchEventPhotos(eventId)]),
