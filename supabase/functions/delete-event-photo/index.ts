@@ -12,12 +12,15 @@ import { deleteFileFromDrive, getDriveAccessToken } from '../_shared/google-driv
  * admin can_edit department event tu / Super Admin) supaya kedua-dua lapisan
  * (Edge Function ini DAN RLS untuk laluan lain) sentiasa sepakat.
  */
+const LOG_TAG = '[DeleteEventPhoto]';
+
 Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') return new Response('ok', { headers: CORS_HEADERS });
 
   try {
     if (request.method !== 'POST') throw new RequestError('Kaedah tidak dibenarkan.', 405);
 
+    console.log(LOG_TAG, 'permintaan diterima');
     const callerId = await requireAuthenticatedUser(request);
 
     const body = await readJson(request);
@@ -54,16 +57,18 @@ Deno.serve(async (request) => {
       throw new RequestError('Anda tiada kebenaran memadam gambar ini.', 403);
     }
 
+    console.log(LOG_TAG, 'kebenaran sah, memadam drive_file_id=' + photo.drive_file_id);
     const accessToken = await getDriveAccessToken();
     await deleteFileFromDrive(accessToken, photo.drive_file_id);
 
     const { error: deleteError } = await admin.from('event_photos').delete().eq('id', photoId);
     if (deleteError) throw new RequestError('Fail dipadam dari Drive tetapi rekod gagal dipadam: ' + deleteError.message, 500);
 
+    console.log(LOG_TAG, 'selesai, photo_id=' + photoId);
     return json({ deleted: true });
   } catch (caught) {
     if (caught instanceof RequestError) return json({ error: caught.message }, caught.status);
-    console.error('delete-event-photo:', caught);
+    console.error(LOG_TAG, 'ralat tidak dijangka:', caught);
     return json({ error: 'Ralat tidak dijangka pada pelayan.' }, 500);
   }
 });

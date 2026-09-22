@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Modal, Pressable, View } from 'react-native';
+import { Modal, Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ScreenHeader } from '@/components/screen-header';
@@ -33,13 +33,40 @@ import type { UsrahEvent } from '@/types/database';
 type Banner = { tone: 'positive' | 'negative'; message: string } | null;
 
 const GRID_GAP = 6;
+const LOG_TAG = '[EventAlbum]';
+
+/**
+ * Tamat masa untuk mana-mana panggilan pelayan skrin ini — TIADA had masa di
+ * sini ialah punca bug "loading tak berkesudahan": bila Edge Function
+ * tersekat, `await` tidak pernah selesai, `setLoading(false)` dalam
+ * `finally` tidak pernah sampai, dan spinner berputar SELAMA-LAMANYA tanpa
+ * sebarang mesej.
+ */
+const CALL_TIMEOUT_MS = 15_000;
+
+async function withTimeout<T>(promise: Promise<T>, label: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout>;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error('Tamat masa menunggu ' + label + '. Sila cuba lagi.')), CALL_TIMEOUT_MS);
+  });
+  try {
+    return await Promise.race([promise, timeout]);
+  } finally {
+    clearTimeout(timer!);
+  }
+}
 
 /**
  * Album Gambar Event — Google Drive Shared Drive, crowd-sourced.
  *
  * Gambar SEBENAR tidak pernah melalui pelayan Supabase: `getPhotoAccessToken()`
- * dipanggil SEKALI (dicache pada peringkat modul, ~1 jam), dan setiap `<Image>`
- * fetch terus dari Google guna token itu. Lihat `lib/event-photos.ts`.
+ * dipanggil terus dari Google, dan setiap `<Image>` fetch terus dari Google
+ * guna token itu. Lihat `lib/event-photos.ts`.
+ *
+ * `getPhotoAccessToken()` HANYA dipanggil bila senarai `event_photos` BUKAN
+ * kosong — tiada sebab meminta token Google untuk album yang belum ada
+ * sebarang gambar, dan setiap panggilan tambahan ialah satu lagi titik
+ * kegagalan yang boleh menyekat skrin ini daripada dibuka langsung.
  */
 export default function EventAlbumScreen() {
   const goBack = useGoBack();
@@ -53,27 +80,44 @@ export default function EventAlbumScreen() {
   const [event, setEvent] = useState<UsrahEvent | null>(null);
   const [photos, setPhotos] = useState<EventPhoto[]>([]);
   const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [tokenError, setTokenError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [banner, setBanner] = useState<Banner>(null);
+
+  const loadToken = useCallback(async () => {
+    setTokenError(null);
+    try {
+      const token = await withTimeout(getPhotoAccessToken(), 'capaian gambar Google Drive');
+      setAccessToken(token);
+    } catch (caught) {
+      console.error(LOG_TAG, 'gagal dapatkan access token:', caught);
+      setTokenError(toMalayErrorVerbose(caught, 'Gagal memuatkan capaian gambar.'));
+    }
+  }, []);
 
   const load = useCallback(async () => {
     if (!eventId) return;
     setLoading(true);
+    setBanner(null);
     try {
-      const [eventRow, photoRows, token] = await Promise.all([
-        fetchUsrahEvent(eventId),
-        fetchEventPhotos(eventId),
-        getPhotoAccessToken(),
-      ]);
+      const [eventRow, photoRows] = await withTimeout(
+        Promise.all([fetchUsrahEvent(eventId), fetchEventPhotos(eventId)]),
+        'senarai album',
+      );
       setEvent(eventRow);
       setPhotos(photoRows);
-      setAccessToken(token);
+
+      // Lihat nota di atas komponen ini — token HANYA diminta bila perlu.
+      if (photoRows.length > 0) {
+        await loadToken();
+      }
     } catch (caught) {
+      console.error(LOG_TAG, 'gagal memuatkan album:', caught);
       setBanner({ tone: 'negative', message: toMalayErrorVerbose(caught, 'Gagal memuatkan album.') });
     } finally {
       setLoading(false);
     }
-  }, [eventId]);
+  }, [eventId, loadToken]);
 
   useEffect(() => {
     void load();
@@ -98,6 +142,7 @@ export default function EventAlbumScreen() {
       setBanner({ tone: 'positive', message: 'Gambar berjaya dimuat naik.' });
       await load();
     } catch (caught) {
+      console.error(LOG_TAG, 'gagal muat naik gambar:', caught);
       setBanner({ tone: 'negative', message: toMalayErrorVerbose(caught, 'Gagal memuat naik gambar.') });
     } finally {
       setUploading(false);
@@ -122,6 +167,7 @@ export default function EventAlbumScreen() {
       setBanner({ tone: 'positive', message: 'Gambar berjaya dipadam.' });
       await load();
     } catch (caught) {
+      console.error(LOG_TAG, 'gagal padam gambar:', caught);
       setPendingDelete(null);
       setBanner({ tone: 'negative', message: toMalayErrorVerbose(caught, 'Gagal memadam gambar.') });
     } finally {
@@ -143,6 +189,13 @@ export default function EventAlbumScreen() {
 
         <View className="gap-4 px-gutter pt-6 pb-8">
           {banner ? <Notice tone={banner.tone} message={banner.message} /> : null}
+
+          {tokenError ? (
+            <View className="gap-2">
+              <Notice tone="negative" message={tokenError} />
+              <Button label="Cuba Lagi Muatkan Gambar" variant="secondary" onPress={() => void loadToken()} />
+            </View>
+          ) : null}
 
           <Button
             label={uploading ? 'Memuat naik…' : '+ Tambah Gambar'}
@@ -176,7 +229,11 @@ export default function EventAlbumScreen() {
                         contentFit="cover"
                         transition={150}
                       />
-                    ) : null}
+                    ) : (
+                      <View className="h-full w-full items-center justify-center">
+                        <Ionicons name="image-outline" size={20} color={Colors.inkFaint} />
+                      </View>
+                    )}
                     {canDelete ? (
                       <Pressable
                         accessibilityRole="button"
@@ -219,7 +276,12 @@ export default function EventAlbumScreen() {
               transition={150}
             />
           ) : (
-            <ActivityIndicator color={Colors.white} />
+            <View className="items-center gap-3 px-gutter">
+              <Text className="text-center text-sm text-white/80">
+                {tokenError ?? 'Gambar tidak dapat dipaparkan buat masa ini.'}
+              </Text>
+              <Button label="Cuba Lagi" variant="secondary" onPress={() => void loadToken()} />
+            </View>
           )}
 
           {viewingPhoto && (canEdit || viewingPhoto.uploaded_by === user?.id) ? (

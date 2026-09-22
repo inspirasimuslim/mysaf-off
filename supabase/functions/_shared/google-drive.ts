@@ -11,13 +11,46 @@
  * menyentuh fail yang IA SENDIRI cipta, bukan seluruh Drive organisasi. Ini
  * sengaja menghadkan risiko: kalau token access ini bocor (contohnya melalui
  * `get-photo-access-token`), yang terdedah cumalah fail app ini sendiri.
+ *
+ * SETIAP panggilan `fetch()` ke Google di sini melalui `fetchWithTimeout()` —
+ * tanpa had masa eksplisit, satu panggilan Google yang tersekat/tergantung
+ * akan menggantung SELURUH permintaan Edge Function sehingga had platform
+ * (~150saat) tercapai, dan pengguna melihat spinner tanpa sebarang mesej
+ * sepanjang itu. 15 saat cukup lapang untuk keadaan rangkaian biasa tetapi
+ * gagal PANTAS dengan mesej jelas bila Google benar-benar tidak menjawab.
  */
+
+const LOG_TAG = '[GoogleDrive]';
 
 const TOKEN_ENDPOINT = 'https://oauth2.googleapis.com/token';
 const DRIVE_API = 'https://www.googleapis.com/drive/v3';
 const DRIVE_UPLOAD_API = 'https://www.googleapis.com/upload/drive/v3';
 
 export const DRIVE_FILE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
+
+const FETCH_TIMEOUT_MS = 15_000;
+
+/** `fetch()` dengan had masa eksplisit — lihat nota di atas fail ini. */
+async function fetchWithTimeout(url: string, options: RequestInit, label: string): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+
+  try {
+    console.log(LOG_TAG, 'fetch mula:', label);
+    const response = await fetch(url, { ...options, signal: controller.signal });
+    console.log(LOG_TAG, 'fetch selesai:', label, response.status);
+    return response;
+  } catch (caught) {
+    if (caught instanceof Error && caught.name === 'AbortError') {
+      console.error(LOG_TAG, 'fetch TAMAT MASA (' + FETCH_TIMEOUT_MS / 1000 + 's):', label);
+      throw new Error('Google tidak menjawab dalam masa yang munasabah (' + label + '). Sila cuba lagi.');
+    }
+    console.error(LOG_TAG, 'fetch gagal:', label, caught);
+    throw caught;
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 type ServiceAccount = { client_email: string; private_key: string };
 
@@ -36,7 +69,21 @@ function parseServiceAccount(): ServiceAccount {
   if (!account.client_email || !account.private_key) {
     throw new Error('GOOGLE_SERVICE_ACCOUNT_JSON tiada client_email/private_key.');
   }
-  return account as ServiceAccount;
+
+  /*
+    `JSON.parse` SEPATUTNYA menukar `\n` (escape) kepada baris baharu sebenar
+    secara automatik. TETAPI kalau nilai secret itu sendiri sudah rosak dari
+    awal (contohnya disalin/ditetapkan melalui laluan yang meratakan baris
+    baharu kepada teks literal DUA aksara `\` + `n` SEBELUM ia sampai ke sini
+    sebagai JSON), `private_key` akan mengandungi teks literal itu walaupun
+    selepas `JSON.parse`. Ini punca BIASA untuk `crypto.subtle.importKey()`
+    gagal atau (lebih teruk) tersangkut secara senyap. `.replace()` di sini
+    tidak berbahaya bila `private_key` SUDAH betul (tiada `\n` literal untuk
+    dipadan), jadi ia selamat sebagai lapisan pertahanan sahaja.
+  */
+  const privateKey = account.private_key.includes('\\n') ? account.private_key.replace(/\\n/g, '\n') : account.private_key;
+
+  return { client_email: account.client_email, private_key: privateKey };
 }
 
 export function sharedDriveId(): string {
@@ -63,15 +110,25 @@ async function importPrivateKey(pem: string): Promise<CryptoKey> {
     .replace(/-----BEGIN PRIVATE KEY-----/, '')
     .replace(/-----END PRIVATE KEY-----/, '')
     .replace(/\s+/g, '');
-  const binaryDer = Uint8Array.from(atob(body), (char) => char.charCodeAt(0));
 
-  return await crypto.subtle.importKey(
-    'pkcs8',
-    binaryDer,
-    { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
-    false,
-    ['sign'],
-  );
+  if (!body) {
+    throw new Error('private_key kosong selepas dibersihkan — semak format GOOGLE_SERVICE_ACCOUNT_JSON.');
+  }
+
+  let binaryDer: Uint8Array;
+  try {
+    binaryDer = Uint8Array.from(atob(body), (char) => char.charCodeAt(0));
+  } catch (caught) {
+    console.error(LOG_TAG, 'private_key bukan base64 sah selepas dibersihkan:', caught);
+    throw new Error('private_key tidak sah (bukan PEM PKCS8 yang boleh dibaca).');
+  }
+
+  try {
+    return await crypto.subtle.importKey('pkcs8', binaryDer, { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['sign']);
+  } catch (caught) {
+    console.error(LOG_TAG, 'crypto.subtle.importKey gagal:', caught);
+    throw new Error('Gagal import private_key Service Account — format PEM mungkin rosak.');
+  }
 }
 
 /**
@@ -82,6 +139,7 @@ async function importPrivateKey(pem: string): Promise<CryptoKey> {
  * stateless, dan overhead satu panggilan token boleh diabaikan).
  */
 export async function getDriveAccessToken(): Promise<string> {
+  console.log(LOG_TAG, 'getDriveAccessToken: mula');
   const account = parseServiceAccount();
   const privateKey = await importPrivateKey(account.private_key);
 
@@ -96,28 +154,38 @@ export async function getDriveAccessToken(): Promise<string> {
   };
 
   const signingInput = base64UrlFromString(JSON.stringify(header)) + '.' + base64UrlFromString(JSON.stringify(claims));
-  const signature = await crypto.subtle.sign(
-    'RSASSA-PKCS1-v1_5',
-    privateKey,
-    new TextEncoder().encode(signingInput),
-  );
+
+  let signature: ArrayBuffer;
+  try {
+    signature = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', privateKey, new TextEncoder().encode(signingInput));
+  } catch (caught) {
+    console.error(LOG_TAG, 'crypto.subtle.sign gagal:', caught);
+    throw new Error('Gagal menandatangan JWT Service Account.');
+  }
   const assertion = signingInput + '.' + base64UrlFromBytes(new Uint8Array(signature));
 
-  const response = await fetch(TOKEN_ENDPOINT, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
-      assertion,
-    }),
-  });
+  const response = await fetchWithTimeout(
+    TOKEN_ENDPOINT,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+        assertion,
+      }),
+    },
+    'oauth2.googleapis.com/token',
+  );
 
   if (!response.ok) {
-    throw new Error('Gagal mendapatkan token akses Google Drive: ' + (await response.text()));
+    const errorText = await response.text();
+    console.error(LOG_TAG, 'token endpoint pulangkan ralat:', response.status, errorText);
+    throw new Error('Gagal mendapatkan token akses Google Drive: ' + errorText);
   }
 
   const data = (await response.json()) as { access_token?: string };
   if (!data.access_token) throw new Error('Respons token Google Drive tiada access_token.');
+  console.log(LOG_TAG, 'getDriveAccessToken: berjaya');
   return data.access_token;
 }
 
@@ -145,24 +213,36 @@ export async function findOrCreateEventFolder(
     `${DRIVE_API}/files?q=${encodeURIComponent(query)}&corpora=drive&driveId=${driveId}` +
     '&includeItemsFromAllDrives=true&supportsAllDrives=true&fields=files(id)';
 
-  const searchResponse = await fetch(searchUrl, { headers: { Authorization: 'Bearer ' + accessToken } });
+  const searchResponse = await fetchWithTimeout(
+    searchUrl,
+    { headers: { Authorization: 'Bearer ' + accessToken } },
+    'drive.files.list (cari subfolder)',
+  );
   if (searchResponse.ok) {
     const found = (await searchResponse.json()) as { files?: { id: string }[] };
     if (found.files && found.files.length > 0 && found.files[0]) return found.files[0].id;
+  } else {
+    console.error(LOG_TAG, 'carian subfolder gagal (teruskan ke cipta baharu):', searchResponse.status, await searchResponse.text());
   }
 
-  const createResponse = await fetch(`${DRIVE_API}/files?supportsAllDrives=true`, {
-    method: 'POST',
-    headers: { Authorization: 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      name: folderName,
-      mimeType: 'application/vnd.google-apps.folder',
-      parents: [driveId],
-    }),
-  });
+  const createResponse = await fetchWithTimeout(
+    `${DRIVE_API}/files?supportsAllDrives=true`,
+    {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: folderName,
+        mimeType: 'application/vnd.google-apps.folder',
+        parents: [driveId],
+      }),
+    },
+    'drive.files.create (subfolder)',
+  );
 
   if (!createResponse.ok) {
-    throw new Error('Gagal mencipta subfolder Drive: ' + (await createResponse.text()));
+    const errorText = await createResponse.text();
+    console.error(LOG_TAG, 'cipta subfolder gagal:', createResponse.status, errorText);
+    throw new Error('Gagal mencipta subfolder Drive: ' + errorText);
   }
 
   const created = (await createResponse.json()) as { id: string };
@@ -196,14 +276,20 @@ export async function uploadFileToDrive(
   body.set(bytes, head.length);
   body.set(tail, head.length + bytes.length);
 
-  const response = await fetch(`${DRIVE_UPLOAD_API}/files?uploadType=multipart&supportsAllDrives=true`, {
-    method: 'POST',
-    headers: { Authorization: 'Bearer ' + accessToken, 'Content-Type': 'multipart/related; boundary=' + boundary },
-    body,
-  });
+  const response = await fetchWithTimeout(
+    `${DRIVE_UPLOAD_API}/files?uploadType=multipart&supportsAllDrives=true`,
+    {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + accessToken, 'Content-Type': 'multipart/related; boundary=' + boundary },
+      body,
+    },
+    'drive.files.create (upload multipart, ' + Math.round(bytes.length / 1024) + 'KB)',
+  );
 
   if (!response.ok) {
-    throw new Error('Gagal muat naik gambar ke Google Drive: ' + (await response.text()));
+    const errorText = await response.text();
+    console.error(LOG_TAG, 'muat naik gagal:', response.status, errorText);
+    throw new Error('Gagal muat naik gambar ke Google Drive: ' + errorText);
   }
 
   const uploaded = (await response.json()) as { id: string };
@@ -212,13 +298,16 @@ export async function uploadFileToDrive(
 
 /** Padam satu fail dari Drive. 404 (sudah tiada) dianggap berjaya — hasil akhirnya sama. */
 export async function deleteFileFromDrive(accessToken: string, fileId: string): Promise<void> {
-  const response = await fetch(`${DRIVE_API}/files/${fileId}?supportsAllDrives=true`, {
-    method: 'DELETE',
-    headers: { Authorization: 'Bearer ' + accessToken },
-  });
+  const response = await fetchWithTimeout(
+    `${DRIVE_API}/files/${fileId}?supportsAllDrives=true`,
+    { method: 'DELETE', headers: { Authorization: 'Bearer ' + accessToken } },
+    'drive.files.delete',
+  );
 
   if (!response.ok && response.status !== 404) {
-    throw new Error('Gagal memadam gambar dari Google Drive: ' + (await response.text()));
+    const errorText = await response.text();
+    console.error(LOG_TAG, 'padam gagal:', response.status, errorText);
+    throw new Error('Gagal memadam gambar dari Google Drive: ' + errorText);
   }
 }
 

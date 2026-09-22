@@ -18,6 +18,7 @@ import {
  */
 
 const MAX_BASE64_LENGTH = 8_000_000; // ~6MB bait mentah — gambar dimampatkan client-side sebelum sampai sini.
+const LOG_TAG = '[UploadEventPhoto]';
 
 Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') return new Response('ok', { headers: CORS_HEADERS });
@@ -25,6 +26,7 @@ Deno.serve(async (request) => {
   try {
     if (request.method !== 'POST') throw new RequestError('Kaedah tidak dibenarkan.', 405);
 
+    console.log(LOG_TAG, 'permintaan diterima');
     const callerId = await requireActiveMember(request);
 
     const body = await readJson(request);
@@ -35,6 +37,7 @@ Deno.serve(async (request) => {
     if (!eventId) throw new RequestError('event_id diperlukan.');
     if (!imageBase64) throw new RequestError('image_base64 diperlukan.');
     if (imageBase64.length > MAX_BASE64_LENGTH) throw new RequestError('Gambar terlalu besar. Sila cuba gambar lain.');
+    console.log(LOG_TAG, 'event_id=' + eventId, 'saiz base64=' + Math.round(imageBase64.length / 1024) + 'KB');
 
     let bytes: Uint8Array;
     try {
@@ -56,20 +59,24 @@ Deno.serve(async (request) => {
     if (eventError) throw new RequestError('Gagal membaca acara.', 500);
     if (!event) throw new RequestError('Acara tidak dijumpai.', 404);
 
+    console.log(LOG_TAG, 'mendapatkan access token Drive');
     const accessToken = await getDriveAccessToken();
 
     let folderId = event.drive_folder_id as string | null;
     if (!folderId) {
+      console.log(LOG_TAG, 'tiada drive_folder_id — cari/cipta subfolder');
       folderId = await findOrCreateEventFolder(accessToken, eventFolderName(event.name, event.start_date));
       const { error: folderUpdateError } = await admin
         .from('usrah_events')
         .update({ drive_folder_id: folderId })
         .eq('id', eventId);
-      if (folderUpdateError) console.error('Gagal simpan drive_folder_id:', folderUpdateError.message);
+      if (folderUpdateError) console.error(LOG_TAG, 'Gagal simpan drive_folder_id:', folderUpdateError.message);
     }
 
     const fileName = 'photo-' + Date.now() + '-' + crypto.randomUUID().slice(0, 8) + '.jpg';
+    console.log(LOG_TAG, 'memuat naik ke folder', folderId);
     const driveFileId = await uploadFileToDrive(accessToken, folderId, fileName, 'image/jpeg', bytes);
+    console.log(LOG_TAG, 'muat naik berjaya, drive_file_id=' + driveFileId);
 
     const { data: inserted, error: insertError } = await admin
       .from('event_photos')
@@ -80,14 +87,16 @@ Deno.serve(async (request) => {
     if (insertError || !inserted) {
       // Fail sudah sampai ke Drive tetapi metadata gagal tersimpan — padam
       // fail itu supaya tiada fail yatim di Drive tanpa rekod DB.
+      console.error(LOG_TAG, 'INSERT event_photos gagal, padam fail Drive semula:', insertError?.message);
       await deleteFileFromDrive(accessToken, driveFileId).catch(() => {});
       throw new RequestError('Gagal menyimpan rekod gambar: ' + (insertError?.message ?? ''), 500);
     }
 
+    console.log(LOG_TAG, 'selesai, photo_id=' + inserted.id);
     return json({ photo_id: inserted.id, drive_file_id: driveFileId });
   } catch (caught) {
     if (caught instanceof RequestError) return json({ error: caught.message }, caught.status);
-    console.error('upload-event-photo:', caught);
+    console.error(LOG_TAG, 'ralat tidak dijangka:', caught);
     return json({ error: 'Ralat tidak dijangka pada pelayan.' }, 500);
   }
 });
