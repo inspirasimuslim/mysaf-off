@@ -682,18 +682,6 @@ export type UsrahGroup = {
   updated_at: string;
 };
 
-/** Hasil `perkaderan_groups_summary()` — kumpulan digabung dengan nama naqib & kiraan. */
-export type UsrahGroupSummary = {
-  id: string;
-  naqib_member_id: string;
-  naqib_full_name: string;
-  sekolah: string;
-  group_name: string;
-  mad_u_count: number;
-  session_count: number;
-  created_at: string;
-};
-
 export type UsrahMadU = {
   id: string;
   group_id: string;
@@ -745,9 +733,51 @@ export type PerkaderanExportDetailRow = {
   tingkatan: string | null;
   tarikh_sesi: string;
   hadir: boolean;
+  partner_naqib: string | null;
+  /** `null` bila tiada partner untuk sesi ini — berbeza daripada `false` (partner ada, tak hadir). */
+  partner_hadir: boolean | null;
 };
 
 export type PerkaderanExport = {
   ringkasan_sesi: PerkaderanExportRow[];
   kehadiran_terperinci: PerkaderanExportDetailRow[];
+};
+
+/** Hasil `perkaderan_naqib_overview()` — PERINGKAT 1 navigasi admin. */
+export type NaqibOverview = {
+  member_id: string;
+  full_name: string;
+  generasi: string | null;
+  sekolah_list: string;
+  group_count: number;
+  session_count: number;
+};
+
+/** Hasil `perkaderan_naqib_sessions()` — PERINGKAT 2 navigasi admin (semua sesi satu naqib). */
+export type NaqibSessionRow = {
+  session_id: string;
+  group_id: string;
+  session_date: string;
+  location_text: string | null;
+  sekolah: string;
+  group_name: string;
+};
+
+/** Satu sesi lampau naqib sendiri, merentasi SEMUA kumpulannya — untuk seksyen Hub. */
+export type MySessionRow = {
+  id: string;
+  group_id: string;
+  session_date: string;
+  location_text: string | null;
+  topik: string | null;
+  sekolah: string;
+  partner_naqib_member_id: string | null;
+  partner_naqib_hadir: boolean;
+};
+
+/** Butiran PENUH satu sesi, paparan VIEW-ONLY untuk naqib (tiada checkbox boleh sunting). */
+export type SessionViewDetail = {
+  session: UsrahSession;
+  sekolah: string;
+  attendees: { nama: string; tingkatan: string | null }[];
 };

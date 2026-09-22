@@ -9,41 +9,56 @@ import { Card } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { LoadingScreen } from '@/components/ui/loading-screen';
 import { Notice } from '@/components/ui/notice';
+import { PickerField } from '@/components/ui/picker-field';
 import { Screen } from '@/components/ui/screen';
 import { SectionTitle } from '@/components/ui/section-title';
+import { TextField } from '@/components/ui/text-field';
 import { Colors } from '@/constants/theme';
 import { usePerkaderanAccess } from '@/lib/department-access';
 import { toMalayErrorVerbose } from '@/lib/errors';
 import { deliveryMessage, type DeliveryMode } from '@/lib/file-delivery';
 import { useGoBack } from '@/lib/navigation';
-import { fetchAllGroupsSummary } from '@/lib/perkaderan';
+import { fetchNaqibOverview } from '@/lib/perkaderan';
 import { downloadPerkaderanReport } from '@/lib/perkaderan-report';
-import type { UsrahGroupSummary } from '@/types/database';
+import { generationLabel, MONTH_OPTIONS, type NaqibOverview } from '@/types/database';
 
 type Banner = { tone: 'positive' | 'info' | 'negative'; message: string } | null;
 
+const ALL_MONTHS = '0';
+const MONTH_FILTER_OPTIONS = [{ value: ALL_MONTHS, label: 'Semua Bulan' }, ...MONTH_OPTIONS];
+
+/**
+ * PERINGKAT 1 navigasi admin: senarai NAQIB (bukan senarai kumpulan terus) —
+ * naqib boleh pegang >1 kumpulan/sekolah, jadi menyenaraikan mengikut
+ * kumpulan akan mengulang nama naqib yang sama berkali-kali. Tap satu naqib
+ * -> PERINGKAT 2 (`naqib-session-history.tsx`) -> PERINGKAT 3 (butiran sesi,
+ * reuse `usrah-session-form.tsx` sedia ada, kebenaran edit tidak berubah).
+ */
 export default function PerkaderanGroupsScreen() {
   const router = useRouter();
   const goBack = useGoBack();
   const { loading: accessLoading, canView } = usePerkaderanAccess();
 
-  const [groups, setGroups] = useState<UsrahGroupSummary[]>([]);
+  const [naqibs, setNaqibs] = useState<NaqibOverview[]>([]);
   const [loading, setLoading] = useState(true);
   const [banner, setBanner] = useState<Banner>(null);
   const [exporting, setExporting] = useState<DeliveryMode | null>(null);
 
+  const [monthFilter, setMonthFilter] = useState(ALL_MONTHS);
+  const [yearFilter, setYearFilter] = useState('');
+
   const load = useCallback(async () => {
     try {
-      setGroups(await fetchAllGroupsSummary());
+      setNaqibs(await fetchNaqibOverview());
     } catch (caught) {
-      setBanner({ tone: 'negative', message: toMalayErrorVerbose(caught, 'Gagal memuatkan senarai kumpulan.') });
+      setBanner({ tone: 'negative', message: toMalayErrorVerbose(caught, 'Gagal memuatkan senarai naqib.') });
     } finally {
       setLoading(false);
     }
   }, []);
 
   // `useFocusEffect` — senarai perlu segar semula selepas admin kembali dari
-  // skrin butiran kumpulan (tambah/buang mad'u, sesi baharu), bukan sekali sahaja.
+  // skrin butiran sesi (edit), bukan sekali sahaja.
   useFocusEffect(
     useCallback(() => {
       if (accessLoading || !canView) return;
@@ -55,10 +70,13 @@ export default function PerkaderanGroupsScreen() {
     async (mode: DeliveryMode) => {
       if (exporting) return;
 
+      const month = monthFilter === ALL_MONTHS ? null : Number.parseInt(monthFilter, 10);
+      const year = yearFilter.trim() ? Number.parseInt(yearFilter, 10) : null;
+
       setBanner(null);
       setExporting(mode);
       try {
-        const report = await downloadPerkaderanReport(null, null, mode);
+        const report = await downloadPerkaderanReport(null, null, mode, month, year);
         setBanner({
           tone: report.result === 'cancelled' ? 'info' : 'positive',
           message: deliveryMessage(report.result, report.fileName, report.rows + ' sesi'),
@@ -69,7 +87,7 @@ export default function PerkaderanGroupsScreen() {
         setExporting(null);
       }
     },
-    [exporting],
+    [exporting, monthFilter, yearFilter],
   );
 
   if (accessLoading || loading) return <LoadingScreen />;
@@ -94,7 +112,7 @@ export default function PerkaderanGroupsScreen() {
       <ScreenHeader
         eyebrow="Panel Admin"
         title="Pantauan Usrah Sekolah"
-        subtitle={groups.length + ' kumpulan merentasi semua naqib'}
+        subtitle={naqibs.length + ' naqib aktif'}
         onBackPress={goBack}
       />
 
@@ -102,27 +120,35 @@ export default function PerkaderanGroupsScreen() {
         {banner ? <Notice tone={banner.tone} message={banner.message} /> : null}
 
         <View>
-          <SectionTitle title="Senarai Kumpulan" caption="Ketuk satu kumpulan untuk lihat mad'u dan sesinya." />
+          <SectionTitle title="Senarai Naqib" caption="Ketuk seorang naqib untuk lihat sejarah sesinya." />
 
-          {groups.length === 0 ? (
+          {naqibs.length === 0 ? (
             <EmptyState
               icon="school-outline"
-              title="Belum ada kumpulan"
-              description="Kumpulan usrah sekolah akan muncul di sini sebaik naqib mencipta kumpulan pertamanya."
+              title="Belum ada naqib"
+              description="Naqib yang dilantik akan muncul di sini."
             />
           ) : (
             <View className="gap-2">
-              {groups.map((group) => (
+              {naqibs.map((naqib) => (
                 <Pressable
-                  key={group.id}
+                  key={naqib.member_id}
                   accessibilityRole="button"
-                  onPress={() => router.push({ pathname: '/(app)/admin/perkaderan-group-detail', params: { id: group.id } })}
+                  onPress={() =>
+                    router.push({
+                      pathname: '/(app)/admin/naqib-session-history',
+                      params: { memberId: naqib.member_id, naqibName: naqib.full_name },
+                    })
+                  }
                   className="flex-row items-center gap-3 rounded-card border border-line bg-surface p-card active:opacity-70">
                   <View className="flex-1">
-                    <Text className="text-base font-semibold text-ink">{group.naqib_full_name}</Text>
-                    <Text className="mt-0.5 text-sm text-ink-muted">{group.sekolah}</Text>
+                    <Text className="text-base font-semibold text-ink">{naqib.full_name}</Text>
+                    <Text className="mt-0.5 text-sm text-ink-muted" numberOfLines={1}>
+                      {naqib.sekolah_list}
+                      {naqib.generasi ? ' · ' + generationLabel(naqib.generasi) : ''}
+                    </Text>
                     <Text className="mt-1 text-xs text-ink-faint">
-                      {group.mad_u_count + " mad'u aktif · " + group.session_count + ' sesi'}
+                      {naqib.group_count + ' kumpulan · ' + naqib.session_count + ' sesi jumlah'}
                     </Text>
                   </View>
                   <Ionicons name="chevron-forward" size={18} color={Colors.inkMuted} />
@@ -133,16 +159,32 @@ export default function PerkaderanGroupsScreen() {
         </View>
 
         <View className="pb-8">
-          <SectionTitle title="Muat Turun Laporan" caption="Ringkasan sesi dan kehadiran terperinci semua kumpulan (.xlsx)." />
+          <SectionTitle title="Muat Turun Laporan" caption="Ringkasan sesi dan kehadiran terperinci, boleh ditapis ikut bulan/tahun (.xlsx)." />
           <Card>
-            <SaveShareButtons
-              kind="file"
-              variant="secondary"
-              webLabel="Muat Turun Laporan (.xlsx)"
-              nativeCaption="Laporan Usrah Sekolah (.xlsx)"
-              busy={exporting}
-              onPress={(mode) => void exportAll(mode)}
-            />
+            <View className="gap-4">
+              <View className="flex-row items-start gap-3">
+                <View className="flex-1">
+                  <PickerField label="Bulan" value={monthFilter} options={MONTH_FILTER_OPTIONS} onChange={(v) => setMonthFilter(v ?? ALL_MONTHS)} clearable={false} />
+                </View>
+                <View className="flex-1">
+                  <TextField
+                    label="Tahun"
+                    placeholder="Semua Tahun"
+                    value={yearFilter}
+                    onChangeText={(value) => setYearFilter(value.replace(/[^\d]/g, '').slice(0, 4))}
+                    keyboardType="number-pad"
+                  />
+                </View>
+              </View>
+              <SaveShareButtons
+                kind="file"
+                variant="secondary"
+                webLabel="Muat Turun Laporan (.xlsx)"
+                nativeCaption="Laporan Usrah Sekolah (.xlsx)"
+                busy={exporting}
+                onPress={(mode) => void exportAll(mode)}
+              />
+            </View>
           </Card>
         </View>
       </View>

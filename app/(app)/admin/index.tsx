@@ -1,14 +1,12 @@
-import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useRouter } from 'expo-router';
 import { View } from 'react-native';
 
+import { NaqibHubSection } from '@/components/naqib-hub-section';
 import { ScreenHeader } from '@/components/screen-header';
 import { ActionRow } from '@/components/ui/action-row';
 import { CollapsibleSection } from '@/components/ui/collapsible-section';
 import { EmptyState } from '@/components/ui/empty-state';
-import { FormModal } from '@/components/ui/form-modal';
 import { Screen } from '@/components/ui/screen';
-import { SelectRow } from '@/components/ui/select-row';
 import {
   useDepartmentAccess,
   useGenerasiAccess,
@@ -21,9 +19,7 @@ import {
 } from '@/lib/department-access';
 import { useGoBack } from '@/lib/navigation';
 import { ORG_CHART_DEPARTMENT } from '@/lib/org-chart';
-import { fetchMyGroups } from '@/lib/perkaderan';
 import { usePermissions } from '@/lib/permissions';
-import type { UsrahGroup } from '@/types/database';
 
 /**
  * Hub Admin — satu-satunya pintu masuk ke panel pentadbiran.
@@ -59,58 +55,15 @@ export default function AdminHubScreen() {
   const superAdmin = isSuperAdmin();
   const naqib = isActiveNaqib();
 
-  // --- "Kumpulan Usrah Saya" — kumpulan milik naqib sendiri ------------------
-  const [myGroups, setMyGroups] = useState<UsrahGroup[]>([]);
-  const [myGroupsLoading, setMyGroupsLoading] = useState(true);
-
-  /*
-    `useFocusEffect` dan bukan `useEffect` sahaja — React Navigation TIDAK
-    memasang semula Hub selepas naqib mencipta kumpulan/sesi di skrin lain
-    dan menekan "kembali" (Hub kekal dalam stack). `useEffect` biasa hanya
-    berjalan SEKALI semasa Hub pertama dibuka, jadi ia sentiasa memaparkan
-    senarai LAPUK — punca bug "sentiasa landing ke Cipta Kumpulan Baru":
-    naqib yang baru sahaja mencipta kumpulan pertamanya kembali ke Hub dan
-    masih dipaparkan seolah-olah tiada kumpulan langsung, lalu cipta
-    kumpulan KEDUA yang tidak perlu.
-  */
-  useFocusEffect(
-    useCallback(() => {
-      if (permissionsLoading || !naqib) {
-        setMyGroupsLoading(false);
-        return;
-      }
-      let active = true;
-      setMyGroupsLoading(true);
-      fetchMyGroups()
-        .then((rows) => active && setMyGroups(rows))
-        .catch(() => active && setMyGroups([]))
-        .finally(() => active && setMyGroupsLoading(false));
-      return () => {
-        active = false;
-      };
-    }, [naqib, permissionsLoading]),
-  );
-
-  // --- "Tambah Sesi" — pilih kumpulan dahulu bila naqib pegang >1 kumpulan ---
-  const [pickingGroupForSession, setPickingGroupForSession] = useState(false);
-
-  const addSession = useCallback(() => {
-    const onlyGroup = myGroups.length === 1 ? myGroups[0] : undefined;
-    if (onlyGroup) {
-      router.push({ pathname: '/(app)/admin/usrah-session-form', params: { groupId: onlyGroup.id } });
-      return;
-    }
-    setPickingGroupForSession(true);
-  }, [myGroups, router]);
-
   /*
     Setiap department dimuat berasingan. Seksyen dipasang hanya selepas
     kesemuanya selesai — jika tidak, seksyen pertama yang siap dipasang ketika
     kiraan masih satu, terbuka, dan kekal terbuka selepas yang lain menyusul.
+    `NaqibHubSection` menguruskan bacaan kumpulan/sesinya SENDIRI (lihat
+    komponen itu) — Hub tidak perlu menunggunya untuk memaparkan seksyen lain.
   */
   const accessLoading =
     permissionsLoading ||
-    (naqib && myGroupsLoading) ||
     [memberAccess, usrahAccess, programAccess, yuranAccess, pipisAccess, orgChartAccess, generasiAccess, perkaderanAccess].some(
       (access) => access.loading,
     );
@@ -130,7 +83,6 @@ export default function AdminHubScreen() {
   const openByDefault = visibleSections === 1;
 
   return (
-    <>
     <Screen padTop={false}>
       <ScreenHeader
         eyebrow="Panel Pentadbiran"
@@ -398,63 +350,7 @@ export default function AdminHubScreen() {
           </CollapsibleSection>
         ) : null}
 
-        {/*
-          Panel Naqib — BUKAN kebenaran department. Naqib aktif yang bukan
-          admin department mana-mana pun tetap perlukan pintu ini supaya Hub
-          tidak kosong; naqib yang turut memegang department lain tetap
-          melihatnya sebagai laluan pantas ke kumpulan sendiri.
-        */}
-        {naqib ? (
-          <CollapsibleSection
-            variant="plain"
-            title="Kumpulan Usrah Saya"
-            caption="Kumpulan usrah sekolah yang anda naqibkan."
-            count={myGroups.length || 1}
-            defaultOpen={openByDefault}>
-            {myGroups.length === 0 ? (
-              // Naqib baharu — tiada apa untuk "tambah sesi" pun, terus ke Cipta.
-              <ActionRow
-                icon="add-circle-outline"
-                title="Cipta Kumpulan Usrah"
-                subtitle="Pilih sekolah dan key in sesi pertama"
-                onPress={() => router.push('/(app)/admin/usrah-group-create')}
-              />
-            ) : (
-              <>
-                {/*
-                  Sekurang-kurangnya SATU kumpulan sedia ada — dua pilihan jelas
-                  dahulu (bukan terus paksa Cipta Kumpulan Baru), kemudian senarai
-                  kumpulan sedia ada di bawah untuk diurus terus.
-                */}
-                <ActionRow
-                  icon="calendar-outline"
-                  title="Tambah Sesi"
-                  subtitle={
-                    myGroups.length === 1
-                      ? 'Sesi baharu untuk kumpulan sedia ada anda'
-                      : 'Pilih kumpulan, kemudian sesi baharu'
-                  }
-                  onPress={addSession}
-                />
-                <ActionRow
-                  icon="add-circle-outline"
-                  title="Cipta Kumpulan Baru"
-                  subtitle="Untuk sekolah/kumpulan LAIN, jika anda pegang lebih daripada satu"
-                  onPress={() => router.push('/(app)/admin/usrah-group-create')}
-                />
-                {myGroups.map((group) => (
-                  <ActionRow
-                    key={group.id}
-                    icon="school-outline"
-                    title={group.group_name}
-                    subtitle={group.sekolah}
-                    onPress={() => router.push({ pathname: '/(app)/admin/perkaderan-group-detail', params: { id: group.id } })}
-                  />
-                ))}
-              </>
-            )}
-          </CollapsibleSection>
-        ) : null}
+        {naqib ? <NaqibHubSection defaultOpen={openByDefault} /> : null}
 
         {/*
           Yuran dimiliki oleh BENDAHARI — department ketiga yang berasingan
@@ -539,27 +435,5 @@ export default function AdminHubScreen() {
         )}
       </View>
     </Screen>
-
-    <FormModal
-      visible={pickingGroupForSession}
-      title="Pilih Kumpulan"
-      description="Kumpulan mana yang mahu ditambah sesi baharu?"
-      onClose={() => setPickingGroupForSession(false)}>
-      <View className="gap-3">
-        {myGroups.map((group) => (
-          <SelectRow
-            key={group.id}
-            title={group.group_name}
-            subtitle={group.sekolah}
-            selected={false}
-            onPress={() => {
-              setPickingGroupForSession(false);
-              router.push({ pathname: '/(app)/admin/usrah-session-form', params: { groupId: group.id } });
-            }}
-          />
-        ))}
-      </View>
-    </FormModal>
-    </>
   );
 }

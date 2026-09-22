@@ -21,8 +21,10 @@ export async function downloadPerkaderanReport(
   groupId: string | null,
   groupLabel: string | null,
   mode: DeliveryMode,
+  month: number | null = null,
+  year: number | null = null,
 ): Promise<PerkaderanReport> {
-  const report = await fetchPerkaderanExport(groupId);
+  const report = await fetchPerkaderanExport(groupId, month, year);
   if (report.ringkasan_sesi.length === 0) {
     throw new UserError('Tiada rekod sesi untuk dilaporkan.');
   }
@@ -36,6 +38,8 @@ export async function downloadPerkaderanReport(
       Lokasi: row.lokasi ?? '',
       Topik: row.topik ?? '',
       'Bilangan Hadir': row.bilangan_hadir,
+      'Partner Naqib': row.partner_naqib ?? '',
+      'Partner Hadir': row.partner_naqib === null ? '' : row.partner_hadir ? 'Ya' : 'Tidak',
     })),
   );
 
@@ -46,9 +50,11 @@ export async function downloadPerkaderanReport(
       Tingkatan: row.tingkatan ?? '',
       'Tarikh Sesi': row.tarikh_sesi,
       Hadir: row.hadir ? 'Ya' : 'Tidak',
+      'Partner Naqib': row.partner_naqib ?? '',
+      'Partner Hadir': row.partner_naqib === null ? '' : row.partner_hadir ? 'Ya' : 'Tidak',
     })),
     {
-      header: ['Kumpulan', 'Nama Mad\'u', 'Tingkatan', 'Tarikh Sesi', 'Hadir'],
+      header: ['Kumpulan', 'Nama Mad\'u', 'Tingkatan', 'Tarikh Sesi', 'Hadir', 'Partner Naqib', 'Partner Hadir'],
     },
   );
 

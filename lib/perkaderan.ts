@@ -1,8 +1,11 @@
 import type {
+  MySessionRow,
   NaqibAssignmentWithMember,
+  NaqibOverview,
+  NaqibSessionRow,
   PerkaderanExport,
+  SessionViewDetail,
   UsrahGroup,
-  UsrahGroupSummary,
   UsrahMadU,
   UsrahSession,
 } from '@/types/database';
@@ -49,15 +52,8 @@ export async function removeNaqib(assignmentId: string): Promise<void> {
 }
 
 // =============================================================================
-// Kumpulan (admin/perkaderan-groups.tsx, hub naqib, perkaderan-group-detail.tsx)
+// Kumpulan (hub naqib, perkaderan-group-detail.tsx)
 // =============================================================================
-
-/** Semua kumpulan merentasi semua naqib — untuk skrin admin sahaja (RLS menyekat naqib biasa). */
-export async function fetchAllGroupsSummary(): Promise<UsrahGroupSummary[]> {
-  const { data, error } = await supabase.rpc('perkaderan_groups_summary');
-  if (error) throw error;
-  return (data as UsrahGroupSummary[] | null) ?? [];
-}
 
 /**
  * Rekod ahli untuk akaun semasa, atau `null` bila akaun ini tiada rekod
@@ -318,8 +314,113 @@ export async function saveAttendance(sessionId: string, presentMadUIds: string[]
 // Eksport (admin/perkaderan-groups.tsx)
 // =============================================================================
 
-export async function fetchPerkaderanExport(groupId: string | null): Promise<PerkaderanExport> {
-  const { data, error } = await supabase.rpc('perkaderan_export', { p_group_id: groupId });
+/** `month`/`year` null = tiada tapisan (semua). */
+export async function fetchPerkaderanExport(
+  groupId: string | null,
+  month: number | null = null,
+  year: number | null = null,
+): Promise<PerkaderanExport> {
+  const { data, error } = await supabase.rpc('perkaderan_export', { p_group_id: groupId, p_month: month, p_year: year });
   if (error) throw error;
   return (data as PerkaderanExport | null) ?? { ringkasan_sesi: [], kehadiran_terperinci: [] };
+}
+
+// =============================================================================
+// Navigasi 3-peringkat admin: Naqib -> Sesi -> Butiran (butiran reuse
+// usrah-session-form.tsx sedia ada, tiada fungsi tambahan diperlukan untuknya)
+// =============================================================================
+
+/** PERINGKAT 1 — senarai naqib, digabung merentasi semua kumpulan setiap satu. */
+export async function fetchNaqibOverview(): Promise<NaqibOverview[]> {
+  const { data, error } = await supabase.rpc('perkaderan_naqib_overview');
+  if (error) throw error;
+  return (data as NaqibOverview[] | null) ?? [];
+}
+
+/** PERINGKAT 2 — semua sesi SATU naqib, merentasi semua kumpulannya. */
+export async function fetchNaqibSessions(naqibMemberId: string): Promise<NaqibSessionRow[]> {
+  const { data, error } = await supabase.rpc('perkaderan_naqib_sessions', { p_naqib_member_id: naqibMemberId });
+  if (error) throw error;
+  return (data as NaqibSessionRow[] | null) ?? [];
+}
+
+// =============================================================================
+// "Sesi Lampau" — naqib melihat sejarah sesinya SENDIRI (VIEW-ONLY, Hub Admin)
+// =============================================================================
+
+type SessionEmbedRow = {
+  id: string;
+  group_id: string;
+  session_date: string;
+  location_text: string | null;
+  topik: string | null;
+  partner_naqib_member_id: string | null;
+  partner_naqib_hadir: boolean;
+  group: { sekolah: string } | { sekolah: string }[] | null;
+};
+
+function embeddedSekolah(group: SessionEmbedRow['group']): string {
+  if (!group) return '';
+  return Array.isArray(group) ? (group[0]?.sekolah ?? '') : group.sekolah;
+}
+
+/**
+ * Sesi naqib SENDIRI merentasi SEMUA kumpulannya — disenaraikan terus (bukan
+ * RPC) kerana RLS `sekolah_usrah_sessions`/`sekolah_usrah_groups` sudah
+ * membenarkan bacaan baris sendiri. `naqib_member_id` ditapis EKSPLISIT
+ * (bukan bergantung semata-mata pada RLS) supaya seorang naqib yang KEBETULAN
+ * turut admin/Super Admin tidak nampak sesi naqib LAIN di seksyen "sesi saya".
+ */
+export async function fetchMySessionsAcrossGroups(): Promise<MySessionRow[]> {
+  const memberId = await fetchMyMemberId();
+  if (!memberId) return [];
+
+  const { data, error } = await supabase
+    .from('sekolah_usrah_sessions')
+    .select(
+      'id, group_id, session_date, location_text, topik, partner_naqib_member_id, partner_naqib_hadir, group:sekolah_usrah_groups!inner(sekolah, naqib_member_id)',
+    )
+    .eq('group.naqib_member_id', memberId)
+    .order('session_date', { ascending: false });
+  if (error) throw error;
+
+  return ((data as SessionEmbedRow[] | null) ?? []).map((row) => ({
+    id: row.id,
+    group_id: row.group_id,
+    session_date: row.session_date,
+    location_text: row.location_text,
+    topik: row.topik,
+    partner_naqib_member_id: row.partner_naqib_member_id,
+    partner_naqib_hadir: row.partner_naqib_hadir,
+    sekolah: embeddedSekolah(row.group),
+  }));
+}
+
+/** Butiran PENUH satu sesi untuk paparan VIEW-ONLY sahaja — tiada senarai calon/checkbox. */
+export async function fetchSessionViewDetail(sessionId: string): Promise<SessionViewDetail> {
+  const [sessionResult, attendanceResult] = await Promise.all([
+    supabase
+      .from('sekolah_usrah_sessions')
+      .select('*, group:sekolah_usrah_groups(sekolah)')
+      .eq('id', sessionId)
+      .single(),
+    supabase.from('sekolah_usrah_attendance').select('mad_u:sekolah_usrah_mad_u(nama, tingkatan)').eq('session_id', sessionId),
+  ]);
+  if (sessionResult.error) throw sessionResult.error;
+  if (attendanceResult.error) throw attendanceResult.error;
+
+  const row = sessionResult.data as UsrahSession & { group: { sekolah: string } | { sekolah: string }[] | null };
+  type MadURef = { nama: string; tingkatan: string | null };
+  const attendeeRows = (attendanceResult.data as unknown as { mad_u: MadURef | MadURef[] | null }[] | null) ?? [];
+
+  const attendees = attendeeRows
+    .map((r) => (Array.isArray(r.mad_u) ? (r.mad_u[0] ?? null) : r.mad_u))
+    .filter((mu): mu is MadURef => mu !== null)
+    .sort((a, b) => a.nama.localeCompare(b.nama, 'ms', { sensitivity: 'base' }));
+
+  return {
+    session: row,
+    sekolah: embeddedSekolah(row.group),
+    attendees,
+  };
 }
