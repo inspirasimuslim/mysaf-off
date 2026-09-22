@@ -1,8 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useLocalSearchParams } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
-import { Modal, Pressable, Text, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { FlatList, Modal, Platform, Pressable, Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ScreenHeader } from '@/components/screen-header';
@@ -178,8 +178,93 @@ export default function EventAlbumScreen() {
     }
   }, [eventId, load, uploading]);
 
-  // --- Lightbox --------------------------------------------------------------
-  const [viewingPhoto, setViewingPhoto] = useState<EventPhoto | null>(null);
+  // --- Lightbox (carousel swipeable/panah) ------------------------------------
+  const { width: windowWidth } = useWindowDimensions();
+  const lightboxRef = useRef<FlatList<EventPhoto>>(null);
+  const [viewingIndex, setViewingIndex] = useState<number | null>(null);
+  /**
+   * Tinggi SEBENAR (piksel, diukur via `onLayout`) — bukan `height: '100%'`.
+   * FlatList mendatar pada react-native-web tidak sebarkan tinggi peratus ke
+   * bekas kandungannya (item runtuh kepada tinggi 0 secara senyap, imej
+   * "hilang" tanpa ralat) — hanya nombor piksel konkrit selamat di sini.
+   */
+  const [carouselHeight, setCarouselHeight] = useState(0);
+  /** Berubah HANYA bila lightbox dibuka (bukan bila ditatal) — pemaksa FlatList
+   *  mula semula pada kedudukan betul setiap kali dibuka, tanpa mengganggu
+   *  gerakan tatal semasa pengguna sedang menatal. */
+  const [lightboxOpenId, setLightboxOpenId] = useState(0);
+
+  const openLightbox = useCallback((index: number) => {
+    setViewingIndex(index);
+    setLightboxOpenId((id) => id + 1);
+  }, []);
+
+  const goToIndex = useCallback(
+    (index: number) => {
+      if (index < 0 || index >= photos.length) return;
+      lightboxRef.current?.scrollToIndex({ index, animated: true });
+      setViewingIndex(index);
+    },
+    [photos.length],
+  );
+
+  const viewingPhoto = viewingIndex !== null ? (photos[viewingIndex] ?? null) : null;
+
+  // Anak panah papan kekunci — web sahaja, aktif hanya semasa lightbox dibuka.
+  useEffect(() => {
+    if (Platform.OS !== 'web' || viewingIndex === null) return;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'ArrowLeft') goToIndex(viewingIndex - 1);
+      else if (event.key === 'ArrowRight') goToIndex(viewingIndex + 1);
+      else if (event.key === 'Escape') setViewingIndex(null);
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [viewingIndex, goToIndex]);
+
+  const lightboxItemLayout = useCallback(
+    (_: unknown, index: number) => ({ length: windowWidth, offset: windowWidth * index, index }),
+    [windowWidth],
+  );
+
+  const onLightboxScrollEnd = useCallback(
+    (event: { nativeEvent: { contentOffset: { x: number } } }) => {
+      setViewingIndex(Math.round(event.nativeEvent.contentOffset.x / windowWidth));
+    },
+    [windowWidth],
+  );
+
+  const renderLightboxItem = useCallback(
+    ({ item }: { item: EventPhoto }) => (
+      <View style={{ width: windowWidth, height: carouselHeight }} className="items-center justify-center">
+        {accessToken ? (
+          <Image
+            source={driveImageSource(item.drive_file_id, accessToken)}
+            style={{ width: '100%', height: '100%' }}
+            contentFit="contain"
+            /*
+              TIADA `transition` di sini (sengaja) — item FlatList yang dimuat
+              di luar skrin (cth kedudukan awal sebelum ditatal ke situ)
+              tersekat pada opacity 0 di web ("cross-dissolve-end" tidak
+              pernah sampai ke opacity 1) sebab animasi peralihan expo-image
+              bergantung pada keterlihatan yang tidak pernah tercetus untuk
+              item yang tidak pernah kelihatan semasa animasinya patut jalan.
+            */
+          />
+        ) : (
+          <View className="items-center gap-3 px-gutter">
+            <Text className="text-center text-sm text-white/80">
+              {tokenError ?? 'Gambar tidak dapat dipaparkan buat masa ini.'}
+            </Text>
+            <Button label="Cuba Lagi" variant="secondary" onPress={() => void loadToken()} />
+          </View>
+        )}
+      </View>
+    ),
+    [accessToken, tokenError, loadToken, windowWidth, carouselHeight],
+  );
 
   // --- Padam ---------------------------------------------------------------------
   const [pendingDelete, setPendingDelete] = useState<EventPhoto | null>(null);
@@ -192,7 +277,7 @@ export default function EventAlbumScreen() {
     try {
       await deleteEventPhoto(pendingDelete.id);
       setPendingDelete(null);
-      setViewingPhoto(null);
+      setViewingIndex(null);
       setBanner({ tone: 'positive', message: 'Gambar berjaya dipadam.' });
       await load();
     } catch (caught) {
@@ -247,14 +332,14 @@ export default function EventAlbumScreen() {
             />
           ) : (
             <View className="flex-row flex-wrap" style={{ gap: GRID_GAP }}>
-              {photos.map((photo) => {
+              {photos.map((photo, index) => {
                 const canDelete = canEdit || photo.uploaded_by === user?.id;
                 return (
                   <Pressable
                     key={photo.id}
                     accessibilityRole="button"
                     accessibilityLabel="Lihat gambar penuh"
-                    onPress={() => setViewingPhoto(photo)}
+                    onPress={() => openLightbox(index)}
                     style={{ width: '32%', aspectRatio: 1 }}
                     className="overflow-hidden rounded-field bg-surface active:opacity-70">
                     {accessToken ? (
@@ -290,34 +375,74 @@ export default function EventAlbumScreen() {
         </View>
       </Screen>
 
-      {/* --- Lightbox ------------------------------------------------------------ */}
-      <Modal visible={viewingPhoto !== null} animationType="fade" transparent onRequestClose={() => setViewingPhoto(null)}>
-        <View className="flex-1 items-center justify-center bg-black/95" style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}>
+      {/*
+        --- Lightbox (carousel swipeable + panah web) -----------------------------
+        `key={lightboxOpenId}` sengaja: `initialScrollIndex` FlatList hanya
+        dihormati pada mount PERTAMA — tanpa key ini, buka semula pada gambar
+        BERBEZA (selepas ditutup) akan kekal di kedudukan lama sebab FlatList
+        tidak remount. Menatal sendiri (swipe/panah) tidak sentuh `lightboxOpenId`,
+        jadi ia tidak mengganggu gerakan tatal semasa pengguna menatal.
+      */}
+      <Modal visible={viewingIndex !== null} animationType="fade" transparent onRequestClose={() => setViewingIndex(null)}>
+        <View className="flex-1 bg-black/95" style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}>
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Tutup"
             hitSlop={10}
-            onPress={() => setViewingPhoto(null)}
+            onPress={() => setViewingIndex(null)}
             className="absolute right-4 top-4 z-10 h-11 w-11 items-center justify-center rounded-pill bg-white/10 active:opacity-70"
             style={{ marginTop: insets.top }}>
             <Ionicons name="close" size={22} color={Colors.white} />
           </Pressable>
 
-          {viewingPhoto && accessToken ? (
-            <Image
-              source={driveImageSource(viewingPhoto.drive_file_id, accessToken)}
-              style={{ width: '100%', height: '80%' }}
-              contentFit="contain"
-              transition={150}
-            />
-          ) : (
-            <View className="items-center gap-3 px-gutter">
-              <Text className="text-center text-sm text-white/80">
-                {tokenError ?? 'Gambar tidak dapat dipaparkan buat masa ini.'}
-              </Text>
-              <Button label="Cuba Lagi" variant="secondary" onPress={() => void loadToken()} />
-            </View>
-          )}
+          {viewingIndex !== null ? (
+            <Text className="z-10 pt-3 text-center text-sm font-semibold text-white/80">
+              {viewingIndex + 1} / {photos.length}
+            </Text>
+          ) : null}
+
+          <View className="flex-1" onLayout={(event) => setCarouselHeight(event.nativeEvent.layout.height)}>
+            {viewingIndex !== null && carouselHeight > 0 ? (
+              <FlatList
+                key={lightboxOpenId}
+                ref={lightboxRef}
+                data={photos}
+                keyExtractor={(item) => item.id}
+                renderItem={renderLightboxItem}
+                horizontal
+                pagingEnabled
+                showsHorizontalScrollIndicator={false}
+                initialScrollIndex={viewingIndex}
+                getItemLayout={lightboxItemLayout}
+                onMomentumScrollEnd={onLightboxScrollEnd}
+                style={{ height: carouselHeight }}
+              />
+            ) : null}
+
+            {/* Panah kiri/kanan — web sahaja; native cukup dengan swipe. */}
+            {Platform.OS === 'web' && viewingIndex !== null ? (
+              <>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Gambar sebelum"
+                  disabled={viewingIndex === 0}
+                  onPress={() => goToIndex(viewingIndex - 1)}
+                  className="absolute left-4 top-1/2 h-11 w-11 items-center justify-center rounded-pill bg-white/10 active:opacity-70"
+                  style={{ marginTop: -22, opacity: viewingIndex === 0 ? 0.3 : 1 }}>
+                  <Ionicons name="chevron-back" size={24} color={Colors.white} />
+                </Pressable>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Gambar seterusnya"
+                  disabled={viewingIndex === photos.length - 1}
+                  onPress={() => goToIndex(viewingIndex + 1)}
+                  className="absolute right-4 top-1/2 h-11 w-11 items-center justify-center rounded-pill bg-white/10 active:opacity-70"
+                  style={{ marginTop: -22, opacity: viewingIndex === photos.length - 1 ? 0.3 : 1 }}>
+                  <Ionicons name="chevron-forward" size={24} color={Colors.white} />
+                </Pressable>
+              </>
+            ) : null}
+          </View>
 
           {viewingPhoto && (canEdit || viewingPhoto.uploaded_by === user?.id) ? (
             <View className="px-gutter pt-4">
