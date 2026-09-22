@@ -77,7 +77,21 @@ export async function getPhotoAccessToken(): Promise<string> {
   return result.access_token;
 }
 
-/** URL fetch TERUS dari Google (bukan proxy Supabase) — lihat nota `get-photo-access-token`. */
-export function driveImageUrl(driveFileId: string, accessToken: string): string {
-  return 'https://www.googleapis.com/drive/v3/files/' + driveFileId + '?alt=media&access_token=' + encodeURIComponent(accessToken);
+/**
+ * Sumber `<Image>` (expo-image) untuk fetch TERUS dari Google (bukan proxy
+ * Supabase) — lihat nota `get-photo-access-token`.
+ *
+ * Token WAJIB dihantar sebagai header `Authorization: Bearer`, BUKAN sebagai
+ * `access_token` dalam query string — Google Drive API menyekat kaedah query
+ * string sebagai "automated queries" (403), walaupun token itu sendiri sah.
+ * `expo-image` sokong `headers` dalam kedua-dua native (RN) dan web (buat
+ * `fetch()` sendiri dan tukar jadi blob URL) — disahkan Google pulangkan
+ * header CORS yang betul untuk kaedah header ini, jadi ia berfungsi di web
+ * juga, bukan setakat native.
+ */
+export function driveImageSource(driveFileId: string, accessToken: string): { uri: string; headers: Record<string, string> } {
+  return {
+    uri: 'https://www.googleapis.com/drive/v3/files/' + driveFileId + '?alt=media',
+    headers: { Authorization: 'Bearer ' + accessToken },
+  };
 }

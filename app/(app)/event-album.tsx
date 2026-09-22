@@ -18,7 +18,7 @@ import { useProgramAccess, useUsrahAccess } from '@/lib/department-access';
 import { toMalayErrorVerbose } from '@/lib/errors';
 import {
   deleteEventPhoto,
-  driveImageUrl,
+  driveImageSource,
   fetchEventPhotos,
   getPhotoAccessToken,
   uploadEventPhoto,
@@ -230,7 +230,7 @@ export default function EventAlbumScreen() {
                     className="overflow-hidden rounded-field bg-surface active:opacity-70">
                     {accessToken ? (
                       <Image
-                        source={{ uri: driveImageUrl(photo.drive_file_id, accessToken) }}
+                        source={driveImageSource(photo.drive_file_id, accessToken)}
                         style={{ width: '100%', height: '100%' }}
                         contentFit="cover"
                         transition={150}
@@ -276,7 +276,7 @@ export default function EventAlbumScreen() {
 
           {viewingPhoto && accessToken ? (
             <Image
-              source={{ uri: driveImageUrl(viewingPhoto.drive_file_id, accessToken) }}
+              source={driveImageSource(viewingPhoto.drive_file_id, accessToken)}
               style={{ width: '100%', height: '80%' }}
               contentFit="contain"
               transition={150}
