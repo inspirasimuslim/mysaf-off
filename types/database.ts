@@ -678,6 +678,8 @@ export type UsrahGroup = {
   group_name: string;
   /** Cadangan sahaja — pra-isi borang sesi baharu. Tidak menjejaskan sesi sedia ada. */
   default_partner_naqib_member_id: string | null;
+  /** `false` = diarkibkan (ada sejarah sesi, tidak boleh dipadam terus) — tidak muncul dalam senarai aktif. */
+  is_active: boolean;
   created_at: string;
   updated_at: string;
 };

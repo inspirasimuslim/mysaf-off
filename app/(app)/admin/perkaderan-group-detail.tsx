@@ -10,6 +10,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { FormModal } from '@/components/ui/form-modal';
 import { IconButton } from '@/components/ui/icon-button';
 import { LoadingScreen } from '@/components/ui/loading-screen';
+import { MemberPickerField } from '@/components/ui/member-picker-field';
 import { Notice } from '@/components/ui/notice';
 import { PickerField } from '@/components/ui/picker-field';
 import { Screen } from '@/components/ui/screen';
@@ -19,7 +20,17 @@ import { usePerkaderanAccess } from '@/lib/department-access';
 import { toMalayErrorVerbose } from '@/lib/errors';
 import { fetchMembersForPicker } from '@/lib/members';
 import { useGoBack } from '@/lib/navigation';
-import { addMadU, fetchGroup, fetchMadU, fetchMyMemberId, fetchSessions, removeMadU } from '@/lib/perkaderan';
+import {
+  addMadU,
+  deleteOrArchiveGroup,
+  deleteSession,
+  fetchGroup,
+  fetchMadU,
+  fetchMyMemberId,
+  fetchSessions,
+  removeMadU,
+  updateGroupDefaultPartner,
+} from '@/lib/perkaderan';
 import { usePermissions } from '@/lib/permissions';
 import { TINGKATAN_OPTIONS, type MemberPickerRow, type Option, type UsrahGroup, type UsrahMadU, type UsrahSession } from '@/types/database';
 
@@ -97,6 +108,26 @@ export default function PerkaderanGroupDetailScreen() {
     [memberCandidates],
   );
 
+  // --- Tukar Partner Naqib DEFAULT kumpulan -----------------------------------
+  const [partnerBusy, setPartnerBusy] = useState(false);
+
+  const changeDefaultPartner = useCallback(
+    async (nextPartnerId: string | null) => {
+      if (!group || partnerBusy) return;
+
+      setPartnerBusy(true);
+      try {
+        await updateGroupDefaultPartner(group.id, nextPartnerId);
+        setGroup({ ...group, default_partner_naqib_member_id: nextPartnerId });
+      } catch (caught) {
+        setBanner({ tone: 'negative', message: toMalayErrorVerbose(caught, 'Gagal menukar Partner Naqib.') });
+      } finally {
+        setPartnerBusy(false);
+      }
+    },
+    [group, partnerBusy],
+  );
+
   // --- Tambah mad'u ----------------------------------------------------------
   const [addingMadU, setAddingMadU] = useState(false);
   const [madUNama, setMadUNama] = useState('');
@@ -147,6 +178,47 @@ export default function PerkaderanGroupDetailScreen() {
     }
   }, [load, pendingRemoveMadU, removeMadUBusy]);
 
+  // --- Padam sesi ------------------------------------------------------------
+  const [pendingRemoveSession, setPendingRemoveSession] = useState<UsrahSession | null>(null);
+  const [removeSessionBusy, setRemoveSessionBusy] = useState(false);
+
+  const confirmRemoveSession = useCallback(async () => {
+    if (!pendingRemoveSession || removeSessionBusy) return;
+
+    setRemoveSessionBusy(true);
+    try {
+      await deleteSession(pendingRemoveSession.id);
+      setPendingRemoveSession(null);
+      await load();
+      setBanner({ tone: 'positive', message: 'Sesi telah dipadam.' });
+    } catch (caught) {
+      setPendingRemoveSession(null);
+      setBanner({ tone: 'negative', message: toMalayErrorVerbose(caught, 'Gagal memadam sesi.') });
+    } finally {
+      setRemoveSessionBusy(false);
+    }
+  }, [load, pendingRemoveSession, removeSessionBusy]);
+
+  // --- Padam/Arkib kumpulan ----------------------------------------------------
+  const [confirmingRemoveGroup, setConfirmingRemoveGroup] = useState(false);
+  const [removeGroupBusy, setRemoveGroupBusy] = useState(false);
+
+  const confirmRemoveGroup = useCallback(async () => {
+    if (!group || removeGroupBusy) return;
+
+    setRemoveGroupBusy(true);
+    try {
+      await deleteOrArchiveGroup(group.id);
+      setConfirmingRemoveGroup(false);
+      goBack();
+    } catch (caught) {
+      setConfirmingRemoveGroup(false);
+      setBanner({ tone: 'negative', message: toMalayErrorVerbose(caught, 'Gagal memadam/mengarkibkan kumpulan.') });
+    } finally {
+      setRemoveGroupBusy(false);
+    }
+  }, [goBack, group, removeGroupBusy]);
+
   if (permissionsLoading || accessLoading || loading) return <LoadingScreen />;
 
   if (!group) {
@@ -176,9 +248,20 @@ export default function PerkaderanGroupDetailScreen() {
           <View>
             <SectionTitle title="Butiran Kumpulan" />
             <Card>
-              <View className="gap-2">
+              <View className="gap-3">
                 <Line label="Sekolah" value={group.sekolah} />
-                <Line label="Partner Naqib (cadangan)" value={partnerName(group.default_partner_naqib_member_id) ?? 'Tiada'} />
+                {canEdit ? (
+                  <MemberPickerField
+                    label="Partner Naqib (cadangan)"
+                    value={group.default_partner_naqib_member_id}
+                    candidates={memberCandidates}
+                    onChange={(next) => void changeDefaultPartner(next)}
+                    placeholder="Tiada partner"
+                    disabled={partnerBusy}
+                  />
+                ) : (
+                  <Line label="Partner Naqib (cadangan)" value={partnerName(group.default_partner_naqib_member_id) ?? 'Tiada'} />
+                )}
               </View>
             </Card>
           </View>
@@ -240,28 +323,56 @@ export default function PerkaderanGroupDetailScreen() {
             ) : (
               <View className="gap-2">
                 {sessions.map((s) => (
-                  <Pressable
-                    key={s.id}
-                    accessibilityRole="button"
-                    onPress={() =>
-                      router.push({ pathname: '/(app)/admin/usrah-session-form', params: { groupId: group.id, id: s.id } })
-                    }
-                    className="rounded-card border border-line bg-surface p-card active:opacity-70">
-                    <Text className="text-base font-semibold text-ink">{dateLabel(s.session_date)}</Text>
-                    <Text className="mt-0.5 text-sm text-ink-muted">
-                      {s.topik || 'Tiada topik'}
-                      {s.location_text ? ' · ' + s.location_text : ''}
-                    </Text>
-                    {s.partner_naqib_member_id ? (
-                      <Text className="mt-0.5 text-xs text-ink-faint">
-                        Partner Naqib: {partnerName(s.partner_naqib_member_id)} · {s.partner_naqib_hadir ? 'Hadir' : 'Tidak Hadir'}
+                  <View key={s.id} className="flex-row items-center gap-2 rounded-card border border-line bg-surface p-card">
+                    <Pressable
+                      accessibilityRole="button"
+                      onPress={() =>
+                        router.push({ pathname: '/(app)/admin/usrah-session-form', params: { groupId: group.id, id: s.id } })
+                      }
+                      className="flex-1 active:opacity-70">
+                      <Text className="text-base font-semibold text-ink">{dateLabel(s.session_date)}</Text>
+                      <Text className="mt-0.5 text-sm text-ink-muted">
+                        {s.topik || 'Tiada topik'}
+                        {s.location_text ? ' · ' + s.location_text : ''}
                       </Text>
+                      {s.partner_naqib_member_id ? (
+                        <Text className="mt-0.5 text-xs text-ink-faint">
+                          Partner Naqib: {partnerName(s.partner_naqib_member_id)} · {s.partner_naqib_hadir ? 'Hadir' : 'Tidak Hadir'}
+                        </Text>
+                      ) : null}
+                    </Pressable>
+                    {canEdit ? (
+                      <IconButton
+                        icon="trash-outline"
+                        tone="danger"
+                        accessibilityLabel={'Padam sesi ' + dateLabel(s.session_date)}
+                        onPress={() => setPendingRemoveSession(s)}
+                      />
                     ) : null}
-                  </Pressable>
+                  </View>
                 ))}
               </View>
             )}
           </View>
+
+          {/* --- Padam kumpulan -------------------------------------------- */}
+          {canEdit ? (
+            <View className="pb-8">
+              <SectionTitle
+                title="Zon Bahaya"
+                caption={
+                  sessions.length > 0
+                    ? 'Kumpulan ini ada sejarah sesi — akan DIARKIBKAN (bukan dipadam terus) untuk kekalkan rekod.'
+                    : 'Kumpulan ini kosong (tiada sesi) — boleh dipadam terus.'
+                }
+              />
+              <Button
+                label="Padam Kumpulan Ini"
+                variant="danger"
+                onPress={() => setConfirmingRemoveGroup(true)}
+              />
+            </View>
+          ) : null}
         </View>
       </Screen>
 
@@ -292,6 +403,32 @@ export default function PerkaderanGroupDetailScreen() {
         busy={removeMadUBusy}
         onConfirm={() => void confirmRemoveMadU()}
         onCancel={() => setPendingRemoveMadU(null)}
+      />
+
+      <ConfirmDialog
+        visible={pendingRemoveSession !== null}
+        title="Padam sesi ini?"
+        message="Rekod kehadiran sesi ini akan turut dipadam. Tindakan ini tidak boleh dibatalkan."
+        confirmLabel="Padam Sesi"
+        destructive
+        busy={removeSessionBusy}
+        onConfirm={() => void confirmRemoveSession()}
+        onCancel={() => setPendingRemoveSession(null)}
+      />
+
+      <ConfirmDialog
+        visible={confirmingRemoveGroup}
+        title={sessions.length > 0 ? 'Arkibkan kumpulan ini?' : 'Padam kumpulan ini?'}
+        message={
+          sessions.length > 0
+            ? 'Kumpulan ini ada sejarah sesi, ia akan diarkibkan (bukan dipadam terus) untuk kekalkan rekod. Ia tidak akan muncul lagi dalam senarai aktif.'
+            : 'Kumpulan ini kosong (tiada sesi) dan akan dipadam terus. Tindakan ini tidak boleh dibatalkan.'
+        }
+        confirmLabel={sessions.length > 0 ? 'Arkibkan Kumpulan' : 'Padam Kumpulan'}
+        destructive
+        busy={removeGroupBusy}
+        onConfirm={() => void confirmRemoveGroup()}
+        onCancel={() => setConfirmingRemoveGroup(false)}
       />
     </>
   );

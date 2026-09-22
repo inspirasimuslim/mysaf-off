@@ -71,7 +71,7 @@ export async function fetchMyMemberId(): Promise<string | null> {
   return (member as { id: string } | null)?.id ?? null;
 }
 
-/** Kumpulan milik naqib SENDIRI — untuk seksyen "Kumpulan Usrah Saya" di Hub Admin. */
+/** Kumpulan AKTIF milik naqib SENDIRI — untuk seksyen "Kumpulan Usrah Saya" di Hub Admin. */
 export async function fetchMyGroups(): Promise<UsrahGroup[]> {
   const memberId = await fetchMyMemberId();
   if (!memberId) return [];
@@ -80,6 +80,7 @@ export async function fetchMyGroups(): Promise<UsrahGroup[]> {
     .from('sekolah_usrah_groups')
     .select('*')
     .eq('naqib_member_id', memberId)
+    .eq('is_active', true)
     .order('created_at', { ascending: true });
   if (error) throw error;
   return (data as UsrahGroup[] | null) ?? [];
@@ -91,24 +92,25 @@ export async function fetchGroup(id: string): Promise<UsrahGroup | null> {
   return (data as UsrahGroup | null) ?? null;
 }
 
+/** Cadangan partner sahaja — tidak menjejaskan sesi sedia ada. */
+export async function updateGroupDefaultPartner(groupId: string, partnerNaqibMemberId: string | null): Promise<void> {
+  const { error } = await supabase
+    .from('sekolah_usrah_groups')
+    .update({ default_partner_naqib_member_id: partnerNaqibMemberId })
+    .eq('id', groupId);
+  if (error) throw error;
+}
+
 /**
- * Cipta kumpulan + sesi PERTAMA serentak dalam SATU aliran — bila naqib
- * belum mempunyai kumpulan langsung. Mad'u belum wujud pada peringkat ini,
- * jadi sesi pertama tercipta tanpa sebarang kehadiran; naqib menambah mad'u
- * dan merekod kehadiran bermula sesi kedua.
- *
- * `defaultPartnerNaqibMemberId` disimpan pada KEDUA-DUA kumpulan (cadangan
- * untuk sesi akan datang) DAN sesi pertama ini (nilai sebenar sesi itu) —
- * selepas ini, setiap sesi menyimpan pilihannya sendiri secara berasingan.
+ * Cipta kumpulan + senarai mad'u AWAL sekali gus — TIADA sesi dicipta di
+ * sini. Sesi pertama dicipta kemudian melalui laluan "Kumpulan Sedia Ada"
+ * -> "Tambah Sesi Baharu" di Hub, sama seperti sesi kedua dan seterusnya.
  */
-export async function createGroupWithFirstSession(
+export async function createGroupWithMadU(
   sekolah: string,
   defaultPartnerNaqibMemberId: string | null,
-  firstSession: { session_date: string; location_text: string | null; topik: string | null },
-): Promise<{ group: UsrahGroup; session: UsrahSession }> {
-  const { data: session } = await supabase.auth.getUser();
-  const uid = session.user?.id ?? null;
-
+  madUList: { nama: string; tingkatan: string | null }[],
+): Promise<UsrahGroup> {
   const memberId = await fetchMyMemberId();
   if (!memberId) {
     throw new UserError(
@@ -124,21 +126,49 @@ export async function createGroupWithFirstSession(
     .single();
   if (groupError) throw groupError;
 
-  const { data: firstSessionRow, error: sessionError } = await supabase
-    .from('sekolah_usrah_sessions')
-    .insert({
-      group_id: (group as UsrahGroup).id,
-      session_date: firstSession.session_date,
-      location_text: firstSession.location_text,
-      topik: firstSession.topik,
-      partner_naqib_member_id: defaultPartnerNaqibMemberId,
-      recorded_by: uid,
-    })
-    .select('*')
-    .single();
-  if (sessionError) throw sessionError;
+  if (madUList.length > 0) {
+    const { error: madUError } = await supabase.from('sekolah_usrah_mad_u').insert(
+      madUList.map((m) => ({
+        group_id: (group as UsrahGroup).id,
+        nama: m.nama.trim(),
+        tingkatan: m.tingkatan,
+      })),
+    );
+    if (madUError) throw madUError;
+  }
 
-  return { group: group as UsrahGroup, session: firstSessionRow as UsrahSession };
+  return group as UsrahGroup;
+}
+
+/** Padam SATU sesi terus — sesi & kehadirannya SATU unit, tiada sebab arkib berasingan. */
+export async function deleteSession(sessionId: string): Promise<void> {
+  const { error } = await supabase.from('sekolah_usrah_sessions').delete().eq('id', sessionId);
+  if (error) throw error;
+}
+
+export type GroupRemoveResult = { outcome: 'deleted' | 'archived' };
+
+/**
+ * Padam kumpulan KOSONG (tiada sesi langsung) terus; kumpulan yang ADA
+ * sejarah sesi diARKIBKAN (`is_active=false`) sebaliknya — sejarah sesi dan
+ * kehadirannya tidak boleh hilang hanya kerana kumpulan itu ditutup.
+ */
+export async function deleteOrArchiveGroup(groupId: string): Promise<GroupRemoveResult> {
+  const { count, error: countError } = await supabase
+    .from('sekolah_usrah_sessions')
+    .select('id', { count: 'exact', head: true })
+    .eq('group_id', groupId);
+  if (countError) throw countError;
+
+  if ((count ?? 0) > 0) {
+    const { error } = await supabase.from('sekolah_usrah_groups').update({ is_active: false }).eq('id', groupId);
+    if (error) throw error;
+    return { outcome: 'archived' };
+  }
+
+  const { error } = await supabase.from('sekolah_usrah_groups').delete().eq('id', groupId);
+  if (error) throw error;
+  return { outcome: 'deleted' };
 }
 
 // =============================================================================

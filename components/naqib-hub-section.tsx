@@ -6,12 +6,14 @@ import { ActionRow } from '@/components/ui/action-row';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { CollapsibleSection } from '@/components/ui/collapsible-section';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { FormModal } from '@/components/ui/form-modal';
 import { LoadingScreen } from '@/components/ui/loading-screen';
+import { Notice } from '@/components/ui/notice';
 import { SelectRow } from '@/components/ui/select-row';
 import { toMalayErrorVerbose } from '@/lib/errors';
 import { fetchMembersForPicker } from '@/lib/members';
-import { fetchMyGroups, fetchMySessionsAcrossGroups, fetchSessionViewDetail } from '@/lib/perkaderan';
+import { deleteSession, fetchMyGroups, fetchMySessionsAcrossGroups, fetchSessionViewDetail } from '@/lib/perkaderan';
 import type { MemberPickerRow, MySessionRow, SessionViewDetail, UsrahGroup } from '@/types/database';
 
 /** 'YYYY-MM-DD' → '12 Sep 2026'. */
@@ -44,47 +46,53 @@ export function NaqibHubSection({ defaultOpen }: { defaultOpen: boolean }) {
     kembali selepas mencipta kumpulan/sesi di skrin lain. Lihat nota sejarah
     bug "sentiasa landing ke Cipta Kumpulan Baru" di `admin/index.tsx`.
   */
-  useFocusEffect(
-    useCallback(() => {
-      let active = true;
-      setLoading(true);
-      Promise.all([fetchMyGroups(), fetchMySessionsAcrossGroups(), fetchMembersForPicker()])
-        .then(([groups, sessions, candidates]) => {
-          if (!active) return;
-          setMyGroups(groups);
-          setMySessions(sessions);
-          setMemberCandidates(candidates);
-        })
-        .catch(() => {
-          if (!active) return;
-          setMyGroups([]);
-          setMySessions([]);
-        })
-        .finally(() => active && setLoading(false));
-      return () => {
-        active = false;
-      };
-    }, []),
-  );
+  const load = useCallback(() => {
+    let active = true;
+    setLoading(true);
+    Promise.all([fetchMyGroups(), fetchMySessionsAcrossGroups(), fetchMembersForPicker()])
+      .then(([groups, sessions, candidates]) => {
+        if (!active) return;
+        setMyGroups(groups);
+        setMySessions(sessions);
+        setMemberCandidates(candidates);
+      })
+      .catch(() => {
+        if (!active) return;
+        setMyGroups([]);
+        setMySessions([]);
+      })
+      .finally(() => active && setLoading(false));
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useFocusEffect(load);
 
   const partnerName = useCallback(
     (memberId: string | null) => (memberId ? memberCandidates.find((row) => row.id === memberId)?.full_name ?? 'Ahli' : null),
     [memberCandidates],
   );
 
-  // --- "Tambah Sesi" — pilih kumpulan dahulu bila naqib pegang >1 kumpulan ---
-  const [pickingGroupForSession, setPickingGroupForSession] = useState(false);
+  // --- "Kumpulan Sedia Ada" — pilih kumpulan (jika >1), kemudian Urus/Tambah Sesi ---
+  const [pickingGroup, setPickingGroup] = useState(false);
+  const [manageGroupId, setManageGroupId] = useState<string | null>(null);
 
-  const addSession = useCallback(() => {
+  const openManageFlow = useCallback(() => {
     const onlyGroup = myGroups.length === 1 ? myGroups[0] : undefined;
     if (onlyGroup) {
-      router.push({ pathname: '/(app)/admin/usrah-session-form', params: { groupId: onlyGroup.id } });
+      setManageGroupId(onlyGroup.id);
       return;
     }
-    setPickingGroupForSession(true);
-  }, [myGroups, router]);
+    setPickingGroup(true);
+  }, [myGroups]);
 
-  // --- Butiran sesi lampau (VIEW-ONLY) ---------------------------------------
+  const pickGroupForManage = useCallback((groupId: string) => {
+    setPickingGroup(false);
+    setManageGroupId(groupId);
+  }, []);
+
+  // --- Butiran sesi lampau (VIEW-ONLY, + Padam Sesi) --------------------------
   const [viewingSessionId, setViewingSessionId] = useState<string | null>(null);
   const [viewDetail, setViewDetail] = useState<SessionViewDetail | null>(null);
   const [viewLoading, setViewLoading] = useState(false);
@@ -104,9 +112,31 @@ export function NaqibHubSection({ defaultOpen }: { defaultOpen: boolean }) {
     }
   }, []);
 
+  const [confirmingDeleteSession, setConfirmingDeleteSession] = useState(false);
+  const [deleteSessionBusy, setDeleteSessionBusy] = useState(false);
+  const [deleteSessionError, setDeleteSessionError] = useState<string | null>(null);
+
+  const confirmDeleteSession = useCallback(async () => {
+    if (!viewingSessionId || deleteSessionBusy) return;
+
+    setDeleteSessionBusy(true);
+    setDeleteSessionError(null);
+    try {
+      await deleteSession(viewingSessionId);
+      setConfirmingDeleteSession(false);
+      setViewingSessionId(null);
+      load();
+    } catch (caught) {
+      setDeleteSessionError(toMalayErrorVerbose(caught, 'Gagal memadam sesi.'));
+    } finally {
+      setDeleteSessionBusy(false);
+    }
+  }, [deleteSessionBusy, load, viewingSessionId]);
+
   if (loading) return null;
 
   const hasGroups = myGroups.length > 0;
+  const manageGroup = myGroups.find((group) => group.id === manageGroupId) ?? null;
 
   return (
     <>
@@ -123,18 +153,22 @@ export function NaqibHubSection({ defaultOpen }: { defaultOpen: boolean }) {
         count={hasGroups ? myGroups.length : 1}
         defaultOpen={defaultOpen}>
         {!hasGroups ? (
-          // Naqib baharu — tiada apa untuk "tambah sesi" pun, terus ke Cipta.
+          // Naqib baharu — tiada apa untuk diurus pun, terus ke Cipta.
           <ActionRow
             icon="add-circle-outline"
             title="Cipta Kumpulan Usrah"
-            subtitle="Pilih sekolah dan key in sesi pertama"
+            subtitle="Pilih sekolah dan tambah mad'u"
             onPress={() => router.push('/(app)/admin/usrah-group-create')}
           />
         ) : (
           <View className="gap-3">
             <View className="flex-row gap-2">
               <View className="flex-1">
-                <Button label="+ Tambah Sesi" size="sm" onPress={addSession} />
+                <Button
+                  label="Kumpulan Sedia Ada"
+                  size="sm"
+                  onPress={openManageFlow}
+                />
               </View>
               <View className="flex-1">
                 <Button
@@ -189,11 +223,12 @@ export function NaqibHubSection({ defaultOpen }: { defaultOpen: boolean }) {
         )}
       </CollapsibleSection>
 
+      {/* Langkah 1 (hanya jika >1 kumpulan): pilih kumpulan mana yang diurus. */}
       <FormModal
-        visible={pickingGroupForSession}
+        visible={pickingGroup}
         title="Pilih Kumpulan"
-        description="Kumpulan mana yang mahu ditambah sesi baharu?"
-        onClose={() => setPickingGroupForSession(false)}>
+        description="Kumpulan mana yang mahu diurus?"
+        onClose={() => setPickingGroup(false)}>
         <View className="gap-3">
           {myGroups.map((group) => (
             <SelectRow
@@ -201,31 +236,69 @@ export function NaqibHubSection({ defaultOpen }: { defaultOpen: boolean }) {
               title={group.group_name}
               subtitle={group.sekolah}
               selected={false}
-              onPress={() => {
-                setPickingGroupForSession(false);
-                router.push({ pathname: '/(app)/admin/usrah-session-form', params: { groupId: group.id } });
-              }}
+              onPress={() => pickGroupForManage(group.id)}
             />
           ))}
         </View>
       </FormModal>
 
+      {/* Langkah 2: kumpulan sudah ditentukan (auto jika cuma satu) — dua pilihan. */}
+      <FormModal
+        visible={manageGroupId !== null}
+        title={manageGroup?.group_name ?? 'Kumpulan'}
+        description="Apa yang mahu dilakukan untuk kumpulan ini?"
+        onClose={() => setManageGroupId(null)}>
+        <View className="gap-3">
+          <Button
+            label="Urus Kumpulan"
+            onPress={() => {
+              const id = manageGroupId;
+              setManageGroupId(null);
+              if (id) router.push({ pathname: '/(app)/admin/perkaderan-group-detail', params: { id } });
+            }}
+          />
+          <Button
+            label="Tambah Sesi Baharu"
+            variant="secondary"
+            onPress={() => {
+              const id = manageGroupId;
+              setManageGroupId(null);
+              if (id) router.push({ pathname: '/(app)/admin/usrah-session-form', params: { groupId: id } });
+            }}
+          />
+        </View>
+      </FormModal>
+
       {/*
-        VIEW-ONLY — tiada butang sunting/simpan sengaja. Menyunting sesi lampau
-        kekal melalui laluan sedia ada: "Tambah Sesi" -> pilih kumpulan -> buka
-        sesi sedia ada di senarai sesi kumpulan itu.
+        VIEW-ONLY — tiada butang sunting/simpan sengaja, kecuali Padam Sesi
+        (memadam, bukan menyunting). Menyunting sesi lampau kekal melalui
+        laluan sedia ada: "Kumpulan Sedia Ada" -> Urus/Tambah Sesi.
       */}
       <FormModal
         visible={viewingSessionId !== null}
         title={viewDetail ? dateLabel(viewDetail.session.session_date) : 'Butiran Sesi'}
         description={viewDetail ? viewDetail.sekolah + (viewDetail.session.location_text ? ' · ' + viewDetail.session.location_text : '') : undefined}
-        onClose={() => setViewingSessionId(null)}>
+        onClose={() => setViewingSessionId(null)}
+        footer={
+          viewDetail ? (
+            <Button
+              label="Padam Sesi Ini"
+              variant="danger"
+              onPress={() => {
+                setDeleteSessionError(null);
+                setConfirmingDeleteSession(true);
+              }}
+            />
+          ) : undefined
+        }>
         {viewLoading ? (
           <LoadingScreen />
         ) : viewError ? (
           <Text className="text-sm text-negative">{viewError}</Text>
         ) : viewDetail ? (
           <View className="gap-4">
+            {deleteSessionError ? <Notice tone="negative" message={deleteSessionError} /> : null}
+
             {viewDetail.session.topik ? (
               <View>
                 <Text className="text-xs font-semibold uppercase text-ink-faint">Topik</Text>
@@ -266,6 +339,17 @@ export function NaqibHubSection({ defaultOpen }: { defaultOpen: boolean }) {
           </View>
         ) : null}
       </FormModal>
+
+      <ConfirmDialog
+        visible={confirmingDeleteSession}
+        title="Padam sesi ini?"
+        message="Rekod kehadiran sesi ini akan turut dipadam. Tindakan ini tidak boleh dibatalkan."
+        confirmLabel="Padam Sesi"
+        destructive
+        busy={deleteSessionBusy}
+        onConfirm={() => void confirmDeleteSession()}
+        onCancel={() => setConfirmingDeleteSession(false)}
+      />
     </>
   );
 }
