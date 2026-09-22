@@ -9,14 +9,17 @@ import { ScreenHeader } from '@/components/screen-header';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { EmptyState } from '@/components/ui/empty-state';
+import { FormModal } from '@/components/ui/form-modal';
 import { LoadingScreen } from '@/components/ui/loading-screen';
 import { Notice } from '@/components/ui/notice';
 import { Screen } from '@/components/ui/screen';
+import { TextField } from '@/components/ui/text-field';
 import { Colors } from '@/constants/theme';
 import { useAuth } from '@/lib/auth-context';
 import { useProgramAccess, useUsrahAccess } from '@/lib/department-access';
 import { toMalayErrorVerbose } from '@/lib/errors';
 import {
+  deleteEventAlbum,
   deleteEventPhoto,
   driveImageSource,
   fetchEventPhotos,
@@ -289,6 +292,33 @@ export default function EventAlbumScreen() {
     }
   }, [deleteBusy, load, pendingDelete]);
 
+  // --- Padam SELURUH album (admin can_edit sahaja) --------------------------------
+  const [deletingAlbum, setDeletingAlbum] = useState(false);
+  const [deleteAlbumConfirmText, setDeleteAlbumConfirmText] = useState('');
+  const [deleteAlbumBusy, setDeleteAlbumBusy] = useState(false);
+
+  const confirmDeleteAlbum = useCallback(async () => {
+    if (!eventId || deleteAlbumBusy) return;
+
+    setDeleteAlbumBusy(true);
+    try {
+      const result = await deleteEventAlbum(eventId);
+      setDeletingAlbum(false);
+      setBanner(
+        result.failed === 0
+          ? { tone: 'positive', message: result.deleted + ' gambar berjaya dipadam.' }
+          : { tone: 'negative', message: result.deleted + ' dipadam, ' + result.failed + ' gagal — sila cuba lagi.' },
+      );
+      await load();
+    } catch (caught) {
+      console.error(LOG_TAG, 'gagal padam seluruh album:', caught);
+      setDeletingAlbum(false);
+      setBanner({ tone: 'negative', message: toMalayErrorVerbose(caught, 'Gagal memadam album.') });
+    } finally {
+      setDeleteAlbumBusy(false);
+    }
+  }, [deleteAlbumBusy, eventId, load]);
+
   if (loading) return <LoadingScreen />;
 
   return (
@@ -323,6 +353,17 @@ export default function EventAlbumScreen() {
             disabled={uploading}
             onPress={() => void addPhoto()}
           />
+
+          {canEdit && photos.length > 0 ? (
+            <Button
+              label="Padam Seluruh Album"
+              variant="danger"
+              onPress={() => {
+                setDeleteAlbumConfirmText('');
+                setDeletingAlbum(true);
+              }}
+            />
+          ) : null}
 
           {photos.length === 0 ? (
             <EmptyState
@@ -462,6 +503,39 @@ export default function EventAlbumScreen() {
         onConfirm={() => void confirmDelete()}
         onCancel={() => setPendingDelete(null)}
       />
+
+      <FormModal
+        visible={deletingAlbum}
+        title="Padam seluruh album?"
+        description={
+          'Ini akan padam SEMUA ' + photos.length + ' gambar dalam album ini secara kekal, termasuk dari Google Drive. ' +
+          'Tindakan ini tidak boleh diundur.'
+        }
+        dismissable={!deleteAlbumBusy}
+        onClose={() => {
+          setDeletingAlbum(false);
+          setDeleteAlbumConfirmText('');
+        }}>
+        <Notice tone="warn" message="Taip PADAM di bawah untuk mengesahkan." />
+
+        <TextField
+          label="Taip PADAM"
+          placeholder="PADAM"
+          value={deleteAlbumConfirmText}
+          onChangeText={setDeleteAlbumConfirmText}
+          autoCapitalize="characters"
+          autoCorrect={false}
+          editable={!deleteAlbumBusy}
+        />
+
+        <Button
+          label="Padam Seluruh Album"
+          variant="danger"
+          loading={deleteAlbumBusy}
+          disabled={deleteAlbumBusy || deleteAlbumConfirmText.trim().toUpperCase() !== 'PADAM'}
+          onPress={() => void confirmDeleteAlbum()}
+        />
+      </FormModal>
     </>
   );
 }

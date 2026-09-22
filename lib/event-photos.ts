@@ -56,6 +56,18 @@ export async function deleteEventPhoto(photoId: string): Promise<void> {
   if (data?.error) throw new Error(String(data.error));
 }
 
+/**
+ * Padam SELURUH album (semua gambar) satu acara — admin can_edit/Super Admin
+ * sahaja, lihat `supabase/functions/delete-event-album`. Pulangkan bilangan
+ * yang berjaya dan gagal supaya UI boleh lapor "X dipadam, Y gagal".
+ */
+export async function deleteEventAlbum(eventId: string): Promise<{ deleted: number; failed: number }> {
+  const { data, error } = await supabase.functions.invoke('delete-event-album', { body: { event_id: eventId } });
+  if (error) throw new Error(await edgeMessage(error, 'Gagal memadam album.'));
+  if (data?.error) throw new Error(String(data.error));
+  return data as { deleted: number; failed: number };
+}
+
 /*
   Cache token di PERINGKAT MODUL (bukan sekadar dalam satu komponen) — sah
   ~1 jam, jadi ia kekal berguna merentasi skrin album yang dibuka semula

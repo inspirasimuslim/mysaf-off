@@ -58,8 +58,22 @@ Deno.serve(async (request) => {
     }
 
     console.log(LOG_TAG, 'kebenaran sah, memadam drive_file_id=' + photo.drive_file_id);
-    const accessToken = await getDriveAccessToken();
-    await deleteFileFromDrive(accessToken, photo.drive_file_id);
+    /*
+      Ralat dari langkah Drive (getDriveAccessToken/deleteFileFromDrive) ialah
+      Error biasa, BUKAN RequestError — tanpa try/catch di sini ia terlepas ke
+      pengendali paling luar dan jatuh ke mesej generik "Ralat tidak dijangka",
+      menyembunyikan sebab sebenar. row DB TIDAK disentuh langsung selagi baris
+      ini tidak sampai ke bawah — kegagalan di sini bermakna PADAM TERHENTI DI
+      SINI, tiada row yang hilang tanpa fail Drive turut hilang.
+    */
+    try {
+      const accessToken = await getDriveAccessToken();
+      await deleteFileFromDrive(accessToken, photo.drive_file_id);
+    } catch (caught) {
+      console.error(LOG_TAG, 'gagal padam fail Drive, row DB TIDAK disentuh:', caught);
+      throw new RequestError('Gagal padam gambar dari storan, cuba lagi.', 502);
+    }
+    console.log(LOG_TAG, 'fail Drive berjaya dipadam, teruskan padam row DB');
 
     const { error: deleteError } = await admin.from('event_photos').delete().eq('id', photoId);
     if (deleteError) throw new RequestError('Fail dipadam dari Drive tetapi rekod gagal dipadam: ' + deleteError.message, 500);
