@@ -13,7 +13,7 @@ import { Screen } from '@/components/ui/screen';
 import { SectionTitle } from '@/components/ui/section-title';
 import { Colors } from '@/constants/theme';
 import { usePerkaderanAccess } from '@/lib/department-access';
-import { toMalayError } from '@/lib/errors';
+import { toMalayErrorVerbose } from '@/lib/errors';
 import { deliveryMessage, type DeliveryMode } from '@/lib/file-delivery';
 import { useGoBack } from '@/lib/navigation';
 import { fetchAllGroupsSummary } from '@/lib/perkaderan';
@@ -36,7 +36,7 @@ export default function PerkaderanGroupsScreen() {
     try {
       setGroups(await fetchAllGroupsSummary());
     } catch (caught) {
-      setBanner({ tone: 'negative', message: toMalayError(caught, 'Gagal memuatkan senarai kumpulan.') });
+      setBanner({ tone: 'negative', message: toMalayErrorVerbose(caught, 'Gagal memuatkan senarai kumpulan.') });
     } finally {
       setLoading(false);
     }
@@ -60,7 +60,7 @@ export default function PerkaderanGroupsScreen() {
           message: deliveryMessage(report.result, report.fileName, report.rows + ' sesi'),
         });
       } catch (caught) {
-        setBanner({ tone: 'negative', message: toMalayError(caught, 'Gagal menjana laporan.') });
+        setBanner({ tone: 'negative', message: toMalayErrorVerbose(caught, 'Gagal menjana laporan.') });
       } finally {
         setExporting(null);
       }

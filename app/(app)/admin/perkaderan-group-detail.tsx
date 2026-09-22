@@ -15,7 +15,7 @@ import { Screen } from '@/components/ui/screen';
 import { SectionTitle } from '@/components/ui/section-title';
 import { TextField } from '@/components/ui/text-field';
 import { usePerkaderanAccess } from '@/lib/department-access';
-import { toMalayError } from '@/lib/errors';
+import { toMalayErrorVerbose } from '@/lib/errors';
 import { useGoBack } from '@/lib/navigation';
 import { addMadU, fetchGroup, fetchMadU, fetchMyMemberId, fetchSessions, removeMadU } from '@/lib/perkaderan';
 import { usePermissions } from '@/lib/permissions';
@@ -59,7 +59,7 @@ export default function PerkaderanGroupDetailScreen() {
       setSessions(sessionRows);
       setIsOwner(Boolean(groupRow && myMemberId && groupRow.naqib_member_id === myMemberId));
     } catch (caught) {
-      setBanner({ tone: 'negative', message: toMalayError(caught, 'Gagal memuatkan kumpulan.') });
+      setBanner({ tone: 'negative', message: toMalayErrorVerbose(caught, 'Gagal memuatkan kumpulan.') });
     } finally {
       setLoading(false);
     }
@@ -95,7 +95,7 @@ export default function PerkaderanGroupDetailScreen() {
       await load();
       setBanner({ tone: 'positive', message: madUNama.trim() + " ditambah ke senarai mad'u." });
     } catch (caught) {
-      setBanner({ tone: 'negative', message: toMalayError(caught, "Gagal menambah mad'u.") });
+      setBanner({ tone: 'negative', message: toMalayErrorVerbose(caught, "Gagal menambah mad'u.") });
     } finally {
       setMadUBusy(false);
     }
@@ -116,7 +116,7 @@ export default function PerkaderanGroupDetailScreen() {
       setBanner({ tone: 'positive', message: target.nama + ' telah dibuang daripada senarai aktif.' });
     } catch (caught) {
       setPendingRemoveMadU(null);
-      setBanner({ tone: 'negative', message: toMalayError(caught, "Gagal membuang mad'u.") });
+      setBanner({ tone: 'negative', message: toMalayErrorVerbose(caught, "Gagal membuang mad'u.") });
     } finally {
       setRemoveMadUBusy(false);
     }

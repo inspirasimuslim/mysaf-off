@@ -14,7 +14,7 @@ import { SectionTitle } from '@/components/ui/section-title';
 import { SelectRow } from '@/components/ui/select-row';
 import { TextField } from '@/components/ui/text-field';
 import { usePerkaderanAccess } from '@/lib/department-access';
-import { toMalayError } from '@/lib/errors';
+import { toMalayErrorVerbose } from '@/lib/errors';
 import { fetchMembersForPicker } from '@/lib/members';
 import { useGoBack } from '@/lib/navigation';
 import { assignNaqib, fetchActiveNaqibList, removeNaqib } from '@/lib/perkaderan';
@@ -37,7 +37,7 @@ export default function NaqibAssignmentsScreen() {
       setNaqibs(nextNaqibs);
       setCandidates(nextCandidates);
     } catch (caught) {
-      setBanner({ tone: 'negative', message: toMalayError(caught, 'Gagal memuatkan senarai naqib.') });
+      setBanner({ tone: 'negative', message: toMalayErrorVerbose(caught, 'Gagal memuatkan senarai naqib.') });
     } finally {
       setLoading(false);
     }
@@ -79,7 +79,7 @@ export default function NaqibAssignmentsScreen() {
         await load();
         setBanner({ tone: 'positive', message: candidate.full_name + ' telah dilantik sebagai naqib.' });
       } catch (caught) {
-        setBanner({ tone: 'negative', message: toMalayError(caught, 'Gagal melantik naqib.') });
+        setBanner({ tone: 'negative', message: toMalayErrorVerbose(caught, 'Gagal melantik naqib.') });
       } finally {
         setAssignBusy(false);
       }
@@ -103,7 +103,7 @@ export default function NaqibAssignmentsScreen() {
       setBanner({ tone: 'positive', message: target.member_full_name + ' bukan lagi naqib aktif.' });
     } catch (caught) {
       setPendingRemove(null);
-      setBanner({ tone: 'negative', message: toMalayError(caught, 'Gagal membuang naqib.') });
+      setBanner({ tone: 'negative', message: toMalayErrorVerbose(caught, 'Gagal membuang naqib.') });
     } finally {
       setRemoveBusy(false);
     }

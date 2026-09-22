@@ -102,6 +102,27 @@ export function toMalayError(error: unknown, fallback = 'Ralat tidak dijangka. S
   return hit ? hit.message : fallback;
 }
 
+/**
+ * Sama seperti `toMalayError`, tetapi bila TIADA terjemahan BM dijumpai
+ * (kod/mesej tidak dikenali — biasanya ralat RLS, constraint atau ralat
+ * pelayan yang jarang berlaku), mesej MENTAH Postgres/Supabase turut
+ * disertakan dalam kurungan dan bukan disembunyikan di sebalik `fallback`
+ * generik. Guna ini untuk operasi tulis yang jarang gagal — bila ia gagal,
+ * mesej mentah itulah petunjuk pertama untuk diagnos punca, bukan tekaan.
+ */
+export function toMalayErrorVerbose(error: unknown, fallback = 'Ralat tidak dijangka. Sila cuba lagi.'): string {
+  if (error instanceof UserError && error.message) return error.message;
+
+  const code = errorCode(error);
+  if (code && CODE_MAP[code]) return CODE_MAP[code] as string;
+
+  const raw = errorMessage(error);
+  if (!raw) return fallback;
+
+  const hit = MESSAGE_MAP.find((entry) => entry.match.test(raw));
+  return hit ? hit.message : fallback + ' (' + raw + ')';
+}
+
 /** Sesi tidak lagi sah — pemanggil biasanya perlu minta pengguna log masuk semula. */
 export function isSessionError(error: unknown): boolean {
   const code = errorCode(error);

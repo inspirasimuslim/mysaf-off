@@ -300,18 +300,33 @@ revoke delete on public.perkaderan_naqib_assignments from authenticated;
 
 alter table public.sekolah_usrah_groups enable row level security;
 
+/*
+  Pemilikan diperiksa terus pada KOLUM baris ini
+  (`is_active_naqib() and naqib_member_id = my_member_id()`) — BUKAN melalui
+  `is_own_naqib_group(id)` — sebab kritikal: `is_own_naqib_group` melakukan
+  sub-query BALIK ke `sekolah_usrah_groups` sendiri. Postgres RLS menyemak
+  policy SELECT ini semasa `INSERT ... RETURNING`, dan pada ketika itu baris
+  yang BARU disisipkan belum kelihatan kepada sub-query berasingan dalam
+  arahan (command) YANG SAMA — walhal baris itu SAH kelihatan kepada
+  RETURNING itu sendiri. Kesannya: setiap `INSERT ... RETURNING` (cara
+  Supabase JS `.insert().select().single()` berfungsi) pada table ini
+  sentiasa gagal dengan "new row violates row-level security policy",
+  walaupun pemiliknya sendiri yang mencipta baris itu. Perbandingan terus
+  pada kolum tidak bergantung kepada sub-query, jadi tiada isu keterlihatan.
+  (`is_own_naqib_group` kekal selamat & betul untuk table ANAK seperti
+  `sekolah_usrah_mad_u`/`sekolah_usrah_sessions` kerana ia menyemak
+  `sekolah_usrah_groups` — table LAIN yang sudah committed, bukan dirinya
+  sendiri.)
+*/
 drop policy if exists sekolah_usrah_groups_select on public.sekolah_usrah_groups;
 create policy sekolah_usrah_groups_select on public.sekolah_usrah_groups
   for select to authenticated
   using (
     public.is_super_admin()
     or public.can_view_perkaderan()
-    or public.is_own_naqib_group(id)
+    or (public.is_active_naqib() and naqib_member_id = public.my_member_id())
   );
 
--- Admin boleh cipta kumpulan untuk MANA-MANA naqib; naqib hanya untuk dirinya
--- sendiri — disemak melalui `naqib_member_id = my_member_id()` kerana
--- `is_own_naqib_group` memerlukan baris SEDIA ADA (belum wujud semasa insert).
 drop policy if exists sekolah_usrah_groups_insert on public.sekolah_usrah_groups;
 create policy sekolah_usrah_groups_insert on public.sekolah_usrah_groups
   for insert to authenticated
@@ -327,7 +342,7 @@ create policy sekolah_usrah_groups_update on public.sekolah_usrah_groups
   using (
     public.is_super_admin()
     or public.can_edit_perkaderan()
-    or public.is_own_naqib_group(id)
+    or (public.is_active_naqib() and naqib_member_id = public.my_member_id())
   )
   with check (
     public.is_super_admin()

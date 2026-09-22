@@ -14,7 +14,7 @@ import { SectionTitle } from '@/components/ui/section-title';
 import { SelectRow } from '@/components/ui/select-row';
 import { TextField } from '@/components/ui/text-field';
 import { usePerkaderanAccess } from '@/lib/department-access';
-import { toMalayError } from '@/lib/errors';
+import { toMalayErrorVerbose } from '@/lib/errors';
 import { useGoBack } from '@/lib/navigation';
 import {
   createSession,
@@ -75,7 +75,7 @@ export default function UsrahSessionFormScreen() {
       setCandidates(attendanceCandidates);
       setPresent(new Set(attendanceCandidates.filter((c) => c.hadir).map((c) => c.mad_u_id)));
     } catch (caught) {
-      setBanner({ tone: 'negative', message: toMalayError(caught, 'Gagal memuatkan sesi.') });
+      setBanner({ tone: 'negative', message: toMalayErrorVerbose(caught, 'Gagal memuatkan sesi.') });
     } finally {
       setLoading(false);
     }
@@ -106,7 +106,7 @@ export default function UsrahSessionFormScreen() {
       await saveAttendance(savedSession.id, [...present]);
       goBack();
     } catch (caught) {
-      setBanner({ tone: 'negative', message: toMalayError(caught, 'Gagal menyimpan sesi.') });
+      setBanner({ tone: 'negative', message: toMalayErrorVerbose(caught, 'Gagal menyimpan sesi.') });
     } finally {
       setSaving(false);
     }

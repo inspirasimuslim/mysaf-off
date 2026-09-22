@@ -10,7 +10,7 @@ import { PickerField } from '@/components/ui/picker-field';
 import { Screen } from '@/components/ui/screen';
 import { SectionTitle } from '@/components/ui/section-title';
 import { TextField } from '@/components/ui/text-field';
-import { toMalayError } from '@/lib/errors';
+import { toMalayErrorVerbose } from '@/lib/errors';
 import { useGoBack } from '@/lib/navigation';
 import { createGroupWithFirstSession } from '@/lib/perkaderan';
 import { SEKOLAH_OPTIONS } from '@/types/database';
@@ -50,7 +50,7 @@ export default function UsrahGroupCreateScreen() {
       });
       router.replace({ pathname: '/(app)/admin/perkaderan-group-detail', params: { id: group.id } });
     } catch (caught) {
-      setError(toMalayError(caught, 'Gagal mencipta kumpulan usrah.'));
+      setError(toMalayErrorVerbose(caught, 'Gagal mencipta kumpulan usrah.'));
     } finally {
       setBusy(false);
     }
