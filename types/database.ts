@@ -342,11 +342,6 @@ export function generationLabel(code: string | null): string {
  */
 export type EventType = 'usrah' | 'program';
 
-export const EVENT_TYPE_OPTIONS: Option<EventType>[] = [
-  { value: 'usrah', label: 'Usrah' },
-  { value: 'program', label: 'Program' },
-];
-
 export const EVENT_TYPE_LABEL: Record<EventType, string> = {
   usrah: 'Usrah',
   program: 'Program',

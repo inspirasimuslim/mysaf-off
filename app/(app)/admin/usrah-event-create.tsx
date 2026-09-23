@@ -1,6 +1,6 @@
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Text, View } from 'react-native';
 
 import { LocationPicker } from '@/components/location-picker';
@@ -24,13 +24,11 @@ import { useGoBack } from '@/lib/navigation';
 import { createUsrahEvent, uploadEventPoster } from '@/lib/usrah-events';
 import {
   EVENT_MODE_OPTIONS,
-  EVENT_TYPE_OPTIONS,
   KAWASAN_USRAH_OPTIONS,
   MONTH_NAMES,
   MONTH_OPTIONS,
   usrahEventName,
   type EventMode,
-  type EventType,
 } from '@/types/database';
 
 const DEFAULT_RADIUS = 100;
@@ -57,22 +55,24 @@ function today(): string {
  * hanyalah bagaimana acara itu DINAMAKAN, dan itu satu bahagian borang, bukan
  * satu skrin.
  *
- * Kebenaran diambil daripada KEDUA-DUA department, kerana jenis yang dipilih
- * menentukan yang mana berkuasa. Admin yang hanya memegang satu daripadanya
- * mendapat toggle yang terkunci pada jenis miliknya.
+ * Jenis DITENTUKAN oleh LALUAN MASUK (parameter `type`), BUKAN pilihan dalam
+ * borang — usrah-events.tsx menghantar 'usrah', program-events.tsx menghantar
+ * 'program'. Tiada toggle di sini: admin yang memegang KEDUA-DUA department
+ * nampak DUA butang berasingan di skrin senarai masing-masing, bukan satu
+ * borang dengan pilihan — menghalang acara jenis 'salah' dicipta dari laluan
+ * yang salah.
  */
 export default function UsrahEventCreateScreen() {
   const router = useRouter();
   const goBack = useGoBack();
 
-  /** `?type=program` daripada senarai Program; usrah bila tiada. */
+  /** `?type=program` daripada senarai Program; usrah bila tiada — lihat nota di atas. */
   const params = useLocalSearchParams<{ type?: string }>();
+  const eventType = params.type === 'program' ? 'program' : 'usrah';
 
   const usrahAccess = useUsrahAccess();
   const programAccess = useProgramAccess();
-  const accessLoading = usrahAccess.loading || programAccess.loading;
-
-  const [eventType, setEventType] = useState<EventType>(params.type === 'program' ? 'program' : 'usrah');
+  const accessLoading = eventType === 'usrah' ? usrahAccess.loading : programAccess.loading;
 
   // --- Nama -----------------------------------------------------------------
   const [programName, setProgramName] = useState('');
@@ -103,16 +103,6 @@ export default function UsrahEventCreateScreen() {
   const [saving, setSaving] = useState(false);
 
   const canEdit = eventType === 'usrah' ? usrahAccess.canEdit : programAccess.canEdit;
-
-  /*
-    Toggle disembunyikan apabila admin hanya memegang satu department: menawarkan
-    pilihan yang pasti ditolak oleh RLS hanya menghasilkan kegagalan selepas
-    borang siap diisi.
-  */
-  const typeOptions = useMemo(
-    () => EVENT_TYPE_OPTIONS.filter((option) => (option.value === 'usrah' ? usrahAccess.canEdit : programAccess.canEdit)),
-    [programAccess.canEdit, usrahAccess.canEdit],
-  );
 
   const parsedYear = Number.parseInt(year, 10);
   const parsedMonth = month ? Number.parseInt(month, 10) : null;
@@ -226,15 +216,19 @@ export default function UsrahEventCreateScreen() {
 
   if (accessLoading) return <LoadingScreen />;
 
-  if (typeOptions.length === 0) {
+  if (!canEdit) {
     return (
       <Screen padTop={false}>
-        <ScreenHeader title="Cipta Acara" onBackPress={goBack} />
+        <ScreenHeader title={eventType === 'usrah' ? 'Cipta Usrah' : 'Cipta Program'} onBackPress={goBack} />
         <View className="px-gutter">
           <EmptyState
             icon="lock-closed-outline"
             title="Tiada akses"
-            description="Mencipta acara memerlukan kebenaran menyunting pada LAJNAH TARBIAH (usrah) atau JABATAN SETIAUSAHA (program)."
+            description={
+              eventType === 'usrah'
+                ? 'Mencipta usrah memerlukan kebenaran menyunting pada LAJNAH TARBIAH.'
+                : 'Mencipta program memerlukan kebenaran menyunting pada JABATAN SETIAUSAHA.'
+            }
           />
         </View>
       </Screen>
@@ -252,22 +246,6 @@ export default function UsrahEventCreateScreen() {
 
       <View className="gap-5 px-gutter pt-5">
         {banner ? <Notice tone={banner.tone} message={banner.message} /> : null}
-
-        <View>
-          <SectionTitle title="Jenis Acara" caption="Usrah masuk ke grid dua belas bulan; program tidak." />
-          {typeOptions.length > 1 ? (
-            <Segmented value={eventType} options={typeOptions} onChange={setEventType} disabled={saving} />
-          ) : (
-            <Notice
-              tone="info"
-              message={
-                'Kebenaran anda membolehkan jenis "' +
-                (typeOptions[0]?.label ?? '') +
-                '" sahaja, jadi jenis itu dipilih secara automatik.'
-              }
-            />
-          )}
-        </View>
 
         {/* --- Nama: dijana untuk usrah, ditaip untuk program ------------------ */}
         <View>
@@ -501,18 +479,7 @@ export default function UsrahEventCreateScreen() {
         </View>
 
         <View className="pb-8">
-          {!canEdit ? (
-            <View className="pb-3">
-              <Notice
-                tone="negative"
-                message={
-                  eventType === 'usrah'
-                    ? 'Mencipta usrah memerlukan kebenaran menyunting pada LAJNAH TARBIAH.'
-                    : 'Mencipta program memerlukan kebenaran menyunting pada JABATAN SETIAUSAHA.'
-                }
-              />
-            </View>
-          ) : !ready ? (
+          {!ready ? (
             <View className="pb-3">
               <Notice
                 tone="negative"
@@ -528,7 +495,7 @@ export default function UsrahEventCreateScreen() {
           <Button
             label={eventType === 'usrah' ? 'Cipta Usrah' : 'Cipta Program'}
             loading={saving}
-            disabled={saving || !ready || !canEdit}
+            disabled={saving || !ready}
             onPress={() => void create()}
           />
         </View>
