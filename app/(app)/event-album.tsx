@@ -508,8 +508,8 @@ export default function EventAlbumScreen() {
         visible={deletingAlbum}
         title="Padam seluruh album?"
         description={
-          'Ini akan padam SEMUA ' + photos.length + ' gambar dalam album ini secara kekal, termasuk dari Google Drive. ' +
-          'Tindakan ini tidak boleh diundur.'
+          'Ini akan padam SEMUA ' + photos.length + ' gambar dalam album ini secara kekal (termasuk dari Google Drive) ' +
+          'DAN buang acara ini dari senarai Album. Tindakan ini tidak boleh diundur.'
         }
         dismissable={!deleteAlbumBusy}
         onClose={() => {

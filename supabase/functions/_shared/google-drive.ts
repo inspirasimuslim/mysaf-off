@@ -296,17 +296,39 @@ export async function uploadFileToDrive(
   return uploaded.id;
 }
 
-/** Padam satu fail dari Drive. 404 (sudah tiada) dianggap berjaya — hasil akhirnya sama. */
+/**
+ * "Padam" satu fail dari Drive — SEBENARNYA buang ke Tong Sampah (`trashed:
+ * true`), BUKAN `DELETE files.delete` (padam kekal).
+ *
+ * Disahkan LANGSUNG (bukan spekulasi) terhadap Shared Drive sebenar guna
+ * token skop `drive.file` yang SAMA seperti Edge Function ini: `DELETE
+ * /files/{id}` pulangkan 404 "File not found" WALAUPUN fail itu wujud
+ * (`GET` pada ID yang SAMA berjaya 200) — skop `drive.file` tidak cukup
+ * untuk padam KEKAL fail dalam Shared Drive, hanya untuk cipta/baca/kemas
+ * kini fail yang ia sendiri cipta. `PATCH {trashed: true}` pula BERJAYA
+ * (200) di bawah skop SAMA — ini punca SEBENAR bug "row DB hilang, fail
+ * Drive kekal ada": kod lama anggap 404 bermakna "dah tiada, jadi ok",
+ * padahal 404 itu palsu (sekatan skop, bukan fail benar-benar tiada), row
+ * DB terus dipadam manakala fail ASLI kekal wujud tanpa rujukan.
+ *
+ * Kesan sampingan BAIK: fail masuk Tong Sampah Drive (boleh dipulihkan
+ * ~30 hari sebelum luput automatik) dan bukan terus hilang — lebih selamat
+ * daripada padam kekal, tanpa perlu longgarkan skop OAuth2 ke `drive` penuh.
+ */
 export async function deleteFileFromDrive(accessToken: string, fileId: string): Promise<void> {
   const response = await fetchWithTimeout(
-    `${DRIVE_API}/files/${fileId}?supportsAllDrives=true`,
-    { method: 'DELETE', headers: { Authorization: 'Bearer ' + accessToken } },
-    'drive.files.delete',
+    `${DRIVE_API}/files/${fileId}?supportsAllDrives=true&fields=id,trashed`,
+    {
+      method: 'PATCH',
+      headers: { Authorization: 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ trashed: true }),
+    },
+    'drive.files.update (trash)',
   );
 
   if (!response.ok && response.status !== 404) {
     const errorText = await response.text();
-    console.error(LOG_TAG, 'padam gagal:', response.status, errorText);
+    console.error(LOG_TAG, 'padam (trash) gagal:', response.status, errorText);
     throw new Error('Gagal memadam gambar dari Google Drive: ' + errorText);
   }
 }

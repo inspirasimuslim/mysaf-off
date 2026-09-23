@@ -92,6 +92,19 @@ Deno.serve(async (request) => {
       throw new RequestError('Gagal menyimpan rekod gambar: ' + (insertError?.message ?? ''), 500);
     }
 
+    /*
+      Muat naik baharu selepas "Padam Seluruh Album" (yang menyorok acara ini
+      dari senarai Album — lihat `delete-event-album`) — batalkan sorokan itu
+      supaya album TAK kekal tersorok selama-lamanya sedangkan ia dah ada
+      gambar semula. Bukan fatal kalau gagal — sekadar tak nampak di Album
+      global, gambar itu sendiri tetap tersimpan dengan selamat.
+    */
+    const { error: unarchiveError } = await admin
+      .from('usrah_events')
+      .update({ album_archived: false })
+      .eq('id', eventId);
+    if (unarchiveError) console.error(LOG_TAG, 'gagal batalkan sorokan Album (bukan fatal):', unarchiveError.message);
+
     console.log(LOG_TAG, 'selesai, photo_id=' + inserted.id);
     return json({ photo_id: inserted.id, drive_file_id: driveFileId });
   } catch (caught) {

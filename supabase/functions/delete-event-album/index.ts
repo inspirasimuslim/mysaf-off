@@ -89,6 +89,22 @@ Deno.serve(async (request) => {
       }
     }
 
+    /*
+      Sorok acara dari senarai Album HANYA bila SEMUA gambar berjaya dipadam
+      (failed === 0) — kalau ada yang gagal, gambar itu (dan row DB-nya) masih
+      kekal, jadi acara ini MESTI kekal boleh dicapai dari senarai Album supaya
+      admin boleh cuba lagi kemudian. `album_archived` (bukan `is_active`) —
+      lihat nota `20260923000056_album_archive.sql`.
+    */
+    if (failed === 0) {
+      const { error: archiveError } = await admin
+        .from('usrah_events')
+        .update({ album_archived: true })
+        .eq('id', eventId);
+      if (archiveError) console.error(LOG_TAG, 'gagal sorok acara dari Album (bukan fatal):', archiveError.message);
+      else console.log(LOG_TAG, 'acara disorok dari senarai Album, event_id=' + eventId);
+    }
+
     console.log(LOG_TAG, 'selesai, dipadam=' + deleted, 'gagal=' + failed);
     return json({ deleted, failed });
   } catch (caught) {
