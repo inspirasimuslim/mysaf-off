@@ -74,7 +74,7 @@ export default function AdminHubScreen() {
     programAccess.canView,
     yuranAccess.canView,
     pipisAccess.canView,
-    orgChartAccess.canEdit,
+    orgChartAccess.canView,
     generasiAccess.canView,
     perkaderanAccess.canView,
     naqib,
@@ -276,23 +276,39 @@ export default function AdminHubScreen() {
         ) : null}
 
         {/*
-          Carta organisasi dimiliki oleh department SETIAUSAHA — BUKAN JABATAN
-          SETIAUSAHA di atas walaupun namanya hampir sama. Dua department dalam
-          seed data, dua seksyen. Hanya can_edit kerana carta sudah boleh
-          dilihat oleh semua ahli dari tab Ahli.
+          Carta organisasi dan Ahli Diputihkan dimiliki oleh department
+          SETIAUSAHA — BUKAN JABATAN SETIAUSAHA di atas walaupun namanya
+          hampir sama. Dua department dalam seed data, dua seksyen.
+          Seksyen terbuka pada can_view (bukan can_edit sahaja seperti dulu):
+          Ahli Diputihkan ada mod paparan-sahaja, jadi admin can_view perlu
+          nampak seksyen ini. Carta Organisasi sendiri kekal can_edit sahaja
+          kerana paparannya sudah terbuka kepada semua ahli dari tab Ahli.
         */}
-        {orgChartAccess.canEdit ? (
+        {orgChartAccess.canView ? (
           <CollapsibleSection
             variant="plain"
             title="Setiausaha Agung"
-            caption="Department SETIAUSAHA — carta organisasi."
-            count={1}
+            caption="Department SETIAUSAHA — carta organisasi dan ahli diputihkan."
+            count={orgChartAccess.canEdit ? 2 : 1}
             defaultOpen={openByDefault}>
+            {orgChartAccess.canEdit ? (
+              <ActionRow
+                icon="git-network-outline"
+                title="Carta Organisasi"
+                subtitle="Tetapkan pemegang jawatan, tambah atau padam bahagian dan jawatan, susun semula"
+                onPress={() => router.push('/(app)/admin/org-chart-manage')}
+              />
+            ) : null}
+
             <ActionRow
-              icon="git-network-outline"
-              title="Carta Organisasi"
-              subtitle="Tetapkan pemegang jawatan, tambah atau padam bahagian dan jawatan, susun semula"
-              onPress={() => router.push('/(app)/admin/org-chart-manage')}
+              icon="person-remove-outline"
+              title="Ahli Diputihkan"
+              subtitle={
+                orgChartAccess.canEdit
+                  ? 'Rekod sejarah ahli yang dibuang secara rasmi'
+                  : 'Rekod sejarah ahli yang dibuang secara rasmi (paparan sahaja)'
+              }
+              onPress={() => router.push('/(app)/admin/ahli-diputihkan')}
             />
           </CollapsibleSection>
         ) : null}
