@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import { ScreenHeader } from '@/components/screen-header';
@@ -29,25 +29,35 @@ export default function AlbumScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    let active = true;
+  /*
+    `useFocusEffect` (bukan `useEffect`) — sengaja. Skrin ini kekal dalam stack
+    navigasi (bukan unmount) bila admin masuk ke `event-album` untuk "Padam
+    Seluruh Album" lalu kembali (`goBack`), jadi `useEffect` sekali sahaja
+    tidak akan pernah refetch dan senarai kekal STALE (acara yang baru disorok
+    kelihatan masih ada walaupun DB sudah betul). Pattern sama seperti
+    `usrah-sejarah.tsx` dan skrin lain yang refresh bila fokus semula.
+  */
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
 
-    void (async () => {
-      setLoading(true);
-      try {
-        const rows = await fetchAllEventsDirectory();
-        if (active) setEvents(rows);
-      } catch (caught) {
-        if (active) setError(toMalayError(caught, 'Gagal memuatkan senarai acara.'));
-      } finally {
-        if (active) setLoading(false);
-      }
-    })();
+      void (async () => {
+        setLoading(true);
+        try {
+          const rows = await fetchAllEventsDirectory();
+          if (active) setEvents(rows);
+        } catch (caught) {
+          if (active) setError(toMalayError(caught, 'Gagal memuatkan senarai acara.'));
+        } finally {
+          if (active) setLoading(false);
+        }
+      })();
 
-    return () => {
-      active = false;
-    };
-  }, []);
+      return () => {
+        active = false;
+      };
+    }, []),
+  );
 
   if (loading) return <LoadingScreen />;
 
