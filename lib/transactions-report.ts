@@ -60,13 +60,16 @@ function amountCell(value: number | string | null): number | string {
   return Number.isFinite(amount) ? amount : '';
 }
 
-function sheetRows(rows: TransactionRow[]): Record<string, string | number>[] {
+function sheetRows(rows: TransactionRow[]): Record<string, string | number | Date>[] {
   return rows.map((row) => ({
     'Nombor Ahli': row.nombor_ahli ?? '',
     Nama: row.full_name,
     Generasi: generationLabel(row.generasi),
-    // Waktu tempatan peranti — fail ini dibaca oleh bendahari, bukan pelayan.
-    Tarikh: new Date(row.created_at).toLocaleString('ms-MY'),
+    // Objek Date sebenar (bukan teks) supaya Excel mengiktirafnya sebagai
+    // datetime — bendahari boleh sort/filter ikut masa. Waktu tempatan
+    // peranti, sama seperti fail lain — fail ini dibaca oleh bendahari,
+    // bukan pelayan.
+    'Tarikh & Masa': new Date(row.created_at),
     Jumlah: amountCell(row.amount),
     // Jumlah yang ahli MINTA bayar, berbanding yang benar-benar masuk. Bagi
     // bayaran gagal, kolum ini satu-satunya petunjuk berapa dia cuba bayar.
@@ -85,7 +88,10 @@ async function download(
   dialogTitle: string,
   mode: DeliveryMode,
 ): Promise<TransactionsReport> {
-  const sheet = XLSX.utils.json_to_sheet(sheetRows(rows));
+  const sheet = XLSX.utils.json_to_sheet(sheetRows(rows), {
+    cellDates: true,
+    dateNF: 'yyyy-mm-dd hh:mm:ss',
+  });
   const book = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(book, sheet, sheetName);
 

@@ -229,7 +229,7 @@ export default function PipisScreen() {
                   </View>
 
                   <Text className="mt-2 text-xs text-ink-muted">
-                    {new Date(row.created_at).toLocaleDateString('ms-MY')}
+                    {new Date(row.created_at).toLocaleString('ms-MY')}
                     {row.note ? ' · ' + row.note : ''}
                   </Text>
 

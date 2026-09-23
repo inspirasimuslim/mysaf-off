@@ -259,7 +259,7 @@ export default function YuranScreen() {
                   </View>
 
                   <Text className="mt-2 text-xs text-ink-muted">
-                    {'Tahun ' + row.year + ' · ' + new Date(row.created_at).toLocaleDateString('ms-MY')}
+                    {'Tahun ' + row.year + ' · ' + new Date(row.created_at).toLocaleString('ms-MY')}
                     {row.note ? ' · ' + row.note : ''}
                   </Text>
 
