@@ -145,7 +145,7 @@ export type Member = {
 /** Bentuk baris untuk skrin senarai — kolum berat tidak dibaca. */
 export type MemberSummary = Pick<
   Member,
-  'id' | 'nombor_ahli' | 'generasi' | 'full_name' | 'email' | 'disekat'
+  'id' | 'nombor_ahli' | 'generasi' | 'full_name' | 'email' | 'disekat' | 'self_updated_at'
 >;
 
 /**

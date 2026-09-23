@@ -4,6 +4,7 @@ import { Pressable, Text, View } from 'react-native';
 
 import { SaveShareButtons } from '@/components/save-share-buttons';
 import { ScreenHeader } from '@/components/screen-header';
+import { formatSelfUpdated } from '@/components/self-update-status';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -24,6 +25,8 @@ import { generationLabel, type Generation, type MemberSummary, type Option } fro
 /** Senarai dipenggal supaya skrin tidak melukis ratusan baris sekaligus. */
 const PAGE = 50;
 
+const SORT_OPTIONS: Option<string>[] = [{ value: 'stale', label: 'Kemaskini Terlama Dahulu' }];
+
 export default function AhliListScreen() {
   const goBack = useGoBack();
   const router = useRouter();
@@ -36,6 +39,7 @@ export default function AhliListScreen() {
 
   const [search, setSearch] = useState('');
   const [generation, setGeneration] = useState<string | null>(null);
+  const [sort, setSort] = useState<string | null>(null);
   const [limit, setLimit] = useState(PAGE);
 
   const [exporting, setExporting] = useState<DeliveryMode | null>(null);
@@ -101,7 +105,7 @@ export default function AhliListScreen() {
   const filtered = useMemo(() => {
     const needle = search.trim().toLowerCase();
 
-    return members.filter((member) => {
+    const rows = members.filter((member) => {
       if (generation && member.generasi !== generation) return false;
       if (!needle) return true;
       // Cari pada nama DAN nombor ahli — admin selalunya memegang salah satu sahaja.
@@ -110,12 +114,27 @@ export default function AhliListScreen() {
         (member.nombor_ahli ?? '').toLowerCase().includes(needle)
       );
     });
-  }, [generation, members, search]);
+
+    /*
+      Ahli yang tidak pernah kemaskini (`null`) ialah yang PALING utama untuk
+      JABATAN DATA & SUMBER MANUSIA kenal pasti — jadi ia disusun paling awal,
+      bukan ditolak ke hujung seperti kelaziman "null last".
+    */
+    if (sort === 'stale') {
+      return [...rows].sort((a, b) => {
+        const aTime = a.self_updated_at ? new Date(a.self_updated_at).getTime() : -Infinity;
+        const bTime = b.self_updated_at ? new Date(b.self_updated_at).getTime() : -Infinity;
+        return aTime - bTime;
+      });
+    }
+
+    return rows;
+  }, [generation, members, search, sort]);
 
   // Tapisan yang berubah mesti mengembalikan senarai ke halaman pertama.
   useEffect(() => {
     setLimit(PAGE);
-  }, [search, generation]);
+  }, [search, generation, sort]);
 
   if (accessLoading) return <LoadingScreen />;
 
@@ -190,6 +209,14 @@ export default function AhliListScreen() {
             options={generationOptions}
             onChange={setGeneration}
           />
+
+          <PickerField
+            label="Susun ikut"
+            placeholder="Nombor ahli (lalai)"
+            value={sort}
+            options={SORT_OPTIONS}
+            onChange={setSort}
+          />
         </View>
 
         {members.length === 0 ? (
@@ -232,6 +259,13 @@ export default function AhliListScreen() {
                       {generationLabel(member.generasi)}
                       {member.email ? ' · ' + member.email : ' · Tiada emel'}
                     </Text>
+                    {sort === 'stale' ? (
+                      <Text className="mt-0.5 text-xs text-ink-faint" numberOfLines={1}>
+                        {member.self_updated_at
+                          ? 'Kemaskini terakhir: ' + formatSelfUpdated(member.self_updated_at)
+                          : 'Belum pernah dikemaskini'}
+                      </Text>
+                    ) : null}
                   </View>
 
                   {member.disekat ? <Badge label="Disekat" tone="negative" /> : null}

@@ -5,6 +5,7 @@ import { Text, View } from 'react-native';
 
 import { MemberForm, type ProfileTab } from '@/components/member-form';
 import { ScreenHeader } from '@/components/screen-header';
+import { SelfUpdateAdminNote } from '@/components/self-update-status';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { LoadingScreen } from '@/components/ui/loading-screen';
@@ -262,6 +263,7 @@ export default function AhliDetailScreen() {
             canEditAdminColumns
             readOnly={!canEdit}
             busy={saving}
+            headerNote={<SelfUpdateAdminNote value={member.self_updated_at} />}
             onPickAvatar={() => void changeAvatar()}
             avatarBusy={avatarBusy}
             tabs={{ value: tab, onChange: setTab }}

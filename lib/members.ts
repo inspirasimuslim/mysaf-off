@@ -12,7 +12,7 @@ import { supabase } from './supabase';
  */
 
 /** Kolum ringkas untuk skrin senarai. */
-const SUMMARY_COLUMNS = 'id, nombor_ahli, generasi, full_name, email, disekat';
+const SUMMARY_COLUMNS = 'id, nombor_ahli, generasi, full_name, email, disekat, self_updated_at';
 
 /**
  * PostgREST menghadkan 1000 baris setiap permintaan secara lalai. Senarai ahli
