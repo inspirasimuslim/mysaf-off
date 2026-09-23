@@ -44,7 +44,7 @@ export default function AlbumScreen() {
       void (async () => {
         setLoading(true);
         try {
-          const rows = await fetchAllEventsDirectory();
+          const rows = await fetchAllEventsDirectory(true);
           if (active) setEvents(rows);
         } catch (caught) {
           if (active) setError(toMalayError(caught, 'Gagal memuatkan senarai acara.'));

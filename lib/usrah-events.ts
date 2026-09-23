@@ -182,9 +182,16 @@ export async function fetchUpcomingEvents(): Promise<UpcomingEvent[]> {
  * yang kedua perlu ini (bukan `fetchUpcomingEvents`) supaya butiran acara LAMA
  * masih boleh dipaparkan untuk sekat/gantikan butang Album, bukan terus jatuh
  * ke "Acara tidak dijumpai".
+ *
+ * `excludeArchivedAlbum` default `false` — butiran program/usrah (event-info.tsx)
+ * SENTIASA kelihatan tak kira status album. HANYA skrin Album Tetapan (album.tsx)
+ * yang patut hantar `true`, supaya "Padam Seluruh Album" menyorok acara itu dari
+ * senarai Album sahaja, bukan daripada carousel/butiran ahli.
  */
-export async function fetchAllEventsDirectory(): Promise<EventDirectoryRow[]> {
-  const { data, error } = await supabase.rpc('event_directory_all');
+export async function fetchAllEventsDirectory(excludeArchivedAlbum = false): Promise<EventDirectoryRow[]> {
+  const { data, error } = await supabase.rpc('event_directory_all', {
+    p_exclude_archived_album: excludeArchivedAlbum,
+  });
   if (error) throw error;
   return (data as EventDirectoryRow[] | null) ?? [];
 }
