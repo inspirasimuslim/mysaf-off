@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRef, useState } from 'react';
+import { useRef, useState, type Ref } from 'react';
 import { Pressable, Text, TextInput, View, type TextInputProps } from 'react-native';
 
 import { Colors } from '@/constants/theme';
@@ -10,12 +10,15 @@ type Props = Omit<TextInputProps, 'style' | 'className'> & {
   error?: string | null;
   /** Papar butang tunjuk/sembunyi dan tetapkan secureTextEntry secara automatik. */
   secure?: boolean;
+  /** Rujukan ke TextInput di dalam, supaya induk boleh memindahkan fokus. */
+  inputRef?: Ref<TextInput>;
 };
 
 export function TextField({
   label,
   error,
   secure = false,
+  inputRef,
   onFocus,
   onBlur,
   onContentSizeChange,
@@ -53,6 +56,7 @@ export function TextField({
 
       <View className={`${boxClass} ${surfaceClass} ${borderClass}`}>
         <TextInput
+          ref={inputRef}
           className={`flex-1 text-base ${readOnly ? 'text-ink-muted' : 'text-ink'}`}
           placeholderTextColor={Colors.inkFaint}
           secureTextEntry={secure && hidden}

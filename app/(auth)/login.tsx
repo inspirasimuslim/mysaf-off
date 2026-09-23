@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { useCallback, useEffect, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Pressable, Text, TextInput, View } from 'react-native';
 
 import { ContactAdminLink } from '@/components/contact-admin';
 import { ForgotPasswordSheet } from '@/components/forgot-password';
@@ -14,6 +14,7 @@ import { Colors } from '@/constants/theme';
 import { getBiometricSupport, getStoredRefreshToken, hasBiometricLogin, promptBiometric } from '@/lib/biometrics';
 import { toMalayError } from '@/lib/errors';
 import { resetIdleTracking } from '@/lib/idle-timer';
+import { getRecentLogins, saveRecentLogin } from '@/lib/recent-logins';
 import { takeAuthNotice } from '@/lib/suspension';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 
@@ -32,6 +33,23 @@ export default function LoginScreen() {
   const [biometricBusy, setBiometricBusy] = useState(false);
   const [biometricAvailable, setBiometricAvailable] = useState(false);
   const [forgotOpen, setForgotOpen] = useState(false);
+  const [recentEmails, setRecentEmails] = useState<string[]>([]);
+  const passwordRef = useRef<TextInput>(null);
+
+  useEffect(() => {
+    let active = true;
+    void getRecentLogins().then((list) => {
+      if (active) setRecentEmails(list);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const pickRecentEmail = useCallback((value: string) => {
+    setEmail(value);
+    passwordRef.current?.focus();
+  }, []);
 
   // Tiada sesi di sini — cap masa aktiviti lama tidak boleh melog keluar log masuk seterusnya.
   useEffect(() => {
@@ -72,7 +90,13 @@ export default function LoginScreen() {
     });
     setBusy(false);
 
-    if (signInError) setError(toMalayError(signInError, 'Gagal log masuk. Sila cuba lagi.'));
+    if (signInError) {
+      setError(toMalayError(signInError, 'Gagal log masuk. Sila cuba lagi.'));
+      return;
+    }
+
+    // Hanya emel yang benar-benar berjaya log masuk disimpan sebagai cadangan.
+    void saveRecentLogin(email);
   }, [email, password]);
 
   const signInWithBiometric = useCallback(async () => {
@@ -130,9 +154,30 @@ export default function LoginScreen() {
                 keyboardType="email-address"
                 textContentType="emailAddress"
                 returnKeyType="next"
+                onSubmitEditing={() => passwordRef.current?.focus()}
               />
 
+              {/* Cadangan isi pantas — disorok sepenuhnya jika tiada emel tersimpan atau medan sudah diisi. */}
+              {recentEmails.length > 0 && !email ? (
+                <View className="-mt-2 flex-row flex-wrap gap-2">
+                  {recentEmails.map((item) => (
+                    <Pressable
+                      key={item}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Guna emel ${item}`}
+                      onPress={() => pickRecentEmail(item)}
+                      className="max-w-full flex-row items-center gap-1.5 rounded-full border border-line bg-background px-3 py-1.5 active:opacity-70">
+                      <Ionicons name="time-outline" size={14} color={Colors.inkMuted} />
+                      <Text numberOfLines={1} className="shrink text-sm text-ink">
+                        {item}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              ) : null}
+
               <TextField
+                inputRef={passwordRef}
                 label="Kata Laluan"
                 placeholder="Masukkan kata laluan"
                 value={password}
