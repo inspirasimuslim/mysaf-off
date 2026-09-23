@@ -7,12 +7,10 @@ import { MemberForm, type ProfileTab } from '@/components/member-form';
 import { ScreenHeader } from '@/components/screen-header';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
-import { FormModal } from '@/components/ui/form-modal';
 import { LoadingScreen } from '@/components/ui/loading-screen';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Notice } from '@/components/ui/notice';
 import { Screen } from '@/components/ui/screen';
-import { TextField } from '@/components/ui/text-field';
 import { Colors } from '@/constants/theme';
 import { pickAvatar, uploadAvatar } from '@/lib/avatar';
 import { useMemberAccess, useUsrahAccess } from '@/lib/department-access';
@@ -163,12 +161,10 @@ export default function AhliDetailScreen() {
 
   // --- Padam ahli (kekal) ---------------------------------------------------
   const [deleteModal, setDeleteModal] = useState(false);
-  const [confirmText, setConfirmText] = useState('');
   const [deleteBusy, setDeleteBusy] = useState(false);
 
   const openDelete = useCallback(() => {
     setBanner(null);
-    setConfirmText('');
     setDeleteBusy(false);
     setDeleteModal(true);
   }, []);
@@ -343,39 +339,22 @@ export default function AhliDetailScreen() {
         onCancel={() => setResetDialog(false)}
       />
 
-      <FormModal
+      <ConfirmDialog
         visible={deleteModal}
         title="Padam ahli?"
-        description={
-          'Rekod ' +
+        message={
+          'Padam rekod ' +
           (member.nombor_ahli ?? '') +
           ' · ' +
           member.full_name +
-          ' dan akaun log masuknya akan dipadam KEKAL. Tindakan ini tidak boleh dibatalkan.'
+          ' secara kekal, termasuk akaun log masuknya? Tindakan ini tidak boleh dibatalkan.'
         }
-        dismissable={!deleteBusy}
-        onClose={() => setDeleteModal(false)}
-      >
-        <Notice tone="warn" message="Taip PADAM di bawah untuk mengesahkan." />
-
-        <TextField
-          label="Taip PADAM"
-          placeholder="PADAM"
-          value={confirmText}
-          onChangeText={setConfirmText}
-          autoCapitalize="characters"
-          autoCorrect={false}
-          editable={!deleteBusy}
-        />
-
-        <Button
-          label="Padam Kekal"
-          variant="danger"
-          loading={deleteBusy}
-          disabled={deleteBusy || confirmText.trim().toUpperCase() !== 'PADAM'}
-          onPress={() => void confirmDelete()}
-        />
-      </FormModal>
+        confirmLabel="Padam Kekal"
+        destructive
+        busy={deleteBusy}
+        onConfirm={() => void confirmDelete()}
+        onCancel={() => setDeleteModal(false)}
+      />
     </>
   );
 }
@@ -422,10 +401,7 @@ function ActionPanel({
         </View>
       ) : null}
 
-      {/*
-        Memadam ahli membuang rekod DAN akaun log masuknya, tanpa pemulihan.
-        Butang terakhir dalam FormModal masih memerlukan "PADAM" ditaip.
-      */}
+      {/* Memadam ahli membuang rekod DAN akaun log masuknya, tanpa pemulihan. */}
       {padam ? (
         <View className="flex-row items-center gap-3 border-t border-line pt-4">
           <Text className="flex-1 text-xs leading-4 text-ink-muted">

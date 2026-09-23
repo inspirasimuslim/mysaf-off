@@ -9,11 +9,9 @@ import { ScreenHeader } from '@/components/screen-header';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { EmptyState } from '@/components/ui/empty-state';
-import { FormModal } from '@/components/ui/form-modal';
 import { LoadingScreen } from '@/components/ui/loading-screen';
 import { Notice } from '@/components/ui/notice';
 import { Screen } from '@/components/ui/screen';
-import { TextField } from '@/components/ui/text-field';
 import { Colors } from '@/constants/theme';
 import { useAuth } from '@/lib/auth-context';
 import { useProgramAccess, useUsrahAccess } from '@/lib/department-access';
@@ -294,7 +292,6 @@ export default function EventAlbumScreen() {
 
   // --- Padam SELURUH album (admin can_edit sahaja) --------------------------------
   const [deletingAlbum, setDeletingAlbum] = useState(false);
-  const [deleteAlbumConfirmText, setDeleteAlbumConfirmText] = useState('');
   const [deleteAlbumBusy, setDeleteAlbumBusy] = useState(false);
 
   const confirmDeleteAlbum = useCallback(async () => {
@@ -358,10 +355,7 @@ export default function EventAlbumScreen() {
             <Button
               label="Padam Seluruh Album"
               variant="danger"
-              onPress={() => {
-                setDeleteAlbumConfirmText('');
-                setDeletingAlbum(true);
-              }}
+              onPress={() => setDeletingAlbum(true)}
             />
           ) : null}
 
@@ -504,38 +498,20 @@ export default function EventAlbumScreen() {
         onCancel={() => setPendingDelete(null)}
       />
 
-      <FormModal
+      <ConfirmDialog
         visible={deletingAlbum}
         title="Padam seluruh album?"
-        description={
-          'Ini akan padam SEMUA ' + photos.length + ' gambar dalam album ini secara kekal (termasuk dari Google Drive) ' +
-          'DAN buang acara ini dari senarai Album. Tindakan ini tidak boleh diundur.'
+        message={
+          'Padam SEMUA ' +
+          photos.length +
+          ' gambar acara ini secara kekal (termasuk dari Google Drive)? Tindakan ini tidak boleh diundur.'
         }
-        dismissable={!deleteAlbumBusy}
-        onClose={() => {
-          setDeletingAlbum(false);
-          setDeleteAlbumConfirmText('');
-        }}>
-        <Notice tone="warn" message="Taip PADAM di bawah untuk mengesahkan." />
-
-        <TextField
-          label="Taip PADAM"
-          placeholder="PADAM"
-          value={deleteAlbumConfirmText}
-          onChangeText={setDeleteAlbumConfirmText}
-          autoCapitalize="characters"
-          autoCorrect={false}
-          editable={!deleteAlbumBusy}
-        />
-
-        <Button
-          label="Padam Seluruh Album"
-          variant="danger"
-          loading={deleteAlbumBusy}
-          disabled={deleteAlbumBusy || deleteAlbumConfirmText.trim().toUpperCase() !== 'PADAM'}
-          onPress={() => void confirmDeleteAlbum()}
-        />
-      </FormModal>
+        confirmLabel="Padam Seluruh Album"
+        destructive
+        busy={deleteAlbumBusy}
+        onConfirm={() => void confirmDeleteAlbum()}
+        onCancel={() => setDeletingAlbum(false)}
+      />
     </>
   );
 }

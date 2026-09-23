@@ -1,9 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
-import { Button } from '@/components/ui/button';
-import { FormModal } from '@/components/ui/form-modal';
-import { Notice } from '@/components/ui/notice';
-import { TextField } from '@/components/ui/text-field';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { toMalayError } from '@/lib/errors';
 import { deleteOrArchiveEvent, type DeleteEventResult } from '@/lib/usrah-events';
 import type { UsrahEvent } from '@/types/database';
@@ -26,7 +23,7 @@ export function deleteResultMessage(event: UsrahEvent, result: DeleteEventResult
 }
 
 type Props = {
-  /** Acara yang hendak dipadam; `null` menutup helaian. */
+  /** Acara yang hendak dipadam; `null` menutup dialog. */
   event: UsrahEvent | null;
   onClose: () => void;
   onDone: (event: UsrahEvent, result: DeleteEventResult) => void;
@@ -34,16 +31,10 @@ type Props = {
 };
 
 /**
- * Pengesahan dua lapis untuk padam acara — sama seperti Padam Ahli: admin mesti
- * MENAIP "PADAM", bukan sekadar menekan Ya.
+ * Pengesahan padam acara — dialog sahkan dua-klik, sama seperti Padam Ahli.
  */
 export function EventDeleteModal({ event, onClose, onDone, onError }: Props) {
-  const [confirmText, setConfirmText] = useState('');
   const [busy, setBusy] = useState(false);
-
-  useEffect(() => {
-    if (event) setConfirmText('');
-  }, [event]);
 
   const confirm = async () => {
     if (!event || busy) return;
@@ -59,34 +50,18 @@ export function EventDeleteModal({ event, onClose, onDone, onError }: Props) {
   };
 
   return (
-    <FormModal
+    <ConfirmDialog
       visible={event !== null}
       title="Padam program?"
-      description={
+      message={
         '"' + (event?.name ?? '') + '" akan dipadam kekal bersama posternya. ' +
         'Jika ia sudah ada rekod kehadiran atau RSVP, ia akan diarkibkan dan bukan dipadam, supaya sejarah data kekal.'
       }
-      dismissable={!busy}
-      onClose={onClose}>
-      <Notice tone="warn" message="Taip PADAM di bawah untuk mengesahkan." />
-
-      <TextField
-        label="Taip PADAM"
-        placeholder="PADAM"
-        value={confirmText}
-        onChangeText={setConfirmText}
-        autoCapitalize="characters"
-        autoCorrect={false}
-        editable={!busy}
-      />
-
-      <Button
-        label="Padam"
-        variant="danger"
-        loading={busy}
-        disabled={busy || confirmText.trim().toUpperCase() !== 'PADAM'}
-        onPress={() => void confirm()}
-      />
-    </FormModal>
+      confirmLabel="Padam"
+      destructive
+      busy={busy}
+      onConfirm={() => void confirm()}
+      onCancel={onClose}
+    />
   );
 }
