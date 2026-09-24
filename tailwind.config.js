@@ -5,13 +5,13 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // Warna utama — lavender
+        // Warna utama — mint
         primary: {
-          DEFAULT: '#6B5B95',
-          dark: '#4A3B6B',
-          mid: '#8677B0',
-          soft: '#E8E3F5', // background pill / ikon aktif
-          tint: '#F5F2FB',
+          DEFAULT: '#2FA695',
+          dark: '#1B6B5F',
+          mid: '#5FC4B3',
+          soft: '#D9F2ED', // background pill / ikon aktif
+          tint: '#F0FBF9',
         },
         // Permukaan & teks
         background: '#FAFAFA',

@@ -511,14 +511,14 @@ function BirthdayName({ row }: { row: BirthdayToday }) {
 
   Kad Yuran memakai teks putih, jadi hujung gradient yang cerah dipilih cukup
   pekat untuk teks putih dan diberi bayang teks yang ringan. Kad PIPIS pastel
-  memakai teks lavender gelap — bayang tidak diperlukan di situ.
+  memakai teks mint gelap — bayang tidak diperlukan di situ.
 */
 const YURAN_OWING = ['#F2894E', '#DC3F5E'] as const;
-const YURAN_SETTLED = ['#4A3B6B', '#8677B0'] as const;
+const YURAN_SETTLED = ['#1B6B5F', '#2FA695'] as const;
 const YURAN_LOADING = ['#9CA3AF', '#6B7280'] as const;
-const PIPIS_GRADIENT = ['#E8E3F5', '#B8A9D9'] as const;
-const PIPIS_BAR = ['#8677B0', '#4A3B6B'] as const;
-const PIPIS_INK = '#4A3B6B';
+const PIPIS_GRADIENT = ['#D9F2ED', '#5FC4B3'] as const;
+const PIPIS_BAR = ['#5FC4B3', '#1B6B5F'] as const;
+const PIPIS_INK = '#1B6B5F';
 
 /** Yuran tahunan tetap — label rujukan pada kad sahaja, bukan sumber pengiraan. */
 const YURAN_TAHUNAN_LABEL = 'RM30';
