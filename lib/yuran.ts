@@ -201,3 +201,102 @@ export async function fetchYuranReport(year: number): Promise<YuranReportRow[]> 
 export function ringgit(amount: number): string {
   return 'RM' + amount.toFixed(2);
 }
+
+// --- Bayaran kumpulan ikut generasi -------------------------------------------
+
+/** Ahli aktif satu generasi + keadaan yuran TAHUN itu (konteks sahaja). */
+export type GroupCandidate = {
+  member_id: string;
+  nombor_ahli: string | null;
+  full_name: string;
+  /** `null` = tiada baris lejar untuk tahun itu. */
+  caj_tahun: number | null;
+  bayar_tahun: number;
+};
+
+export async function fetchGroupCandidates(generasi: string, year: number): Promise<GroupCandidate[]> {
+  const { data, error } = await supabase.rpc('yuran_group_candidates', { p_generasi: generasi, p_year: year });
+  if (error) throw error;
+
+  return ((data as GroupCandidate[] | null) ?? []).map((row) => ({
+    ...row,
+    caj_tahun: row.caj_tahun === null ? null : toNumber(row.caj_tahun),
+    bayar_tahun: toNumber(row.bayar_tahun),
+  }));
+}
+
+/** Yuran tahunan seorang ahli — nilai lalai jumlah kumpulan = bilangan dipilih × ini. */
+export const YURAN_PER_MEMBER = 30;
+
+export type GroupPaymentResult = {
+  group_id: string;
+  member_count: number;
+  /** Amaun setiap ahli sebelum sen lebihan. */
+  base_amount: number;
+  /** Bilangan ahli yang menerima RM0.01 tambahan kerana jumlah tidak boleh dibahagi rata. */
+  extra_cents: number;
+};
+
+/**
+ * Satu RPC atomik: batch + satu bayaran setiap ahli dalam SATU transaksi.
+ * Pelayan mengesahkan semula bahawa setiap ahli aktif dan dalam generasi itu.
+ */
+export async function createGroupPayment(input: {
+  generasi: string;
+  year: number;
+  memberIds: string[];
+  total: number;
+  note: string | null;
+}): Promise<GroupPaymentResult> {
+  const { data, error } = await supabase.rpc('create_yuran_group_payment', {
+    p_generasi: input.generasi,
+    p_year: input.year,
+    p_member_ids: input.memberIds,
+    p_total: input.total,
+    p_note: input.note,
+  });
+  if (error) throw new Error(error.message);
+
+  const row = (data as GroupPaymentResult[] | null)?.[0];
+  if (!row) throw new Error('Bayaran kumpulan tidak dapat direkodkan.');
+  return { ...row, base_amount: toNumber(row.base_amount), extra_cents: toNumber(row.extra_cents) };
+}
+
+/** Bilangan rekod bayaran yang dipadam bersama batch. */
+export async function cancelGroupPayment(groupId: string): Promise<number> {
+  const { data, error } = await supabase.rpc('cancel_yuran_group_payment', { p_group_id: groupId });
+  if (error) throw new Error(error.message);
+  return toNumber(data);
+}
+
+export type GroupPaymentBatch = {
+  id: string;
+  generasi: string;
+  year: number;
+  total_amount: number;
+  member_count: number;
+  note: string | null;
+  created_at: string;
+  admin_name: string | null;
+};
+
+export async function fetchGroupPaymentHistory(): Promise<GroupPaymentBatch[]> {
+  const { data, error } = await supabase.rpc('yuran_group_payment_history');
+  if (error) throw error;
+
+  return ((data as GroupPaymentBatch[] | null) ?? []).map((row) => ({
+    ...row,
+    year: toNumber(row.year),
+    total_amount: toNumber(row.total_amount),
+    member_count: toNumber(row.member_count),
+  }));
+}
+
+export type GroupPaymentMember = { member_id: string; nombor_ahli: string | null; full_name: string; amount: number };
+
+export async function fetchGroupPaymentMembers(groupId: string): Promise<GroupPaymentMember[]> {
+  const { data, error } = await supabase.rpc('yuran_group_payment_members', { p_group_id: groupId });
+  if (error) throw error;
+
+  return ((data as GroupPaymentMember[] | null) ?? []).map((row) => ({ ...row, amount: toNumber(row.amount) }));
+}

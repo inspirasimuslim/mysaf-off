@@ -378,7 +378,7 @@ export default function AdminHubScreen() {
             variant="plain"
             title="Bendahari"
             caption="Urus yuran keahlian dan pembayaran lain."
-            count={2}
+            count={3}
             defaultOpen={openByDefault}>
             <ActionRow
               icon="wallet-outline"
@@ -389,6 +389,17 @@ export default function AdminHubScreen() {
                   : 'Semak baki dan eksport laporan (paparan sahaja)'
               }
               onPress={() => router.push('/(app)/admin/yuran-list')}
+            />
+
+            <ActionRow
+              icon="people-circle-outline"
+              title="Bayaran Kumpulan"
+              subtitle={
+                yuranAccess.canEdit
+                  ? 'Rekod bayaran yuran satu generasi sekali gus, dan urus sejarah batch'
+                  : 'Semak sejarah bayaran kumpulan (paparan sahaja)'
+              }
+              onPress={() => router.push('/(app)/admin/yuran-group-payment')}
             />
 
             {/*
