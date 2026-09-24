@@ -166,7 +166,7 @@ export default function AhliScreen() {
             onPress={() => router.push('/(app)/organisasi')}
           />
           <MenuTile
-            words={['Ahli', 'Lahir', 'Bulan', 'Ini']}
+            words={['Ahli Lahir', 'Bulan Ini']}
             icon="gift"
             color={BIRTHDAY_GOLD}
             onPress={() => router.push('/(app)/hari-jadi-bulan')}
@@ -267,7 +267,14 @@ function MenuTile({
       accessibilityRole="button"
       accessibilityLabel={words.join(' ')}
       onPress={onPress}
-      className="min-h-[170px] flex-1 items-center gap-3 rounded-2xl border border-line bg-surface px-1 py-4 active:opacity-70">
+      className="min-h-[112px] flex-1 items-center gap-2 rounded-2xl border border-line bg-surface px-1 py-3 active:opacity-70"
+      style={{
+        shadowColor: '#0F5132',
+        shadowOpacity: 0.08,
+        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 3 },
+        elevation: 2,
+      }}>
       <View className="h-11 w-11 items-center justify-center rounded-pill" style={{ backgroundColor: color + '1A' }}>
         <Ionicons name={icon} size={22} color={color} />
       </View>
