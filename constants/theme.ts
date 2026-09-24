@@ -4,11 +4,11 @@
  * (contoh: ikon, placeholderTextColor, navigation options).
  */
 export const Colors = {
-  primary: '#0F5132',
-  primaryDark: '#0A3A23',
-  primaryMid: '#157347',
-  primarySoft: '#E7F1EC',
-  primaryTint: '#F2F8F5',
+  primary: '#6B5B95',
+  primaryDark: '#4A3B6B',
+  primaryMid: '#8677B0',
+  primarySoft: '#E8E3F5',
+  primaryTint: '#F5F2FB',
 
   background: '#FAFAFA',
   surface: '#FFFFFF',
@@ -52,9 +52,9 @@ export const Spacing = {
 export const BIRTHDAY_GOLD = '#D97706';
 
 /*
-  Emas pencapaian — chip kedudukan pada kepala hijau, dan lencana di Profil.
+  Emas pencapaian — chip kedudukan pada kepala lavender (primary), dan lencana di Profil.
 
-  Lebih cerah daripada `BIRTHDAY_GOLD` kerana ia sentiasa duduk di atas hijau
+  Lebih cerah daripada `BIRTHDAY_GOLD` kerana ia sentiasa duduk di atas latar
   gelap: #D97706 pada latar itu membaca sebagai coklat kusam, bukan emas. Aksen
   hari lahir pula duduk di atas latar terang, jadi keduanya tidak boleh berkongsi
   satu nilai.

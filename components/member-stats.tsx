@@ -25,7 +25,7 @@ import { isNoRecord, type StatSlice } from '@/lib/member-statistics';
  */
 
 /** Palet kategori — urutan tetap, tidak dikitar. Lulus validator (mod cerah). */
-const CATEGORICAL = ['#157347', '#D97706', '#2563EB'] as const;
+const CATEGORICAL = ['#6B5B95', '#D97706', '#2563EB'] as const;
 const NO_RECORD_COLOR = '#D1D5DB';
 const BAR_COLOR = Colors.primaryMid;
 const TRACK_COLOR = Colors.primaryTint;

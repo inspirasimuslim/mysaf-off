@@ -15,10 +15,10 @@ import type { MyActivityRank } from '@/lib/activity-rank';
   memberi permukaan itu rasa "lencana" tanpa apa-apa yang berjalan pada thread
   UI setiap bingkai.
 */
-const BADGE_GRADIENT = ['#0A3A23', '#157347'] as const;
+const BADGE_GRADIENT = ['#4A3B6B', '#6B5B95'] as const;
 const SHINE = ['rgba(255,255,255,0)', 'rgba(255,255,255,0.14)', 'rgba(255,255,255,0)'] as const;
 
-/** Hijau lebih cerah daripada `positive`: pada latar hijau gelap, #16A34A hilang. */
+/** Tanda semantik (berjaya) kekal hijau, lebih cerah daripada `positive`: pada latar gelap, #16A34A hilang. */
 const TICK = '#4ADE80';
 const CROSS = 'rgba(255,255,255,0.38)';
 

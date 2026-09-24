@@ -9,6 +9,7 @@ import { Card } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Screen } from '@/components/ui/screen';
 import { SectionTitle } from '@/components/ui/section-title';
+import { Colors } from '@/constants/theme';
 import { fetchAdhocPayments } from '@/lib/adhoc-payments';
 import { useAuth } from '@/lib/auth-context';
 import { fetchMyMemberLinked } from '@/lib/members';
@@ -173,7 +174,7 @@ export default function PembayaranScreen() {
                   }
                   className="flex-row items-center gap-3 rounded-field border border-line bg-surface p-4 active:opacity-70">
                   <View className="h-11 w-11 items-center justify-center rounded-pill bg-primary-soft">
-                    <Ionicons name="qr-code-outline" size={20} color="#0F5132" />
+                    <Ionicons name="qr-code-outline" size={20} color={Colors.primary} />
                   </View>
 
                   <View className="flex-1">
