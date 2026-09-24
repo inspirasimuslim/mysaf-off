@@ -28,6 +28,8 @@ export type PermissionsState = {
   /** Baca semula selepas peranan atau assignment berubah. */
   refresh: () => Promise<void>;
   isSuperAdmin: () => boolean;
+  /** Peranan pemulihan kecemasan — BERASINGAN, bukan "Super Admin+": tiada akses admin biasa. */
+  isOwner: () => boolean;
   isAdmin: () => boolean;
   canView: (departmentId: string) => boolean;
   canEdit: (departmentId: string) => boolean;
@@ -48,6 +50,7 @@ const EMPTY: PermissionsState = {
   error: null,
   refresh: async () => {},
   isSuperAdmin: () => false,
+  isOwner: () => false,
   isAdmin: () => false,
   canView: () => false,
   canEdit: () => false,
@@ -140,6 +143,7 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
       error,
       refresh,
       isSuperAdmin: () => superAdmin,
+      isOwner: () => role === 'owner',
       isAdmin: () => role === 'admin' || superAdmin,
       canView: (departmentId: string) => superAdmin || Boolean(find(departmentId)?.can_view),
       canEdit: (departmentId: string) => superAdmin || Boolean(find(departmentId)?.can_edit),

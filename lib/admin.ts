@@ -97,7 +97,8 @@ export async function saveAssignments(
     if (error) throw error;
   }
 
-  if (currentRole === 'super_admin') return;
+  // Super Admin & Owner: peranannya tidak diselaraskan daripada assignment.
+  if (currentRole === 'super_admin' || currentRole === 'owner') return;
 
   const nextRole: UserRole = keep.length ? 'admin' : 'ahli';
   if (nextRole !== currentRole) await setRole(userId, nextRole);
@@ -108,12 +109,4 @@ export async function removeAdmin(userId: string): Promise<void> {
   const { error } = await supabase.from('admin_assignments').delete().eq('user_id', userId);
   if (error) throw error;
   await setRole(userId, 'ahli');
-}
-
-/**
- * Turunkan pangkat Super Admin: jadi `admin` bila dia masih memegang department,
- * jika tidak jadi `ahli`.
- */
-export async function demoteSuperAdmin(userId: string, hasAssignments: boolean): Promise<void> {
-  await setRole(userId, hasAssignments ? 'admin' : 'ahli');
 }

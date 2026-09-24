@@ -3,7 +3,8 @@
  * Selari dengan `supabase/migrations/20260906000001_roles_permissions.sql`.
  */
 
-export type UserRole = 'super_admin' | 'admin' | 'ahli';
+/** 'owner' hanya boleh ditetapkan melalui SQL Editor — lihat `20260925000063_owner_recovery.sql`. */
+export type UserRole = 'owner' | 'super_admin' | 'admin' | 'ahli';
 
 export type Profile = {
   id: string;
@@ -33,6 +34,7 @@ export type Permission = {
 };
 
 export const ROLE_LABEL: Record<UserRole, string> = {
+  owner: 'Owner',
   super_admin: 'Super Admin',
   admin: 'Admin',
   ahli: 'Ahli',

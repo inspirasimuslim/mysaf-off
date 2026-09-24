@@ -1,4 +1,4 @@
-import { Stack, useRouter } from 'expo-router';
+import { Stack, usePathname, useRouter } from 'expo-router';
 import { View } from 'react-native';
 
 import { ScreenHeader } from '@/components/screen-header';
@@ -44,9 +44,14 @@ function NoAccess() {
  * Ini kawalan UI sahaja — RLS di Supabase tetap penentu muktamad.
  */
 export default function AdminLayout() {
-  const { loading, isAdmin, isActiveNaqib } = usePermissions();
+  const { loading, isAdmin, isActiveNaqib, isOwner } = usePermissions();
+  const pathname = usePathname();
 
   if (loading) return <LoadingScreen />;
+  // Owner BUKAN admin: satu-satunya skrin di bawah /admin yang dibuka untuknya ialah pemulihan.
+  if (isOwner() && !isAdmin() && pathname.endsWith('/owner-recovery')) {
+    return <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: Colors.background } }} />;
+  }
   if (!isAdmin() && !isActiveNaqib()) return <NoAccess />;
 
   return <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: Colors.background } }} />;

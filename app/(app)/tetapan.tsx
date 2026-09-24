@@ -12,6 +12,7 @@ import { SectionTitle } from '@/components/ui/section-title';
 import { TextField } from '@/components/ui/text-field';
 import { ToggleRow } from '@/components/ui/toggle-row';
 import { useAuth } from '@/lib/auth-context';
+import { usePermissions } from '@/lib/permissions';
 import {
   disableBiometric,
   enableBiometric,
@@ -73,6 +74,7 @@ export default function TetapanScreen() {
   const { user } = useAuth();
   const router = useRouter();
   const goBack = useGoBack();
+  const { isOwner } = usePermissions();
 
   const [banner, setBanner] = useState<Banner>(null);
 
@@ -394,6 +396,17 @@ export default function TetapanScreen() {
                 subtitle="Maklum balas dan cadangan"
                 onPress={() => router.push('/(app)/komen')}
               />
+
+              {/* Owner sahaja — pemulihan kecemasan, tiada di Hub Admin. */}
+              {isOwner() ? (
+                <ActionRow
+                  icon="shield-half-outline"
+                  title="Pemulihan Kecemasan"
+                  subtitle="Lantik / turunkan Super Admin"
+                  tone="danger"
+                  onPress={() => router.push('/(app)/admin/owner-recovery')}
+                />
+              ) : null}
             </View>
           </View>
 

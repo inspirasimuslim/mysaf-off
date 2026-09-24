@@ -151,7 +151,7 @@ export default function AdminsScreen() {
   const candidates = useMemo(() => {
     const term = search.trim().toLowerCase();
     return profiles
-      .filter((row) => row.role !== 'super_admin')
+      .filter((row) => row.role !== 'super_admin' && row.role !== 'owner')
       .filter(
         (row) =>
           !term ||
