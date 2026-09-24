@@ -17,7 +17,7 @@ export function Card({ tone = 'surface', className = '', children, ...rest }: Pr
     <View
       className={`rounded-card p-card ${toneClass} ${className}`}
       style={{
-        shadowColor: '#2FA695',
+        shadowColor: '#3B9EDB',
         shadowOpacity: tone === 'primary' ? 0.18 : 0.05,
         shadowRadius: 16,
         shadowOffset: { width: 0, height: 6 },
