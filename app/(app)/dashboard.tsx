@@ -26,6 +26,7 @@ import {
   ringgitPipis,
   type PipisSummary,
 } from '@/lib/pipis';
+import { useIsDesktop } from '@/lib/use-desktop';
 import { fetchUpcomingEvents } from '@/lib/usrah-events';
 import { fetchYuranSummary, ringgit, type YuranSummary } from '@/lib/yuran';
 import { shortDateRangeLabel, type Announcement, type UpcomingEvent } from '@/types/database';
@@ -38,6 +39,7 @@ const AVATAR_SIZE = 44;
 export default function DashboardScreen() {
   const { user } = useAuth();
   const router = useRouter();
+  const desktop = useIsDesktop();
   /* Utama ialah skrin akar selepas log masuk: back di sini bertanya sebelum menutup app. */
   const exitPrompt = useAndroidExitPrompt();
 
@@ -164,7 +166,7 @@ export default function DashboardScreen() {
   }));
 
   return (
-    <Screen padTop={false}>
+    <Screen padTop={false} wide>
       <ScreenHeader
         eyebrow="Assalamualaikum,"
         title={displayName(user)}
@@ -202,42 +204,53 @@ export default function DashboardScreen() {
         {banner ? <Notice tone={banner.tone} message={banner.message} /> : null}
 
         {/*
-          Dua kad separuh lebar. Yuran ialah satu-satunya perkara di skrin ini
-          yang menuntut tindakan daripada ahli, jadi ia mengambil tempat kiri —
-          di mana mata jatuh dahulu — dan PIPIS di sebelahnya melaporkan
-          sumbangan yang sudah dibuat, bukan sesuatu yang perlu dilangsaikan.
+          Satu set komponen, dua susun atur. Telefon: satu lajur menegak (sama
+          seperti dahulu). Desktop: dua lajur — kiri (lebih lebar) untuk status
+          peribadi, kanan untuk kandungan poster.
         */}
-        <View className="flex-row gap-4">
-          <YuranCard summary={yuran} onPress={() => router.push('/(app)/yuran')} />
-          <PipisCard summary={pipis} onPress={() => router.push('/(app)/pipis')} />
+        <View className={desktop ? 'flex-row items-start gap-8' : 'gap-8'}>
+          <View className="gap-8" style={desktop ? { flex: 3, minWidth: 0 } : undefined}>
+            {/*
+              Dua kad separuh lebar. Yuran ialah satu-satunya perkara di skrin ini
+              yang menuntut tindakan daripada ahli, jadi ia mengambil tempat kiri —
+              di mana mata jatuh dahulu — dan PIPIS di sebelahnya melaporkan
+              sumbangan yang sudah dibuat, bukan sesuatu yang perlu dilangsaikan.
+            */}
+            <View className="flex-row gap-4" style={desktop ? { minHeight: 150 } : undefined}>
+              <YuranCard summary={yuran} onPress={() => router.push('/(app)/yuran')} />
+              <PipisCard summary={pipis} onPress={() => router.push('/(app)/pipis')} />
+            </View>
+
+            <UsrahStrip userId={user?.id ?? null} />
+
+            {/*
+              Tidak wujud langsung dalam pokok komponen bila tiada sesiapa lahir hari
+              ini — tiada tajuk kosong, tiada teks "Tiada".
+            */}
+            {birthdays.length ? (
+              <BirthdayGreeting rows={birthdays} onPress={() => router.push('/(app)/hari-jadi-bulan')} />
+            ) : null}
+          </View>
+
+          {/*
+            Dua carousel, kedua-duanya hilang sepenuhnya bila kosong. Skrin Utama
+            bagi ahli yang tiada program dan tiada pengumuman patut kelihatan
+            sengaja pendek, bukan seperti skrin yang gagal memuatkan.
+          */}
+          <View className="gap-8" style={desktop ? { flex: 2, minWidth: 0 } : undefined}>
+            <PosterCarousel
+              title="Program & Usrah"
+              items={eventItems}
+              onPress={(id) => router.push({ pathname: '/(app)/event-info', params: { id } })}
+            />
+
+            <PosterCarousel
+              title="Pengumuman"
+              items={announcementItems}
+              onPress={(id) => router.push({ pathname: '/(app)/announcement-info', params: { id } })}
+            />
+          </View>
         </View>
-
-        <UsrahStrip userId={user?.id ?? null} />
-
-        {/*
-          Tidak wujud langsung dalam pokok komponen bila tiada sesiapa lahir hari
-          ini — tiada tajuk kosong, tiada teks "Tiada".
-        */}
-        {birthdays.length ? (
-          <BirthdayGreeting rows={birthdays} onPress={() => router.push('/(app)/hari-jadi-bulan')} />
-        ) : null}
-
-        {/*
-          Dua carousel, kedua-duanya hilang sepenuhnya bila kosong. Skrin Utama
-          bagi ahli yang tiada program dan tiada pengumuman patut kelihatan
-          sengaja pendek, bukan seperti skrin yang gagal memuatkan.
-        */}
-        <PosterCarousel
-          title="Program & Usrah"
-          items={eventItems}
-          onPress={(id) => router.push({ pathname: '/(app)/event-info', params: { id } })}
-        />
-
-        <PosterCarousel
-          title="Pengumuman"
-          items={announcementItems}
-          onPress={(id) => router.push({ pathname: '/(app)/announcement-info', params: { id } })}
-        />
       </View>
 
       <ConfirmDialog

@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Colors } from '@/constants/theme';
 import { usePermissions } from '@/lib/permissions';
+import { useIsDesktop } from '@/lib/use-desktop';
 
 type Props = {
   title: string;
@@ -41,9 +42,12 @@ export function ScreenHeader({ title, eyebrow, subtitle, leading, onBackPress }:
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { isAdmin, isActiveNaqib } = usePermissions();
+  const desktop = useIsDesktop();
 
   return (
-    <View className="rounded-b-[28px] bg-primary px-gutter pb-7" style={{ paddingTop: insets.top + 18 }}>
+    <View
+      className={`bg-primary px-gutter pb-7 ${desktop ? 'mt-6 rounded-[28px]' : 'rounded-b-[28px]'}`}
+      style={{ paddingTop: insets.top + 18 }}>
       <View className="flex-row items-center gap-4">
         {onBackPress ? <HeaderIcon icon="chevron-back" label="Kembali" onPress={onBackPress} /> : null}
 
@@ -61,6 +65,8 @@ export function ScreenHeader({ title, eyebrow, subtitle, leading, onBackPress }:
           ) : null}
         </View>
 
+        {/* Mod desktop: Admin & Tetapan tinggal di sidebar. */}
+        {desktop ? null : (
         <View className="flex-row items-center gap-2">
           {/*
             Perisai tidak wujud langsung dalam pokok komponen untuk ahli biasa —
@@ -76,6 +82,7 @@ export function ScreenHeader({ title, eyebrow, subtitle, leading, onBackPress }:
           ) : null}
           <HeaderIcon icon="settings-outline" label="Tetapan" onPress={() => router.navigate('/(app)/tetapan')} />
         </View>
+        )}
       </View>
     </View>
   );

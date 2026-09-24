@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { DesktopSidebar } from '@/components/desktop-sidebar';
 import { ContactAdminLink } from '@/components/contact-admin';
 import { ForcePasswordChange } from '@/components/force-password-change';
 import { Screen } from '@/components/ui/screen';
@@ -15,6 +16,7 @@ import { useAndroidBackNavigation } from '@/lib/android-back';
 import { useAuth } from '@/lib/auth-context';
 import { activityCaptureProps, useIdleTimeout } from '@/lib/idle-timer';
 import { signOutEverywhere } from '@/lib/session';
+import { useIsDesktop } from '@/lib/use-desktop';
 import { SUSPENDED_MESSAGE, setAuthNotice, useAccountStatus } from '@/lib/suspension';
 import { EXPIRED_MESSAGE, fetchPasswordStatus, type PasswordStatus } from '@/lib/temp-password';
 
@@ -154,6 +156,7 @@ export default function AppLayout() {
 function AppGate() {
   const { session, user, initialising } = useAuth();
   const insets = useSafeAreaInsets();
+  const desktop = useIsDesktop();
 
   const userId = user?.id ?? null;
   const { status, recheck } = useAccountStatus(userId);
@@ -223,7 +226,7 @@ function AppGate() {
     return <ForcePasswordChange onDone={() => setPassword({ state: 'ok' })} />;
   }
 
-  return (
+  const tabs = (
     <Tabs
       /*
         'history' dan bukan lalai 'firstRoute'. Skrin dalam seperti Yuran dan
@@ -239,13 +242,16 @@ function AppGate() {
         tabBarInactiveTintColor: Colors.inkFaint,
         tabBarLabelStyle: { fontSize: 11, fontWeight: '600', marginTop: 2 },
         tabBarItemStyle: { paddingTop: 8 },
-        tabBarStyle: {
-          backgroundColor: Colors.surface,
-          borderTopColor: Colors.line,
-          borderTopWidth: 1,
-          height: 66 + insets.bottom,
-          paddingBottom: insets.bottom + 8,
-        },
+        /* Mod desktop: bar bawah disembunyikan (bukan dibuang) — sidebar mengambil alih. */
+        tabBarStyle: desktop
+          ? { display: 'none' }
+          : {
+              backgroundColor: Colors.surface,
+              borderTopColor: Colors.line,
+              borderTopWidth: 1,
+              height: 66 + insets.bottom,
+              paddingBottom: insets.bottom + 8,
+            },
       }}>
       <Tabs.Screen
         name="dashboard"
@@ -306,5 +312,14 @@ function AppGate() {
       <Tabs.Screen name="event-album" options={{ href: null }} />
       <Tabs.Screen name="announcement-info" options={{ href: null }} />
     </Tabs>
+  );
+
+  if (!desktop) return tabs;
+
+  return (
+    <View style={{ flex: 1, flexDirection: 'row' }}>
+      <DesktopSidebar />
+      <View style={{ flex: 1 }}>{tabs}</View>
+    </View>
   );
 }

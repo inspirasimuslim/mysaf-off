@@ -2,11 +2,15 @@ import { useRef } from 'react';
 import { ScrollView, View, type ViewProps } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useIsDesktop } from '@/lib/use-desktop';
 import { KeyboardAwareProvider, useKeyboardAware } from '@/lib/keyboard-aware';
 import { useResetScrollOnFocus } from '@/lib/scroll-reset';
 
 /** Reka bentuk disasarkan untuk telefon — hadkan lebar supaya web tidak melebar. */
 const MAX_CONTENT_WIDTH = 560;
+/** Mod desktop: skrin biasa dipusatkan pada lebar munasabah; skrin `wide` (Utama) guna grid lebar. */
+const DESKTOP_CONTENT_WIDTH = 880;
+const DESKTOP_WIDE_WIDTH = 1200;
 
 type Props = ViewProps & {
   /** Kandungan boleh ditatal (default) atau tetap. */
@@ -14,10 +18,14 @@ type Props = ViewProps & {
   /** Sisipkan padding atas selamat — matikan bila skrin ada header sendiri. */
   padTop?: boolean;
   className?: string;
+  /** Mod desktop sahaja: benarkan lebar grid (skrin yang sudah disusun semula untuk desktop). */
+  wide?: boolean;
 };
 
-export function Screen({ scroll = true, padTop = true, className = '', children, ...rest }: Props) {
+export function Screen({ scroll = true, padTop = true, wide = false, className = '', children, ...rest }: Props) {
   const insets = useSafeAreaInsets();
+  const desktop = useIsDesktop();
+  const maxWidth = desktop ? (wide ? DESKTOP_WIDE_WIDTH : DESKTOP_CONTENT_WIDTH) : MAX_CONTENT_WIDTH;
   const paddingTop = padTop ? insets.top + 12 : 0;
   // Semua skrin yang ditatal melalui komponen ini dibuka semula di atas.
   const scrollRef = useRef<ScrollView>(null);
@@ -29,7 +37,7 @@ export function Screen({ scroll = true, padTop = true, className = '', children,
   const keyboard = useKeyboardAware(scrollRef);
 
   const body = (
-    <View className="w-full self-center" style={{ maxWidth: MAX_CONTENT_WIDTH, paddingTop }}>
+    <View className="w-full self-center" style={{ maxWidth, paddingTop }}>
       {children}
     </View>
   );
