@@ -7,7 +7,7 @@ import { usePermissions } from '@/lib/permissions';
 
 type IconName = keyof typeof Ionicons.glyphMap;
 
-export const SIDEBAR_WIDTH = 260;
+export const SIDEBAR_WIDTH = 232;
 
 type Item = { label: string; href: Href; segment: string; active: IconName; inactive: IconName };
 
@@ -47,17 +47,18 @@ export function DesktopSidebar() {
 
   return (
     <View
-      className="border-r border-line bg-surface px-4 py-6"
+      className="border-r border-line bg-surface"
       style={{ width: SIDEBAR_WIDTH }}
       role="navigation">
-      <View className="mb-8 flex-row items-center gap-3 px-2">
-        <View className="h-10 w-10 items-center justify-center rounded-xl bg-primary">
-          <Ionicons name="leaf" size={20} color={Colors.white} />
+      {/* Kepala sidebar: logo + nama, dipisahkan daripada navigasi oleh garis nipis. */}
+      <View className="h-16 flex-row items-center gap-2.5 border-b border-line px-5">
+        <View className="h-8 w-8 items-center justify-center rounded-lg bg-primary">
+          <Ionicons name="leaf" size={17} color={Colors.white} />
         </View>
-        <Text className="text-xl font-bold text-primary">MySAFF</Text>
+        <Text className="text-[17px] font-bold tracking-tight text-primary">MySAFF</Text>
       </View>
 
-      <View className="flex-1 gap-1">
+      <View className="flex-1 gap-0.5 px-3 pt-4">
         {ITEMS.map((item) => (
           <SidebarLink
             key={item.segment}
@@ -69,7 +70,7 @@ export function DesktopSidebar() {
         ))}
       </View>
 
-      <View className="gap-1 border-t border-line pt-4">
+      <View className="mx-3 gap-0.5 border-t border-line pb-4 pt-3">
         {isAdmin() || isActiveNaqib() ? (
           <SidebarLink
             label="Hub Admin"
@@ -106,11 +107,13 @@ function SidebarLink({
       accessibilityLabel={label}
       accessibilityState={{ selected: focused }}
       onPress={onPress}
-      className={`flex-row items-center gap-3 rounded-xl px-3 py-3 ${
-        focused ? 'bg-primary-soft' : 'active:bg-primary-tint hover:bg-primary-tint'
+      className={`flex-row items-center gap-3 rounded-lg border-l-[3px] py-2.5 pl-2.5 pr-3 ${
+        focused
+          ? 'border-primary bg-primary-tint'
+          : 'border-transparent active:bg-primary-tint hover:bg-background'
       }`}>
-      <Ionicons name={icon} size={20} color={focused ? Colors.primary : Colors.inkMuted} />
-      <Text className={`text-[15px] ${focused ? 'font-bold text-primary' : 'font-medium text-ink-muted'}`}>
+      <Ionicons name={icon} size={18} color={focused ? Colors.primary : Colors.inkMuted} />
+      <Text className={`text-sm ${focused ? 'font-semibold text-primary' : 'font-medium text-ink-muted'}`}>
         {label}
       </Text>
     </Pressable>

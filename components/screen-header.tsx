@@ -46,8 +46,8 @@ export function ScreenHeader({ title, eyebrow, subtitle, leading, onBackPress }:
 
   return (
     <View
-      className={`bg-primary px-gutter pb-7 ${desktop ? 'mt-6 rounded-[28px]' : 'rounded-b-[28px]'}`}
-      style={{ paddingTop: insets.top + 18 }}>
+      className={`bg-primary ${desktop ? 'mt-6 rounded-2xl px-6 pb-5' : 'rounded-b-[28px] px-gutter pb-7'}`}
+      style={{ paddingTop: desktop ? 20 : insets.top + 18 }}>
       <View className="flex-row items-center gap-4">
         {onBackPress ? <HeaderIcon icon="chevron-back" label="Kembali" onPress={onBackPress} /> : null}
 

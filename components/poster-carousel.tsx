@@ -21,7 +21,6 @@ import { Colors } from '@/constants/theme';
 
 /** Nisbah 3:4 — bentuk poster A4 yang paling lazim dimuat naik. */
 const CARD_WIDTH = 156;
-const POSTER_HEIGHT = 208;
 
 /** Jarak (px) tetikus mesti bergerak sebelum tekanan dikira seretan, bukan ketukan. */
 const DRAG_THRESHOLD = 6;
@@ -39,6 +38,8 @@ type Props = {
   caption?: string;
   items: PosterItem[];
   onPress: (id: string) => void;
+  /** Lebar kad poster (lalai 156). Tinggi mengikut nisbah 3:4. */
+  cardWidth?: number;
 };
 
 /**
@@ -154,7 +155,8 @@ export function useWebMouseScroll(ref: RefObject<ScrollView | null>, enabled: bo
   }, [ref, enabled]);
 }
 
-export function PosterCarousel({ title, caption, items, onPress }: Props) {
+export function PosterCarousel({ title, caption, items, onPress, cardWidth = CARD_WIDTH }: Props) {
+  const posterHeight = Math.round((cardWidth * 4) / 3);
   const scrollRef = useRef<ScrollView>(null);
   // Bergantung pada ada/tiada item: ScrollView belum wujud semasa senarai kosong.
   useWebMouseScroll(scrollRef, items.length > 0);
@@ -181,12 +183,12 @@ export function PosterCarousel({ title, caption, items, onPress }: Props) {
             accessibilityRole="button"
             accessibilityLabel={item.title}
             onPress={() => onPress(item.id)}
-            style={{ width: CARD_WIDTH }}
+            style={{ width: cardWidth }}
             className="active:opacity-70">
             {item.posterUrl ? (
               <Image
                 source={{ uri: item.posterUrl }}
-                style={{ width: CARD_WIDTH, height: POSTER_HEIGHT, borderRadius: 16 }}
+                style={{ width: cardWidth, height: posterHeight, borderRadius: 16 }}
                 contentFit="cover"
                 transition={150}
                 accessibilityLabel={'Poster ' + item.title}
@@ -194,7 +196,7 @@ export function PosterCarousel({ title, caption, items, onPress }: Props) {
             ) : (
               // Acara tanpa poster masih perlu muncul — ia tetap berlaku.
               <View
-                style={{ width: CARD_WIDTH, height: POSTER_HEIGHT, borderRadius: 16 }}
+                style={{ width: cardWidth, height: posterHeight, borderRadius: 16 }}
                 className="items-center justify-center border border-line bg-primary-tint">
                 <Ionicons name="image-outline" size={28} color={Colors.inkFaint} />
               </View>

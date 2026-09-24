@@ -33,6 +33,19 @@ import { shortDateRangeLabel, type Announcement, type UpcomingEvent } from '@/ty
 
 type Banner = { tone: 'positive' | 'info' | 'negative'; message: string } | null;
 
+/** Lebar poster carousel di desktop; tinggi mengikut nisbah 3:4 dalam `PosterCarousel`. */
+const DESK_POSTER_WIDTH = 176;
+
+/**
+ * Desktop: bungkus seksyen dalam kad putih bersempadan nipis supaya bahagian grid
+ * terpisah jelas. Mobile: tiada pembungkus — pokok komponen sama seperti dahulu.
+ */
+function DeskCard({ desktop, hidden, children }: { desktop: boolean; hidden?: boolean; children: ReactNode }) {
+  if (hidden) return null;
+  if (!desktop) return <>{children}</>;
+  return <View className="rounded-card border border-line bg-surface p-5">{children}</View>;
+}
+
 /** Sama saiz dengan ikon kepala skrin (44px) ditambah bingkai 2px — sebaris dengan perisai dan gear. */
 const AVATAR_SIZE = 44;
 
@@ -208,15 +221,15 @@ export default function DashboardScreen() {
           seperti dahulu). Desktop: dua lajur — kiri (lebih lebar) untuk status
           peribadi, kanan untuk kandungan poster.
         */}
-        <View className={desktop ? 'flex-row items-start gap-8' : 'gap-8'}>
-          <View className="gap-8" style={desktop ? { flex: 3, minWidth: 0 } : undefined}>
+        <View className={desktop ? 'flex-row items-start gap-6' : 'gap-8'}>
+          <View className={desktop ? 'gap-6' : 'gap-8'} style={desktop ? { flex: 3, minWidth: 0 } : undefined}>
             {/*
               Dua kad separuh lebar. Yuran ialah satu-satunya perkara di skrin ini
               yang menuntut tindakan daripada ahli, jadi ia mengambil tempat kiri —
               di mana mata jatuh dahulu — dan PIPIS di sebelahnya melaporkan
               sumbangan yang sudah dibuat, bukan sesuatu yang perlu dilangsaikan.
             */}
-            <View className="flex-row gap-4" style={desktop ? { minHeight: 150 } : undefined}>
+            <View className="flex-row gap-4" style={desktop ? { minHeight: 168 } : undefined}>
               <YuranCard summary={yuran} onPress={() => router.push('/(app)/yuran')} />
               <PipisCard summary={pipis} onPress={() => router.push('/(app)/pipis')} />
             </View>
@@ -228,7 +241,21 @@ export default function DashboardScreen() {
               ini — tiada tajuk kosong, tiada teks "Tiada".
             */}
             {birthdays.length ? (
-              <BirthdayGreeting rows={birthdays} onPress={() => router.push('/(app)/hari-jadi-bulan')} />
+              <DeskCard desktop={desktop}>
+                <BirthdayGreeting rows={birthdays} onPress={() => router.push('/(app)/hari-jadi-bulan')} />
+              </DeskCard>
+            ) : null}
+
+            {/* Desktop: Pengumuman di lajur kiri supaya tinggi dua lajur seimbang. */}
+            {desktop && announcementItems.length ? (
+              <DeskCard desktop>
+                <PosterCarousel
+                  title="Pengumuman"
+                  items={announcementItems}
+                  cardWidth={DESK_POSTER_WIDTH}
+                  onPress={(id) => router.push({ pathname: '/(app)/announcement-info', params: { id } })}
+                />
+              </DeskCard>
             ) : null}
           </View>
 
@@ -237,18 +264,23 @@ export default function DashboardScreen() {
             bagi ahli yang tiada program dan tiada pengumuman patut kelihatan
             sengaja pendek, bukan seperti skrin yang gagal memuatkan.
           */}
-          <View className="gap-8" style={desktop ? { flex: 2, minWidth: 0 } : undefined}>
-            <PosterCarousel
-              title="Program & Usrah"
-              items={eventItems}
-              onPress={(id) => router.push({ pathname: '/(app)/event-info', params: { id } })}
-            />
+          <View className={desktop ? 'gap-6' : 'gap-8'} style={desktop ? { flex: 2, minWidth: 0 } : undefined}>
+            <DeskCard desktop={desktop} hidden={desktop && eventItems.length === 0}>
+              <PosterCarousel
+                title="Program & Usrah"
+                items={eventItems}
+                cardWidth={desktop ? DESK_POSTER_WIDTH : undefined}
+                onPress={(id) => router.push({ pathname: '/(app)/event-info', params: { id } })}
+              />
+            </DeskCard>
 
-            <PosterCarousel
-              title="Pengumuman"
-              items={announcementItems}
-              onPress={(id) => router.push({ pathname: '/(app)/announcement-info', params: { id } })}
-            />
+            {desktop ? null : (
+              <PosterCarousel
+                title="Pengumuman"
+                items={announcementItems}
+                onPress={(id) => router.push({ pathname: '/(app)/announcement-info', params: { id } })}
+              />
+            )}
           </View>
         </View>
       </View>

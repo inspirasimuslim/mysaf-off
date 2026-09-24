@@ -7,6 +7,7 @@ import { Colors } from '@/constants/theme';
 import { fetchMyMemberLinked } from '@/lib/members';
 import { fetchUsrahYearDetail, type UsrahMonthDetail } from '@/lib/usrah';
 import { MONTH_LABELS } from '@/lib/usrah-import';
+import { useIsDesktop } from '@/lib/use-desktop';
 
 /**
  * Kehadiran usrah pengguna sendiri bagi tahun semasa — dua belas bulatan.
@@ -71,6 +72,7 @@ function MonthDot({ month }: { month: UsrahMonthDetail | undefined }) {
 
 export function UsrahStrip({ userId }: { userId: string | null }) {
   const router = useRouter();
+  const desktop = useIsDesktop();
   const year = new Date().getFullYear();
   const [state, setState] = useState<State>({ ready: false });
 
@@ -119,7 +121,7 @@ export function UsrahStrip({ userId }: { userId: string | null }) {
       accessibilityRole="button"
       accessibilityLabel={'Kehadiran Usrah ' + year + '. Ketik untuk lihat sejarah kehadiran.'}
       onPress={() => router.push('/(app)/usrah-sejarah')}
-      className="rounded-card border border-line p-card active:opacity-70">
+      className={`rounded-card border border-line p-card active:opacity-70 ${desktop ? 'bg-surface' : ''}`}>
       <View className="flex-row items-center">
         <Text className="flex-1 text-sm font-semibold text-ink">Kehadiran Usrah {year}</Text>
         <Ionicons name="chevron-forward" size={16} color={Colors.inkFaint} />

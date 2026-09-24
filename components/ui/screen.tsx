@@ -9,7 +9,7 @@ import { useResetScrollOnFocus } from '@/lib/scroll-reset';
 /** Reka bentuk disasarkan untuk telefon — hadkan lebar supaya web tidak melebar. */
 const MAX_CONTENT_WIDTH = 560;
 /** Mod desktop: skrin biasa dipusatkan pada lebar munasabah; skrin `wide` (Utama) guna grid lebar. */
-const DESKTOP_CONTENT_WIDTH = 880;
+const DESKTOP_CONTENT_WIDTH = 840;
 const DESKTOP_WIDE_WIDTH = 1200;
 
 type Props = ViewProps & {
