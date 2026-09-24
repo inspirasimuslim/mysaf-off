@@ -13,14 +13,14 @@ import { memberInitials } from '@/types/database';
 /**
  * Rona dipilih daripada nama supaya seorang ahli sentiasa mendapat warna yang
  * sama pada setiap skrin, tanpa perlu menyimpan pilihan itu di mana-mana.
- * Julat kekal dalam keluarga biru agar sejajar dengan warna biru langit app.
+ * Julat kekal dalam keluarga hijau/teal agar sejajar dengan warna forest app.
  */
 function hueFor(name: string): number {
   let hash = 0;
   for (let index = 0; index < name.length; index += 1) {
     hash = (hash * 31 + name.charCodeAt(index)) % 360;
   }
-  return 195 + (hash % 25);
+  return 120 + (hash % 90);
 }
 
 type Props = {

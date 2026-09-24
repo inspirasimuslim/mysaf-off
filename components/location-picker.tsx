@@ -69,7 +69,7 @@ function mapHtml(latitude: number, longitude: number, radius: number, hasPin: bo
       if (marker) { map.removeLayer(marker); }
       if (circle) { map.removeLayer(circle); }
       marker = L.marker([lat, lng]).addTo(map);
-      circle = L.circle([lat, lng], { radius: ${radius}, color: '#3B9EDB', fillColor: '#3B9EDB', fillOpacity: 0.15 }).addTo(map);
+      circle = L.circle([lat, lng], { radius: ${radius}, color: '#0F5132', fillColor: '#0F5132', fillOpacity: 0.15 }).addTo(map);
     }
 
     if (${hasPin ? 'true' : 'false'}) { place(${latitude}, ${longitude}); }

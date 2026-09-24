@@ -5,13 +5,13 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // Warna utama — biru langit
+        // Warna utama — forest / dark green
         primary: {
-          DEFAULT: '#3B9EDB',
-          dark: '#1D6FA5',
-          mid: '#6FB8E6',
-          soft: '#DDEEF9', // background pill / ikon aktif
-          tint: '#F0F8FD',
+          DEFAULT: '#0F5132',
+          dark: '#0A3A23',
+          mid: '#157347',
+          soft: '#E7F1EC', // background pill / ikon aktif
+          tint: '#F2F8F5',
         },
         // Permukaan & teks
         background: '#FAFAFA',
