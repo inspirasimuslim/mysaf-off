@@ -5,6 +5,7 @@ import { Text, View } from 'react-native';
 import { ScreenHeader } from '@/components/screen-header';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { CellText, DataTable, RowIconAction } from '@/components/ui/data-table';
 import { EmptyState } from '@/components/ui/empty-state';
 import { FormModal } from '@/components/ui/form-modal';
 import { IconButton } from '@/components/ui/icon-button';
@@ -18,6 +19,7 @@ import { usePerkaderanAccess } from '@/lib/department-access';
 import { toMalayErrorVerbose } from '@/lib/errors';
 import { fetchMembersForPicker } from '@/lib/members';
 import { useGoBack } from '@/lib/navigation';
+import { useIsDesktop } from '@/lib/use-desktop';
 import { assignNaqib, fetchActiveNaqibList, removeNaqib } from '@/lib/perkaderan';
 import { generationLabel, type MemberPickerRow, type NaqibAssignmentWithMember } from '@/types/database';
 
@@ -25,6 +27,7 @@ type Banner = { tone: 'positive' | 'info' | 'negative'; message: string } | null
 
 export default function NaqibAssignmentsScreen() {
   const goBack = useGoBack();
+  const desktop = useIsDesktop();
   const { loading: accessLoading, canEdit } = usePerkaderanAccess();
 
   const [naqibs, setNaqibs] = useState<NaqibAssignmentWithMember[]>([]);
@@ -131,7 +134,7 @@ export default function NaqibAssignmentsScreen() {
 
   return (
     <>
-      <Screen padTop={false}>
+      <Screen padTop={false} wide>
         <ScreenHeader
           eyebrow="Panel Admin"
           title="Naqib/Naqibah"
@@ -153,6 +156,30 @@ export default function NaqibAssignmentsScreen() {
           ) : (
             <View>
               <SectionTitle title="Senarai Naqib" caption="Setiap naqib mengendalikan kumpulan usrah sekolahnya sendiri." />
+              {desktop ? (
+                <DataTable
+                  rows={naqibs}
+                  keyOf={(n) => n.id}
+                  actionsWidth={56}
+                  columns={[
+                    { key: 'nama', header: 'Nama', flex: 2, render: (n) => <CellText strong>{n.member_full_name}</CellText> },
+                    {
+                      key: 'gen',
+                      header: 'Generasi',
+                      flex: 1,
+                      render: (n) => <CellText muted>{n.member_generasi ? generationLabel(n.member_generasi) : 'Tiada generasi'}</CellText>,
+                    },
+                  ]}
+                  actions={(n) => (
+                    <RowIconAction
+                      icon="person-remove-outline"
+                      destructive
+                      label={'Buang ' + n.member_full_name + ' sebagai naqib'}
+                      onPress={() => setPendingRemove(n)}
+                    />
+                  )}
+                />
+              ) : (
               <View className="gap-3">
                 {naqibs.map((naqib) => (
                   <View
@@ -173,6 +200,7 @@ export default function NaqibAssignmentsScreen() {
                   </View>
                 ))}
               </View>
+              )}
             </View>
           )}
         </View>

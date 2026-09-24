@@ -6,6 +6,7 @@ import { Pressable, Text, View } from 'react-native';
 
 import { ScreenHeader } from '@/components/screen-header';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { CellText, DataTable, RowIconAction } from '@/components/ui/data-table';
 import { EmptyState } from '@/components/ui/empty-state';
 import { LoadingScreen } from '@/components/ui/loading-screen';
 import { Notice } from '@/components/ui/notice';
@@ -15,6 +16,7 @@ import { useProgramAccess, useUsrahAccess } from '@/lib/department-access';
 import { deleteEventAlbum } from '@/lib/event-photos';
 import { toMalayError, toMalayErrorVerbose } from '@/lib/errors';
 import { useGoBack } from '@/lib/navigation';
+import { useIsDesktop } from '@/lib/use-desktop';
 import { usePermissions } from '@/lib/permissions';
 import { fetchAllEventsDirectory } from '@/lib/usrah-events';
 import { EVENT_TYPE_LABEL, dateRangeLabel, type EventDirectoryRow } from '@/types/database';
@@ -27,6 +29,7 @@ import { EVENT_TYPE_LABEL, dateRangeLabel, type EventDirectoryRow } from '@/type
  */
 export default function AlbumScreen() {
   const router = useRouter();
+  const desktop = useIsDesktop();
   const goBack = useGoBack();
   const { isSuperAdmin } = usePermissions();
   const usrahAccess = useUsrahAccess();
@@ -97,7 +100,7 @@ export default function AlbumScreen() {
 
   return (
     <>
-      <Screen padTop={false}>
+      <Screen padTop={false} wide>
         <ScreenHeader title="Album" subtitle="Galeri gambar setiap acara" onBackPress={goBack} />
         <View className="gap-3 px-gutter pb-8 pt-2">
           {error ? <Notice tone="negative" message={error} /> : null}
@@ -105,6 +108,45 @@ export default function AlbumScreen() {
 
           {events.length === 0 && !error ? (
             <EmptyState icon="images-outline" title="Tiada acara" description="Belum ada acara direkodkan lagi." />
+          ) : desktop ? (
+            <DataTable
+              rows={events}
+              keyOf={(e) => e.id}
+              onRowPress={(e) => router.push({ pathname: '/(app)/event-album', params: { event_id: e.id } })}
+              actionsWidth={56}
+              columns={[
+                {
+                  key: 'poster',
+                  header: '',
+                  width: 52,
+                  render: (e) =>
+                    e.poster_url ? (
+                      <Image source={{ uri: e.poster_url }} style={{ width: 32, height: 32, borderRadius: 8 }} contentFit="cover" />
+                    ) : (
+                      <View className="h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+                        <Ionicons name="images-outline" size={16} color={Colors.primary} />
+                      </View>
+                    ),
+                },
+                { key: 'nama', header: 'Acara', flex: 3, render: (e) => <CellText strong>{e.name}</CellText> },
+                { key: 'jenis', header: 'Jenis', width: 110, render: (e) => <CellText muted>{EVENT_TYPE_LABEL[e.event_type]}</CellText> },
+                { key: 'tarikh', header: 'Tarikh', flex: 2, render: (e) => <CellText muted>{dateRangeLabel(e.start_date, e.end_date)}</CellText> },
+                { key: 'gambar', header: 'Gambar', width: 100, align: 'right', render: (e) => <CellText>{String(e.photo_count)}</CellText> },
+              ]}
+              actions={(e) =>
+                canEditEvent(e) && e.photo_count > 0 ? (
+                  <RowIconAction
+                    icon="trash-outline"
+                    destructive
+                    label={'Padam album ' + e.name}
+                    onPress={() => {
+                      setDeleteError(null);
+                      setPendingDelete(e);
+                    }}
+                  />
+                ) : null
+              }
+            />
           ) : (
             events.map((event) => (
               <View

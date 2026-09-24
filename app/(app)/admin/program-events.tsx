@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { View } from 'react-native';
 
 import { EventDeleteModal, deleteResultMessage } from '@/components/event-delete-modal';
+import { EventTable } from '@/components/event-table';
 import { EventListRow, deleteMenuAction, exportMenuActions } from '@/components/event-list-row';
 import { ScreenHeader } from '@/components/screen-header';
 import { Button } from '@/components/ui/button';
@@ -17,6 +18,7 @@ import { toMalayError } from '@/lib/errors';
 import { downloadEventAttendance } from '@/lib/event-attendance-report';
 import { deliveryMessage, type DeliveryMode } from '@/lib/file-delivery';
 import { useGoBack } from '@/lib/navigation';
+import { useIsDesktop } from '@/lib/use-desktop';
 import { downloadRsvpList } from '@/lib/rsvp';
 import { fetchUsrahEvents } from '@/lib/usrah-events';
 import type { UsrahEvent } from '@/types/database';
@@ -40,6 +42,7 @@ const EXPORTS = [
  */
 export default function ProgramEventsScreen() {
   const router = useRouter();
+  const desktop = useIsDesktop();
   const goBack = useGoBack();
   const { loading: accessLoading, canView, canEdit } = useProgramAccess();
 
@@ -100,6 +103,13 @@ export default function ProgramEventsScreen() {
     [busyId],
   );
 
+  const actionsFor = (event: UsrahEvent) => [
+    ...exportMenuActions(EXPORTS, (kind, mode) => void runExport(event, kind, mode)),
+    ...(canEdit && !event.archived_at
+      ? [deleteMenuAction(() => { setBanner(null); setDeleteTarget(event); })]
+      : []),
+  ];
+
   if (accessLoading || loading) return <LoadingScreen />;
 
   if (!canView) {
@@ -118,7 +128,7 @@ export default function ProgramEventsScreen() {
   }
 
   return (
-    <Screen padTop={false}>
+    <Screen padTop={false} wide>
       <ScreenHeader
         eyebrow="Panel Admin"
         title="Program"
@@ -166,6 +176,13 @@ export default function ProgramEventsScreen() {
                   : 'Program yang dicipta akan muncul di sini bersama kod QR kehadirannya.'
               }
             />
+          ) : desktop ? (
+            <EventTable
+              events={events}
+              actionsFor={actionsFor}
+              busyId={busyId}
+              onPress={(event) => router.push({ pathname: '/(app)/admin/usrah-event-detail', params: { id: event.id } })}
+            />
           ) : (
             <View className="gap-2">
               {events.map((event) => (
@@ -175,12 +192,7 @@ export default function ProgramEventsScreen() {
                   onPress={() => router.push({ pathname: '/(app)/admin/usrah-event-detail', params: { id: event.id } })}
                   busy={busyId === event.id}
                   locked={busyId !== null}
-                  actions={[
-                    ...exportMenuActions(EXPORTS, (kind, mode) => void runExport(event, kind, mode)),
-                    ...(canEdit && !event.archived_at
-                      ? [deleteMenuAction(() => { setBanner(null); setDeleteTarget(event); })]
-                      : []),
-                  ]}
+                  actions={actionsFor(event)}
                 />
               ))}
             </View>

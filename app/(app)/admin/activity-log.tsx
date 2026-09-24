@@ -6,6 +6,7 @@ import { NoAccessScreen, SUPER_ADMIN_ONLY } from '@/components/no-access';
 import { SaveShareButtons } from '@/components/save-share-buttons';
 import { ScreenHeader } from '@/components/screen-header';
 import { Button } from '@/components/ui/button';
+import { CellText, DataTable } from '@/components/ui/data-table';
 import { EmptyState } from '@/components/ui/empty-state';
 import { LoadingScreen } from '@/components/ui/loading-screen';
 import { Notice } from '@/components/ui/notice';
@@ -28,6 +29,7 @@ import { fetchAssignments, fetchDepartments, fetchProfiles } from '@/lib/admin';
 import { toMalayError } from '@/lib/errors';
 import { deliveryMessage, type DeliveryMode } from '@/lib/file-delivery';
 import { useGoBack } from '@/lib/navigation';
+import { useIsDesktop } from '@/lib/use-desktop';
 import { usePermissions } from '@/lib/permissions';
 import { MONTH_NAMES, ROLE_LABEL } from '@/types/database';
 
@@ -61,6 +63,7 @@ function formatTime(iso: string): string {
  */
 export default function ActivityLogScreen() {
   const goBack = useGoBack();
+  const desktop = useIsDesktop();
   const { isSuperAdmin, loading: permissionsLoading } = usePermissions();
   const allowed = !permissionsLoading && isSuperAdmin();
 
@@ -206,7 +209,7 @@ export default function ActivityLogScreen() {
   if (!allowed) return <NoAccessScreen title="Log Aktiviti Admin" description={SUPER_ADMIN_ONLY} />;
 
   return (
-    <Screen padTop={false}>
+    <Screen padTop={false} wide>
       <ScreenHeader
         eyebrow="Panel Super Admin"
         title="Log Aktiviti Admin"
@@ -273,6 +276,53 @@ export default function ActivityLogScreen() {
               caption="Dikumpul ikut admin dan hari. Department pada kepala blok ialah department SEMASA admin, bukan pada masa tindakan."
             />
 
+            {desktop ? (
+              <DataTable
+                rows={rows}
+                keyOf={(row) => row.id}
+                columns={[
+                  { key: 'masa', header: 'Tarikh & Masa', width: 170, render: (row) => <CellText muted>{formatDay(row.created_at) + SEP + formatTime(row.created_at)}</CellText> },
+                  { key: 'admin', header: 'Admin', flex: 1, render: (row) => <CellText strong>{row.actor_name}</CellText> },
+                  {
+                    key: 'dept',
+                    header: 'Peranan Semasa',
+                    flex: 1,
+                    render: (row) => (
+                      <CellText muted>
+                        {(row.actor_id ? currentRole.get(row.actor_id) : 'Akaun telah dipadam') ?? '—'}
+                      </CellText>
+                    ),
+                  },
+                  { key: 'tindakan', header: 'Tindakan', flex: 2, render: (row) => <CellText strong>{row.action}</CellText> },
+                  {
+                    key: 'sasaran',
+                    header: 'Sasaran',
+                    flex: 2,
+                    render: (row) => (
+                      <CellText muted>
+                        {typeof row.details?.label === 'string' ? row.details.label : (TARGET_TYPE_LABEL[row.target_type] ?? row.target_type)}
+                      </CellText>
+                    ),
+                  },
+                ]}
+                renderExpanded={(row) => {
+                  const changed = Array.isArray(row.details?.diubah) ? row.details.diubah : [];
+                  return (
+                    <View className="gap-0.5">
+                      <Text className="text-xs text-ink-muted">
+                        {(TARGET_TYPE_LABEL[row.target_type] ?? row.target_type) + (row.target_id ? ' #' + row.target_id.slice(0, 8) : '')}
+                      </Text>
+                      {changed.length ? <Text className="text-xs text-ink-muted">Medan: {changed.join(', ')}</Text> : null}
+                      {detailEntries(row.details).map(([key, value]) => (
+                        <Text key={key} className="text-xs text-ink-muted">
+                          {key}: {value}
+                        </Text>
+                      ))}
+                    </View>
+                  );
+                }}
+              />
+            ) : (
             <View className="gap-3">
               {groups.map((group, index) => (
                 <GroupBlock
@@ -283,6 +333,7 @@ export default function ActivityLogScreen() {
                 />
               ))}
             </View>
+            )}
 
             {hasMore ? (
               <View className="pt-4">

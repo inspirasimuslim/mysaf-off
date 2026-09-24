@@ -7,6 +7,7 @@ import { ScreenHeader } from '@/components/screen-header';
 import { formatSelfUpdated } from '@/components/self-update-status';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { CellText, DataTable } from '@/components/ui/data-table';
 import { EmptyState } from '@/components/ui/empty-state';
 import { LoadingScreen } from '@/components/ui/loading-screen';
 import { Notice } from '@/components/ui/notice';
@@ -20,6 +21,7 @@ import { deliveryMessage, type DeliveryMode } from '@/lib/file-delivery';
 import { downloadMembersFullExport } from '@/lib/member-export';
 import { fetchGenerations, fetchMembers } from '@/lib/members';
 import { useGoBack } from '@/lib/navigation';
+import { useIsDesktop } from '@/lib/use-desktop';
 import { generationLabel, type Generation, type MemberSummary, type Option } from '@/types/database';
 
 /** Senarai dipenggal supaya skrin tidak melukis ratusan baris sekaligus. */
@@ -30,6 +32,7 @@ const SORT_OPTIONS: Option<string>[] = [{ value: 'stale', label: 'Kemaskini Terl
 export default function AhliListScreen() {
   const goBack = useGoBack();
   const router = useRouter();
+  const desktop = useIsDesktop();
   const { loading: accessLoading, canView, canEdit } = useMemberAccess();
 
   const [members, setMembers] = useState<MemberSummary[]>([]);
@@ -158,7 +161,7 @@ export default function AhliListScreen() {
   const visible = filtered.slice(0, limit);
 
   return (
-    <Screen padTop={false}>
+    <Screen padTop={false} wide>
       <ScreenHeader
         eyebrow="Panel Admin"
         title="Senarai Ahli"
@@ -235,6 +238,33 @@ export default function AhliListScreen() {
             title="Tiada padanan"
             description="Tiada ahli sepadan dengan carian atau tapisan ini. Cuba kata kunci lain."
           />
+        ) : desktop ? (
+          <View>
+            <SectionTitle
+              title={'Keputusan (' + filtered.length + ')'}
+              caption="Klik satu baris untuk melihat dan menyunting butiran penuh."
+            />
+            <DataTable
+              rows={filtered}
+              keyOf={(m) => m.id}
+              onRowPress={(m) => router.push({ pathname: '/(app)/admin/ahli-detail', params: { id: m.id } })}
+              columns={[
+                { key: 'no', header: 'No. Ahli', width: 96, render: (m) => <CellText strong tone="primary">{m.nombor_ahli ?? '—'}</CellText> },
+                { key: 'nama', header: 'Nama', flex: 2, render: (m) => <CellText strong>{m.full_name}</CellText> },
+                { key: 'gen', header: 'Generasi', flex: 1, render: (m) => <CellText muted>{generationLabel(m.generasi)}</CellText> },
+                { key: 'emel', header: 'Emel', flex: 2, render: (m) => <CellText muted>{m.email ?? 'Tiada emel'}</CellText> },
+                {
+                  key: 'kemaskini',
+                  header: 'Kemaskini Terakhir',
+                  width: 170,
+                  render: (m) => (
+                    <CellText muted>{m.self_updated_at ? formatSelfUpdated(m.self_updated_at) : 'Belum pernah'}</CellText>
+                  ),
+                },
+                { key: 'status', header: 'Status', width: 96, render: (m) => (m.disekat ? <Badge label="Disekat" tone="negative" /> : null) },
+              ]}
+            />
+          </View>
         ) : (
           <View>
             <SectionTitle

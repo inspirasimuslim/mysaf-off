@@ -5,6 +5,7 @@ import { Pressable, Text, View } from 'react-native';
 import { ScreenHeader } from '@/components/screen-header';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { CellText, DataTable, RowIconAction } from '@/components/ui/data-table';
 import { EmptyState } from '@/components/ui/empty-state';
 import { FormModal } from '@/components/ui/form-modal';
 import { LoadingScreen } from '@/components/ui/loading-screen';
@@ -23,6 +24,7 @@ import { useDepartmentAccess } from '@/lib/department-access';
 import { toMalayError } from '@/lib/errors';
 import { fetchGenerations } from '@/lib/members';
 import { useGoBack } from '@/lib/navigation';
+import { useIsDesktop } from '@/lib/use-desktop';
 import { ORG_CHART_DEPARTMENT } from '@/lib/org-chart';
 import { Colors } from '@/constants/theme';
 import { generationLabel, generationOrder, type Generation, type Option } from '@/types/database';
@@ -40,6 +42,7 @@ type Banner = { tone: 'positive' | 'negative'; message: string } | null;
  */
 export default function AhliDiputihkanScreen() {
   const goBack = useGoBack();
+  const desktop = useIsDesktop();
   const { loading: accessLoading, canView, canEdit } = useDepartmentAccess(ORG_CHART_DEPARTMENT);
 
   const [rows, setRows] = useState<AhliDiputihkan[]>([]);
@@ -158,7 +161,7 @@ export default function AhliDiputihkanScreen() {
 
   return (
     <>
-      <Screen padTop={false}>
+      <Screen padTop={false} wide>
         <ScreenHeader
           eyebrow="Panel Admin"
           title="Ahli Diputihkan"
@@ -201,6 +204,29 @@ export default function AhliDiputihkanScreen() {
           ) : (
             <View>
               <SectionTitle title={'Rekod (' + filtered.length + ')'} />
+              {desktop ? (
+                <DataTable
+                  rows={filtered}
+                  keyOf={(r) => r.id}
+                  actionsWidth={56}
+                  columns={[
+                    { key: 'nama', header: 'Nama', flex: 2, render: (r) => <CellText strong>{r.nama}</CellText> },
+                    { key: 'gen', header: 'Generasi', flex: 1, render: (r) => <CellText muted>{generationLabel(r.generasi)}</CellText> },
+                    { key: 'tahun', header: 'Tahun Dibuang', width: 130, render: (r) => <CellText>{String(r.tahun_dibuang)}</CellText> },
+                    { key: 'catatan', header: 'Catatan', flex: 2, render: (r) => <CellText muted>{r.catatan ?? '—'}</CellText> },
+                  ]}
+                  actions={(r) =>
+                    canEdit ? (
+                      <RowIconAction
+                        icon="trash-outline"
+                        destructive
+                        label={'Padam rekod ' + r.nama}
+                        onPress={() => setPendingDelete(r)}
+                      />
+                    ) : null
+                  }
+                />
+              ) : (
               <View className="gap-2.5">
                 {filtered.map((row) => (
                   <View
@@ -229,6 +255,7 @@ export default function AhliDiputihkanScreen() {
                   </View>
                 ))}
               </View>
+              )}
             </View>
           )}
         </View>

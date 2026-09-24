@@ -7,6 +7,7 @@ import { ScreenHeader } from '@/components/screen-header';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { CellText, DataTable } from '@/components/ui/data-table';
 import { EmptyState } from '@/components/ui/empty-state';
 import { LoadingScreen } from '@/components/ui/loading-screen';
 import { Notice } from '@/components/ui/notice';
@@ -17,6 +18,7 @@ import { usePipisAccess } from '@/lib/department-access';
 import { toMalayError } from '@/lib/errors';
 import { deliveryMessage, type DeliveryMode } from '@/lib/file-delivery';
 import { useGoBack } from '@/lib/navigation';
+import { useIsDesktop } from '@/lib/use-desktop';
 import { fetchPipisReport, peratusLabel, ringgitPipis, type PipisReportRow } from '@/lib/pipis';
 import { downloadPipisReport } from '@/lib/pipis-report';
 import { downloadPipisTransactions } from '@/lib/transactions-report';
@@ -42,6 +44,7 @@ const STATUS_TONE = {
  */
 export default function PipisListScreen() {
   const router = useRouter();
+  const desktop = useIsDesktop();
   const goBack = useGoBack();
   const { loading: accessLoading, canView, canEdit } = usePipisAccess();
 
@@ -160,7 +163,7 @@ export default function PipisListScreen() {
   }
 
   return (
-    <Screen padTop={false}>
+    <Screen padTop={false} wide>
       <ScreenHeader
         eyebrow="Panel Admin"
         title="PIPIS ASET"
@@ -231,6 +234,25 @@ export default function PipisListScreen() {
               icon="business-outline"
               title="Tiada rekod"
               description="Import fail sumbangan untuk bermula."
+            />
+          ) : desktop ? (
+            <DataTable
+              rows={filtered}
+              keyOf={(r) => r.member_id}
+              onRowPress={(r) =>
+                router.push({
+                  pathname: '/(app)/admin/pipis-detail',
+                  params: { id: r.member_id, nama: r.full_name, nombor: r.nombor_ahli ?? '' },
+                })
+              }
+              columns={[
+                { key: 'no', header: 'No. Ahli', width: 110, render: (r) => <CellText strong tone="primary">{r.nombor_ahli ?? 'Tiada nombor'}</CellText> },
+                { key: 'nama', header: 'Nama', flex: 2, render: (r) => <CellText strong>{r.full_name}</CellText> },
+                { key: 'gen', header: 'Generasi', flex: 1, render: (r) => <CellText muted>{generationLabel(r.generasi)}</CellText> },
+                { key: 'jumlah', header: 'Jumlah', width: 130, align: 'right', render: (r) => <CellText strong muted={r.jumlah <= 0}>{ringgitPipis(r.jumlah)}</CellText> },
+                { key: 'peratus', header: 'Peratus', width: 100, align: 'right', render: (r) => <CellText muted>{peratusLabel(r.peratus)}</CellText> },
+                { key: 'status', header: 'Status', width: 130, render: (r) => <Badge label={r.status} tone={STATUS_TONE[r.status] ?? 'neutral'} /> },
+              ]}
             />
           ) : (
             <View className="gap-2">

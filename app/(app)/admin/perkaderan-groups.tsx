@@ -6,6 +6,7 @@ import { Pressable, Text, View } from 'react-native';
 import { SaveShareButtons } from '@/components/save-share-buttons';
 import { ScreenHeader } from '@/components/screen-header';
 import { Card } from '@/components/ui/card';
+import { CellText, DataTable, RowIconAction } from '@/components/ui/data-table';
 import { EmptyState } from '@/components/ui/empty-state';
 import { LoadingScreen } from '@/components/ui/loading-screen';
 import { Notice } from '@/components/ui/notice';
@@ -18,6 +19,7 @@ import { usePerkaderanAccess } from '@/lib/department-access';
 import { toMalayErrorVerbose } from '@/lib/errors';
 import { deliveryMessage, type DeliveryMode } from '@/lib/file-delivery';
 import { useGoBack } from '@/lib/navigation';
+import { useIsDesktop } from '@/lib/use-desktop';
 import { fetchNaqibOverview } from '@/lib/perkaderan';
 import { downloadPerkaderanReport } from '@/lib/perkaderan-report';
 import { generationLabel, MONTH_OPTIONS, type NaqibOverview } from '@/types/database';
@@ -36,6 +38,7 @@ const MONTH_FILTER_OPTIONS = [{ value: ALL_MONTHS, label: 'Semua Bulan' }, ...MO
  */
 export default function PerkaderanGroupsScreen() {
   const router = useRouter();
+  const desktop = useIsDesktop();
   const goBack = useGoBack();
   const { loading: accessLoading, canView } = usePerkaderanAccess();
 
@@ -108,7 +111,7 @@ export default function PerkaderanGroupsScreen() {
   }
 
   return (
-    <Screen padTop={false}>
+    <Screen padTop={false} wide>
       <ScreenHeader
         eyebrow="Panel Admin"
         title="Pantauan Usrah Sekolah"
@@ -127,6 +130,24 @@ export default function PerkaderanGroupsScreen() {
               icon="school-outline"
               title="Belum ada naqib"
               description="Naqib yang dilantik akan muncul di sini."
+            />
+          ) : desktop ? (
+            <DataTable
+              rows={naqibs}
+              keyOf={(n) => n.member_id}
+              onRowPress={(n) =>
+                router.push({
+                  pathname: '/(app)/admin/naqib-session-history',
+                  params: { memberId: n.member_id, naqibName: n.full_name },
+                })
+              }
+              columns={[
+                { key: 'nama', header: 'Nama', flex: 2, render: (n) => <CellText strong>{n.full_name}</CellText> },
+                { key: 'gen', header: 'Generasi', flex: 1, render: (n) => <CellText muted>{n.generasi ? generationLabel(n.generasi) : '—'}</CellText> },
+                { key: 'sekolah', header: 'Sekolah', flex: 2, render: (n) => <CellText muted>{n.sekolah_list}</CellText> },
+                { key: 'kumpulan', header: 'Kumpulan', width: 100, align: 'right', render: (n) => <CellText>{String(n.group_count)}</CellText> },
+                { key: 'sesi', header: 'Jumlah Sesi', width: 110, align: 'right', render: (n) => <CellText>{String(n.session_count)}</CellText> },
+              ]}
             />
           ) : (
             <View className="gap-2">

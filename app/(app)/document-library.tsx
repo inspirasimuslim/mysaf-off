@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { CellText, DataTable, RowIconAction } from '@/components/ui/data-table';
 import { EmptyState } from '@/components/ui/empty-state';
 import { FormModal } from '@/components/ui/form-modal';
 import { LoadingScreen } from '@/components/ui/loading-screen';
@@ -33,6 +34,7 @@ import {
 } from '@/lib/documents';
 import { toMalayErrorVerbose } from '@/lib/errors';
 import { useGoBack } from '@/lib/navigation';
+import { useIsDesktop } from '@/lib/use-desktop';
 import { usePermissions } from '@/lib/permissions';
 
 /**
@@ -60,6 +62,7 @@ function progressLabel(progress: UploadProgress | null): string {
 
 export default function DocumentLibraryScreen() {
   const goBack = useGoBack();
+  const desktop = useIsDesktop();
   const { user } = useAuth();
   const { isSuperAdmin } = usePermissions();
 
@@ -207,7 +210,7 @@ export default function DocumentLibraryScreen() {
 
   return (
     <View className="flex-1 bg-background">
-      <Screen padTop={false}>
+      <Screen padTop={false} wide>
         <ScreenHeader eyebrow="Tetapan" title="Arkib" subtitle="Perpustakaan dokumen untuk semua ahli" onBackPress={goBack} />
 
         <View className="gap-4 px-gutter pt-6">
@@ -250,6 +253,42 @@ export default function DocumentLibraryScreen() {
             />
           ) : visible.length === 0 ? (
             <EmptyState icon="search-outline" title="Tiada padanan" description="Cuba kata carian atau kategori lain." />
+          ) : desktop ? (
+            <DataTable
+              rows={visible}
+              keyOf={(d) => d.id}
+              onRowPress={(d) => void open(d)}
+              actionsWidth={56}
+              columns={[
+                {
+                  key: 'ikon',
+                  header: '',
+                  width: 44,
+                  render: (d) => (
+                    <Ionicons
+                      name={openingId === d.id ? 'sync-outline' : KIND_ICON[documentKind(d.file_name)]}
+                      size={20}
+                      color={Colors.primary}
+                    />
+                  ),
+                },
+                { key: 'nama', header: 'Nama Fail', flex: 3, render: (d) => <CellText strong>{d.file_name}</CellText> },
+                { key: 'kategori', header: 'Kategori', width: 160, render: (d) => (d.category ? <Badge label={d.category} tone="neutral" /> : null) },
+                { key: 'desc', header: 'Penerangan', flex: 2, render: (d) => <CellText muted>{d.description ?? '—'}</CellText> },
+                { key: 'saiz', header: 'Saiz', width: 90, align: 'right', render: (d) => <CellText muted>{formatFileSize(d.file_size_bytes)}</CellText> },
+                { key: 'tarikh', header: 'Dimuat Naik', width: 130, render: (d) => <CellText muted>{formatUploadDate(d.created_at)}</CellText> },
+              ]}
+              actions={(d) =>
+                isSuperAdmin() || d.uploaded_by === user?.id ? (
+                  <RowIconAction
+                    icon="trash-outline"
+                    destructive
+                    label={'Padam ' + d.file_name}
+                    onPress={() => setPendingDelete(d)}
+                  />
+                ) : null
+              }
+            />
           ) : (
             <View className="gap-3">
               {visible.map((doc) => {

@@ -7,6 +7,7 @@ import { ScreenHeader } from '@/components/screen-header';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { CellText, DataTable } from '@/components/ui/data-table';
 import { EmptyState } from '@/components/ui/empty-state';
 import { LoadingScreen } from '@/components/ui/loading-screen';
 import { Notice } from '@/components/ui/notice';
@@ -17,6 +18,7 @@ import { useYuranAccess } from '@/lib/department-access';
 import { toMalayError } from '@/lib/errors';
 import { deliveryMessage, type DeliveryMode } from '@/lib/file-delivery';
 import { useGoBack } from '@/lib/navigation';
+import { useIsDesktop } from '@/lib/use-desktop';
 import { downloadYuranTransactions } from '@/lib/transactions-report';
 import { downloadYuranReport } from '@/lib/yuran-report';
 import { fetchYuranReport, generateYuranYear, ringgit, type YuranReportRow } from '@/lib/yuran';
@@ -42,6 +44,7 @@ const STATUS_TONE = { Tertunggak: 'negative', Kredit: 'info', Lunas: 'positive' 
  */
 export default function YuranListScreen() {
   const router = useRouter();
+  const desktop = useIsDesktop();
   const goBack = useGoBack();
   const { loading: accessLoading, canView, canEdit } = useYuranAccess();
 
@@ -201,7 +204,7 @@ export default function YuranListScreen() {
   }
 
   return (
-    <Screen padTop={false}>
+    <Screen padTop={false} wide>
       <ScreenHeader
         eyebrow="Panel Admin"
         title="Yuran"
@@ -294,6 +297,35 @@ export default function YuranListScreen() {
               icon="wallet-outline"
               title="Tiada rekod"
               description="Jana yuran tahunan atau import baki permulaan 2025 untuk bermula."
+            />
+          ) : desktop ? (
+            <DataTable
+              rows={filtered}
+              keyOf={(r) => r.member_id}
+              onRowPress={(r) =>
+                router.push({
+                  pathname: '/(app)/admin/yuran-detail',
+                  params: { id: r.member_id, nama: r.full_name, nombor: r.nombor_ahli ?? '' },
+                })
+              }
+              columns={[
+                { key: 'no', header: 'No. Ahli', width: 110, render: (r) => <CellText strong tone="primary">{r.nombor_ahli ?? 'Tiada nombor'}</CellText> },
+                { key: 'nama', header: 'Nama', flex: 2, render: (r) => <CellText strong>{r.full_name}</CellText> },
+                { key: 'gen', header: 'Generasi', flex: 1, render: (r) => <CellText muted>{generationLabel(r.generasi)}</CellText> },
+                {
+                  key: 'tunggak',
+                  header: 'Tertunggak',
+                  width: 130,
+                  align: 'right',
+                  render: (r) => <CellText strong tone={r.tertunggak > 0 ? 'negative' : undefined} muted={r.tertunggak <= 0}>{ringgit(r.tertunggak > 0 ? r.tertunggak : 0)}</CellText>,
+                },
+                {
+                  key: 'status',
+                  header: 'Status',
+                  width: 130,
+                  render: (r) => <Badge label={r.status} tone={STATUS_TONE[r.status as keyof typeof STATUS_TONE] ?? 'neutral'} />,
+                },
+              ]}
             />
           ) : (
             <View className="gap-2">
