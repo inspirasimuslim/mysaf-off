@@ -166,7 +166,7 @@ export default function EventInfoScreen() {
         ) : (
           <Pressable onPress={() => router.push('/(app)/album')} className="items-center py-1">
             <Text className="text-sm text-ink-muted underline">
-              Album acara ini boleh diakses melalui Tetapan &gt; Lain-lain &gt; Album
+              Album acara ini boleh diakses melalui tab Arkib &gt; Album
             </Text>
           </Pressable>
         )}

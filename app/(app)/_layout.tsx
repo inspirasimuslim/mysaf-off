@@ -286,9 +286,11 @@ function AppGate() {
         options={{ title: 'Ahli', tabBarIcon: tabIcon('people', 'people-outline') }}
       />
       <Tabs.Screen
-        name="profil"
-        options={{ title: 'Profil', tabBarIcon: tabIcon('person-circle', 'person-circle-outline') }}
+        name="arkib-hub"
+        options={{ title: 'Arkib', tabBarIcon: tabIcon('file-tray-full', 'file-tray-full-outline') }}
       />
+      {/* Profil dicapai melalui avatar di Utama — bukan lagi tab. */}
+      <Tabs.Screen name="profil" options={{ href: null }} />
       {/*
         Hub Admin dan Tetapan dicapai melalui ikon perisai dan gear di kepala
         setiap skrin (`ScreenHeader`) — kedua-duanya skrin dalam, bukan tab.

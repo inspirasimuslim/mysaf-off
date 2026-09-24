@@ -15,6 +15,7 @@ import { Colors } from '@/constants/theme';
 import { fetchMyActivityRank, type MyActivityRank } from '@/lib/activity-rank';
 import { pickAvatar, uploadAvatar } from '@/lib/avatar';
 import { displayName, useAuth } from '@/lib/auth-context';
+import { useGoBack } from '@/lib/navigation';
 import { toMalayError } from '@/lib/errors';
 import { fetchGenerations, fetchMembersForPicker, fetchMyMember, fetchMyMemberLinked, updateMember } from '@/lib/members';
 import { type Generation, type Member, type MemberPickerRow } from '@/types/database';
@@ -33,6 +34,7 @@ export default function ProfilScreen() {
   const { user } = useAuth();
   const userId = user?.id ?? null;
 
+  const goBack = useGoBack();
   const [member, setMember] = useState<Member | null>(null);
   const [generations, setGenerations] = useState<Generation[]>([]);
   const [spouseCandidates, setSpouseCandidates] = useState<MemberPickerRow[]>([]);
@@ -157,7 +159,7 @@ export default function ProfilScreen() {
 
   // Nombor ahli dan generasi tidak lagi di kepala skrin: generasi kini dalam
   // kepala profil borang, dan nombor ahli sengaja tidak dipapar kepada ahli.
-  const header = <ScreenHeader title="Profil" />;
+  const header = <ScreenHeader title="Profil" onBackPress={goBack} />;
 
   // --- Akaun belum dikaitkan ke mana-mana rekod ahli -------------------------
   if (!member) {

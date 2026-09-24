@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'expo-router';
 import { View } from 'react-native';
 
 import { OrgPositionRow } from '@/components/org-position-row';
@@ -8,8 +9,10 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { LoadingScreen } from '@/components/ui/loading-screen';
 import { Notice } from '@/components/ui/notice';
 import { Screen } from '@/components/ui/screen';
+import type { DirectoryMember } from '@/types/database';
 import { toMalayError } from '@/lib/errors';
 import { useGoBack } from '@/lib/navigation';
+import { fetchMemberDirectory } from '@/lib/members';
 import { fetchOrgChart, groupOrgChart, type OrgPosition, type OrgSection } from '@/lib/org-chart';
 
 /**
@@ -22,10 +25,12 @@ import { fetchOrgChart, groupOrgChart, type OrgPosition, type OrgSection } from 
  */
 export default function OrganisasiScreen() {
   const goBack = useGoBack();
+  const router = useRouter();
 
   const [rows, setRows] = useState<OrgPosition[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [directory, setDirectory] = useState<DirectoryMember[]>([]);
 
   const load = useCallback(async () => {
     try {
@@ -41,6 +46,37 @@ export default function OrganisasiScreen() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  /*
+    Direktori dibaca untuk melengkapkan paparan awam (emel, telefon, status) —
+    carta sendiri hanya membawa nama, generasi dan gambar. Kegagalan senyap:
+    profil tetap dibuka dengan data carta.
+  */
+  useEffect(() => {
+    void fetchMemberDirectory()
+      .then(setDirectory)
+      .catch(() => setDirectory([]));
+  }, []);
+
+  const openProfile = useCallback(
+    (position: OrgPosition) => {
+      if (!position.full_name) return;
+      const match = directory.find((row) => row.full_name === position.full_name);
+      router.push({
+        pathname: '/(app)/ahli-view',
+        params: {
+          nama: position.full_name,
+          generasi: match?.generasi ?? position.generasi ?? '',
+          emel: match?.email ?? '',
+          tel: match?.no_tel ?? '',
+          avatar: match?.avatar_url ?? position.avatar_url ?? '',
+          pekerjaan: match?.status_pekerjaan ?? '',
+          perkahwinan: match?.status_perkahwinan ?? '',
+        },
+      });
+    },
+    [directory, router],
+  );
 
   const sections = useMemo<OrgSection[]>(() => groupOrgChart(rows), [rows]);
 
@@ -72,7 +108,7 @@ export default function OrganisasiScreen() {
               {/* Jarak antara jawatan lebih rapat daripada jarak lalai seksyen. */}
               <View className="gap-3">
                 {section.positions.map((position) => (
-                  <OrgPositionRow key={position.id} position={position} />
+                  <OrgPositionRow key={position.id} position={position} onPress={() => openProfile(position)} />
                 ))}
               </View>
             </CollapsibleSection>

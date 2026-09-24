@@ -1,6 +1,6 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useState, type ReactNode } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import { ScreenHeader } from '@/components/screen-header';
@@ -108,7 +108,7 @@ export default function PembayaranScreen() {
               nombornya diberi ruang untuk dibaca.
             */}
             <SummaryCard
-              icon="wallet-outline"
+              icon={<Ionicons name="calendar-outline" size={16} color="#0F5132" />}
               title="Yuran Tahunan"
               highlight={yuranSettled}
               value={
@@ -127,7 +127,7 @@ export default function PembayaranScreen() {
             />
 
             <SummaryCard
-              icon="business-outline"
+              icon={<MaterialCommunityIcons name="sprout" size={16} color="#0F5132" />}
               title="Sumbangan PIPIS ASET"
               highlight={pipisReached}
               value={
@@ -207,8 +207,9 @@ export default function PembayaranScreen() {
 /**
  * Kad ringkasan satu modul.
  *
- * `highlight` menghijaukan kad bila tiada apa yang perlu dibuat — sama seperti
- * kad di skrin Utama, supaya warna membawa makna yang SAMA di kedua-dua skrin.
+ * Kad sentiasa neutral. Status selesai ditandakan dengan tick hijau kecil di
+ * sebelah nilai, bukan dengan menghijaukan seluruh kad. Kotak ikon sama saiz
+ * dan bentuk dengan kad di skrin Utama (h-8 w-8, sudut xl).
  */
 function SummaryCard({
   icon,
@@ -218,25 +219,30 @@ function SummaryCard({
   highlight,
   onPress,
 }: {
-  icon: keyof typeof Ionicons.glyphMap;
+  icon: ReactNode;
   title: string;
   value: string;
   caption: string;
+  /** Selesai/lunas — papar tick hijau. */
   highlight: boolean;
   onPress: () => void;
 }) {
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={title} onPress={onPress} className="active:opacity-70">
-      <Card tone={highlight ? 'primary' : 'surface'}>
-        <View className="flex-row items-center gap-2">
-          <Ionicons name={icon} size={16} color={highlight ? 'rgba(255,255,255,0.7)' : '#6B7280'} />
-          <Text className={`text-sm ${highlight ? 'text-white/70' : 'text-ink-muted'}`}>{title}</Text>
-          <View className="flex-1" />
-          <Ionicons name="chevron-forward" size={18} color={highlight ? 'rgba(255,255,255,0.7)' : '#9CA3AF'} />
+      <Card tone="surface">
+        <View className="flex-row items-center gap-3">
+          <View className="h-8 w-8 items-center justify-center rounded-xl bg-primary-soft">{icon}</View>
+          <Text className="flex-1 text-lg font-bold text-ink" numberOfLines={2}>
+            {title}
+          </Text>
+          <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
         </View>
 
-        <Text className={`mt-2 text-stat font-bold ${highlight ? 'text-white' : 'text-ink'}`}>{value}</Text>
-        <Text className={`mt-1 text-sm ${highlight ? 'text-white/70' : 'text-ink-muted'}`}>{caption}</Text>
+        <View className="mt-3 flex-row items-center gap-2">
+          <Text className="text-2xl font-bold text-ink">{value}</Text>
+          {highlight ? <Ionicons name="checkmark-circle" size={22} color="#2E9E63" /> : null}
+        </View>
+        <Text className="mt-1 text-sm text-ink-muted">{caption}</Text>
       </Card>
     </Pressable>
   );

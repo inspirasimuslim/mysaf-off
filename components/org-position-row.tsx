@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
 import { GenerationChip } from '@/components/ui/generation-chip';
 import { MemberAvatar } from '@/components/ui/member-avatar';
@@ -18,11 +18,18 @@ const AVATAR_SIZE = 38;
  * carta mesti kelihatan lengkap walaupun ada kekosongan. Dikongsi oleh skrin
  * ahli (paparan sahaja) dan skrin urus admin.
  */
-export function OrgPositionRow({ position }: { position: OrgPosition }) {
+export function OrgPositionRow({ position, onPress }: { position: OrgPosition; onPress?: () => void }) {
   const vacant = !position.member_id || !position.full_name;
 
+  /* Slot kosong tiada ahli untuk dipaut, jadi tidak pernah boleh diketuk. */
+  const tappable = !vacant && !!onPress;
+  const Wrapper = tappable ? Pressable : View;
+  const wrapperProps = tappable
+    ? { accessibilityRole: 'button' as const, accessibilityLabel: position.jawatan + ': ' + position.full_name, onPress }
+    : {};
+
   return (
-    <View className="flex-row items-center gap-3">
+    <Wrapper {...wrapperProps} className={'flex-row items-center gap-3' + (tappable ? ' active:opacity-70' : '')}>
       {vacant ? (
         <View
           style={{ width: AVATAR_SIZE, height: AVATAR_SIZE, borderRadius: AVATAR_SIZE / 2 }}
@@ -46,6 +53,6 @@ export function OrgPositionRow({ position }: { position: OrgPosition }) {
           </View>
         )}
       </View>
-    </View>
+    </Wrapper>
   );
 }

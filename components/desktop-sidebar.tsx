@@ -17,7 +17,7 @@ const ITEMS: Item[] = [
   { label: 'Pembayaran', href: '/(app)/pembayaran', segment: 'pembayaran', active: 'card', inactive: 'card-outline' },
   { label: 'Scan', href: '/(app)/usrah-scan', segment: 'usrah-scan', active: 'qr-code', inactive: 'qr-code-outline' },
   { label: 'Ahli', href: '/(app)/ahli', segment: 'ahli', active: 'people', inactive: 'people-outline' },
-  { label: 'Profil', href: '/(app)/profil', segment: 'profil', active: 'person-circle', inactive: 'person-circle-outline' },
+  { label: 'Arkib', href: '/(app)/arkib-hub', segment: 'arkib-hub', active: 'file-tray-full', inactive: 'file-tray-full-outline' },
 ];
 
 /** Skrin dalam dikira di bawah tab induknya supaya sidebar tidak "kehilangan" kedudukan. */
@@ -26,6 +26,9 @@ const PARENT: Record<string, string> = {
   pipis: 'pembayaran',
   'adhoc-payment-info': 'pembayaran',
   'ahli-view': 'ahli',
+  album: 'arkib-hub',
+  'document-library': 'arkib-hub',
+  profil: 'dashboard',
   'ahli-mbm': 'ahli',
   'ahli-rumusan': 'ahli',
   'hari-jadi-bulan': 'dashboard',

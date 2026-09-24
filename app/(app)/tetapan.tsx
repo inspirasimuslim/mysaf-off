@@ -368,28 +368,12 @@ export default function TetapanScreen() {
           </View>
 
           {/*
-            Album dan Komen tinggal di sini dan bukan pada bar tab. Tujuh ikon
-            tidak muat dengan selesa pada lebar telefon, dan kedua-duanya belum
-            dibina — bar tab dikhaskan untuk lima destinasi yang benar-benar
-            digunakan setiap hari.
+            Album dan Arkib sudah berpindah ke tab Arkib; Komen kekal di sini
+            kerana bar tab dikhaskan untuk destinasi harian.
           */}
           <View>
             <SectionTitle title="Lain-lain" />
             <View className="gap-4">
-              <ActionRow
-                icon="images-outline"
-                title="Album"
-                subtitle="Galeri gambar program"
-                onPress={() => router.push('/(app)/album')}
-              />
-
-              <ActionRow
-                icon="folder-open-outline"
-                title="Arkib"
-                subtitle="Perpustakaan dokumen"
-                onPress={() => router.push('/(app)/document-library')}
-              />
-
               <ActionRow
                 icon="chatbubble-ellipses-outline"
                 title="Komen"
