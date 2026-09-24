@@ -151,8 +151,8 @@ export default function AhliScreen() {
           (tiada data individu), carta organisasi (maklumat terbuka), dan
           senarai pasangan Ahli MBM (lapan field terhad, lihat `ahli-mbm.tsx`).
         */}
-        {/* Grid 2 lajur; label penuh, dibenarkan bungkus ke baris kedua. */}
-        <View className="flex-row flex-wrap gap-3">
+        {/* Satu baris empat kotak sama lebar; label penuh, bungkus ke beberapa baris (kotak jadi lebih tinggi). */}
+        <View className="flex-row items-stretch gap-2">
           <MenuTile
             label="Rumusan Ahli"
             icon="stats-chart"
@@ -267,12 +267,11 @@ function MenuTile({
       accessibilityRole="button"
       accessibilityLabel={label}
       onPress={onPress}
-      style={{ width: '48%', flexGrow: 1 }}
-      className="min-h-[112px] gap-3 rounded-card border border-line bg-surface p-4 active:opacity-70">
-      <View className="h-11 w-11 items-center justify-center rounded-pill" style={{ backgroundColor: color + '1A' }}>
-        <Ionicons name={icon} size={22} color={color} />
+      className="min-h-[104px] flex-1 items-center gap-2 rounded-2xl border border-line bg-surface px-1.5 py-3 active:opacity-70">
+      <View className="h-9 w-9 items-center justify-center rounded-pill" style={{ backgroundColor: color + '1A' }}>
+        <Ionicons name={icon} size={18} color={color} />
       </View>
-      <Text className="text-[15px] font-semibold leading-5 text-ink">{label}</Text>
+      <Text className="text-center text-[11px] font-semibold leading-[14px] text-ink">{label}</Text>
     </Pressable>
   );
 }
