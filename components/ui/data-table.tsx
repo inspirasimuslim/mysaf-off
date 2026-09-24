@@ -71,6 +71,8 @@ export function DataTable<T>({ columns, rows, keyOf, onRowPress, actions, action
                 accessibilityRole={interactive ? 'button' : undefined}
                 accessibilityState={renderExpanded ? { expanded: open } : undefined}
                 disabled={!interactive}
+                // Garis penanda di kiri baris terpilih — lebih jelas daripada warna hover sahaja.
+                style={selectedKey === key ? { boxShadow: `inset 3px 0 0 ${Colors.primary}` } : undefined}
                 onPress={() => {
                   if (renderExpanded) setOpenKey(open ? null : key);
                   onRowPress?.(row);
