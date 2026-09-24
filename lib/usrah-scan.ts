@@ -159,3 +159,47 @@ export async function currentCoords(): Promise<Coords> {
     throw new ScanError('Gagal membaca lokasi semasa. Pastikan GPS dihidupkan dan cuba lagi.', 'location_failed');
   }
 }
+
+/** Program yang sedang berlangsung dan dalam radius geofence lokasi ahli. */
+export type NearbyEvent = {
+  event_id: string;
+  name: string;
+  distance_meters: number;
+};
+
+/**
+ * Program berdekatan untuk "Tekan Hadir". Pelayar menapis (aktif, QR hidup,
+ * dalam masa, dalam radius, belum hadir); senarai kosong = tiada apa-apa untuk
+ * dipaparkan. Sebarang ralat dipulangkan sebagai senarai kosong: ciri ini
+ * tambahan dan tidak boleh mengganggu imbasan QR.
+ */
+export async function findNearbyEvents(coords: { latitude: number; longitude: number }): Promise<NearbyEvent[]> {
+  const { data, error } = await supabase.rpc('nearby_active_events', {
+    p_latitude: coords.latitude,
+    p_longitude: coords.longitude,
+  });
+  if (error) return [];
+  return (data as NearbyEvent[] | null) ?? [];
+}
+
+/**
+ * Tekan Hadir. Koordinat dihantar semula dan jarak dikira SEMULA di pelayar
+ * terhadap pin acara — senarai "berdekatan" tadi hanya cadangan, bukan bukti.
+ */
+export async function recordProximityAttendance(
+  eventId: string,
+  coords: { latitude: number; longitude: number },
+): Promise<AttendanceResult> {
+  const { data, error } = await supabase.rpc('record_attendance_proximity', {
+    p_event_id: eventId,
+    p_latitude: coords.latitude,
+    p_longitude: coords.longitude,
+  });
+
+  if (error) throw toScanError(error, 'Kehadiran tidak dapat direkodkan. Sila cuba lagi.');
+
+  const row = (data as AttendanceResult[] | null)?.[0];
+  if (!row) throw new ScanError('Kehadiran tidak dapat direkodkan. Sila cuba lagi.');
+
+  return row;
+}

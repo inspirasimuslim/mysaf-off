@@ -24,6 +24,7 @@ import { deliverWorkbook } from './xlsx-download';
 const METHOD_LABEL: Record<string, string> = {
   scan: 'Imbas kamera',
   upload: 'Muat naik gambar',
+  proximity: 'Tekan Hadir (lokasi)',
 };
 
 type AttendanceRow = {

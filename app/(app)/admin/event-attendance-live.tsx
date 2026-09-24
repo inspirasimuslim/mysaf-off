@@ -294,7 +294,7 @@ function AttendeeRow({ row, fresh }: { row: LiveAttendee; fresh: boolean }) {
           label={row.attendance_mode === 'online' ? 'Online' : 'Bersemuka'}
           tone={row.attendance_mode === 'online' ? 'info' : 'primary'}
         />
-        {fresh ? <Badge label="Baru" tone="positive" /> : row.method === 'upload' ? <Badge label="Galeri" tone="neutral" /> : null}
+        {fresh ? <Badge label="Baru" tone="positive" /> : row.method === 'upload' ? <Badge label="Galeri" tone="neutral" /> : row.method === 'proximity' ? <Badge label="Lokasi" tone="neutral" /> : null}
       </View>
     </View>
   );

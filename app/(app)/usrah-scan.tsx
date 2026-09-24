@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { CameraView, scanFromURLAsync, useCameraPermissions } from 'expo-camera';
 import { useRouter } from 'expo-router';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform, Text, View } from 'react-native';
 
 import { ScreenHeader } from '@/components/screen-header';
@@ -16,7 +16,10 @@ import {
   ScanError,
   currentCoords,
   findEventByQrToken,
+  findNearbyEvents,
   recordAttendance,
+  recordProximityAttendance,
+  type NearbyEvent,
   type AttendanceResult,
   type ScanMethod,
   type ScannedEvent,
@@ -94,6 +97,36 @@ export default function UsrahScanScreen() {
   */
   const busy = useRef(false);
 
+  /*
+    Tekan Hadir (proximity): TAMBAHAN kepada imbasan QR. Lokasi dibaca SEKALI
+    semasa skrin dibuka; jika ada program berdekatan, kad ditawarkan di atas
+    kamera. Lokasi ditolak/gagal, atau tiada program sepadan = senyap sepenuhnya
+    — tiada mesej, tiada ruang kosong. Pelayan mengesahkan semula geofence bila
+    "Hadir" ditekan (`record_attendance_proximity`).
+  */
+  const [nearby, setNearby] = useState<{
+    events: NearbyEvent[];
+    coords: { latitude: number; longitude: number };
+  } | null>(null);
+
+  useEffect(() => {
+    let active = true;
+
+    void (async () => {
+      try {
+        const coords = await currentCoords();
+        const events = await findNearbyEvents(coords);
+        if (active && events.length > 0) setNearby({ events, coords });
+      } catch {
+        // Senyap: imbasan QR biasa kekal seperti sedia ada.
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
   /**
    * Lokasi → rekod, bagi acara yang sudah dipadankan.
    *
@@ -146,6 +179,7 @@ export default function UsrahScanScreen() {
   const run = useCallback(async (work: () => Promise<void>) => {
     if (busy.current) return;
     busy.current = true;
+    setNearby(null);
 
     try {
       await work();
@@ -183,6 +217,16 @@ export default function UsrahScanScreen() {
         await submit({ event, token, method }, false);
       }),
     [run, submit],
+  );
+
+  const markPresent = useCallback(
+    (eventId: string, coords: { latitude: number; longitude: number }) =>
+      run(async () => {
+        setPhase({ step: 'proses', note: 'Merekod kehadiran...' });
+        const result = await recordProximityAttendance(eventId, coords);
+        setPhase({ step: 'berjaya', result });
+      }),
+    [run],
   );
 
   const scanAgain = useCallback(() => {
@@ -244,6 +288,32 @@ export default function UsrahScanScreen() {
       <View className="gap-6 px-gutter pt-6">
         {phase.step === 'imbas' ? (
           <>
+            {nearby ? (
+              <Card>
+                <View className="gap-3">
+                  <View className="flex-row items-start gap-3">
+                    <Ionicons name="location" size={22} color={Colors.primary} />
+                    <Text className="flex-1 text-base font-semibold leading-6 text-ink">
+                      {nearby.events.length === 1
+                        ? 'Anda berada di lokasi ' + nearby.events[0]?.name + '. Tekan Hadir untuk tanda kehadiran.'
+                        : 'Anda berada berdekatan beberapa program. Pilih program untuk tanda kehadiran.'}
+                    </Text>
+                  </View>
+
+                  {nearby.events.map((item) => (
+                    <View key={item.event_id} className="gap-2">
+                      {nearby.events.length > 1 ? (
+                        <Text className="text-sm text-ink-muted">{item.name}</Text>
+                      ) : null}
+                      <Button label="Hadir" onPress={() => void markPresent(item.event_id, nearby.coords)} />
+                    </View>
+                  ))}
+
+                  <Button label="Nanti" variant="ghost" onPress={() => setNearby(null)} />
+                </View>
+              </Card>
+            ) : null}
+
             {permission?.granted && !cameraError ? (
               <View
                 className="overflow-hidden rounded-card border border-line bg-ink"

@@ -16,7 +16,7 @@ export type LiveAttendee = {
   generasi: string | null;
   avatar_url: string | null;
   scanned_at: string;
-  method: 'scan' | 'upload';
+  method: 'scan' | 'upload' | 'proximity';
   attendance_mode: 'bersemuka' | 'online';
 };
 
