@@ -154,25 +154,31 @@ export default function AhliScreen() {
         {/* Satu baris empat kotak sama lebar; label penuh, bungkus ke beberapa baris (kotak jadi lebih tinggi). */}
         <View className="flex-row items-stretch gap-2">
           <MenuTile
-            label="Rumusan Ahli"
+            label="Rumusan
+Ahli"
             icon="stats-chart"
             color={Colors.primary}
             onPress={() => router.push('/(app)/ahli-rumusan')}
           />
           <MenuTile
-            label="Organisasi 2025/2027"
+            label="Organisasi
+2025/2027"
             icon="git-network"
             color={Colors.primary}
             onPress={() => router.push('/(app)/organisasi')}
           />
           <MenuTile
-            label="Hari Lahir Bulan Ini"
+            label="Ahli
+Lahir
+Bulan
+Ini"
             icon="gift"
             color={BIRTHDAY_GOLD}
             onPress={() => router.push('/(app)/hari-jadi-bulan')}
           />
           <MenuTile
-            label="Ahli MBM"
+            label="Ahli
+MBM"
             icon="heart"
             color={Colors.primary}
             onPress={() => router.push('/(app)/ahli-mbm')}
@@ -265,13 +271,28 @@ function MenuTile({
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={label}
+      accessibilityLabel={label.replace(/
+/g, ' ')}
       onPress={onPress}
-      className="min-h-[104px] flex-1 items-center gap-2 rounded-2xl border border-line bg-surface px-1.5 py-3 active:opacity-70">
-      <View className="h-9 w-9 items-center justify-center rounded-pill" style={{ backgroundColor: color + '1A' }}>
-        <Ionicons name={icon} size={18} color={color} />
+      className="min-h-[170px] flex-1 items-center gap-3 rounded-2xl border border-line bg-surface px-1 py-4 active:opacity-70">
+      <View className="h-11 w-11 items-center justify-center rounded-pill" style={{ backgroundColor: color + '1A' }}>
+        <Ionicons name={icon} size={22} color={color} />
       </View>
-      <Text className="text-center text-[11px] font-semibold leading-[14px] text-ink">{label}</Text>
+      {/* Satu perkataan satu baris (
+ eksplisit); saiz font asal 15px. */}
+      <View className="items-center">
+        {label.split('
+').map((word) => (
+          <Text
+            key={word}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.85}
+            className="text-center text-[15px] font-semibold leading-5 text-ink">
+            {word}
+          </Text>
+        ))}
+      </View>
     </Pressable>
   );
 }
