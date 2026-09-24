@@ -182,7 +182,7 @@ export default function DashboardScreen() {
     <Screen padTop={false} wide>
       <ScreenHeader
         eyebrow="Assalamualaikum,"
-        title={displayName(user)}
+        title={profile?.fullName ?? displayName(user)}
         /*
           Kedudukan menggantikan emel di bawah nama. Emel di situ tidak
           memberitahu pemiliknya apa-apa yang dia belum tahu; kedudukan berubah
