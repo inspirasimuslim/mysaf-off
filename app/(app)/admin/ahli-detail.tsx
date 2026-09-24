@@ -1,7 +1,7 @@
 import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, View } from 'react-native';
+import { Linking, Text, View } from 'react-native';
 
 import { MemberForm, type ProfileTab } from '@/components/member-form';
 import { ScreenHeader } from '@/components/screen-header';
@@ -18,6 +18,7 @@ import { useMemberAccess, useUsrahAccess } from '@/lib/department-access';
 import { toMalayError } from '@/lib/errors';
 import { deleteMemberAccount, fetchGenerations, fetchMember, fetchMembersForPicker, updateMember } from '@/lib/members';
 import { useGoBack } from '@/lib/navigation';
+import { toWhatsAppNumber } from '@/lib/phone';
 import { usePermissions } from '@/lib/permissions';
 import { useIsDesktop } from '@/lib/use-desktop';
 import { TEMP_PASSWORD, resetMemberPassword } from '@/lib/temp-password';
@@ -316,6 +317,17 @@ export function AhliDetailView({
                     />
                   ) : null
                 }
+                whatsapp={
+                  toWhatsAppNumber(member.no_tel) ? (
+                    <Button
+                      label="WhatsApp"
+                      variant="secondary"
+                      size="sm"
+                      icon={<Ionicons name="logo-whatsapp" size={16} color="#25D366" />}
+                      onPress={() => void Linking.openURL('https://wa.me/' + toWhatsAppNumber(member.no_tel))}
+                    />
+                  ) : null
+                }
                 sekat={sekat}
                 // Kebenaran BERASINGAN: kehadiran usrah milik LAJNAH TARBIAH, bukan pemilik rekod ahli.
                 usrah={
@@ -397,17 +409,19 @@ export function AhliDetailView({
 function ActionPanel({
   save,
   reset,
+  whatsapp,
   sekat,
   usrah,
   padam,
 }: {
   save: ReactNode;
   reset: ReactNode;
+  whatsapp: ReactNode;
   sekat: ReactNode;
   usrah: ReactNode;
   padam: ReactNode;
 }) {
-  const hasTools = Boolean(reset || sekat || usrah);
+  const hasTools = Boolean(reset || sekat || usrah || whatsapp);
   if (!save && !hasTools && !padam) return null;
 
   return (
@@ -424,6 +438,7 @@ function ActionPanel({
               {sekat ? <View className="flex-1">{sekat}</View> : null}
             </View>
           ) : null}
+          {whatsapp}
           {usrah}
         </View>
       ) : null}

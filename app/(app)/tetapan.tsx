@@ -368,7 +368,7 @@ export default function TetapanScreen() {
           </View>
 
           {/*
-            Album dan Arkib sudah berpindah ke tab Arkib; Komen kekal di sini
+            Album dan Arkib sudah berpindah ke tab Arkib; Maklum Balas kekal di sini
             kerana bar tab dikhaskan untuk destinasi harian.
           */}
           <View>
@@ -376,9 +376,9 @@ export default function TetapanScreen() {
             <View className="gap-4">
               <ActionRow
                 icon="chatbubble-ellipses-outline"
-                title="Komen"
-                subtitle="Maklum balas dan cadangan"
-                onPress={() => router.push('/(app)/komen')}
+                title="Maklum Balas"
+                subtitle="Hantar maklum balas dan cadangan"
+                onPress={() => router.push('/(app)/maklum-balas')}
               />
 
               {/* Owner sahaja — pemulihan kecemasan, tiada di Hub Admin. */}

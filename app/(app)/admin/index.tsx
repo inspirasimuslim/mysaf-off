@@ -105,7 +105,7 @@ export default function AdminHubScreen() {
             variant="plain"
             title="Organisasi"
             caption="Struktur department dan pemegang jawatan."
-            count={7}
+            count={8}
             defaultOpen={openByDefault}>
             <ActionRow
               icon="business-outline"
@@ -141,6 +141,13 @@ export default function AdminHubScreen() {
               laluan yang diketahui umum, dan itu keputusan peringkat
               organisasi, bukan kerja penyelenggaraan rekod.
             */}
+            <ActionRow
+              icon="chatbubble-ellipses-outline"
+              title="Maklum Balas Aplikasi"
+              subtitle="Baca maklum balas yang dihantar ahli"
+              onPress={() => router.push('/(app)/admin/app-feedback')}
+            />
+
             <ActionRow
               icon="key-outline"
               title="Provision Akaun Ahli"

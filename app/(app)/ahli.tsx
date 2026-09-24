@@ -151,60 +151,33 @@ export default function AhliScreen() {
           (tiada data individu), carta organisasi (maklumat terbuka), dan
           senarai pasangan Ahli MBM (lapan field terhad, lihat `ahli-mbm.tsx`).
         */}
-        <View className="flex-row gap-3">
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Rumusan Keseluruhan Ahli"
+        {/* Grid 2 lajur; label penuh, dibenarkan bungkus ke baris kedua. */}
+        <View className="flex-row flex-wrap gap-3">
+          <MenuTile
+            label="Rumusan Ahli"
+            icon="stats-chart"
+            color={Colors.primary}
             onPress={() => router.push('/(app)/ahli-rumusan')}
-            className="flex-1 gap-2 rounded-card border border-line bg-surface p-4 active:opacity-70">
-            <View className="h-11 w-11 items-center justify-center rounded-pill bg-primary-soft">
-              <Ionicons name="stats-chart" size={20} color={Colors.primary} />
-            </View>
-            <Text className="text-sm font-semibold leading-5 text-ink">Rumusan Keseluruhan Ahli</Text>
-          </Pressable>
-
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Organisasi 2025/2027"
+          />
+          <MenuTile
+            label="Organisasi 2025/2027"
+            icon="git-network"
+            color={Colors.primary}
             onPress={() => router.push('/(app)/organisasi')}
-            className="flex-1 gap-2 rounded-card border border-line bg-surface p-4 active:opacity-70">
-            <View className="h-11 w-11 items-center justify-center rounded-pill bg-primary-soft">
-              <Ionicons name="git-network" size={20} color={Colors.primary} />
-            </View>
-            <Text className="text-sm font-semibold leading-5 text-ink">Organisasi 2025/2027</Text>
-          </Pressable>
+          />
+          <MenuTile
+            label="Hari Lahir Bulan Ini"
+            icon="gift"
+            color={BIRTHDAY_GOLD}
+            onPress={() => router.push('/(app)/hari-jadi-bulan')}
+          />
+          <MenuTile
+            label="Ahli MBM"
+            icon="heart"
+            color={Colors.primary}
+            onPress={() => router.push('/(app)/ahli-mbm')}
+          />
         </View>
-
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Ahli MBM"
-          onPress={() => router.push('/(app)/ahli-mbm')}
-          className="flex-row items-center gap-4 rounded-card border border-line bg-surface p-4 active:opacity-70">
-          <View className="h-11 w-11 items-center justify-center rounded-pill bg-primary-soft">
-            <Ionicons name="heart" size={20} color={Colors.primary} />
-          </View>
-          <Text className="flex-1 text-sm font-semibold leading-5 text-ink">Ahli MBM</Text>
-          <Ionicons name="chevron-forward" size={18} color={Colors.inkFaint} />
-        </Pressable>
-
-        {/*
-          Pintu ketiga, selebar baris penuh dan bukan sebahagian daripada
-          pasangan di atas: dua yang itu membuka data ahli, yang ini ucapan.
-          Ikonnya emas atas sebab yang sama seperti ucapan di skrin Utama.
-        */}
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Hari Jadi Bulan Ini"
-          onPress={() => router.push('/(app)/hari-jadi-bulan')}
-          className="flex-row items-center gap-4 rounded-card border border-line bg-surface p-4 active:opacity-70">
-          <View
-            className="h-11 w-11 items-center justify-center rounded-pill"
-            style={{ backgroundColor: BIRTHDAY_GOLD + '1A' }}>
-            <Ionicons name="gift" size={20} color={BIRTHDAY_GOLD} />
-          </View>
-          <Text className="flex-1 text-sm font-semibold leading-5 text-ink">Hari Jadi Bulan Ini</Text>
-          <Ionicons name="chevron-forward" size={18} color={Colors.inkFaint} />
-        </Pressable>
 
         <TextField
           label="Cari"
@@ -275,5 +248,31 @@ export default function AhliScreen() {
         </View>
       )}
     </Screen>
+  );
+}
+
+function MenuTile({
+  label,
+  icon,
+  color,
+  onPress,
+}: {
+  label: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  color: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      onPress={onPress}
+      style={{ width: '48%', flexGrow: 1 }}
+      className="min-h-[112px] gap-3 rounded-card border border-line bg-surface p-4 active:opacity-70">
+      <View className="h-11 w-11 items-center justify-center rounded-pill" style={{ backgroundColor: color + '1A' }}>
+        <Ionicons name={icon} size={22} color={color} />
+      </View>
+      <Text className="text-[15px] font-semibold leading-5 text-ink">{label}</Text>
+    </Pressable>
   );
 }
