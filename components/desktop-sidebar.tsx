@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { usePathname, useRouter, type Href } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
 
@@ -53,12 +54,14 @@ export function DesktopSidebar() {
       className="border-r border-line bg-surface"
       style={{ width: SIDEBAR_WIDTH }}
       role="navigation">
-      {/* Kepala sidebar: logo + nama, dipisahkan daripada navigasi oleh garis nipis. */}
-      <View className="h-16 flex-row items-center gap-2.5 border-b border-line px-5">
-        <View className="h-8 w-8 items-center justify-center rounded-lg bg-primary">
-          <Ionicons name="leaf" size={17} color={Colors.white} />
-        </View>
-        <Text className="text-[17px] font-bold tracking-tight text-primary">MySAFF</Text>
+      {/* Kepala sidebar: logo penuh (dengan tagline), dipisahkan daripada navigasi oleh garis nipis. */}
+      <View className="h-20 items-center justify-center border-b border-line px-5">
+        <Image
+          source={require('@/assets/images/mysaff-logo-wide.png')}
+          accessibilityLabel="MySAFF — Melangkah Bersama"
+          contentFit="contain"
+          style={{ width: 168, aspectRatio: 1090 / 367 }}
+        />
       </View>
 
       <View className="flex-1 gap-0.5 px-3 pt-4">
