@@ -99,7 +99,7 @@ export default function PembayaranScreen() {
 
       <View className="gap-8 px-gutter pt-6">
         <View>
-          <SectionTitle title="Akaun Anda" caption="Rekod peribadi yang disimpan oleh Bendahari." />
+          <SectionTitle title="Akaun Anda" />
           <View className="gap-4">
             {/*
               Kad penuh lebar dan bukan dua separuh seperti di skrin Utama. Di
@@ -150,10 +150,7 @@ export default function PembayaranScreen() {
         </View>
 
         <View className="pb-8">
-          <SectionTitle
-            title="Pembayaran & Infaq Lain"
-            caption="Ketuk untuk melihat butiran dan kod QR DuitNow."
-          />
+          <SectionTitle title="Pembayaran & Infaq Lain" />
 
           {adhoc.length === 0 ? (
             <EmptyState

@@ -300,7 +300,7 @@ export function OnlinePaymentForm({
   pending,
 }: {
   payment: OnlinePayment;
-  caption: string;
+  caption?: string;
   /** Semua bil pending, terbaharu dahulu. */
   pending: PendingPayment[];
 }) {

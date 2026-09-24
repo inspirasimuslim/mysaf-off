@@ -361,7 +361,6 @@ export default function TetapanScreen() {
               <ActionRow
                 icon="lock-closed-outline"
                 title="Tukar Kata Laluan"
-                subtitle={'Minimum ' + MIN_PASSWORD_LENGTH + ' aksara'}
                 onPress={openPasswordModal}
               />
             </View>
@@ -377,7 +376,6 @@ export default function TetapanScreen() {
               <ActionRow
                 icon="chatbubble-ellipses-outline"
                 title="Maklum Balas"
-                subtitle="Hantar maklum balas dan cadangan"
                 onPress={() => router.push('/(app)/maklum-balas')}
               />
 

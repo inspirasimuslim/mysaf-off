@@ -18,19 +18,17 @@ export default function ArkibHubScreen() {
 
   return (
     <Screen padTop={false}>
-      <ScreenHeader eyebrow="Simpanan" title="Arkib" subtitle="Album gambar dan koleksi dokumen" />
+      <ScreenHeader eyebrow="Simpanan" title="Arkib" />
 
       <View className="gap-4 px-gutter pb-8 pt-6">
         <HubButton
           icon="images-outline"
           title="Album"
-          subtitle="Galeri gambar program"
           onPress={() => router.push('/(app)/album')}
         />
         <HubButton
           icon="folder-open-outline"
           title="Koleksi Dokumen"
-          subtitle="Perpustakaan dokumen"
           onPress={() => router.push('/(app)/document-library')}
         />
       </View>
@@ -46,7 +44,7 @@ function HubButton({
 }: {
   icon: IconName;
   title: string;
-  subtitle: string;
+  subtitle?: string;
   onPress: () => void;
 }) {
   return (
@@ -58,7 +56,7 @@ function HubButton({
           </View>
           <View className="flex-1">
             <Text className="text-lg font-bold text-ink">{title}</Text>
-            <Text className="mt-0.5 text-sm text-ink-muted">{subtitle}</Text>
+            {subtitle ? <Text className="mt-0.5 text-sm text-ink-muted">{subtitle}</Text> : null}
           </View>
           <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
         </View>

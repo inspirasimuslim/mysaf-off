@@ -87,7 +87,6 @@ export default function AdminHubScreen() {
       <ScreenHeader
         eyebrow="Panel Pentadbiran"
         title="Hub Admin"
-        subtitle="Pilih bahagian yang ingin diurus"
         onBackPress={goBack}
       />
 
@@ -104,7 +103,6 @@ export default function AdminHubScreen() {
           <CollapsibleSection
             variant="plain"
             title="Organisasi"
-            caption="Struktur department dan pemegang jawatan."
             count={8}
             defaultOpen={openByDefault}>
             <ActionRow
@@ -186,7 +184,6 @@ export default function AdminHubScreen() {
           <CollapsibleSection
             variant="plain"
             title="Data & Sumber Manusia"
-            caption="Urus rekod keahlian."
             count={memberAccess.canEdit ? 2 : 1}
             defaultOpen={openByDefault}>
             <ActionRow
@@ -220,7 +217,6 @@ export default function AdminHubScreen() {
           <CollapsibleSection
             variant="plain"
             title="Tarbiah"
-            caption="Urus rekod kehadiran usrah."
             count={usrahAccess.canEdit ? 2 : 1}
             defaultOpen={openByDefault}>
             <ActionRow
@@ -255,7 +251,6 @@ export default function AdminHubScreen() {
           <CollapsibleSection
             variant="plain"
             title="Setiausaha"
-            caption="Urus program dan kehadirannya."
             count={2}
             defaultOpen={openByDefault}>
             <ActionRow
@@ -295,7 +290,6 @@ export default function AdminHubScreen() {
           <CollapsibleSection
             variant="plain"
             title="Setiausaha Agung"
-            caption="Department SETIAUSAHA — carta organisasi dan ahli diputihkan."
             count={orgChartAccess.canEdit ? 2 : 1}
             defaultOpen={openByDefault}>
             {orgChartAccess.canEdit ? (
@@ -328,7 +322,6 @@ export default function AdminHubScreen() {
           <CollapsibleSection
             variant="plain"
             title="Pembangunan Generasi"
-            caption="Penarafan aktiviti ahli dan generasi."
             count={1}
             defaultOpen={openByDefault}>
             <ActionRow
@@ -349,7 +342,6 @@ export default function AdminHubScreen() {
           <CollapsibleSection
             variant="plain"
             title="Perkaderan"
-            caption="Usrah sekolah — naqib/naqibah, mad'u dan sesi."
             count={perkaderanAccess.canEdit ? 2 : 1}
             defaultOpen={openByDefault}>
             {perkaderanAccess.canEdit ? (
@@ -384,7 +376,6 @@ export default function AdminHubScreen() {
           <CollapsibleSection
             variant="plain"
             title="Bendahari"
-            caption="Urus yuran keahlian dan pembayaran lain."
             count={3}
             defaultOpen={openByDefault}>
             <ActionRow
@@ -437,7 +428,6 @@ export default function AdminHubScreen() {
           <CollapsibleSection
             variant="plain"
             title="Ekonomi & Aset"
-            caption="Urus sumbangan PIPIS ASET."
             count={1}
             defaultOpen={openByDefault}>
             <ActionRow

@@ -150,7 +150,6 @@ export default function PipisScreen() {
       <ScreenHeader
         eyebrow="Ekonomi & Aset"
         title="PIPIS ASET"
-        subtitle="Sumbangan sekali seumur hidup RM5,000"
         onBackPress={goBack}
       />
 
@@ -196,15 +195,11 @@ export default function PipisScreen() {
 
         <OnlinePaymentForm
           payment={payment}
-          caption="FPX atau kad. Masukkan sebarang amaun, minimum RM1."
           pending={pending}
         />
 
         <View className="pb-8">
-          <SectionTitle
-            title="Sejarah Sumbangan"
-            caption="Rekod Lajnah Ekonomi dan Aset serta bayaran online anda."
-          />
+          <SectionTitle title="Sejarah Sumbangan" />
 
           {history.length === 0 ? (
             <EmptyState
