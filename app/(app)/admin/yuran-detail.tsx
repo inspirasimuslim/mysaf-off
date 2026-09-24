@@ -1,4 +1,4 @@
-import { useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { Redirect, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Text, View } from 'react-native';
 
@@ -16,6 +16,7 @@ import { TextField } from '@/components/ui/text-field';
 import { useYuranAccess } from '@/lib/department-access';
 import { toMalayError } from '@/lib/errors';
 import { useGoBack } from '@/lib/navigation';
+import { useIsDesktop } from '@/lib/use-desktop';
 import { addManualAdjustment, fetchYuranSummary, ringgit, type YuranSummary } from '@/lib/yuran';
 
 type Banner = { tone: 'positive' | 'negative'; message: string } | null;
@@ -37,12 +38,34 @@ const DIRECTION_OPTIONS = [
  * dengan tarikh, jumlah dan nota.
  */
 export default function YuranDetailScreen() {
-  const goBack = useGoBack();
   const params = useLocalSearchParams<{ id?: string; nama?: string; nombor?: string }>();
+  const desktop = useIsDesktop();
+
+  // Desktop: butiran hidup di panel kanan senarai — pautan terus dibuka di sana.
+  if (desktop) {
+    return <Redirect href={{ pathname: '/(app)/admin/yuran-list', params: params.id ? { id: params.id } : {} }} />;
+  }
+
+  return <YuranDetailView id={params.id} nama={params.nama} nombor={params.nombor} />;
+}
+
+/** Skrin penuh di mobile, panel kanan di desktop (`yuran-list`). `onChanged` selepas pelarasan direkod. */
+export function YuranDetailView({
+  id,
+  nama,
+  nombor,
+  onChanged,
+}: {
+  id?: string;
+  nama?: string;
+  nombor?: string;
+  onChanged?: () => void;
+}) {
+  const goBack = useGoBack();
   const { loading: accessLoading, canView, canEdit } = useYuranAccess();
 
-  const memberId = params.id ?? null;
-  const memberName = params.nama?.trim() || 'Ahli';
+  const memberId = id ?? null;
+  const memberName = nama?.trim() || 'Ahli';
 
   const [summary, setSummary] = useState<YuranSummary | null>(null);
   const [loading, setLoading] = useState(true);
@@ -109,12 +132,13 @@ export default function YuranDetailScreen() {
           '.',
       });
       await load();
+      onChanged?.();
     } catch (caught) {
       setBanner({ tone: 'negative', message: toMalayError(caught, 'Gagal merekod pelarasan.') });
     } finally {
       setSaving(false);
     }
-  }, [direction, load, memberId, note, parsedAmount, parsedYear, ready, saving]);
+  }, [direction, load, memberId, note, onChanged, parsedAmount, parsedYear, ready, saving]);
 
   if (accessLoading || loading) return <LoadingScreen />;
 
@@ -142,7 +166,7 @@ export default function YuranDetailScreen() {
   return (
     <Screen padTop={false}>
       <ScreenHeader
-        eyebrow={params.nombor ? 'Ahli ' + params.nombor : 'Panel Admin'}
+        eyebrow={nombor ? 'Ahli ' + nombor : 'Panel Admin'}
         title={memberName}
         subtitle="Yuran keahlian"
         onBackPress={goBack}

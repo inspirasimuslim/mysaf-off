@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Colors } from '@/constants/theme';
 import { usePermissions } from '@/lib/permissions';
+import { useEmbedded } from '@/components/ui/split-pane';
 import { useIsDesktop } from '@/lib/use-desktop';
 
 type Props = {
@@ -43,13 +44,15 @@ export function ScreenHeader({ title, eyebrow, subtitle, leading, onBackPress }:
   const router = useRouter();
   const { isAdmin, isActiveNaqib } = usePermissions();
   const desktop = useIsDesktop();
+  // Panel kanan: kepala padat, tiada anak panah kembali (panel kiri ialah senarainya).
+  const embedded = useEmbedded();
 
   return (
     <View
-      className={`bg-primary ${desktop ? 'mt-6 rounded-2xl px-6 pb-5' : 'rounded-b-[28px] px-gutter pb-7'}`}
-      style={{ paddingTop: desktop ? 20 : insets.top + 18 }}>
+      className={`bg-primary ${embedded ? 'mx-4 mt-4 rounded-2xl px-5 pb-4' : desktop ? 'mt-6 rounded-2xl px-6 pb-5' : 'rounded-b-[28px] px-gutter pb-7'}`}
+      style={{ paddingTop: embedded ? 16 : desktop ? 20 : insets.top + 18 }}>
       <View className="flex-row items-center gap-4">
-        {onBackPress ? <HeaderIcon icon="chevron-back" label="Kembali" onPress={onBackPress} /> : null}
+        {onBackPress && !embedded ? <HeaderIcon icon="chevron-back" label="Kembali" onPress={onBackPress} /> : null}
 
         {leading ?? null}
 

@@ -1,4 +1,4 @@
-import { useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { Redirect, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Text, View } from 'react-native';
 
@@ -17,6 +17,7 @@ import { TextField } from '@/components/ui/text-field';
 import { usePipisAccess } from '@/lib/department-access';
 import { toMalayError } from '@/lib/errors';
 import { useGoBack } from '@/lib/navigation';
+import { useIsDesktop } from '@/lib/use-desktop';
 import {
   addPipisAdjustment,
   fetchPipisHistory,
@@ -47,12 +48,34 @@ const DIRECTION_OPTIONS = [
  * jawapan: setiap perubahan ialah satu catatan dengan tarikh, jumlah dan nota.
  */
 export default function PipisDetailScreen() {
-  const goBack = useGoBack();
   const params = useLocalSearchParams<{ id?: string; nama?: string; nombor?: string }>();
+  const desktop = useIsDesktop();
+
+  // Desktop: butiran hidup di panel kanan senarai — pautan terus dibuka di sana.
+  if (desktop) {
+    return <Redirect href={{ pathname: '/(app)/admin/pipis-list', params: params.id ? { id: params.id } : {} }} />;
+  }
+
+  return <PipisDetailView id={params.id} nama={params.nama} nombor={params.nombor} />;
+}
+
+/** Skrin penuh di mobile, panel kanan di desktop (`pipis-list`). `onChanged` selepas pelarasan direkod. */
+export function PipisDetailView({
+  id,
+  nama,
+  nombor,
+  onChanged,
+}: {
+  id?: string;
+  nama?: string;
+  nombor?: string;
+  onChanged?: () => void;
+}) {
+  const goBack = useGoBack();
   const { loading: accessLoading, canView, canEdit } = usePipisAccess();
 
-  const memberId = params.id ?? null;
-  const memberName = params.nama?.trim() || 'Ahli';
+  const memberId = id ?? null;
+  const memberName = nama?.trim() || 'Ahli';
 
   const [summary, setSummary] = useState<PipisSummary | null>(null);
   const [history, setHistory] = useState<PipisContribution[]>([]);
@@ -119,12 +142,13 @@ export default function PipisDetailScreen() {
           ' direkodkan.',
       });
       await load();
+      onChanged?.();
     } catch (caught) {
       setBanner({ tone: 'negative', message: toMalayError(caught, 'Gagal merekod pelarasan.') });
     } finally {
       setSaving(false);
     }
-  }, [direction, load, memberId, note, parsedAmount, ready, saving]);
+  }, [direction, load, memberId, note, onChanged, parsedAmount, ready, saving]);
 
   if (accessLoading || loading) return <LoadingScreen />;
 
@@ -152,7 +176,7 @@ export default function PipisDetailScreen() {
   return (
     <Screen padTop={false}>
       <ScreenHeader
-        eyebrow={params.nombor ? 'Ahli ' + params.nombor : 'Panel Admin'}
+        eyebrow={nombor ? 'Ahli ' + nombor : 'Panel Admin'}
         title={memberName}
         subtitle="Sumbangan PIPIS ASET"
         onBackPress={goBack}

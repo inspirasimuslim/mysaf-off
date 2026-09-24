@@ -1,5 +1,5 @@
-import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import { SaveShareButtons } from '@/components/save-share-buttons';
@@ -13,6 +13,7 @@ import { LoadingScreen } from '@/components/ui/loading-screen';
 import { Notice } from '@/components/ui/notice';
 import { Screen } from '@/components/ui/screen';
 import { SectionTitle } from '@/components/ui/section-title';
+import { DetailPlaceholder, SplitPane } from '@/components/ui/split-pane';
 import { TextField } from '@/components/ui/text-field';
 import { useYuranAccess } from '@/lib/department-access';
 import { toMalayError } from '@/lib/errors';
@@ -23,6 +24,8 @@ import { downloadYuranTransactions } from '@/lib/transactions-report';
 import { downloadYuranReport } from '@/lib/yuran-report';
 import { fetchYuranReport, generateYuranYear, ringgit, type YuranReportRow } from '@/lib/yuran';
 import { generationLabel } from '@/types/database';
+
+import { YuranDetailView } from './yuran-detail';
 
 type Banner = { tone: 'positive' | 'info' | 'negative'; message: string } | null;
 
@@ -46,6 +49,13 @@ export default function YuranListScreen() {
   const router = useRouter();
   const desktop = useIsDesktop();
   const goBack = useGoBack();
+  const { id: paramId } = useLocalSearchParams<{ id?: string }>();
+
+  // Desktop: ahli yang dipilih dipaparkan di panel kanan. `?id=` (pautan terus) memilihnya terus.
+  const [selectedId, setSelectedId] = useState<string | null>(paramId ?? null);
+  useEffect(() => {
+    if (paramId) setSelectedId(paramId);
+  }, [paramId]);
   const { loading: accessLoading, canView, canEdit } = useYuranAccess();
 
   const [rows, setRows] = useState<YuranReportRow[]>([]);
@@ -62,8 +72,9 @@ export default function YuranListScreen() {
   const yearValid = Number.isFinite(parsedYear) && parsedYear >= 2000 && parsedYear <= 2100;
 
   const load = useCallback(
-    async (target: number) => {
-      setLoading(true);
+    async (target: number, silent = false) => {
+      // `silent`: muat semula di latar (selepas pelarasan di panel kanan) tanpa skrin memuat.
+      if (!silent) setLoading(true);
       try {
         setRows(await fetchYuranReport(target));
       } catch (caught) {
@@ -203,16 +214,17 @@ export default function YuranListScreen() {
     );
   }
 
-  return (
-    <Screen padTop={false} wide>
-      <ScreenHeader
+  const header = (
+    <ScreenHeader
         eyebrow="Panel Admin"
         title="Yuran"
         subtitle="Baki keseluruhan setiap ahli"
         onBackPress={goBack}
-      />
+    />
+  );
 
-      <View className="gap-6 px-gutter pt-6">
+  const body = (
+      <View className={desktop ? 'gap-6 px-4 pb-8 pt-4' : 'gap-6 px-gutter pt-6'}>
         {banner ? <Notice tone={banner.tone} message={banner.message} /> : null}
 
         <Card>
@@ -300,30 +312,20 @@ export default function YuranListScreen() {
             />
           ) : desktop ? (
             <DataTable
+              fill
               rows={filtered}
               keyOf={(r) => r.member_id}
-              onRowPress={(r) =>
-                router.push({
-                  pathname: '/(app)/admin/yuran-detail',
-                  params: { id: r.member_id, nama: r.full_name, nombor: r.nombor_ahli ?? '' },
-                })
-              }
+              selectedKey={selectedId}
+              onRowPress={(r) => setSelectedId(r.member_id)}
               columns={[
-                { key: 'no', header: 'No. Ahli', width: 110, render: (r) => <CellText strong tone="primary">{r.nombor_ahli ?? 'Tiada nombor'}</CellText> },
-                { key: 'nama', header: 'Nama', flex: 2, render: (r) => <CellText strong>{r.full_name}</CellText> },
-                { key: 'gen', header: 'Generasi', flex: 1, render: (r) => <CellText muted>{generationLabel(r.generasi)}</CellText> },
+                { key: 'no', header: 'No.', width: 84, render: (r) => <CellText strong tone="primary">{r.nombor_ahli ?? '—'}</CellText> },
+                { key: 'nama', header: 'Nama', flex: 1, render: (r) => <CellText strong>{r.full_name}</CellText> },
                 {
                   key: 'tunggak',
                   header: 'Tertunggak',
-                  width: 130,
+                  width: 104,
                   align: 'right',
                   render: (r) => <CellText strong tone={r.tertunggak > 0 ? 'negative' : undefined} muted={r.tertunggak <= 0}>{ringgit(r.tertunggak > 0 ? r.tertunggak : 0)}</CellText>,
-                },
-                {
-                  key: 'status',
-                  header: 'Status',
-                  width: 130,
-                  render: (r) => <Badge label={r.status} tone={STATUS_TONE[r.status as keyof typeof STATUS_TONE] ?? 'neutral'} />,
                 },
               ]}
             />
@@ -372,6 +374,35 @@ export default function YuranListScreen() {
           )}
         </View>
       </View>
+  );
+
+  if (desktop) {
+    const selected = selectedId ? rows.find((r) => r.member_id === selectedId) : undefined;
+    return (
+      <SplitPane
+        header={header}
+        left={body}
+        right={
+          selectedId ? (
+            <YuranDetailView
+              key={selectedId}
+              id={selectedId}
+              nama={selected?.full_name}
+              nombor={selected?.nombor_ahli ?? undefined}
+              onChanged={() => void load(parsedYear, true)}
+            />
+          ) : (
+            <DetailPlaceholder icon="wallet-outline" text="Pilih ahli dari senarai untuk lihat butiran" />
+          )
+        }
+      />
+    );
+  }
+
+  return (
+    <Screen padTop={false} wide>
+      {header}
+      {body}
     </Screen>
   );
 }

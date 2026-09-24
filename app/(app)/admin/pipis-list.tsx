@@ -1,5 +1,5 @@
-import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import { SaveShareButtons } from '@/components/save-share-buttons';
@@ -13,6 +13,7 @@ import { LoadingScreen } from '@/components/ui/loading-screen';
 import { Notice } from '@/components/ui/notice';
 import { Screen } from '@/components/ui/screen';
 import { SectionTitle } from '@/components/ui/section-title';
+import { DetailPlaceholder, SplitPane } from '@/components/ui/split-pane';
 import { TextField } from '@/components/ui/text-field';
 import { usePipisAccess } from '@/lib/department-access';
 import { toMalayError } from '@/lib/errors';
@@ -23,6 +24,8 @@ import { fetchPipisReport, peratusLabel, ringgitPipis, type PipisReportRow } fro
 import { downloadPipisReport } from '@/lib/pipis-report';
 import { downloadPipisTransactions } from '@/lib/transactions-report';
 import { generationLabel } from '@/types/database';
+
+import { PipisDetailView } from './pipis-detail';
 
 type Banner = { tone: 'positive' | 'info' | 'negative'; message: string } | null;
 
@@ -46,6 +49,13 @@ export default function PipisListScreen() {
   const router = useRouter();
   const desktop = useIsDesktop();
   const goBack = useGoBack();
+  const { id: paramId } = useLocalSearchParams<{ id?: string }>();
+
+  // Desktop: ahli yang dipilih dipaparkan di panel kanan. `?id=` (pautan terus) memilihnya terus.
+  const [selectedId, setSelectedId] = useState<string | null>(paramId ?? null);
+  useEffect(() => {
+    if (paramId) setSelectedId(paramId);
+  }, [paramId]);
   const { loading: accessLoading, canView, canEdit } = usePipisAccess();
 
   const [rows, setRows] = useState<PipisReportRow[]>([]);
@@ -56,8 +66,9 @@ export default function PipisListScreen() {
   const [exporting, setExporting] = useState<DeliveryMode | null>(null);
   const [exportingTrx, setExportingTrx] = useState<DeliveryMode | null>(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  // `silent`: muat semula di latar (selepas pelarasan di panel kanan) tanpa skrin memuat.
+  const load = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       setRows(await fetchPipisReport());
     } catch (caught) {
@@ -162,16 +173,17 @@ export default function PipisListScreen() {
     );
   }
 
-  return (
-    <Screen padTop={false} wide>
-      <ScreenHeader
+  const header = (
+    <ScreenHeader
         eyebrow="Panel Admin"
         title="PIPIS ASET"
         subtitle="Sumbangan sekali seumur hidup RM5,000"
         onBackPress={goBack}
-      />
+    />
+  );
 
-      <View className="gap-6 px-gutter pt-6">
+  const body = (
+      <View className={desktop ? 'gap-6 px-4 pb-8 pt-4' : 'gap-6 px-gutter pt-6'}>
         {banner ? <Notice tone={banner.tone} message={banner.message} /> : null}
 
         <Card>
@@ -237,21 +249,15 @@ export default function PipisListScreen() {
             />
           ) : desktop ? (
             <DataTable
+              fill
               rows={filtered}
               keyOf={(r) => r.member_id}
-              onRowPress={(r) =>
-                router.push({
-                  pathname: '/(app)/admin/pipis-detail',
-                  params: { id: r.member_id, nama: r.full_name, nombor: r.nombor_ahli ?? '' },
-                })
-              }
+              selectedKey={selectedId}
+              onRowPress={(r) => setSelectedId(r.member_id)}
               columns={[
-                { key: 'no', header: 'No. Ahli', width: 110, render: (r) => <CellText strong tone="primary">{r.nombor_ahli ?? 'Tiada nombor'}</CellText> },
-                { key: 'nama', header: 'Nama', flex: 2, render: (r) => <CellText strong>{r.full_name}</CellText> },
-                { key: 'gen', header: 'Generasi', flex: 1, render: (r) => <CellText muted>{generationLabel(r.generasi)}</CellText> },
-                { key: 'jumlah', header: 'Jumlah', width: 130, align: 'right', render: (r) => <CellText strong muted={r.jumlah <= 0}>{ringgitPipis(r.jumlah)}</CellText> },
-                { key: 'peratus', header: 'Peratus', width: 100, align: 'right', render: (r) => <CellText muted>{peratusLabel(r.peratus)}</CellText> },
-                { key: 'status', header: 'Status', width: 130, render: (r) => <Badge label={r.status} tone={STATUS_TONE[r.status] ?? 'neutral'} /> },
+                { key: 'no', header: 'No.', width: 84, render: (r) => <CellText strong tone="primary">{r.nombor_ahli ?? '—'}</CellText> },
+                { key: 'nama', header: 'Nama', flex: 1, render: (r) => <CellText strong>{r.full_name}</CellText> },
+                { key: 'jumlah', header: 'Jumlah', width: 104, align: 'right', render: (r) => <CellText strong muted={r.jumlah <= 0}>{ringgitPipis(r.jumlah)}</CellText> },
               ]}
             />
           ) : (
@@ -296,6 +302,35 @@ export default function PipisListScreen() {
           )}
         </View>
       </View>
+  );
+
+  if (desktop) {
+    const selected = selectedId ? rows.find((r) => r.member_id === selectedId) : undefined;
+    return (
+      <SplitPane
+        header={header}
+        left={body}
+        right={
+          selectedId ? (
+            <PipisDetailView
+              key={selectedId}
+              id={selectedId}
+              nama={selected?.full_name}
+              nombor={selected?.nombor_ahli ?? undefined}
+              onChanged={() => void load(true)}
+            />
+          ) : (
+            <DetailPlaceholder icon="business-outline" text="Pilih ahli dari senarai untuk lihat butiran" />
+          )
+        }
+      />
+    );
+  }
+
+  return (
+    <Screen padTop={false} wide>
+      {header}
+      {body}
     </Screen>
   );
 }

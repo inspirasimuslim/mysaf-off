@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
@@ -14,6 +14,7 @@ import { Notice } from '@/components/ui/notice';
 import { PickerField } from '@/components/ui/picker-field';
 import { Screen } from '@/components/ui/screen';
 import { SectionTitle } from '@/components/ui/section-title';
+import { DetailPlaceholder, SplitPane } from '@/components/ui/split-pane';
 import { TextField } from '@/components/ui/text-field';
 import { useMemberAccess } from '@/lib/department-access';
 import { toMalayError } from '@/lib/errors';
@@ -22,6 +23,8 @@ import { downloadMembersFullExport } from '@/lib/member-export';
 import { fetchGenerations, fetchMembers } from '@/lib/members';
 import { useGoBack } from '@/lib/navigation';
 import { useIsDesktop } from '@/lib/use-desktop';
+
+import { AhliDetailView } from './ahli-detail';
 import { generationLabel, type Generation, type MemberSummary, type Option } from '@/types/database';
 
 /** Senarai dipenggal supaya skrin tidak melukis ratusan baris sekaligus. */
@@ -33,7 +36,14 @@ export default function AhliListScreen() {
   const goBack = useGoBack();
   const router = useRouter();
   const desktop = useIsDesktop();
+  const { id: paramId } = useLocalSearchParams<{ id?: string }>();
   const { loading: accessLoading, canView, canEdit } = useMemberAccess();
+
+  // Desktop: ahli yang dipilih dipaparkan di panel kanan. `?id=` (pautan terus) memilihnya terus.
+  const [selectedId, setSelectedId] = useState<string | null>(paramId ?? null);
+  useEffect(() => {
+    if (paramId) setSelectedId(paramId);
+  }, [paramId]);
 
   const [members, setMembers] = useState<MemberSummary[]>([]);
   const [generations, setGenerations] = useState<Generation[]>([]);
@@ -81,8 +91,9 @@ export default function AhliListScreen() {
     [exporting],
   );
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  // `silent`: muat semula di latar (selepas simpan/padam di panel kanan) tanpa skrin memuat.
+  const load = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const [rows, gens] = await Promise.all([fetchMembers(), fetchGenerations()]);
       setMembers(rows);
@@ -160,16 +171,17 @@ export default function AhliListScreen() {
 
   const visible = filtered.slice(0, limit);
 
-  return (
-    <Screen padTop={false} wide>
-      <ScreenHeader
-        eyebrow="Panel Admin"
-        title="Senarai Ahli"
-        subtitle={members.length + ' ahli direkodkan'}
-        onBackPress={goBack}
-      />
+  const header = (
+    <ScreenHeader
+      eyebrow="Panel Admin"
+      title="Senarai Ahli"
+      subtitle={members.length + ' ahli direkodkan'}
+      onBackPress={goBack}
+    />
+  );
 
-      <View className="gap-6 px-gutter pt-6">
+  const body = (
+      <View className={desktop ? 'gap-6 px-4 pb-8 pt-4' : 'gap-6 px-gutter pt-6'}>
         {error ? <Notice tone="negative" message={error} /> : null}
         {exportNotice ? <Notice tone={exportNotice.tone} message={exportNotice.message} /> : null}
 
@@ -242,26 +254,18 @@ export default function AhliListScreen() {
           <View>
             <SectionTitle
               title={'Keputusan (' + filtered.length + ')'}
-              caption="Klik satu baris untuk melihat dan menyunting butiran penuh."
+              caption="Klik satu baris untuk melihat dan menyunting butiran di sebelah."
             />
             <DataTable
+              fill
               rows={filtered}
               keyOf={(m) => m.id}
-              onRowPress={(m) => router.push({ pathname: '/(app)/admin/ahli-detail', params: { id: m.id } })}
+              selectedKey={selectedId}
+              onRowPress={(m) => setSelectedId(m.id)}
               columns={[
-                { key: 'no', header: 'No. Ahli', width: 96, render: (m) => <CellText strong tone="primary">{m.nombor_ahli ?? '—'}</CellText> },
-                { key: 'nama', header: 'Nama', flex: 2, render: (m) => <CellText strong>{m.full_name}</CellText> },
-                { key: 'gen', header: 'Generasi', flex: 1, render: (m) => <CellText muted>{generationLabel(m.generasi)}</CellText> },
-                { key: 'emel', header: 'Emel', flex: 2, render: (m) => <CellText muted>{m.email ?? 'Tiada emel'}</CellText> },
-                {
-                  key: 'kemaskini',
-                  header: 'Kemaskini Terakhir',
-                  width: 170,
-                  render: (m) => (
-                    <CellText muted>{m.self_updated_at ? formatSelfUpdated(m.self_updated_at) : 'Belum pernah'}</CellText>
-                  ),
-                },
-                { key: 'status', header: 'Status', width: 96, render: (m) => (m.disekat ? <Badge label="Disekat" tone="negative" /> : null) },
+                { key: 'no', header: 'No.', width: 72, render: (m) => <CellText strong tone="primary">{m.nombor_ahli ?? '—'}</CellText> },
+                { key: 'nama', header: 'Nama', flex: 1, render: (m) => <CellText strong>{m.full_name}</CellText> },
+                { key: 'status', header: 'Status', width: 84, render: (m) => (m.disekat ? <Badge label="Disekat" tone="negative" /> : null) },
               ]}
             />
           </View>
@@ -315,6 +319,37 @@ export default function AhliListScreen() {
           </View>
         )}
       </View>
+  );
+
+  if (desktop) {
+    return (
+      <SplitPane
+        header={header}
+        left={body}
+        right={
+          selectedId ? (
+            <AhliDetailView
+              key={selectedId}
+              id={selectedId}
+              onChanged={() => void load(true)}
+              onDeleted={() => {
+                setSelectedId(null);
+                setExportNotice({ tone: 'positive', message: 'Ahli berjaya dipadam.' });
+                void load(true);
+              }}
+            />
+          ) : (
+            <DetailPlaceholder icon="person-outline" text="Pilih ahli dari senarai untuk lihat butiran" />
+          )
+        }
+      />
+    );
+  }
+
+  return (
+    <Screen padTop={false} wide>
+      {header}
+      {body}
     </Screen>
   );
 }

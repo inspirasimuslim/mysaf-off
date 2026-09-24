@@ -27,6 +27,10 @@ type Props<T> = {
   renderExpanded?: (row: T) => ReactNode;
   /** Tinggi yang ditolak daripada tetingkap untuk menetapkan tinggi tatal jadual. */
   reserve?: number;
+  /** Baris terpilih (panel berkembar) — diserlahkan lebih jelas daripada hover. */
+  selectedKey?: string | null;
+  /** Tiada tatal dalaman & tiada had tinggi — pemanggil (panel) yang menatal. */
+  fill?: boolean;
 };
 
 /**
@@ -34,7 +38,7 @@ type Props<T> = {
  * mobile melalui `useIsDesktop()`. Kepala lajur tinggal di luar kawasan tatal,
  * jadi ia sentiasa kelihatan (sticky) sementara baris ditatal dalam jadual.
  */
-export function DataTable<T>({ columns, rows, keyOf, onRowPress, actions, actionsWidth = 72, renderExpanded, reserve = 260 }: Props<T>) {
+export function DataTable<T>({ columns, rows, keyOf, onRowPress, actions, actionsWidth = 72, renderExpanded, reserve = 260, selectedKey = null, fill = false }: Props<T>) {
   const [openKey, setOpenKey] = useState<string | null>(null);
   const { height } = useWindowDimensions();
   const maxHeight = Math.max(320, height - reserve);
@@ -56,7 +60,7 @@ export function DataTable<T>({ columns, rows, keyOf, onRowPress, actions, action
         {actions ? <View style={{ width: actionsWidth }} /> : null}
       </View>
 
-      <ScrollView style={{ maxHeight }} showsVerticalScrollIndicator>
+      <ScrollView style={fill ? undefined : { maxHeight }} scrollEnabled={!fill} showsVerticalScrollIndicator>
         {rows.map((row, index) => {
           const key = keyOf(row);
           const open = renderExpanded !== undefined && openKey === key;
@@ -71,9 +75,9 @@ export function DataTable<T>({ columns, rows, keyOf, onRowPress, actions, action
                   if (renderExpanded) setOpenKey(open ? null : key);
                   onRowPress?.(row);
                 }}
-                className={`flex-row items-center px-4 py-2.5 hover:bg-primary-tint active:bg-primary-soft ${
-                  open ? 'bg-primary-tint' : ''
-                }`}>
+                className={`flex-row items-center px-4 py-2.5 ${
+                  selectedKey === key ? 'bg-primary-soft' : 'hover:bg-primary-tint active:bg-primary-soft'
+                } ${open ? 'bg-primary-tint' : ''}`}>
                 {columns.map((column) => (
                   <View key={column.key} style={cellStyle(column)}>
                     {column.render(row)}

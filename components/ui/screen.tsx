@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useIsDesktop } from '@/lib/use-desktop';
 import { KeyboardAwareProvider, useKeyboardAware } from '@/lib/keyboard-aware';
 import { useResetScrollOnFocus } from '@/lib/scroll-reset';
+import { useEmbedded } from '@/components/ui/split-pane';
 
 /** Reka bentuk disasarkan untuk telefon — hadkan lebar supaya web tidak melebar. */
 const MAX_CONTENT_WIDTH = 560;
@@ -25,8 +26,10 @@ type Props = ViewProps & {
 export function Screen({ scroll = true, padTop = true, wide = false, className = '', children, ...rest }: Props) {
   const insets = useSafeAreaInsets();
   const desktop = useIsDesktop();
+  // Dipasang di panel kanan (panel berkembar): isi lebar panel, tanpa padding atas.
+  const embedded = useEmbedded();
   const maxWidth = desktop ? (wide ? DESKTOP_WIDE_WIDTH : DESKTOP_CONTENT_WIDTH) : MAX_CONTENT_WIDTH;
-  const paddingTop = padTop ? insets.top + 12 : 0;
+  const paddingTop = padTop && !embedded ? insets.top + 12 : 0;
   // Semua skrin yang ditatal melalui komponen ini dibuka semula di atas.
   const scrollRef = useRef<ScrollView>(null);
   useResetScrollOnFocus(scrollRef);
@@ -37,7 +40,7 @@ export function Screen({ scroll = true, padTop = true, wide = false, className =
   const keyboard = useKeyboardAware(scrollRef);
 
   const body = (
-    <View className="w-full self-center" style={{ maxWidth, paddingTop }}>
+    <View className="w-full self-center" style={{ maxWidth: embedded ? undefined : maxWidth, paddingTop }}>
       {children}
     </View>
   );
@@ -55,7 +58,7 @@ export function Screen({ scroll = true, padTop = true, wide = false, className =
       <ScrollView
         ref={scrollRef}
         className={`flex-1 bg-background ${className}`}
-        contentContainerStyle={{ alignItems: 'center', paddingBottom: 32 + keyboard.inset }}
+        contentContainerStyle={{ alignItems: embedded ? 'stretch' : 'center', paddingBottom: 32 + keyboard.inset }}
         keyboardShouldPersistTaps="handled"
         onScroll={keyboard.onScroll}
         scrollEventThrottle={16}

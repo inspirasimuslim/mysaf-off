@@ -1,4 +1,4 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, View } from 'react-native';
@@ -19,14 +19,36 @@ import { toMalayError } from '@/lib/errors';
 import { deleteMemberAccount, fetchGenerations, fetchMember, fetchMembersForPicker, updateMember } from '@/lib/members';
 import { useGoBack } from '@/lib/navigation';
 import { usePermissions } from '@/lib/permissions';
+import { useIsDesktop } from '@/lib/use-desktop';
 import { TEMP_PASSWORD, resetMemberPassword } from '@/lib/temp-password';
 import { type Generation, type Member, type MemberPickerRow } from '@/types/database';
 
 type Banner = { tone: 'positive' | 'negative'; message: string } | null;
 
 export default function AhliDetailScreen() {
-  const goBack = useGoBack();
   const { id } = useLocalSearchParams<{ id?: string }>();
+  const desktop = useIsDesktop();
+
+  // Desktop: butiran hidup di panel kanan senarai — pautan terus dibuka di sana.
+  if (desktop) return <Redirect href={{ pathname: '/(app)/admin/ahli-list', params: id ? { id } : {} }} />;
+
+  return <AhliDetailView id={id} />;
+}
+
+/**
+ * Butiran ahli — skrin penuh di mobile, panel kanan di desktop (`ahli-list`).
+ * `onChanged` dipanggil selepas simpan; `onDeleted` selepas padam (mod panel).
+ */
+export function AhliDetailView({
+  id,
+  onChanged,
+  onDeleted,
+}: {
+  id?: string;
+  onChanged?: () => void;
+  onDeleted?: () => void;
+}) {
+  const goBack = useGoBack();
   const { loading: accessLoading, canView, canEdit } = useMemberAccess();
   const router = useRouter();
   // Kebenaran BERASINGAN: kehadiran usrah milik LAJNAH TARBIAH, bukan pemilik rekod ahli.
@@ -114,13 +136,14 @@ export default function AhliDetailScreen() {
         setMember(fresh);
         setVersion((current) => current + 1);
         setBanner({ tone: 'positive', message: 'Perubahan telah disimpan.' });
+        onChanged?.();
       } catch (caught) {
         setBanner({ tone: 'negative', message: toMalayError(caught, 'Gagal menyimpan perubahan.') });
       } finally {
         setSaving(false);
       }
     },
-    [member, saving],
+    [member, onChanged, saving],
   );
 
   // --- Tempoh log masuk sementara -------------------------------------------
@@ -185,13 +208,15 @@ export default function AhliDetailScreen() {
       */
       setMember(null);
       setBanner({ tone: 'positive', message: 'Ahli berjaya dipadam.' });
+      // Mod panel: senarai membuang barisnya dan panel kanan kembali kosong.
+      onDeleted?.();
     } catch (caught) {
       setDeleteModal(false);
       setBanner({ tone: 'negative', message: toMalayError(caught, 'Gagal memadam ahli.') });
     } finally {
       setDeleteBusy(false);
     }
-  }, [deleteBusy, member]);
+  }, [deleteBusy, member, onDeleted]);
 
   if (accessLoading || loading) return <LoadingScreen />;
 
