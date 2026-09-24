@@ -83,6 +83,7 @@ export type Member = {
   nombor_ahli: string | null;
   generasi: string | null;
   full_name: string;
+  nama_panggilan: string | null;
   jantina: string | null;
   nric: string | null;
   email: string | null;

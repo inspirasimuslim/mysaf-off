@@ -233,6 +233,7 @@ function mapRow(raw: RawRow): ParsedMember {
     nombor_ahli: memberNumber(raw.NomborAhli),
     generasi: toGenerationCode(raw.Generasi),
     full_name: text(raw.UserName) ?? '',
+    nama_panggilan: null,
     jantina: text(raw.Jantina),
     nric: text(raw.Nric),
     email: text(raw.Email),

@@ -62,7 +62,7 @@ export default function DashboardScreen() {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [yuran, setYuran] = useState<YuranSummary | null>(null);
   const [pipis, setPipis] = useState<PipisSummary | null>(null);
-  const [profile, setProfile] = useState<{ fullName: string; avatarUrl: string | null } | null>(null);
+  const [profile, setProfile] = useState<{ fullName: string; greetingName: string; avatarUrl: string | null } | null>(null);
   const [birthdays, setBirthdays] = useState<BirthdayToday[]>([]);
   const [rank, setRank] = useState<MyActivityRank | null>(null);
 
@@ -140,7 +140,7 @@ export default function DashboardScreen() {
 
           // Rekod yang sama membawa gambar profil; dibaca semula setiap fokus,
           // jadi gambar yang baru ditukar di Profil kelihatan sebaik kembali.
-          setProfile({ fullName: member.full_name, avatarUrl: member.avatar_url });
+          setProfile({ fullName: member.full_name, greetingName: member.nama_panggilan?.trim() || member.full_name, avatarUrl: member.avatar_url });
 
           const [yuranSummary, pipisSummary] = await Promise.all([
             fetchYuranSummary(member.id),
@@ -182,7 +182,7 @@ export default function DashboardScreen() {
     <Screen padTop={false} wide>
       <ScreenHeader
         eyebrow="Assalamualaikum,"
-        title={profile?.fullName ?? displayName(user)}
+        title={profile?.greetingName ?? displayName(user)}
         /*
           Kedudukan menggantikan emel di bawah nama. Emel di situ tidak
           memberitahu pemiliknya apa-apa yang dia belum tahu; kedudukan berubah

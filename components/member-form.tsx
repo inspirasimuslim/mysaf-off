@@ -363,6 +363,14 @@ export function MemberForm({
         autoCapitalize="characters"
         autoCorrect={false}
       />
+      <TextField
+        label="Nama panggilan"
+        value={draft.nama_panggilan ?? ''}
+        onChangeText={setText('nama_panggilan')}
+        editable={!locked}
+        autoCapitalize="words"
+        autoCorrect={false}
+      />
       <PickerField
         label="Jantina"
         value={draft.jantina}
