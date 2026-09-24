@@ -174,7 +174,7 @@ export default function ProfilScreen() {
                 <Ionicons name="person" size={24} color={Colors.primary} />
               </View>
               <View className="flex-1">
-                <Text className="text-lg font-bold text-ink">{displayName(user)}</Text>
+                <Text className="text-lg font-bold text-ink">{member?.full_name ?? displayName(user)}</Text>
                 <Text className="mt-0.5 text-sm text-ink-muted" numberOfLines={1}>
                   {user?.email ?? 'Tiada emel'}
                 </Text>
