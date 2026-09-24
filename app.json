@@ -2,7 +2,7 @@
   "expo": {
     "name": "MySAFF",
     "slug": "mysaf-off",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/images/mysaff-icon-white.png",
     "scheme": "mysafoff",
@@ -14,6 +14,7 @@
     },
     "android": {
       "package": "com.sakuradigital.mysafoff",
+      "versionCode": 2,
       "adaptiveIcon": {
         "backgroundColor": "#FFFFFF",
         "foregroundImage": "./assets/images/mysaff-adaptive-foreground-v3.png",
