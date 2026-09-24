@@ -382,6 +382,13 @@ export default function TetapanScreen() {
               />
 
               <ActionRow
+                icon="folder-open-outline"
+                title="Arkib"
+                subtitle="Perpustakaan dokumen"
+                onPress={() => router.push('/(app)/document-library')}
+              />
+
+              <ActionRow
                 icon="chatbubble-ellipses-outline"
                 title="Komen"
                 subtitle="Maklum balas dan cadangan"

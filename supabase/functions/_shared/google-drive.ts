@@ -31,9 +31,14 @@ export const DRIVE_FILE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
 const FETCH_TIMEOUT_MS = 15_000;
 
 /** `fetch()` dengan had masa eksplisit — lihat nota di atas fail ini. */
-async function fetchWithTimeout(url: string, options: RequestInit, label: string): Promise<Response> {
+async function fetchWithTimeout(
+  url: string,
+  options: RequestInit,
+  label: string,
+  timeoutMs: number = FETCH_TIMEOUT_MS,
+): Promise<Response> {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
     console.log(LOG_TAG, 'fetch mula:', label);
@@ -42,7 +47,7 @@ async function fetchWithTimeout(url: string, options: RequestInit, label: string
     return response;
   } catch (caught) {
     if (caught instanceof Error && caught.name === 'AbortError') {
-      console.error(LOG_TAG, 'fetch TAMAT MASA (' + FETCH_TIMEOUT_MS / 1000 + 's):', label);
+      console.error(LOG_TAG, 'fetch TAMAT MASA (' + timeoutMs / 1000 + 's):', label);
       throw new Error('Google tidak menjawab dalam masa yang munasabah (' + label + '). Sila cuba lagi.');
     }
     console.error(LOG_TAG, 'fetch gagal:', label, caught);
@@ -195,15 +200,16 @@ function escapeDriveQueryValue(value: string): string {
 }
 
 /**
+ * Cari folder (nama padan tepat, terus di bawah akar Shared Drive) atau cipta
+ * baharu kalau tiada. Dipakai untuk SATU folder tetap (contohnya "Dokumen" —
+ * Library Dokumen) dan, melalui `findOrCreateEventFolder`, subfolder per-event.
+ *
  * Cari subfolder event sedia ada (nama padan tepat, dalam Shared Drive) atau
  * cipta baharu kalau tiada. Carian dahulu — dan bukan terus cipta — mengelak
  * subfolder pendua kalau `drive_folder_id` belum sempat disimpan pada event
  * (contohnya dua muat naik pertama berlaku serentak).
  */
-export async function findOrCreateEventFolder(
-  accessToken: string,
-  folderName: string,
-): Promise<string> {
+export async function getOrCreateFixedFolder(accessToken: string, folderName: string): Promise<string> {
   const driveId = sharedDriveId();
   const query =
     `name = '${escapeDriveQueryValue(folderName)}' and mimeType = 'application/vnd.google-apps.folder' ` +
@@ -249,10 +255,15 @@ export async function findOrCreateEventFolder(
   return created.id;
 }
 
+/** Subfolder per-event (Album) — folder biasa dengan nama "[Nama Event] - [Tarikh]". */
+export function findOrCreateEventFolder(accessToken: string, folderName: string): Promise<string> {
+  return getOrCreateFixedFolder(accessToken, folderName);
+}
+
 /**
  * Muat naik satu fail (bait mentah) ke dalam folder Drive — muat naik
  * "multipart" (metadata + kandungan dalam SATU permintaan), sesuai untuk
- * gambar bersaiz sederhana (foto album, bukan video).
+ * fail bersaiz sederhana (foto album, dokumen sehingga 20MB, bukan video).
  */
 export async function uploadFileToDrive(
   accessToken: string,
@@ -260,6 +271,7 @@ export async function uploadFileToDrive(
   fileName: string,
   mimeType: string,
   bytes: Uint8Array,
+  timeoutMs: number = FETCH_TIMEOUT_MS,
 ): Promise<string> {
   const boundary = 'mysaff_' + crypto.randomUUID();
   const metadata = JSON.stringify({ name: fileName, parents: [folderId] });
@@ -284,12 +296,13 @@ export async function uploadFileToDrive(
       body,
     },
     'drive.files.create (upload multipart, ' + Math.round(bytes.length / 1024) + 'KB)',
+    timeoutMs,
   );
 
   if (!response.ok) {
     const errorText = await response.text();
     console.error(LOG_TAG, 'muat naik gagal:', response.status, errorText);
-    throw new Error('Gagal muat naik gambar ke Google Drive: ' + errorText);
+    throw new Error('Gagal muat naik fail ke Google Drive: ' + errorText);
   }
 
   const uploaded = (await response.json()) as { id: string };

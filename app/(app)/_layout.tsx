@@ -290,6 +290,7 @@ function AppGate() {
       */}
       <Tabs.Screen name="admin" options={{ href: null }} />
       <Tabs.Screen name="album" options={{ href: null }} />
+      <Tabs.Screen name="document-library" options={{ href: null }} />
       <Tabs.Screen name="komen" options={{ href: null }} />
       <Tabs.Screen name="tetapan" options={{ href: null }} />
       <Tabs.Screen name="ahli-view" options={{ href: null }} />
