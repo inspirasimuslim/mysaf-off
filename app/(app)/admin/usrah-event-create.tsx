@@ -84,8 +84,8 @@ export default function UsrahEventCreateScreen() {
   // --- Sama untuk kedua-dua jenis -------------------------------------------
   const [startDate, setStartDate] = useState(today());
   const [endDate, setEndDate] = useState(today());
-  const [startTime, setStartTime] = useState('20:00');
-  const [endTime, setEndTime] = useState('22:00');
+  const [startTime, setStartTime] = useState('08:00');
+  const [endTime, setEndTime] = useState('10:00');
   const [locationText, setLocationText] = useState('');
   const [coords, setCoords] = useState<{ latitude: number; longitude: number } | null>(null);
   const [radius, setRadius] = useState(DEFAULT_RADIUS);

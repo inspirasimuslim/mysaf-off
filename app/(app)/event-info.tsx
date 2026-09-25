@@ -236,7 +236,16 @@ export default function EventInfoScreen() {
             </View>
           </Card>
           {event.latitude !== null && event.longitude !== null ? (
-            <View className="mt-3">
+            <View
+              className="mt-3 rounded-field bg-surface"
+              // Bayang halus yang sama seperti kotak Tab Ahli — butang kelihatan sedikit terangkat.
+              style={{
+                shadowColor: '#0F5132',
+                shadowOpacity: 0.08,
+                shadowRadius: 8,
+                shadowOffset: { width: 0, height: 3 },
+                elevation: 2,
+              }}>
               <Button
                 label="Navigasi"
                 variant="secondary"

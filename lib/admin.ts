@@ -110,3 +110,11 @@ export async function removeAdmin(userId: string): Promise<void> {
   if (error) throw error;
   await setRole(userId, 'ahli');
 }
+
+/**
+ * Turunkan pangkat Super Admin: jadi `admin` bila dia masih memegang department,
+ * jika tidak jadi `ahli`. Pangkalan data menolak jika dia satu-satunya Super Admin.
+ */
+export async function demoteSuperAdmin(userId: string, hasAssignments: boolean): Promise<void> {
+  await setRole(userId, hasAssignments ? 'admin' : 'ahli');
+}

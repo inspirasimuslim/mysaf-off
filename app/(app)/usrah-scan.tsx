@@ -179,7 +179,6 @@ export default function UsrahScanScreen() {
   const run = useCallback(async (work: () => Promise<void>) => {
     if (busy.current) return;
     busy.current = true;
-    setNearby(null);
 
     try {
       await work();
@@ -224,15 +223,35 @@ export default function UsrahScanScreen() {
       run(async () => {
         setPhase({ step: 'proses', note: 'Merekod kehadiran...' });
         const result = await recordProximityAttendance(eventId, coords);
+        /*
+          Buang HANYA program yang baru direkod — program lain kekal ditawarkan.
+          Dahulu `run` mengosongkan keseluruhan senarai pada setiap tindakan,
+          jadi selepas satu Hadir semua program lain hilang sehingga skrin dibuka semula.
+        */
+        setNearby((current) => {
+          const events = current?.events.filter((item) => item.event_id !== eventId) ?? [];
+          return current && events.length > 0 ? { ...current, events } : null;
+        });
         setPhase({ step: 'berjaya', result });
       }),
     [run],
   );
 
+  const nearbyCoords = nearby?.coords ?? null;
+
   const scanAgain = useCallback(() => {
     busy.current = false;
     setPhase({ step: 'imbas' });
-  }, []);
+
+    // Segarkan senarai daripada pelayan (ia sudah menapis program yang telah dihadiri,
+    // termasuk melalui QR). Hasil kosong TIDAK menimpa senarai sedia ada: `findNearbyEvents`
+    // memulangkan [] juga bila panggilan gagal, dan senarai tidak patut hilang kerana itu.
+    if (nearbyCoords) {
+      void findNearbyEvents(nearbyCoords).then((events) => {
+        if (events.length > 0) setNearby((latest) => (latest ? { ...latest, events } : latest));
+      });
+    }
+  }, [nearbyCoords]);
 
   /**
    * Kod QR daripada gambar yang tersimpan dalam galeri.
