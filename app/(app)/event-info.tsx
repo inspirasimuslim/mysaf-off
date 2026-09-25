@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Linking, Platform, Pressable, Text, View } from 'react-native';
 
 import { EventQrCard } from '@/components/event-qr-card';
 import { ScreenHeader } from '@/components/screen-header';
@@ -15,6 +15,7 @@ import { Screen } from '@/components/ui/screen';
 import { SectionTitle } from '@/components/ui/section-title';
 import { Colors } from '@/constants/theme';
 import { toMalayError } from '@/lib/errors';
+import { navigationUrl } from '@/lib/google-maps';
 import { useGoBack } from '@/lib/navigation';
 import { RSVP_LABEL, fetchMyRsvp, rsvpOpen, setMyRsvp, type RsvpResponse } from '@/lib/rsvp';
 import { fetchAllEventsDirectory } from '@/lib/usrah-events';
@@ -230,6 +231,20 @@ export default function EventInfoScreen() {
               <Row icon="location-outline" label="Lokasi" value={event.location_text ?? 'Belum ditetapkan'} />
             </View>
           </Card>
+          {event.latitude !== null && event.longitude !== null ? (
+            <View className="mt-3">
+              <Button
+                label="Navigasi"
+                variant="secondary"
+                icon={<Ionicons name="navigate-outline" size={18} color={Colors.primary} />}
+                onPress={() => {
+                  const url = navigationUrl(event.latitude as number, event.longitude as number, event.location_text ?? event.name);
+                  if (Platform.OS === 'web') window.open(url, '_blank', 'noopener');
+                  else void Linking.openURL(url).catch(() => setRsvpError('Tiada aplikasi navigasi ditemui pada peranti ini.'));
+                }}
+              />
+            </View>
+          ) : null}
         </View>
       </View>
     </Screen>

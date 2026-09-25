@@ -416,6 +416,7 @@ export default function UsrahEventCreateScreen() {
               longitude={coords?.longitude ?? null}
               radiusMeters={radius}
               onChange={setCoords}
+              onPlaceSelected={setLocationText}
               disabled={saving}
             />
             <StepperField

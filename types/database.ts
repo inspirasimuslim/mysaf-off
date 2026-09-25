@@ -602,6 +602,9 @@ export type UpcomingEvent = {
  * (event-info.tsx) guna ia untuk sekat butang Album pada acara tamat.
  */
 export type EventDirectoryRow = UpcomingEvent & {
+  /** Pin lokasi (untuk butang Navigasi); NULL bila admin tidak meletakkan pin. */
+  latitude: number | null;
+  longitude: number | null;
   is_upcoming: boolean;
   photo_count: number;
 };

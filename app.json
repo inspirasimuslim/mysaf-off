@@ -20,7 +20,12 @@
         "foregroundImage": "./assets/images/mysaff-adaptive-foreground-v3.png",
         "monochromeImage": "./assets/images/mysaff-adaptive-monochrome-v3.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "config": {
+        "googleMaps": {
+          "apiKey": "GANTI_DENGAN_ANDROID_KEY"
+        }
+      }
     },
     "web": {
       "output": "static",
