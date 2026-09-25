@@ -14,6 +14,7 @@ import { PickerField } from '@/components/ui/picker-field';
 import { Screen } from '@/components/ui/screen';
 import { SectionTitle } from '@/components/ui/section-title';
 import { TextField } from '@/components/ui/text-field';
+import { ToastBanner } from '@/components/ui/toast';
 import {
   createAhliDiputihkan,
   deleteAhliDiputihkan,
@@ -170,7 +171,7 @@ export default function AhliDiputihkanScreen() {
         />
 
         <View className="gap-4 px-gutter pt-5 pb-8">
-          {banner ? <Notice tone={banner.tone} message={banner.message} /> : null}
+          {banner ? <ToastBanner tone={banner.tone} message={banner.message} /> : null}
 
           {!canEdit ? (
             <Notice tone="info" message="Anda hanya mempunyai akses Lihat. Senarai di bawah adalah paparan sahaja." />

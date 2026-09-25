@@ -11,6 +11,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { LoadingScreen } from '@/components/ui/loading-screen';
 import { Notice } from '@/components/ui/notice';
 import { Screen } from '@/components/ui/screen';
+import { ToastBanner } from '@/components/ui/toast';
 import { Colors } from '@/constants/theme';
 import { fetchMyActivityRank, type MyActivityRank } from '@/lib/activity-rank';
 import { pickAvatar, uploadAvatar } from '@/lib/avatar';
@@ -200,7 +201,7 @@ export default function ProfilScreen() {
 
       <View className="gap-6 px-gutter pt-6">
         {error ? <Notice tone="negative" message={error} /> : null}
-        {banner ? <Notice tone={banner.tone} message={banner.message} /> : null}
+        {banner ? <ToastBanner tone={banner.tone} message={banner.message} /> : null}
 
         <MemberForm
           key={member.id + ':' + version}

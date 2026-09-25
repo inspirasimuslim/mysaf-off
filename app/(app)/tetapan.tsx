@@ -11,6 +11,7 @@ import { Screen } from '@/components/ui/screen';
 import { SectionTitle } from '@/components/ui/section-title';
 import { TextField } from '@/components/ui/text-field';
 import { ToggleRow } from '@/components/ui/toggle-row';
+import { ToastBanner } from '@/components/ui/toast';
 import { useAuth } from '@/lib/auth-context';
 import { usePermissions } from '@/lib/permissions';
 import {
@@ -336,7 +337,7 @@ export default function TetapanScreen() {
         <ScreenHeader title="Tetapan" subtitle={user?.email ?? undefined} onBackPress={goBack} />
 
         <View className="gap-6 px-gutter pt-6">
-          {banner ? <Notice tone={banner.tone} message={banner.message} /> : null}
+          {banner ? <ToastBanner tone={banner.tone} message={banner.message} /> : null}
 
           <View>
             <SectionTitle title="Tetapan Akaun" />

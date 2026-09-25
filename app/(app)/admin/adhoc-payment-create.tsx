@@ -12,6 +12,7 @@ import { Screen } from '@/components/ui/screen';
 import { SectionTitle } from '@/components/ui/section-title';
 import { TextField } from '@/components/ui/text-field';
 import { ToggleRow } from '@/components/ui/toggle-row';
+import { ToastBanner } from '@/components/ui/toast';
 import { createAdhocPayment, uploadPaymentQr } from '@/lib/adhoc-payments';
 import { useYuranAccess } from '@/lib/department-access';
 import { toMalayError } from '@/lib/errors';
@@ -108,7 +109,7 @@ export default function AdhocPaymentCreateScreen() {
       />
 
       <View className="gap-6 px-gutter pt-6">
-        {banner ? <Notice tone="negative" message={banner} /> : null}
+        {banner ? <ToastBanner tone="negative" message={banner} /> : null}
 
         <View>
           <SectionTitle title="Kandungan" caption="Tajuk pendek; butiran penuh masuk dalam penerangan." />

@@ -16,6 +16,7 @@ import { Notice } from '@/components/ui/notice';
 import { PickerField } from '@/components/ui/picker-field';
 import { Screen } from '@/components/ui/screen';
 import { TextField } from '@/components/ui/text-field';
+import { ToastBanner } from '@/components/ui/toast';
 import { Colors } from '@/constants/theme';
 import { useAuth } from '@/lib/auth-context';
 import {
@@ -214,7 +215,7 @@ export default function DocumentLibraryScreen() {
         <ScreenHeader eyebrow="Tetapan" title="Arkib" subtitle="Perpustakaan dokumen untuk semua ahli" onBackPress={goBack} />
 
         <View className="gap-4 px-gutter pt-6">
-          {banner ? <Notice tone={banner.tone} message={banner.message} /> : null}
+          {banner ? <ToastBanner tone={banner.tone} message={banner.message} /> : null}
 
           <Button
             label="+ Muat Naik Dokumen"

@@ -14,6 +14,7 @@ import { Screen } from '@/components/ui/screen';
 import { SectionTitle } from '@/components/ui/section-title';
 import { Segmented } from '@/components/ui/segmented';
 import { TextField } from '@/components/ui/text-field';
+import { ToastBanner } from '@/components/ui/toast';
 import { usePipisAccess } from '@/lib/department-access';
 import { toMalayError } from '@/lib/errors';
 import { useGoBack } from '@/lib/navigation';
@@ -183,7 +184,7 @@ export function PipisDetailView({
       />
 
       <View className="gap-6 px-gutter pt-6">
-        {banner ? <Notice tone={banner.tone} message={banner.message} /> : null}
+        {banner ? <ToastBanner tone={banner.tone} message={banner.message} /> : null}
 
         <Card tone={reached ? 'primary' : 'surface'}>
           <Text className={`text-sm ${reached ? 'text-white/70' : 'text-ink-muted'}`}>Jumlah sumbangan</Text>

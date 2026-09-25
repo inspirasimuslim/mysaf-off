@@ -10,10 +10,10 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { FormModal } from '@/components/ui/form-modal';
 import { IconButton } from '@/components/ui/icon-button';
 import { LoadingScreen } from '@/components/ui/loading-screen';
-import { Notice } from '@/components/ui/notice';
 import { Screen } from '@/components/ui/screen';
 import { SectionTitle } from '@/components/ui/section-title';
 import { TextField } from '@/components/ui/text-field';
+import { ToastBanner } from '@/components/ui/toast';
 import { Colors } from '@/constants/theme';
 import { toMalayError } from '@/lib/errors';
 import { createGeneration, deleteGeneration, fetchGenerations, setGenerationActive } from '@/lib/members';
@@ -180,7 +180,7 @@ export default function GenerasiScreen() {
         />
 
         <View className="gap-5 px-gutter pt-5">
-          {banner ? <Notice tone={banner.tone} message={banner.message} /> : null}
+          {banner ? <ToastBanner tone={banner.tone} message={banner.message} /> : null}
 
           <Button label="Tambah Generasi" onPress={openAddModal} />
 

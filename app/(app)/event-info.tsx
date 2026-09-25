@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Linking, Platform, Pressable, Text, View } from 'react-native';
 
 import { EventQrCard } from '@/components/event-qr-card';
+import { StaticMap } from '@/components/static-map';
 import { ScreenHeader } from '@/components/screen-header';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -229,6 +230,9 @@ export default function EventInfoScreen() {
                 value={timeRangeLabel(event.start_time, event.end_time)}
               />
               <Row icon="location-outline" label="Lokasi" value={event.location_text ?? 'Belum ditetapkan'} />
+              {event.latitude !== null && event.longitude !== null ? (
+                <StaticMap latitude={event.latitude} longitude={event.longitude} />
+              ) : null}
             </View>
           </Card>
           {event.latitude !== null && event.longitude !== null ? (

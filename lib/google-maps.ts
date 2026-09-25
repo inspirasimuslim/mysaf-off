@@ -138,3 +138,26 @@ export function navigationUrl(latitude: number, longitude: number, label?: strin
   }
   return `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`;
 }
+
+/**
+ * Gambar peta statik (Maps Static API) dengan pin — untuk paparan butiran
+ * tanpa memuatkan peta interaktif. Kunci & header ikut platform yang sama
+ * seperti carian tempat; `null` bila kunci belum dikonfigurasi.
+ */
+export function staticMapSource(
+  latitude: number,
+  longitude: number,
+): { uri: string; headers?: Record<string, string> } | null {
+  if (!placesConfigured) return null;
+  const point = `${latitude},${longitude}`;
+  const uri =
+    'https://maps.googleapis.com/maps/api/staticmap?center=' +
+    point +
+    '&zoom=16&size=400x200&scale=2&markers=' +
+    point +
+    '&key=' +
+    placesKey;
+  const headers =
+    Platform.OS === 'android' ? { 'X-Android-Package': ANDROID_PACKAGE, 'X-Android-Cert': ANDROID_CERT_SHA1 } : undefined;
+  return { uri, headers };
+}

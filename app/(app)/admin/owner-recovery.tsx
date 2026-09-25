@@ -6,10 +6,10 @@ import { ScreenHeader } from '@/components/screen-header';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { LoadingScreen } from '@/components/ui/loading-screen';
-import { Notice } from '@/components/ui/notice';
 import { Screen } from '@/components/ui/screen';
 import { SectionTitle } from '@/components/ui/section-title';
 import { TextField } from '@/components/ui/text-field';
+import { ToastBanner } from '@/components/ui/toast';
 import { toMalayError } from '@/lib/errors';
 import { useGoBack } from '@/lib/navigation';
 import {
@@ -112,7 +112,7 @@ export default function OwnerRecoveryScreen() {
             boleh melakukannya; setiap tindakan direkod dalam Log Aktiviti sebagai "(Pemulihan)".
           </Text>
 
-          {banner ? <Notice tone={banner.tone} message={banner.message} /> : null}
+          {banner ? <ToastBanner tone={banner.tone} message={banner.message} /> : null}
 
           <View>
             <SectionTitle title={'Super Admin semasa (' + superAdmins.length + ')'} />

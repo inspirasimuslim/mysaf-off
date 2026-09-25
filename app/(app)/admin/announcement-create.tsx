@@ -13,6 +13,7 @@ import { Screen } from '@/components/ui/screen';
 import { SectionTitle } from '@/components/ui/section-title';
 import { TextField } from '@/components/ui/text-field';
 import { ToggleRow } from '@/components/ui/toggle-row';
+import { ToastBanner } from '@/components/ui/toast';
 import { useProgramAccess } from '@/lib/department-access';
 import { createAnnouncement, uploadAnnouncementPoster } from '@/lib/announcements';
 import { toMalayError } from '@/lib/errors';
@@ -124,10 +125,10 @@ export default function AnnouncementCreateScreen() {
       />
 
       <View className="gap-6 px-gutter pt-6">
-        {banner ? <Notice tone="negative" message={banner} /> : null}
+        {banner ? <ToastBanner tone="negative" message={banner} /> : null}
 
         <View>
-          <SectionTitle title="Poster" caption="Wajib. Dikecilkan kepada 1080px sebelum dimuat naik." />
+          <SectionTitle title="Poster" />
           <View className="gap-3">
             {posterUri ? (
               <Image
@@ -170,18 +171,16 @@ export default function AnnouncementCreateScreen() {
         </View>
 
         <View>
-          <SectionTitle
-            title="Tempoh Paparan"
-            caption="Kedua-duanya pilihan. Kosongkan tarikh mula untuk papar serta-merta, dan tarikh tamat untuk kekal sehingga dimatikan."
-          />
+          <SectionTitle title="Tempoh Paparan" />
           <View className="gap-4">
-            <OptionalDateField
-              label="Tarikh mula"
-              value={startDate}
-              onChange={setStartDate}
-              disabled={saving}
-            />
-            <OptionalDateField label="Tarikh tamat" value={endDate} onChange={setEndDate} disabled={saving} />
+            <View className="flex-row items-start gap-3">
+              <View className="flex-1">
+                <OptionalDateField label="Tarikh mula" value={startDate} onChange={setStartDate} disabled={saving} />
+              </View>
+              <View className="flex-1">
+                <OptionalDateField label="Tarikh tamat" value={endDate} onChange={setEndDate} disabled={saving} />
+              </View>
+            </View>
 
             {!rangeValid ? (
               <Notice tone="negative" message="Tarikh tamat tidak boleh lebih awal daripada tarikh mula." />

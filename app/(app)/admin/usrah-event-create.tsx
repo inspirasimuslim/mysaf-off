@@ -17,6 +17,7 @@ import { Segmented } from '@/components/ui/segmented';
 import { StepperField } from '@/components/ui/stepper-field';
 import { TextField } from '@/components/ui/text-field';
 import { ToggleRow } from '@/components/ui/toggle-row';
+import { ToastBanner } from '@/components/ui/toast';
 import { useProgramAccess, useUsrahAccess } from '@/lib/department-access';
 import { toMalayError } from '@/lib/errors';
 import { pickImage } from '@/lib/image-upload';
@@ -245,7 +246,7 @@ export default function UsrahEventCreateScreen() {
       />
 
       <View className="gap-5 px-gutter pt-5">
-        {banner ? <Notice tone={banner.tone} message={banner.message} /> : null}
+        {banner ? <ToastBanner tone={banner.tone} message={banner.message} /> : null}
 
         {/* --- Nama: dijana untuk usrah, ditaip untuk program ------------------ */}
         <View>

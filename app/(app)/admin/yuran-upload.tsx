@@ -12,6 +12,7 @@ import { LoadingScreen } from '@/components/ui/loading-screen';
 import { Notice } from '@/components/ui/notice';
 import { Screen } from '@/components/ui/screen';
 import { SectionTitle } from '@/components/ui/section-title';
+import { ToastBanner } from '@/components/ui/toast';
 import { ImportError } from '@/lib/ahli-import';
 import { useYuranAccess } from '@/lib/department-access';
 import { toMalayError } from '@/lib/errors';
@@ -205,7 +206,7 @@ export default function YuranUploadScreen() {
       />
 
       <View className="gap-6 px-gutter pt-6">
-        {banner ? <Notice tone={banner.tone} message={banner.message} /> : null}
+        {banner ? <ToastBanner tone={banner.tone} message={banner.message} /> : null}
 
         <Notice
           tone="info"

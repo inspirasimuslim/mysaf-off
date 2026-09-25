@@ -15,6 +15,7 @@ import { Screen } from '@/components/ui/screen';
 import { SectionTitle } from '@/components/ui/section-title';
 import { SelectRow } from '@/components/ui/select-row';
 import { TextField } from '@/components/ui/text-field';
+import { ToastBanner } from '@/components/ui/toast';
 import { Colors } from '@/constants/theme';
 import { fetchAssignments, fetchDepartments, fetchProfiles, removeAdmin, saveAssignments } from '@/lib/admin';
 import { toMalayError } from '@/lib/errors';
@@ -257,7 +258,7 @@ export default function AdminsScreen() {
         />
 
         <View className="gap-6 px-gutter pt-6">
-          {banner ? <Notice tone={banner.tone} message={banner.message} /> : null}
+          {banner ? <ToastBanner tone={banner.tone} message={banner.message} /> : null}
 
           <Button label="Lantik Admin Baru" onPress={openNew} />
 

@@ -12,6 +12,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { LoadingScreen } from '@/components/ui/loading-screen';
 import { Notice } from '@/components/ui/notice';
 import { Screen } from '@/components/ui/screen';
+import { ToastBanner } from '@/components/ui/toast';
 import { Colors } from '@/constants/theme';
 import { useAuth } from '@/lib/auth-context';
 import { useProgramAccess, useUsrahAccess } from '@/lib/department-access';
@@ -329,7 +330,7 @@ export default function EventAlbumScreen() {
         />
 
         <View className="gap-4 px-gutter pt-6 pb-8">
-          {banner ? <Notice tone={banner.tone} message={banner.message} /> : null}
+          {banner ? <ToastBanner tone={banner.tone} message={banner.message} /> : null}
 
           {tokenError ? (
             <View className="gap-2">

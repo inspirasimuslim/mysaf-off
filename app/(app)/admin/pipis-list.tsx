@@ -10,11 +10,11 @@ import { Card } from '@/components/ui/card';
 import { CellText, DataTable } from '@/components/ui/data-table';
 import { EmptyState } from '@/components/ui/empty-state';
 import { LoadingScreen } from '@/components/ui/loading-screen';
-import { Notice } from '@/components/ui/notice';
 import { Screen } from '@/components/ui/screen';
 import { SectionTitle } from '@/components/ui/section-title';
 import { DetailPlaceholder, SplitPane } from '@/components/ui/split-pane';
 import { TextField } from '@/components/ui/text-field';
+import { ToastBanner } from '@/components/ui/toast';
 import { usePipisAccess } from '@/lib/department-access';
 import { toMalayError } from '@/lib/errors';
 import { deliveryMessage, type DeliveryMode } from '@/lib/file-delivery';
@@ -184,7 +184,7 @@ export default function PipisListScreen() {
 
   const body = (
       <View className={desktop ? 'gap-6 px-4 pb-8 pt-4' : 'gap-6 px-gutter pt-6'}>
-        {banner ? <Notice tone={banner.tone} message={banner.message} /> : null}
+        {banner ? <ToastBanner tone={banner.tone} message={banner.message} /> : null}
 
         <Card>
           <View className="flex-row justify-between">

@@ -10,6 +10,7 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Notice } from '@/components/ui/notice';
 import { SectionTitle } from '@/components/ui/section-title';
 import { TextField } from '@/components/ui/text-field';
+import { ToastBanner } from '@/components/ui/toast';
 import { toMalayError } from '@/lib/errors';
 import {
   cancelGatewayPayment,
@@ -311,7 +312,7 @@ export function OnlinePaymentForm({
     <View>
       <SectionTitle title="Bayar Online (ToyyibPay)" caption={caption} />
       <View className="gap-4">
-        {notice ? <Notice tone={notice.tone} message={notice.message} /> : null}
+        {notice ? <ToastBanner tone={notice.tone} message={notice.message} /> : null}
 
         {latest ? (
           <View>

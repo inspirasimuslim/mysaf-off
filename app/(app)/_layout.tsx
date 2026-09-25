@@ -264,7 +264,7 @@ function AppGate() {
       */}
       <Tabs.Screen
         name="pembayaran"
-        options={{ title: 'Pembayaran', tabBarIcon: tabIcon('card', 'card-outline') }}
+        options={{ title: 'Bayar/Infaq', tabBarIcon: tabIcon('card', 'card-outline') }}
       />
       {/*
         Skrin imbasan ialah sebuah TAB dan bukan skrin dalam. Sebelum ini ia
@@ -287,7 +287,7 @@ function AppGate() {
       />
       <Tabs.Screen
         name="arkib-hub"
-        options={{ title: 'Arkib', tabBarIcon: tabIcon('file-tray-full', 'file-tray-full-outline') }}
+        options={{ title: 'Direktori', tabBarIcon: tabIcon('file-tray-full', 'file-tray-full-outline') }}
       />
       {/* Profil dicapai melalui avatar di Utama — bukan lagi tab. */}
       <Tabs.Screen name="profil" options={{ href: null }} />

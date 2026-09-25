@@ -9,6 +9,7 @@ import { LoadingScreen } from '@/components/ui/loading-screen';
 import { Notice } from '@/components/ui/notice';
 import { Screen } from '@/components/ui/screen';
 import { SectionTitle } from '@/components/ui/section-title';
+import { ToastBanner } from '@/components/ui/toast';
 import { fetchProfiles } from '@/lib/admin';
 import { toMalayError } from '@/lib/errors';
 import { useGoBack } from '@/lib/navigation';
@@ -55,7 +56,7 @@ export default function SuperAdminsScreen() {
         />
 
         <View className="gap-6 px-gutter pt-6">
-          {banner ? <Notice tone={banner.tone} message={banner.message} /> : null}
+          {banner ? <ToastBanner tone={banner.tone} message={banner.message} /> : null}
 
           <Notice
             tone="info"

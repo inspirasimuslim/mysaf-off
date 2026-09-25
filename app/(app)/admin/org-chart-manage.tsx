@@ -15,6 +15,7 @@ import { MemberAvatar } from '@/components/ui/member-avatar';
 import { Notice } from '@/components/ui/notice';
 import { Screen } from '@/components/ui/screen';
 import { TextField } from '@/components/ui/text-field';
+import { ToastBanner } from '@/components/ui/toast';
 import { Colors } from '@/constants/theme';
 import { useDepartmentAccess } from '@/lib/department-access';
 import { toMalayError } from '@/lib/errors';
@@ -369,7 +370,7 @@ export default function OrgChartManageScreen() {
         />
 
         <View className="gap-4 px-gutter pb-8 pt-5">
-          {banner ? <Notice tone={banner.tone} message={banner.message} /> : null}
+          {banner ? <ToastBanner tone={banner.tone} message={banner.message} /> : null}
 
           <Button
             label="Tambah Bahagian Baharu"

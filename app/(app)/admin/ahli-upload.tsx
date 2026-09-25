@@ -12,6 +12,7 @@ import { LoadingScreen } from '@/components/ui/loading-screen';
 import { Notice } from '@/components/ui/notice';
 import { Screen } from '@/components/ui/screen';
 import { SectionTitle } from '@/components/ui/section-title';
+import { ToastBanner } from '@/components/ui/toast';
 import { ImportError, parseWorkbook, summarise, type ParseResult } from '@/lib/ahli-import';
 import { useMemberAccess } from '@/lib/department-access';
 import { toMalayError } from '@/lib/errors';
@@ -197,7 +198,7 @@ export default function AhliUploadScreen() {
       />
 
       <View className="gap-6 px-gutter pt-6">
-        {banner ? <Notice tone={banner.tone} message={banner.message} /> : null}
+        {banner ? <ToastBanner tone={banner.tone} message={banner.message} /> : null}
 
         {/* --- Langkah 1: pilih fail ---------------------------------------- */}
         {!done ? (

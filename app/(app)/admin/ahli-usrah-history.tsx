@@ -8,12 +8,12 @@ import { UsrahMonthRecordRow } from '@/components/usrah-month-record';
 import { Button } from '@/components/ui/button';
 import { FormModal } from '@/components/ui/form-modal';
 import { LoadingScreen } from '@/components/ui/loading-screen';
-import { Notice } from '@/components/ui/notice';
 import { OptionalDateField } from '@/components/ui/optional-date-field';
 import { PickerField } from '@/components/ui/picker-field';
 import { Screen } from '@/components/ui/screen';
 import { Segmented } from '@/components/ui/segmented';
 import { TextField } from '@/components/ui/text-field';
+import { ToastBanner } from '@/components/ui/toast';
 import { useUsrahAccess } from '@/lib/department-access';
 import { toMalayError } from '@/lib/errors';
 import { useGoBack } from '@/lib/navigation';
@@ -140,7 +140,7 @@ export default function AhliUsrahHistoryScreen() {
         />
 
         <View className="gap-4 px-gutter pb-8 pt-6">
-          {banner ? <Notice tone={banner.tone} message={banner.message} /> : null}
+          {banner ? <ToastBanner tone={banner.tone} message={banner.message} /> : null}
 
           <PickerField
             label="Tahun"

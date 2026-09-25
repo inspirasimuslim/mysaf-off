@@ -6,6 +6,7 @@ import { Switch, Text, View } from 'react-native';
 import { EventQrCard } from '@/components/event-qr-card';
 import { SaveShareButtons } from '@/components/save-share-buttons';
 import { ScreenHeader } from '@/components/screen-header';
+import { StaticMap } from '@/components/static-map';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -19,6 +20,7 @@ import { SectionTitle } from '@/components/ui/section-title';
 import { Segmented } from '@/components/ui/segmented';
 import { TextField } from '@/components/ui/text-field';
 import { ToggleRow } from '@/components/ui/toggle-row';
+import { ToastBanner } from '@/components/ui/toast';
 import { Colors } from '@/constants/theme';
 import { useProgramAccess, useUsrahAccess } from '@/lib/department-access';
 import { toMalayError } from '@/lib/errors';
@@ -302,7 +304,7 @@ export default function UsrahEventDetailScreen() {
       />
 
       <View className="gap-6 px-gutter pt-6">
-        {banner ? <Notice tone={banner.tone} message={banner.message} /> : null}
+        {banner ? <ToastBanner tone={banner.tone} message={banner.message} /> : null}
 
         {/* Hilang sendiri sebaik poster berjaya dimuat naik semula. */}
         {posterError && !event.poster_url ? (
@@ -462,6 +464,9 @@ export default function UsrahEventDetailScreen() {
           <Card>
             <View className="gap-2">
               <Line label="Lokasi" value={event.location_text ?? 'Tiada'} />
+              {event.latitude !== null && event.longitude !== null ? (
+                <StaticMap latitude={Number(event.latitude)} longitude={Number(event.longitude)} />
+              ) : null}
               <Line
                 label="Koordinat"
                 value={

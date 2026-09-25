@@ -3,9 +3,9 @@ import { View } from 'react-native';
 
 import { ScreenHeader } from '@/components/screen-header';
 import { Button } from '@/components/ui/button';
-import { Notice } from '@/components/ui/notice';
 import { Screen } from '@/components/ui/screen';
 import { TextField } from '@/components/ui/text-field';
+import { ToastBanner } from '@/components/ui/toast';
 import { FEEDBACK_MAX_LENGTH, submitAppFeedback } from '@/lib/app-feedback';
 import { useAuth } from '@/lib/auth-context';
 import { toMalayError } from '@/lib/errors';
@@ -53,7 +53,7 @@ export default function MaklumBalasScreen() {
       <ScreenHeader eyebrow="Tetapan" title="Maklum Balas" onBackPress={goBack} />
 
       <View className="gap-4 px-gutter pb-8 pt-6">
-        {banner ? <Notice tone={banner.tone} message={banner.message} /> : null}
+        {banner ? <ToastBanner tone={banner.tone} message={banner.message} /> : null}
 
         <TextField
           label="Maklum balas anda"

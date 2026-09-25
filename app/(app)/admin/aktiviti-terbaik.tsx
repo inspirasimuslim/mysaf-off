@@ -14,6 +14,7 @@ import { Notice } from '@/components/ui/notice';
 import { Screen } from '@/components/ui/screen';
 import { Segmented } from '@/components/ui/segmented';
 import { TextField } from '@/components/ui/text-field';
+import { ToastBanner } from '@/components/ui/toast';
 import { Colors } from '@/constants/theme';
 import {
   downloadGenerationRanking,
@@ -458,7 +459,7 @@ function GenerationRanking({ result }: { result: ActivityRanking }) {
         </StatCard>
       ) : null}
 
-      {notice ? <Notice tone={notice.tone} message={notice.message} /> : null}
+      {notice ? <ToastBanner tone={notice.tone} message={notice.message} /> : null}
 
       <SaveShareButtons
         kind="file"
@@ -625,7 +626,7 @@ function InactiveSection({ startDate, endDate, rangeValid }: { startDate: string
                 busy={saving}
                 onPress={(mode) => void download(mode)}
               />
-              {notice ? <Notice tone={notice.tone} message={notice.message} /> : null}
+              {notice ? <ToastBanner tone={notice.tone} message={notice.message} /> : null}
 
               <View className="overflow-hidden rounded-card border border-line bg-surface">
                 {list.members.slice(0, shown).map((row, index, visible) => (

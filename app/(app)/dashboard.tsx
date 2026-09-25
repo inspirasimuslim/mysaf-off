@@ -10,8 +10,8 @@ import { ScreenHeader } from '@/components/screen-header';
 import { UsrahStrip } from '@/components/usrah-strip';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { MemberAvatar } from '@/components/ui/member-avatar';
-import { Notice } from '@/components/ui/notice';
 import { Screen } from '@/components/ui/screen';
+import { ToastBanner } from '@/components/ui/toast';
 import { fetchMyActivityRank, type MyActivityRank } from '@/lib/activity-rank';
 import { useAndroidExitPrompt } from '@/lib/android-back';
 import { fetchVisibleAnnouncements } from '@/lib/announcements';
@@ -214,7 +214,7 @@ export default function DashboardScreen() {
       />
 
       <View className="gap-8 px-gutter pt-6">
-        {banner ? <Notice tone={banner.tone} message={banner.message} /> : null}
+        {banner ? <ToastBanner tone={banner.tone} message={banner.message} /> : null}
 
         {/*
           Satu set komponen, dua susun atur. Telefon: satu lajur menegak (sama

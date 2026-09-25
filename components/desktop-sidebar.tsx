@@ -15,10 +15,10 @@ type Item = { label: string; href: Href; segment: string; active: IconName; inac
 /** Lima destinasi yang sama seperti tab bawah, dalam susunan yang sama. */
 const ITEMS: Item[] = [
   { label: 'Utama', href: '/(app)/dashboard', segment: 'dashboard', active: 'home', inactive: 'home-outline' },
-  { label: 'Pembayaran', href: '/(app)/pembayaran', segment: 'pembayaran', active: 'card', inactive: 'card-outline' },
+  { label: 'Bayar/Infaq', href: '/(app)/pembayaran', segment: 'pembayaran', active: 'card', inactive: 'card-outline' },
   { label: 'Scan', href: '/(app)/usrah-scan', segment: 'usrah-scan', active: 'qr-code', inactive: 'qr-code-outline' },
   { label: 'Ahli', href: '/(app)/ahli', segment: 'ahli', active: 'people', inactive: 'people-outline' },
-  { label: 'Arkib', href: '/(app)/arkib-hub', segment: 'arkib-hub', active: 'file-tray-full', inactive: 'file-tray-full-outline' },
+  { label: 'Direktori', href: '/(app)/arkib-hub', segment: 'arkib-hub', active: 'file-tray-full', inactive: 'file-tray-full-outline' },
 ];
 
 /** Skrin dalam dikira di bawah tab induknya supaya sidebar tidak "kehilangan" kedudukan. */

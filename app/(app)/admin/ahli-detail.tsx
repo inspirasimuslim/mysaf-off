@@ -12,6 +12,7 @@ import { LoadingScreen } from '@/components/ui/loading-screen';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Notice } from '@/components/ui/notice';
 import { Screen } from '@/components/ui/screen';
+import { ToastBanner } from '@/components/ui/toast';
 import { Colors } from '@/constants/theme';
 import { pickAvatar, uploadAvatar } from '@/lib/avatar';
 import { useMemberAccess, useUsrahAccess } from '@/lib/department-access';
@@ -243,7 +244,7 @@ export function AhliDetailView({
         <View className="px-gutter">
           {banner ? (
             <View className="pt-6">
-              <Notice tone={banner.tone} message={banner.message} />
+              <ToastBanner tone={banner.tone} message={banner.message} />
             </View>
           ) : null}
           <EmptyState
@@ -268,7 +269,7 @@ export function AhliDetailView({
         />
 
         <View className="gap-6 px-gutter pb-8 pt-6">
-          {banner ? <Notice tone={banner.tone} message={banner.message} /> : null}
+          {banner ? <ToastBanner tone={banner.tone} message={banner.message} /> : null}
 
           {!canEdit ? (
             <Notice

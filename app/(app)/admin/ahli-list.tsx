@@ -16,6 +16,7 @@ import { Screen } from '@/components/ui/screen';
 import { SectionTitle } from '@/components/ui/section-title';
 import { DetailPlaceholder, SplitPane } from '@/components/ui/split-pane';
 import { TextField } from '@/components/ui/text-field';
+import { ToastBanner } from '@/components/ui/toast';
 import { useMemberAccess } from '@/lib/department-access';
 import { toMalayError } from '@/lib/errors';
 import { deliveryMessage, type DeliveryMode } from '@/lib/file-delivery';
@@ -183,7 +184,7 @@ export default function AhliListScreen() {
   const body = (
       <View className={desktop ? 'gap-6 px-4 pb-8 pt-4' : 'gap-6 px-gutter pt-6'}>
         {error ? <Notice tone="negative" message={error} /> : null}
-        {exportNotice ? <Notice tone={exportNotice.tone} message={exportNotice.message} /> : null}
+        {exportNotice ? <ToastBanner tone={exportNotice.tone} message={exportNotice.message} /> : null}
 
         <View className="gap-3">
           {canEdit ? (

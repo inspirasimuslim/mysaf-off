@@ -14,6 +14,7 @@ import { PickerField } from '@/components/ui/picker-field';
 import { Screen } from '@/components/ui/screen';
 import { SectionTitle } from '@/components/ui/section-title';
 import { TextField } from '@/components/ui/text-field';
+import { ToastBanner } from '@/components/ui/toast';
 import { Colors } from '@/constants/theme';
 import {
   ACTIVITY_CATEGORY_OPTIONS,
@@ -219,7 +220,7 @@ export default function ActivityLogScreen() {
 
       <View className="gap-6 px-gutter pt-6">
         {error ? <Notice tone="negative" message={error} /> : null}
-        {exportNotice ? <Notice tone={exportNotice.tone} message={exportNotice.message} /> : null}
+        {exportNotice ? <ToastBanner tone={exportNotice.tone} message={exportNotice.message} /> : null}
 
         <View className="gap-4">
           <TextField
