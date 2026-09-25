@@ -4,13 +4,11 @@ import { Platform } from 'react-native';
  * Konfigurasi & pembantu Google Maps.
  *
  * KUNCI WEB (`EXPO_PUBLIC_GOOGLE_MAPS_WEB_API_KEY`): Maps JavaScript API
- * (peta web) + Places API (New) (carian tempat, web DAN native — panggilan
- * REST terus). Kunci Android Maps SDK ialah kunci BERBEZA dan diletakkan di
+ * (peta web) + Places API (New) (carian tempat web, panggilan REST terus). Kunci Android Maps SDK ialah kunci BERBEZA dan diletakkan di
  * `app.json` → `android.config.googleMaps.apiKey`.
  *
- * Carian tempat native tidak menghantar `Referer`; jika kunci web disekat
- * dengan "HTTP referrers", carian pada Android akan ditolak — sekat kunci
- * itu dengan "API restrictions" (Maps JavaScript + Places API (New)) sahaja.
+ * Carian tempat (Places REST): web guna kunci web; Android guna kunci Android
+ * dengan header pengenalan app (lihat `placesHeaders`).
  */
 
 export const GOOGLE_MAPS_WEB_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_WEB_API_KEY ?? '';
@@ -18,6 +16,32 @@ export const GOOGLE_MAPS_WEB_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_WEB_A
 /** Kunci kosong atau masih placeholder `GANTI_DENGAN_...` = belum dikonfigurasi. */
 export const googleMapsWebConfigured =
   GOOGLE_MAPS_WEB_API_KEY.trim() !== '' && !GOOGLE_MAPS_WEB_API_KEY.startsWith('GANTI_');
+
+/**
+ * Android: kunci Android (disekat "Android apps") + header `X-Android-Package`
+ * / `X-Android-Cert` (SHA-1 tanpa titik bertindih) — cara rasmi Google
+ * mengesahkan permintaan REST dari app native, yang tiada `Referer`. Nilai
+ * kunci SAMA dengan `app.json` → `android.config.googleMaps.apiKey`; app.json
+ * tidak boleh dibaca dari JS, maka disalin ke env ini. SHA-1 di sini ialah
+ * keystore yang menandatangani APK (kini `debug.keystore`) — kemas kini jika
+ * bertukar ke keystore release.
+ */
+const ANDROID_PACKAGE = 'com.sakuradigital.mysafoff';
+const ANDROID_CERT_SHA1 = '5E8F16062EA3CD2C4A0D547876BAA6F38CABF625';
+const GOOGLE_MAPS_ANDROID_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_ANDROID_API_KEY ?? '';
+
+const placesKey = Platform.OS === 'android' ? GOOGLE_MAPS_ANDROID_API_KEY : GOOGLE_MAPS_WEB_API_KEY;
+
+/** Carian tempat (Places REST) boleh digunakan pada platform semasa. */
+export const placesConfigured = placesKey.trim() !== '' && !placesKey.startsWith('GANTI_');
+
+function placesHeaders(extra: Record<string, string> = {}): Record<string, string> {
+  return {
+    'X-Goog-Api-Key': placesKey,
+    ...(Platform.OS === 'android' ? { 'X-Android-Package': ANDROID_PACKAGE, 'X-Android-Cert': ANDROID_CERT_SHA1 } : {}),
+    ...extra,
+  };
+}
 
 export type Coords = { latitude: number; longitude: number };
 
@@ -42,7 +66,7 @@ export function newPlacesSessionToken(): string {
 }
 
 function assertConfigured() {
-  if (!googleMapsWebConfigured) {
+  if (!placesConfigured) {
     throw new PlacesError('Kunci Google Maps belum dikonfigurasi.');
   }
 }
@@ -56,7 +80,7 @@ export async function searchPlaces(
   const response = await fetch(`${PLACES_BASE}/places:autocomplete`, {
     method: 'POST',
     signal,
-    headers: { 'Content-Type': 'application/json', 'X-Goog-Api-Key': GOOGLE_MAPS_WEB_API_KEY },
+    headers: placesHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ input, sessionToken, languageCode: 'ms', regionCode: 'MY' }),
   });
   if (!response.ok) throw new PlacesError('Carian tempat gagal (' + response.status + ').');
@@ -82,7 +106,7 @@ export async function searchPlaces(
 export async function fetchPlaceCoords(placeId: string, sessionToken: string): Promise<Coords> {
   assertConfigured();
   const response = await fetch(`${PLACES_BASE}/places/${encodeURIComponent(placeId)}?sessionToken=${sessionToken}`, {
-    headers: { 'X-Goog-Api-Key': GOOGLE_MAPS_WEB_API_KEY, 'X-Goog-FieldMask': 'location' },
+    headers: placesHeaders({ 'X-Goog-FieldMask': 'location' }),
   });
   if (!response.ok) throw new PlacesError('Gagal mendapatkan lokasi tempat (' + response.status + ').');
 

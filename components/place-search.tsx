@@ -6,7 +6,7 @@ import { TextField } from '@/components/ui/text-field';
 import { Colors } from '@/constants/theme';
 import {
   fetchPlaceCoords,
-  googleMapsWebConfigured,
+  placesConfigured,
   newPlacesSessionToken,
   searchPlaces,
   type Coords,
@@ -34,7 +34,7 @@ export function PlaceSearch({ onSelect, disabled = false }: Props) {
       return undefined;
     }
     const text = query.trim();
-    if (text.length < 3 || !googleMapsWebConfigured) {
+    if (text.length < 3 || !placesConfigured) {
       setResults([]);
       return undefined;
     }
@@ -83,10 +83,10 @@ export function PlaceSearch({ onSelect, disabled = false }: Props) {
         placeholder="Cari tempat dalam Maps..."
         value={query}
         onChangeText={setQuery}
-        editable={!disabled && googleMapsWebConfigured}
+        editable={!disabled && placesConfigured}
         autoCorrect={false}
       />
-      {!googleMapsWebConfigured ? (
+      {!placesConfigured ? (
         <Text className="text-xs text-ink-muted">Carian tempat belum aktif (kunci Google Maps belum dimasukkan).</Text>
       ) : null}
       {busy ? <ActivityIndicator color={Colors.primary} /> : null}
