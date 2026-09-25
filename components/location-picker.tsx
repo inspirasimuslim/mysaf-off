@@ -20,6 +20,9 @@ import { LocationError, readCurrentCoords } from '@/lib/geolocation';
  * lihat `geolocation.ts`.
  */
 
+/** Medan koordinat manual disorok dari UI; logik dikekalkan sebagai sandaran teknikal. */
+const SHOW_MANUAL_COORDS = false;
+
 type Props = {
   latitude: number | null;
   longitude: number | null;
@@ -132,11 +135,8 @@ export function LocationPicker({ latitude, longitude, radiusMeters, onChange, on
         />
       </View>
 
-      {Platform.OS === 'web' ? (
+      {SHOW_MANUAL_COORDS && Platform.OS === 'web' ? (
         <>
-          <Text className="text-xs text-ink-muted">
-            Atau masukkan koordinat secara manual (boleh tampal terus dari Google Maps, cth. 3.139, 101.6869):
-          </Text>
           <View className="flex-row gap-3">
             <View className="flex-1">
               <TextField
@@ -172,11 +172,11 @@ export function LocationPicker({ latitude, longitude, radiusMeters, onChange, on
 
       {error ? <Notice tone="negative" message={error} /> : null}
 
-      <Text className="text-xs text-ink-muted">
-        {hasPin
-          ? 'Pin: ' + latitude.toFixed(6) + ', ' + longitude.toFixed(6) + ' · radius ' + radiusMeters + 'm'
-          : 'Belum ada pin lokasi. Kehadiran tanpa pin tidak boleh disemak jaraknya.'}
-      </Text>
+      {hasPin ? (
+        <Text className="text-xs text-ink-muted">
+          {'Pin: ' + latitude.toFixed(6) + ', ' + longitude.toFixed(6) + ' · radius ' + radiusMeters + 'm'}
+        </Text>
+      ) : null}
     </View>
   );
 }

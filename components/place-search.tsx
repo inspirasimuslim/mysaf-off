@@ -79,8 +79,8 @@ export function PlaceSearch({ onSelect, disabled = false }: Props) {
   return (
     <View className="gap-2">
       <TextField
-        label="Cari tempat"
-        placeholder="Cari nama tempat..."
+        label="Cari tempat dalam Maps"
+        placeholder="Cari tempat dalam Maps..."
         value={query}
         onChangeText={setQuery}
         editable={!disabled && googleMapsWebConfigured}
