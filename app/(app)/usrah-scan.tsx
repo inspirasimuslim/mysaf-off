@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { CameraView, scanFromURLAsync, useCameraPermissions } from 'expo-camera';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Platform, Text, View } from 'react-native';
+import { Platform, Pressable, Text, View } from 'react-native';
 
 import { ScreenHeader } from '@/components/screen-header';
 import { Button } from '@/components/ui/button';
@@ -289,29 +289,35 @@ export default function UsrahScanScreen() {
         {phase.step === 'imbas' ? (
           <>
             {nearby ? (
-              <Card>
-                <View className="gap-3">
-                  <View className="flex-row items-start gap-3">
-                    <Ionicons name="location" size={22} color={Colors.primary} />
-                    <Text className="flex-1 text-base font-semibold leading-6 text-ink">
-                      {nearby.events.length === 1
-                        ? 'Anda berada di lokasi ' + nearby.events[0]?.name + '. Tekan Hadir untuk tanda kehadiran.'
-                        : 'Anda berada berdekatan beberapa program. Pilih program untuk tanda kehadiran.'}
-                    </Text>
-                  </View>
-
-                  {nearby.events.map((item) => (
-                    <View key={item.event_id} className="gap-2">
-                      {nearby.events.length > 1 ? (
-                        <Text className="text-sm text-ink-muted">{item.name}</Text>
-                      ) : null}
-                      <Button label="Hadir" onPress={() => void markPresent(item.event_id, nearby.coords)} />
-                    </View>
-                  ))}
-
-                  <Button label="Nanti" variant="ghost" onPress={() => setNearby(null)} />
+              <View className="rounded-card border border-line bg-surface px-4 py-3">
+                <View className="flex-row items-center gap-2">
+                  <Ionicons name="location" size={16} color={Colors.primary} />
+                  <Text className="flex-1 text-sm font-semibold text-ink-muted">Anda berada berdekatan:</Text>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Tutup"
+                    hitSlop={10}
+                    onPress={() => setNearby(null)}
+                    className="active:opacity-60">
+                    <Ionicons name="close" size={18} color={Colors.inkFaint} />
+                  </Pressable>
                 </View>
-              </Card>
+
+                {nearby.events.map((item) => (
+                  <View key={item.event_id} className="mt-2 flex-row items-center gap-3">
+                    <Text className="flex-1 text-base font-semibold text-ink" numberOfLines={2}>
+                      {item.name}
+                    </Text>
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={'Hadir: ' + item.name}
+                      onPress={() => void markPresent(item.event_id, nearby.coords)}
+                      className="rounded-pill bg-primary px-4 py-1.5 active:opacity-80">
+                      <Text className="text-sm font-bold text-white">Hadir</Text>
+                    </Pressable>
+                  </View>
+                ))}
+              </View>
             ) : null}
 
             {permission?.granted && !cameraError ? (
