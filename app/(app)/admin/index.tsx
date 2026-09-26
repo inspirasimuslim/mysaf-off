@@ -67,7 +67,16 @@ export default function AdminHubScreen() {
     [memberAccess, usrahAccess, programAccess, yuranAccess, pipisAccess, orgChartAccess, generasiAccess, perkaderanAccess].some(
       (access) => access.loading,
     );
+  const statCards = [
+    { show: usrahAccess.canView, icon: 'people-outline', title: 'Tarbiah', subtitle: 'Kehadiran usrah bulanan dan taburan ahli', route: 'statistik-tarbiah' },
+    { show: perkaderanAccess.canView, icon: 'school-outline', title: 'Perkaderan', subtitle: 'Naqib mengikut sekolah dan kekerapan usrah', route: 'statistik-perkaderan' },
+    { show: pipisAccess.canView, icon: 'business-outline', title: 'PIPIS', subtitle: 'Kutipan mengikut bulan dan generasi, terkumpul vs baki', route: 'statistik-pipis' },
+    { show: yuranAccess.canView, icon: 'wallet-outline', title: 'Yuran', subtitle: 'Kutipan bulanan dan tunggakan', route: 'statistik-yuran' },
+  ] as const;
+  const visibleStatCards = statCards.filter((card) => card.show);
+
   const visibleSections = [
+    visibleStatCards.length > 0,
     superAdmin,
     memberAccess.canView,
     usrahAccess.canView,
@@ -103,7 +112,7 @@ export default function AdminHubScreen() {
           <CollapsibleSection
             variant="plain"
             title="Organisasi"
-            count={8}
+            count={7}
             defaultOpen={openByDefault}>
             <ActionRow
               icon="business-outline"
@@ -433,6 +442,29 @@ export default function AdminHubScreen() {
               }
               onPress={() => router.push('/(app)/admin/pipis-list')}
             />
+          </CollapsibleSection>
+        ) : null}
+
+        {/*
+          Statistik: satu kad setiap department, dipaparkan mengikut kebenaran
+          department yang sama seperti modulnya (Super Admin nampak semua).
+          RPC `stat_*` menguatkuasakannya semula di pangkalan data.
+        */}
+        {visibleStatCards.length > 0 ? (
+          <CollapsibleSection
+            variant="plain"
+            title="Statistik"
+            count={visibleStatCards.length}
+            defaultOpen={openByDefault}>
+            {visibleStatCards.map((card) => (
+              <ActionRow
+                key={card.route}
+                icon={card.icon}
+                title={card.title}
+                subtitle={card.subtitle}
+                onPress={() => router.push(('/(app)/admin/' + card.route) as never)}
+              />
+            ))}
           </CollapsibleSection>
         ) : null}
 
