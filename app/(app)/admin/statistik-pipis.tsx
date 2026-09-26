@@ -36,7 +36,7 @@ export default function StatistikPipisScreen() {
 
   return (
     <StatShell
-      eyebrow="Bendahari"
+      eyebrow="Ekonomi & Aset"
       title="Statistik PIPIS"
       subtitle="Kutipan sumbangan PIPIS ASET"
       year={year}

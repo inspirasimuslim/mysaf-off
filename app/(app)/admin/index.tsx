@@ -379,14 +379,12 @@ export default function AdminHubScreen() {
           daripada modul ahli dan usrah. Seorang admin boleh memegang satu
           tanpa yang lain, jadi kadnya berdiri sendiri.
         */}
-        {yuranAccess.canView || pipisAccess.canView ? (
+        {yuranAccess.canView ? (
           <CollapsibleSection
             variant="plain"
             title="Bendahari"
-            count={(yuranAccess.canView ? 4 : 0) + (pipisAccess.canView ? 1 : 0)}
+            count={4}
             defaultOpen={openByDefault}>
-            {yuranAccess.canView ? (
-              <>
             <ActionRow
               icon="wallet-outline"
               title="Yuran"
@@ -426,23 +424,12 @@ export default function AdminHubScreen() {
               onPress={() => router.push('/(app)/admin/adhoc-payment-list')}
             />
 
-              <ActionRow
-                icon="stats-chart-outline"
-                title="Statistik Yuran"
-                subtitle="Kutipan bulanan dan tunggakan mengikut generasi"
-                onPress={() => router.push('/(app)/admin/statistik-yuran')}
-              />
-              </>
-            ) : null}
-
-            {pipisAccess.canView ? (
-              <ActionRow
-                icon="stats-chart-outline"
-                title="Statistik PIPIS"
-                subtitle="Kutipan mengikut bulan dan generasi, terkumpul vs baki"
-                onPress={() => router.push('/(app)/admin/statistik-pipis')}
-              />
-            ) : null}
+            <ActionRow
+              icon="stats-chart-outline"
+              title="Statistik Yuran"
+              subtitle="Kutipan bulanan dan tunggakan mengikut generasi"
+              onPress={() => router.push('/(app)/admin/statistik-yuran')}
+            />
           </CollapsibleSection>
         ) : null}
 
@@ -455,7 +442,7 @@ export default function AdminHubScreen() {
           <CollapsibleSection
             variant="plain"
             title="Ekonomi & Aset"
-            count={1}
+            count={2}
             defaultOpen={openByDefault}>
             <ActionRow
               icon="business-outline"
@@ -466,6 +453,13 @@ export default function AdminHubScreen() {
                   : 'Semak sumbangan dan eksport laporan (paparan sahaja)'
               }
               onPress={() => router.push('/(app)/admin/pipis-list')}
+            />
+
+            <ActionRow
+              icon="stats-chart-outline"
+              title="Statistik PIPIS"
+              subtitle="Kutipan mengikut bulan dan generasi, terkumpul vs baki"
+              onPress={() => router.push('/(app)/admin/statistik-pipis')}
             />
           </CollapsibleSection>
         ) : null}
