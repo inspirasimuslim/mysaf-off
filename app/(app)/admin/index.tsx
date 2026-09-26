@@ -165,13 +165,6 @@ export default function AdminHubScreen() {
               subtitle="Reset kata laluan dan tempoh untuk ahli yang belum berjaya log masuk kali pertama"
               onPress={() => router.push('/(app)/admin/bulk-reset-unlogged')}
             />
-
-            <ActionRow
-              icon="document-text-outline"
-              title="Log Aktiviti Admin"
-              subtitle="Jejak tindakan admin merentasi sistem — siapa, apa dan bila"
-              onPress={() => router.push('/(app)/admin/activity-log')}
-            />
           </CollapsibleSection>
         ) : null}
 

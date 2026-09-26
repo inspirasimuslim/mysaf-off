@@ -12,7 +12,7 @@ import { deliverWorkbook } from './xlsx-download';
  *
  * Tiada fungsi tulis di sini dengan sengaja: baris log hanya dicipta oleh
  * trigger pangkalan data dan Edge Function (migration
- * 20260915000043_admin_activity_log.sql). RLS membenarkan Super Admin sahaja
+ * 20260915000043_admin_activity_log.sql). RLS membenarkan Owner sahaja
  * membacanya.
  */
 

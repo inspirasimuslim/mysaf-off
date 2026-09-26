@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 
-import { NoAccessScreen, SUPER_ADMIN_ONLY } from '@/components/no-access';
+import { NoAccessScreen } from '@/components/no-access';
 import { SaveShareButtons } from '@/components/save-share-buttons';
 import { ScreenHeader } from '@/components/screen-header';
 import { Button } from '@/components/ui/button';
@@ -51,7 +51,7 @@ function formatTime(iso: string): string {
 }
 
 /**
- * Log Aktiviti Admin — Super Admin sahaja.
+ * Log Aktiviti Admin — Owner sahaja.
  *
  * Dikumpul ikut admin + hari kerana soalan yang biasa ditanya ialah "apa yang
  * si polan buat semalam", bukan membaca satu demi satu tindakan. Setiap
@@ -65,8 +65,8 @@ function formatTime(iso: string): string {
 export default function ActivityLogScreen() {
   const goBack = useGoBack();
   const desktop = useIsDesktop();
-  const { isSuperAdmin, loading: permissionsLoading } = usePermissions();
-  const allowed = !permissionsLoading && isSuperAdmin();
+  const { isOwner, loading: permissionsLoading } = usePermissions();
+  const allowed = !permissionsLoading && isOwner();
 
   const [rows, setRows] = useState<AdminActivity[]>([]);
   const [loading, setLoading] = useState(true);
@@ -207,7 +207,7 @@ export default function ActivityLogScreen() {
   const count = rows.length + (hasMore ? '+' : '');
 
   if (permissionsLoading) return <LoadingScreen />;
-  if (!allowed) return <NoAccessScreen title="Log Aktiviti Admin" description={SUPER_ADMIN_ONLY} />;
+  if (!allowed) return <NoAccessScreen title="Log Aktiviti Admin" description="Halaman ini khusus untuk Owner sahaja." />;
 
   return (
     <Screen padTop={false} wide>

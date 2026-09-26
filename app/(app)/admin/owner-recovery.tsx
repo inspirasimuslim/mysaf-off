@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
 
@@ -30,6 +31,7 @@ type Pending = { id: string; name: string; make: boolean } | null;
  */
 export default function OwnerRecoveryScreen() {
   const goBack = useGoBack();
+  const router = useRouter();
   const { loading: permLoading, isOwner } = usePermissions();
 
   const [superAdmins, setSuperAdmins] = useState<SuperAdminRow[]>([]);
@@ -113,6 +115,12 @@ export default function OwnerRecoveryScreen() {
           </Text>
 
           {banner ? <ToastBanner tone={banner.tone} message={banner.message} /> : null}
+
+          <Button
+            label="Log Aktiviti Admin"
+            variant="secondary"
+            onPress={() => router.push('/(app)/admin/activity-log')}
+          />
 
           <View>
             <SectionTitle title={'Super Admin semasa (' + superAdmins.length + ')'} />

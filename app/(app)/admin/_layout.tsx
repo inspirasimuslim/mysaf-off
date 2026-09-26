@@ -48,8 +48,8 @@ export default function AdminLayout() {
   const pathname = usePathname();
 
   if (loading) return <LoadingScreen />;
-  // Owner BUKAN admin: satu-satunya skrin di bawah /admin yang dibuka untuknya ialah pemulihan.
-  if (isOwner() && !isAdmin() && pathname.endsWith('/owner-recovery')) {
+  // Owner BUKAN admin: hanya skrin pemulihan satu-satunya skrin di bawah /admin yang dibuka untuknya ialah pemulihan log aktiviti dibuka untuknya.
+  if (isOwner() && !isAdmin() && (pathname.endsWith('/owner-recovery') || pathname.endsWith('/activity-log'))) {
     return <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: Colors.background } }} />;
   }
   if (!isAdmin() && !isActiveNaqib()) return <NoAccess />;
