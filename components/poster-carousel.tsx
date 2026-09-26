@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { useEffect, useRef, type RefObject } from 'react';
+import { useEffect, useRef, useState, type RefObject } from 'react';
 import { Platform, Pressable, ScrollView, Text, View } from 'react-native';
 
 import { SectionTitle } from '@/components/ui/section-title';
@@ -40,6 +40,12 @@ type Props = {
   onPress: (id: string) => void;
   /** Lebar kad poster (lalai 156). Tinggi mengikut nisbah 3:4. */
   cardWidth?: number;
+  /**
+   * Mod desktop: grid 2 lajur × 2 baris yang kelihatan, dengan tatalan menegak
+   * DALAM seksyen bila lebih daripada empat item. Lebar kad mengikut lebar
+   * bekas, jadi `cardWidth` tidak dipakai.
+   */
+  grid?: boolean;
 };
 
 /**
@@ -155,13 +161,88 @@ export function useWebMouseScroll(ref: RefObject<ScrollView | null>, enabled: bo
   }, [ref, enabled]);
 }
 
-export function PosterCarousel({ title, caption, items, onPress, cardWidth = CARD_WIDTH }: Props) {
+const GRID_GAP = 12;
+/** Ruang tajuk (maks. dua baris) dan kapsyen di bawah poster dalam grid. */
+const GRID_TEXT_HEIGHT = 56;
+
+function PosterCell({ item, width, onPress }: { item: PosterItem; width: number; onPress: (id: string) => void }) {
+  const posterHeight = Math.round((width * 4) / 3);
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={item.title}
+      onPress={() => onPress(item.id)}
+      style={{ width }}
+      className="active:opacity-70">
+      {item.posterUrl ? (
+        <Image
+          source={{ uri: item.posterUrl }}
+          style={{ width, height: posterHeight, borderRadius: 16 }}
+          contentFit="cover"
+          transition={150}
+          accessibilityLabel={'Poster ' + item.title}
+        />
+      ) : (
+        <View
+          style={{ width, height: posterHeight, borderRadius: 16 }}
+          className="items-center justify-center border border-line bg-primary-tint">
+          <Ionicons name="image-outline" size={28} color={Colors.inkFaint} />
+        </View>
+      )}
+
+      <Text className="mt-2 text-sm font-semibold text-ink" numberOfLines={2}>
+        {item.title}
+      </Text>
+      {item.caption ? (
+        <Text className="mt-0.5 text-xs text-ink-muted" numberOfLines={1}>
+          {item.caption}
+        </Text>
+      ) : null}
+    </Pressable>
+  );
+}
+
+/**
+ * Grid dua lajur untuk desktop. Tinggi kawasan kelihatan dihadkan kepada dua
+ * baris (empat poster); item selebihnya dicapai dengan tatalan menegak di
+ * dalam seksyen, jadi tinggi seksyen tidak bergantung pada bilangan program.
+ */
+function PosterGrid({ title, caption, items, onPress }: Omit<Props, 'grid' | 'cardWidth'>) {
+  const [measured, setMeasured] = useState(0);
+  const cellWidth = measured > 0 ? Math.floor((measured - GRID_GAP) / 2) : 0;
+  const rowHeight = Math.round((cellWidth * 4) / 3) + GRID_TEXT_HEIGHT;
+  const visibleHeight = rowHeight * 2 + GRID_GAP;
+
+  return (
+    <View onLayout={(event) => setMeasured(event.nativeEvent.layout.width)}>
+      <SectionTitle title={title} caption={caption} />
+
+      {cellWidth > 0 ? (
+        <ScrollView
+          nestedScrollEnabled
+          showsVerticalScrollIndicator={items.length > 4}
+          style={{ maxHeight: visibleHeight }}>
+          <View className="flex-row flex-wrap" style={{ gap: GRID_GAP }}>
+            {items.map((item) => (
+              <PosterCell key={item.id} item={item} width={cellWidth} onPress={onPress} />
+            ))}
+          </View>
+        </ScrollView>
+      ) : null}
+    </View>
+  );
+}
+
+export function PosterCarousel({ title, caption, items, onPress, cardWidth = CARD_WIDTH, grid = false }: Props) {
   const posterHeight = Math.round((cardWidth * 4) / 3);
   const scrollRef = useRef<ScrollView>(null);
   // Bergantung pada ada/tiada item: ScrollView belum wujud semasa senarai kosong.
   useWebMouseScroll(scrollRef, items.length > 0);
 
   if (items.length === 0) return null;
+
+  if (grid) return <PosterGrid title={title} caption={caption} items={items} onPress={onPress} />;
 
   return (
     <View>

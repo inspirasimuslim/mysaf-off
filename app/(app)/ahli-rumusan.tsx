@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Text, View } from 'react-native';
 
 import { DonutStat, GenerationColumns, RankedBars, StatCard, useCountUp } from '@/components/member-stats';
@@ -9,6 +9,7 @@ import { Screen } from '@/components/ui/screen';
 import { toMalayError } from '@/lib/errors';
 import { fetchMemberStatistics, type MemberStatistics } from '@/lib/member-statistics';
 import { useGoBack } from '@/lib/navigation';
+import { useIsDesktop } from '@/lib/use-desktop';
 import { KAWASAN_USRAH_OPTIONS, generationLabel } from '@/types/database';
 
 type State =
@@ -58,8 +59,10 @@ export default function AhliRumusanScreen() {
     void load();
   }, [load]);
 
+  const desktop = useIsDesktop();
+
   return (
-    <Screen padTop={false}>
+    <Screen padTop={false} wide>
       <ScreenHeader
         eyebrow="Direktori"
         title="Rumusan Ahli"
@@ -67,7 +70,7 @@ export default function AhliRumusanScreen() {
         onBackPress={goBack}
       />
 
-      <View className="gap-5 px-gutter pb-8 pt-5">
+      <View className={desktop ? 'gap-4 px-1 pb-6 pt-4' : 'gap-5 px-gutter pb-8 pt-5'}>
         {state.step === 'memuat' ? <LoadingCards /> : null}
 
         {state.step === 'gagal' ? (
@@ -84,10 +87,49 @@ export default function AhliRumusanScreen() {
 }
 
 function Summary({ data }: { data: MemberStatistics }) {
+  const desktop = useIsDesktop();
   const total = data.total_ahli;
   const withoutProfile = data.ikut_jantina.find((slice) => slice.label === 'Tiada Rekod')?.count ?? 0;
   const generations = data.ikut_generasi.filter((slice) => slice.count > 0 && slice.label !== 'Tiada Rekod').length;
   const states = data.ikut_negeri.filter((slice) => slice.label !== 'Tidak Dapat Dikenal Pasti' && slice.count > 0).length;
+
+  const cards: Record<'jantina' | 'generasi' | 'kawasan' | 'sekolah' | 'pekerjaan' | 'perkahwinan' | 'negeri', ReactNode> = {
+    jantina: (
+      <StatCard title="Jantina">
+        <DonutStat slices={data.ikut_jantina} total={total} />
+      </StatCard>
+    ),
+    generasi: (
+      <StatCard title="Generasi" caption={'Ikhwan 01 hingga ' + generationLabel(data.ikut_generasi.at(-1)?.label ?? null)}>
+        <GenerationColumns slices={data.ikut_generasi} formatLabel={(code) => generationLabel(code)} />
+      </StatCard>
+    ),
+    kawasan: (
+      <StatCard title="Kawasan Usrah">
+        <RankedBars slices={data.ikut_kawasan_usrah} total={total} formatLabel={kawasanLabel} />
+      </StatCard>
+    ),
+    sekolah: (
+      <StatCard title="Sekolah">
+        <RankedBars slices={data.ikut_sekolah} total={total} formatLabel={sekolahLabel} />
+      </StatCard>
+    ),
+    pekerjaan: (
+      <StatCard title="Status Pekerjaan">
+        <RankedBars slices={data.ikut_status_pekerjaan} total={total} />
+      </StatCard>
+    ),
+    perkahwinan: (
+      <StatCard title="Status Perkahwinan">
+        <DonutStat slices={data.ikut_status_perkahwinan} total={total} />
+      </StatCard>
+    ),
+    negeri: (
+      <StatCard title="Negeri" caption="Anggaran berdasarkan alamat semasa">
+        <RankedBars slices={data.ikut_negeri} total={total} />
+      </StatCard>
+    ),
+  };
 
   return (
     <>
@@ -103,33 +145,31 @@ function Summary({ data }: { data: MemberStatistics }) {
         />
       ) : null}
 
-      <StatCard title="Jantina">
-        <DonutStat slices={data.ikut_jantina} total={total} />
-      </StatCard>
-
-      <StatCard title="Generasi" caption={'Ikhwan 01 hingga ' + generationLabel(data.ikut_generasi.at(-1)?.label ?? null)}>
-        <GenerationColumns slices={data.ikut_generasi} formatLabel={(code) => generationLabel(code)} />
-      </StatCard>
-
-      <StatCard title="Kawasan Usrah">
-        <RankedBars slices={data.ikut_kawasan_usrah} total={total} formatLabel={kawasanLabel} />
-      </StatCard>
-
-      <StatCard title="Sekolah">
-        <RankedBars slices={data.ikut_sekolah} total={total} formatLabel={sekolahLabel} />
-      </StatCard>
-
-      <StatCard title="Status Pekerjaan">
-        <RankedBars slices={data.ikut_status_pekerjaan} total={total} />
-      </StatCard>
-
-      <StatCard title="Status Perkahwinan">
-        <DonutStat slices={data.ikut_status_perkahwinan} total={total} />
-      </StatCard>
-
-      <StatCard title="Negeri" caption="Anggaran berdasarkan alamat semasa">
-        <RankedBars slices={data.ikut_negeri} total={total} />
-      </StatCard>
+      {desktop ? (
+        /*
+          Desktop (≥1024px): grid dua lajur. Generasi (27 lajur) lebar penuh;
+          selebihnya berpasangan. Urutan telefon tidak berubah.
+        */
+        <View className="flex-row flex-wrap gap-4">
+          <Cell>{cards.jantina}</Cell>
+          <Cell>{cards.perkahwinan}</Cell>
+          <Cell full>{cards.generasi}</Cell>
+          <Cell>{cards.kawasan}</Cell>
+          <Cell>{cards.pekerjaan}</Cell>
+          <Cell>{cards.sekolah}</Cell>
+          <Cell>{cards.negeri}</Cell>
+        </View>
+      ) : (
+        <>
+          {cards.jantina}
+          {cards.generasi}
+          {cards.kawasan}
+          {cards.sekolah}
+          {cards.pekerjaan}
+          {cards.perkahwinan}
+          {cards.negeri}
+        </>
+      )}
 
       <Text className="text-center text-xs text-ink-faint">
         {'Dikira pada ' +
@@ -140,6 +180,11 @@ function Summary({ data }: { data: MemberStatistics }) {
       </Text>
     </>
   );
+}
+
+/** Sel grid desktop: separuh lebar (dua lajur), atau lebar penuh. */
+function Cell({ full = false, children }: { full?: boolean; children: ReactNode }) {
+  return <View style={{ flexGrow: 1, flexShrink: 1, minWidth: 0, flexBasis: full ? '100%' : '48%' }}>{children}</View>;
 }
 
 /**

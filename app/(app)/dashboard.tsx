@@ -269,7 +269,8 @@ export default function DashboardScreen() {
               <PosterCarousel
                 title="Program & Usrah"
                 items={eventItems}
-                cardWidth={desktop ? DESK_POSTER_WIDTH : undefined}
+                // Desktop: grid 2×2, tatalan menegak dalam seksyen bila lebih empat.
+                grid={desktop}
                 onPress={(id) => router.push({ pathname: '/(app)/event-info', params: { id } })}
               />
             </DeskCard>

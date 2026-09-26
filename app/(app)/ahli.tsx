@@ -1,19 +1,24 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { FlatList, Pressable, Text, View } from 'react-native';
+import { FlatList, Pressable, ScrollView, Text, View } from 'react-native';
 
 import { ScreenHeader } from '@/components/screen-header';
+import { ActionRow } from '@/components/ui/action-row';
 import { EmptyState } from '@/components/ui/empty-state';
 import { LoadingScreen } from '@/components/ui/loading-screen';
 import { MemberAvatar } from '@/components/ui/member-avatar';
 import { Notice } from '@/components/ui/notice';
 import { Screen } from '@/components/ui/screen';
+import { DetailPlaceholder, SplitPane } from '@/components/ui/split-pane';
 import { TextField } from '@/components/ui/text-field';
 import { BIRTHDAY_GOLD, Colors } from '@/constants/theme';
 import { useMemberAccess } from '@/lib/department-access';
 import { toMalayError } from '@/lib/errors';
 import { fetchMemberDirectory, fetchMembers } from '@/lib/members';
+import { useIsDesktop } from '@/lib/use-desktop';
+import { AhliViewBody } from './ahli-view';
+import { AhliDetailView } from './admin/ahli-detail';
 import { generationLabel, generationOrder, type DirectoryMember } from '@/types/database';
 
 const CARD_WIDTH = 96;
@@ -34,6 +39,9 @@ type Group = { code: string | null; members: DirectoryMember[] };
 export default function AhliScreen() {
   const router = useRouter();
   const { loading: accessLoading, canView } = useMemberAccess();
+  const desktop = useIsDesktop();
+  // Desktop: ahli terpilih dipapar di panel kanan (master-detail), tanpa tukar skrin.
+  const [selected, setSelected] = useState<DirectoryMember | null>(null);
 
   const [members, setMembers] = useState<DirectoryMember[]>([]);
   /**
@@ -105,6 +113,11 @@ export default function AhliScreen() {
 
   const open = useCallback(
     (member: DirectoryMember) => {
+      if (desktop) {
+        setSelected(member);
+        return;
+      }
+
       const id = member.nombor_ahli ? idByNumber.get(member.nombor_ahli) : undefined;
 
       // Admin department mendapat skrin butiran penuh yang sedia ada; skrin itu
@@ -127,7 +140,7 @@ export default function AhliScreen() {
         },
       });
     },
-    [canView, idByNumber, router],
+    [canView, desktop, idByNumber, router],
   );
 
   if (accessLoading || loading) return <LoadingScreen />;
@@ -135,59 +148,160 @@ export default function AhliScreen() {
   const total = members.length;
   const shown = groups.reduce((sum, group) => sum + group.members.length, 0);
 
-  return (
-    <Screen padTop={false}>
-      <ScreenHeader
-        eyebrow="Direktori"
-        title="Ahli"
-        subtitle={search.trim() ? shown + ' daripada ' + total + ' ahli' : total + ' ahli direkodkan'}
-      />
+  const header = (
+    <ScreenHeader
+      eyebrow="Direktori"
+      title="Ahli"
+      subtitle={search.trim() ? shown + ' daripada ' + total + ' ahli' : total + ' ahli direkodkan'}
+    />
+  );
 
-      <View className="gap-6 px-gutter pt-6">
-        {error ? <Notice tone="negative" message={error} /> : null}
+  const controls = (
+    <>
+      {error ? <Notice tone="negative" message={error} /> : null}
 
-        {/*
-          Tiga pintu, kesemuanya dibuka kepada semua ahli: rumusan agregat
-          (tiada data individu), carta organisasi (maklumat terbuka), dan
-          senarai pasangan Ahli MBM (lapan field terhad, lihat `ahli-mbm.tsx`).
-        */}
-        {/* Satu baris empat kotak sama lebar; label penuh, bungkus ke beberapa baris (kotak jadi lebih tinggi). */}
-        <View className="flex-row items-stretch gap-2">
-          <MenuTile
-            words={['Rumusan', 'Ahli']}
-            icon="stats-chart"
-            color={Colors.primary}
-            onPress={() => router.push('/(app)/ahli-rumusan')}
-          />
-          <MenuTile
-            words={['Organisasi', '2025/2027']}
-            icon="git-network"
-            color={Colors.primary}
-            onPress={() => router.push('/(app)/organisasi')}
-          />
-          <MenuTile
-            words={['Ahli Lahir', 'Bulan Ini']}
-            icon="gift"
-            color={BIRTHDAY_GOLD}
-            onPress={() => router.push('/(app)/hari-jadi-bulan')}
-          />
-          <MenuTile
-            words={['Ahli', 'MBM']}
-            icon="heart"
-            color={Colors.primary}
-            onPress={() => router.push('/(app)/ahli-mbm')}
-          />
-        </View>
-
-        <TextField
-          label="Cari"
-          placeholder="Nama ahli"
-          value={search}
-          onChangeText={setSearch}
-          autoCapitalize="none"
-          autoCorrect={false}
+      {/*
+        Tiga pintu, kesemuanya dibuka kepada semua ahli: rumusan agregat
+        (tiada data individu), carta organisasi (maklumat terbuka), dan
+        senarai pasangan Ahli MBM (lapan field terhad, lihat `ahli-mbm.tsx`).
+      */}
+      {/* Satu baris empat kotak sama lebar; label penuh, bungkus ke beberapa baris (kotak jadi lebih tinggi). */}
+      <View className="flex-row items-stretch gap-2">
+        <MenuTile
+          words={['Rumusan', 'Ahli']}
+          icon="stats-chart"
+          color={Colors.primary}
+          onPress={() => router.push('/(app)/ahli-rumusan')}
+        />
+        <MenuTile
+          words={['Organisasi', '2025/2027']}
+          icon="git-network"
+          color={Colors.primary}
+          onPress={() => router.push('/(app)/organisasi')}
+        />
+        <MenuTile
+          words={['Ahli Lahir', 'Bulan Ini']}
+          icon="gift"
+          color={BIRTHDAY_GOLD}
+          onPress={() => router.push('/(app)/hari-jadi-bulan')}
+        />
+        <MenuTile
+          words={['Ahli', 'MBM']}
+          icon="heart"
+          color={Colors.primary}
+          onPress={() => router.push('/(app)/ahli-mbm')}
         />
       </View>
+
+      {/* Dahulu di Tetapan > Lain-lain; dipindahkan ke sini. */}
+      <ActionRow
+        icon="chatbubble-ellipses-outline"
+        title="Maklum Balas"
+        subtitle="Hantar cadangan atau masalah mengenai aplikasi"
+        onPress={() => router.push('/(app)/maklum-balas')}
+      />
+
+      <TextField
+        label="Cari"
+        placeholder="Nama ahli"
+        value={search}
+        onChangeText={setSearch}
+        autoCapitalize="none"
+        autoCorrect={false}
+      />
+    </>
+  );
+
+  const emptyState = (
+    <EmptyState
+      icon="search-outline"
+      title={search.trim() ? 'Tiada nama sepadan' : 'Tiada rekod ahli'}
+      description={
+        search.trim()
+          ? 'Cuba ejaan lain atau sebahagian nama sahaja.'
+          : 'Direktori masih kosong. Rekod ahli diimport melalui panel admin.'
+      }
+    />
+  );
+
+  if (desktop) {
+    const selectedId = selected?.nombor_ahli ? idByNumber.get(selected.nombor_ahli) : undefined;
+
+    return (
+      <SplitPane
+        header={header}
+        left={
+          <View className="gap-4 p-4">
+            {controls}
+
+            {groups.length
+              ? groups.map((group) => (
+                  <View key={group.code ?? 'tiada'}>
+                    <View className="mb-1 flex-row items-baseline gap-2">
+                      <Text className="text-base font-bold text-ink">
+                        {group.code ? 'Generasi ' + group.code : 'Tanpa generasi'}
+                      </Text>
+                      <Text className="text-sm text-ink-muted">{'· ' + group.members.length + ' ahli'}</Text>
+                    </View>
+                    {group.members.map((item, index) => {
+                      const active =
+                        selected !== null &&
+                        selected.nombor_ahli === item.nombor_ahli &&
+                        selected.full_name === item.full_name;
+                      return (
+                        <Pressable
+                          key={(item.nombor_ahli ?? 'x') + ':' + index}
+                          accessibilityRole="button"
+                          accessibilityLabel={item.full_name}
+                          accessibilityState={{ selected: active }}
+                          onPress={() => open(item)}
+                          className={`flex-row items-center gap-3 rounded-field px-2 py-1.5 ${
+                            active ? 'bg-primary-soft' : 'active:opacity-70'
+                          }`}>
+                          <MemberAvatar fullName={item.full_name} avatarUrl={item.avatar_url} size={36} />
+                          <Text className={`flex-1 text-sm text-ink ${active ? 'font-semibold' : ''}`} numberOfLines={1}>
+                            {item.full_name}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                ))
+              : emptyState}
+          </View>
+        }
+        right={
+          selected ? (
+            canView && selectedId ? (
+              <AhliDetailView key={selectedId} id={selectedId} />
+            ) : (
+              <ScrollView key={selected.nombor_ahli ?? selected.full_name} showsVerticalScrollIndicator={false}>
+                <AhliViewBody
+                  member={{
+                    nama: selected.full_name,
+                    generasi: selected.generasi ?? '',
+                    emel: selected.email ?? '',
+                    tel: selected.no_tel ?? '',
+                    avatar: selected.avatar_url ?? '',
+                    pekerjaan: selected.status_pekerjaan ?? '',
+                    perkahwinan: selected.status_perkahwinan ?? '',
+                  }}
+                />
+              </ScrollView>
+            )
+          ) : (
+            <DetailPlaceholder icon="person-outline" text="Pilih ahli dari senarai untuk lihat butiran" />
+          )
+        }
+      />
+    );
+  }
+
+  return (
+    <Screen padTop={false}>
+      {header}
+
+      <View className="gap-6 px-gutter pt-6">{controls}</View>
 
       {groups.length ? (
         <View className="gap-8 pb-8 pt-6">
@@ -235,17 +349,7 @@ export default function AhliScreen() {
           ))}
         </View>
       ) : (
-        <View className="px-gutter pt-6">
-          <EmptyState
-            icon="search-outline"
-            title={search.trim() ? 'Tiada nama sepadan' : 'Tiada rekod ahli'}
-            description={
-              search.trim()
-                ? 'Cuba ejaan lain atau sebahagian nama sahaja.'
-                : 'Direktori masih kosong. Rekod ahli diimport melalui panel admin.'
-            }
-          />
-        </View>
+        <View className="px-gutter pt-6">{emptyState}</View>
       )}
     </Screen>
   );

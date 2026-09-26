@@ -32,6 +32,7 @@ import { useGenerasiAccess } from '@/lib/department-access';
 import { toMalayError } from '@/lib/errors';
 import { deliveryMessage, type DeliveryMode } from '@/lib/file-delivery';
 import { useGoBack } from '@/lib/navigation';
+import { useIsDesktop } from '@/lib/use-desktop';
 import { dateRangeLabel, generationLabel, generationOrder, type Option } from '@/types/database';
 
 type Tab = 'aktif' | 'generasi' | 'tidak-aktif';
@@ -41,6 +42,12 @@ const TAB_OPTIONS: Option<Tab>[] = [
   { value: 'aktif', label: 'Paling Aktif' },
   { value: 'generasi', label: 'Generasi' },
   { value: 'tidak-aktif', label: 'Tidak Aktif' },
+];
+
+/** Desktop: generasi ada lajur sendiri di kanan, jadi togol kiri hanya dua pilihan. */
+const DESKTOP_TAB_OPTIONS: Option<Tab>[] = [
+  { value: 'aktif', label: 'Ahli Paling Aktif' },
+  { value: 'tidak-aktif', label: 'Ahli Tidak Aktif' },
 ];
 
 /** Ahli dipapar berperingkat — 325 baris sekali gus melambatkan skrin. */
@@ -82,6 +89,7 @@ function generasiName(code: string | null): string {
 export default function PenarafanScreen() {
   const goBack = useGoBack();
   const access = useGenerasiAccess();
+  const desktop = useIsDesktop();
 
   const [startDate, setStartDate] = useState(() => new Date().getFullYear() + '-01-01');
   const [endDate, setEndDate] = useState(() => isoDate(new Date()));
@@ -126,6 +134,84 @@ export default function PenarafanScreen() {
   }
 
   const stale = result !== null && (result.startDate !== startDate || result.endDate !== endDate);
+  // Desktop tiada tab 'generasi' (ia lajur kanan); jatuh ke 'aktif' bila tab itu terpilih di mobile.
+  const leftTab: Tab = tab === 'generasi' ? 'aktif' : tab;
+
+  const periodCard = (
+    <StatCard title="Tempoh" caption={'Markah maksimum dalam tempoh ini: ' + maxScore}>
+      <View className="gap-3">
+        <View className="flex-row items-start gap-3">
+          <View className="flex-1">
+            <DateTimeField label="Tarikh mula" mode="date" value={startDate} onChange={setStartDate} disabled={busy} />
+          </View>
+          <View className="flex-1">
+            <DateTimeField label="Tarikh tamat" mode="date" value={endDate} onChange={setEndDate} disabled={busy} />
+          </View>
+        </View>
+
+        {!rangeValid ? <Notice tone="negative" message="Tarikh tamat mesti pada atau selepas tarikh mula." /> : null}
+
+        <Button
+          label="Jana Penarafan"
+          loading={busy}
+          disabled={busy || !rangeValid}
+          icon={<Ionicons name="trophy-outline" size={18} color={Colors.white} />}
+          onPress={() => void generate()}
+        />
+
+        {stale && !busy ? (
+          <Text className="text-center text-xs text-ink-muted">
+            Tempoh telah berubah — tekan Jana Penarafan untuk mengira semula.
+          </Text>
+        ) : null}
+      </View>
+    </StatCard>
+  );
+
+  if (desktop) {
+    /*
+      Desktop (≥1024px): tempoh + ringkasan sebaris di atas; di bawahnya dua
+      lajur — kiri togol Ahli Paling Aktif / Ahli Tidak Aktif, kanan Generasi.
+      Telefon kekal tiga tab dalam satu lajur (cabang di bawah).
+    */
+    return (
+      <Screen padTop={false} wide>
+        <ScreenHeader
+          eyebrow="Pembangunan Generasi"
+          title="Penarafan Ahli dan Generasi"
+          subtitle={result ? dateRangeLabel(result.startDate, result.endDate) : 'Mengikut tempoh pilihan'}
+          onBackPress={goBack}
+        />
+
+        <View className="gap-4 px-1 pb-6 pt-4">
+          <View className="flex-row items-stretch gap-4">
+            <View style={{ flex: 1, minWidth: 0 }}>{periodCard}</View>
+            <View style={{ flex: 1, minWidth: 0, justifyContent: 'center' }}>
+              {result ? <Hero result={result} /> : busy ? <LoadingCards /> : null}
+            </View>
+          </View>
+
+          {error ? <Notice tone="negative" message={error} /> : null}
+
+          <View className="flex-row items-start gap-4">
+            <View className="gap-4" style={{ flex: 1, minWidth: 0 }}>
+              <Segmented value={leftTab} options={DESKTOP_TAB_OPTIONS} onChange={setTab} />
+
+              {leftTab === 'aktif' ? (
+                result ? <MemberRanking members={result.members} /> : null
+              ) : (
+                <InactiveSection startDate={startDate} endDate={endDate} rangeValid={rangeValid} />
+              )}
+            </View>
+
+            <View style={{ flex: 1, minWidth: 0 }}>{result ? <GenerationRanking result={result} /> : null}</View>
+          </View>
+
+          <ScoringGuide />
+        </View>
+      </Screen>
+    );
+  }
 
   return (
     <Screen padTop={false}>
@@ -138,36 +224,7 @@ export default function PenarafanScreen() {
 
       <View className="gap-5 px-gutter pb-8 pt-5">
         {/* --- Tempoh (dikongsi semua tab) ----------------------------------- */}
-        <StatCard title="Tempoh" caption={'Markah maksimum dalam tempoh ini: ' + maxScore}>
-          <View className="gap-3">
-            <View className="flex-row items-start gap-3">
-              <View className="flex-1">
-                <DateTimeField label="Tarikh mula" mode="date" value={startDate} onChange={setStartDate} disabled={busy} />
-              </View>
-              <View className="flex-1">
-                <DateTimeField label="Tarikh tamat" mode="date" value={endDate} onChange={setEndDate} disabled={busy} />
-              </View>
-            </View>
-
-            {!rangeValid ? (
-              <Notice tone="negative" message="Tarikh tamat mesti pada atau selepas tarikh mula." />
-            ) : null}
-
-            <Button
-              label="Jana Penarafan"
-              loading={busy}
-              disabled={busy || !rangeValid}
-              icon={<Ionicons name="trophy-outline" size={18} color={Colors.white} />}
-              onPress={() => void generate()}
-            />
-
-            {stale && !busy ? (
-              <Text className="text-center text-xs text-ink-muted">
-                Tempoh telah berubah — tekan Jana Penarafan untuk mengira semula.
-              </Text>
-            ) : null}
-          </View>
-        </StatCard>
+        {periodCard}
 
         {error ? <Notice tone="negative" message={error} /> : null}
 

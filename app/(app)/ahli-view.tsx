@@ -43,63 +43,94 @@ export default function AhliViewScreen() {
     perkahwinan?: string;
   }>();
 
-  const fullName = params.nama?.trim() || 'Ahli';
-  const generasi = params.generasi?.trim() || null;
-  const email = params.emel?.trim() || null;
-  const phone = params.tel?.trim() || null;
-  const avatarUrl = params.avatar?.trim() || null;
-  const pekerjaan = (params.pekerjaan?.trim() || null) as StatusPekerjaan | null;
-  const perkahwinan = (params.perkahwinan?.trim() || null) as StatusPerkahwinan | null;
-
-  const whatsApp = toWhatsAppNumber(phone);
-
   return (
     <Screen padTop={false}>
       <ScreenHeader eyebrow="Direktori" title="Ahli" onBackPress={goBack} />
 
-      <View className="gap-6 px-gutter pt-6">
-        <Card>
-          <View className="items-center gap-3">
-            <MemberAvatar fullName={fullName} avatarUrl={avatarUrl} size={AVATAR_SIZE} />
-            <Text className="text-center text-xl font-bold text-ink">{fullName}</Text>
-            <Text className="text-sm text-ink-muted">{generationLabel(generasi)}</Text>
-          </View>
-        </Card>
+      <AhliViewBody
+        member={{
+          nama: params.nama,
+          generasi: params.generasi,
+          emel: params.emel,
+          tel: params.tel,
+          avatar: params.avatar,
+          pekerjaan: params.pekerjaan,
+          perkahwinan: params.perkahwinan,
+        }}
+      />
+    </Screen>
+  );
+}
 
-        <View>
-          <SectionTitle title="Hubungi" />
-          <View className="gap-4">
-            <InfoRow icon="mail-outline" label="Emel" value={email} />
+/** Medan direktori sebagai teks mentah (parameter laluan atau baris direktori). */
+export type AhliViewMember = {
+  nama?: string;
+  generasi?: string;
+  emel?: string;
+  tel?: string;
+  avatar?: string;
+  pekerjaan?: string;
+  perkahwinan?: string;
+};
 
-            <InfoRow icon="call-outline" label="No. telefon" value={phone}>
-              {/*
-                Butang hanya muncul bila nombor benar-benar boleh dihubungi —
-                butang mati yang membuka pautan rosak lebih mengelirukan
-                daripada tiada butang langsung.
-              */}
-              {whatsApp ? (
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={'WhatsApp ' + fullName}
-                  hitSlop={8}
-                  onPress={() => void Linking.openURL('https://wa.me/' + whatsApp)}
-                  className="h-10 w-10 items-center justify-center rounded-pill bg-positive-soft active:opacity-70">
-                  <Ionicons name="logo-whatsapp" size={20} color={Colors.positive} />
-                </Pressable>
-              ) : null}
-            </InfoRow>
-          </View>
+/**
+ * Kandungan paparan ahli — dikongsi skrin penuh (mobile) dan panel kanan
+ * Direktori (desktop, master-detail).
+ */
+export function AhliViewBody({ member }: { member: AhliViewMember }) {
+  const fullName = member.nama?.trim() || 'Ahli';
+  const generasi = member.generasi?.trim() || null;
+  const email = member.emel?.trim() || null;
+  const phone = member.tel?.trim() || null;
+  const avatarUrl = member.avatar?.trim() || null;
+  const pekerjaan = (member.pekerjaan?.trim() || null) as StatusPekerjaan | null;
+  const perkahwinan = (member.perkahwinan?.trim() || null) as StatusPerkahwinan | null;
+
+  const whatsApp = toWhatsAppNumber(phone);
+
+  return (
+    <View className="gap-6 px-gutter pt-6">
+      <Card>
+        <View className="items-center gap-3">
+          <MemberAvatar fullName={fullName} avatarUrl={avatarUrl} size={AVATAR_SIZE} />
+          <Text className="text-center text-xl font-bold text-ink">{fullName}</Text>
+          <Text className="text-sm text-ink-muted">{generationLabel(generasi)}</Text>
         </View>
+      </Card>
 
-        <View className="pb-8">
-          <SectionTitle title="Maklumat Ringkas" />
-          <View className="gap-4">
-            <InfoRow icon="briefcase-outline" label="Status pekerjaan" value={directoryPekerjaanLabel(pekerjaan)} />
-            <InfoRow icon="heart-outline" label="Status perkahwinan" value={directoryPerkahwinanLabel(perkahwinan)} />
-          </View>
+      <View>
+        <SectionTitle title="Hubungi" />
+        <View className="gap-4">
+          <InfoRow icon="mail-outline" label="Emel" value={email} />
+
+          <InfoRow icon="call-outline" label="No. telefon" value={phone}>
+            {/*
+              Butang hanya muncul bila nombor benar-benar boleh dihubungi —
+              butang mati yang membuka pautan rosak lebih mengelirukan
+              daripada tiada butang langsung.
+            */}
+            {whatsApp ? (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={'WhatsApp ' + fullName}
+                hitSlop={8}
+                onPress={() => void Linking.openURL('https://wa.me/' + whatsApp)}
+                className="h-10 w-10 items-center justify-center rounded-pill bg-positive-soft active:opacity-70">
+                <Ionicons name="logo-whatsapp" size={20} color={Colors.positive} />
+              </Pressable>
+            ) : null}
+          </InfoRow>
         </View>
       </View>
-    </Screen>
+
+      <View className="pb-8">
+        <SectionTitle title="Maklumat Ringkas" />
+        <View className="gap-4">
+          <InfoRow icon="briefcase-outline" label="Status pekerjaan" value={directoryPekerjaanLabel(pekerjaan)} />
+          <InfoRow icon="heart-outline" label="Status perkahwinan" value={directoryPerkahwinanLabel(perkahwinan)} />
+        </View>
+      </View>
+    </View>
   );
 }
 

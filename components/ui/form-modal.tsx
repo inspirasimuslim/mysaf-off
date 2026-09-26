@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Colors } from '@/constants/theme';
 import { KeyboardAwareProvider, useKeyboardAware } from '@/lib/keyboard-aware';
+import { useIsDesktop } from '@/lib/use-desktop';
 
 const MAX_SHEET_WIDTH = 560;
 
@@ -21,12 +22,16 @@ type Props = {
    * lebih panjang daripada skrin.
    */
   footer?: ReactNode;
+  /** Desktop (≥1024px) sahaja: pusatkan sebagai dialog di tengah skrin, bukan helaian melekat di bawah. */
+  centerOnDesktop?: boolean;
   children: ReactNode;
 };
 
 /** Helaian ringkas untuk borang pendek (tukar emel / kata laluan). */
-export function FormModal({ visible, title, description, onClose, dismissable = true, footer, children }: Props) {
+export function FormModal({ visible, title, description, onClose, dismissable = true, footer, centerOnDesktop = false, children }: Props) {
   const insets = useSafeAreaInsets();
+  const desktop = useIsDesktop();
+  const centered = centerOnDesktop && desktop;
   const rootRef = useRef<View>(null);
   const scrollRef = useRef<ScrollView>(null);
   /*
@@ -43,7 +48,8 @@ export function FormModal({ visible, title, description, onClose, dismissable = 
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={close}>
-      <View ref={rootRef} className="flex-1 justify-end bg-black/40" style={{ paddingBottom: keyboard.inset }}>
+      <View ref={rootRef} className={`flex-1 bg-black/40 ${centered ? 'justify-center px-6' : 'justify-end'}`}
+        style={{ paddingBottom: keyboard.inset }}>
         {/* Ketuk di luar helaian untuk tutup. */}
         <Pressable
           accessibilityRole="button"
@@ -54,7 +60,7 @@ export function FormModal({ visible, title, description, onClose, dismissable = 
           onPress={close}
         />
 
-        <View style={{ maxHeight: '90%', flexShrink: 1 }}>
+        <View style={{ maxHeight: '90%', flexShrink: 1 }} className={centered ? 'items-center' : undefined}>
           {/*
             flexShrink WAJIB di sini. Tanpanya helaian mengambil tinggi penuh
             kandungannya dan melimpah keluar dari had 90% di atas — bahagian
@@ -62,8 +68,8 @@ export function FormModal({ visible, title, description, onClose, dismissable = 
             navigasi sistem, dan ScrollView di dalam tidak pernah mengecil.
           */}
           <View
-            className="w-full self-center rounded-t-[28px] bg-background px-gutter pt-6"
-            style={{ maxWidth: MAX_SHEET_WIDTH, flexShrink: 1, paddingBottom: insets.bottom + 24 }}>
+            className={`w-full self-center bg-background px-gutter pt-6 ${centered ? 'rounded-[28px]' : 'rounded-t-[28px]'}`}
+            style={{ maxWidth: centered ? 480 : MAX_SHEET_WIDTH, flexShrink: 1, paddingBottom: (centered ? 0 : insets.bottom) + 24 }}>
             <View className="mb-5 flex-row items-start gap-4">
               <View className="flex-1">
                 <Text className="text-xl font-bold text-ink">{title}</Text>

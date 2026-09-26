@@ -50,7 +50,7 @@ export default function MaklumBalasScreen() {
 
   return (
     <Screen padTop={false}>
-      <ScreenHeader eyebrow="Tetapan" title="Maklum Balas" onBackPress={goBack} />
+      <ScreenHeader eyebrow="Direktori" title="Maklum Balas" onBackPress={goBack} />
 
       <View className="gap-4 px-gutter pb-8 pt-6">
         {banner ? <ToastBanner tone={banner.tone} message={banner.message} /> : null}

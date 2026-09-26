@@ -368,20 +368,14 @@ export default function TetapanScreen() {
           </View>
 
           {/*
-            Album dan Arkib sudah berpindah ke tab Arkib; Maklum Balas kekal di sini
-            kerana bar tab dikhaskan untuk destinasi harian.
+            Album dan Arkib sudah berpindah ke tab Arkib, dan Maklum Balas ke skrin
+            Direktori Ahli. Bahagian ini kini hanya untuk Owner.
           */}
-          <View>
-            <SectionTitle title="Lain-lain" />
-            <View className="gap-4">
-              <ActionRow
-                icon="chatbubble-ellipses-outline"
-                title="Maklum Balas"
-                onPress={() => router.push('/(app)/maklum-balas')}
-              />
-
-              {/* Owner sahaja — pemulihan kecemasan, tiada di Hub Admin. */}
-              {isOwner() ? (
+          {isOwner() ? (
+            <View>
+              <SectionTitle title="Lain-lain" />
+              <View className="gap-4">
+                {/* Owner sahaja — pemulihan kecemasan, tiada di Hub Admin. */}
                 <ActionRow
                   icon="shield-half-outline"
                   title="Pemulihan Kecemasan"
@@ -389,9 +383,9 @@ export default function TetapanScreen() {
                   tone="danger"
                   onPress={() => router.push('/(app)/admin/owner-recovery')}
                 />
-              ) : null}
+              </View>
             </View>
-          </View>
+          ) : null}
 
           <Button label="Log Keluar" variant="danger" loading={signOutBusy} onPress={() => void signOut()} />
         </View>
@@ -399,6 +393,7 @@ export default function TetapanScreen() {
 
       <FormModal
         visible={emailModal}
+        centerOnDesktop
         title="Tukar Emel"
         description="Emel hanya bertukar selepas anda klik pautan pengesahan yang dihantar ke emel baharu."
         dismissable={!emailBusy}
@@ -426,6 +421,7 @@ export default function TetapanScreen() {
 
       <FormModal
         visible={passwordModal}
+        centerOnDesktop
         title="Tukar Kata Laluan"
         description={
           'Kata laluan mesti sekurang-kurangnya ' +
