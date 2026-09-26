@@ -79,7 +79,7 @@ export default function StatistikPipisScreen() {
               />
             </Panel>
 
-            <Panel title="Kutipan mengikut generasi" caption="Terkumpul keseluruhan · nombor generasi">
+            <Panel title="Kutipan mengikut generasi" caption="Terkumpul keseluruhan">
               <Columns
                 values={stat.generasi.map((row) => row.jumlah)}
                 labels={stat.generasi.map((row) => generationAxisLabel(row.generasi))}
@@ -87,7 +87,6 @@ export default function StatistikPipisScreen() {
                 format={formatRm}
                 axisFormat={compactRm}
                 detail={(index) => (stat.generasi[index] ? stat.generasi[index].ahli + ' ahli' : null)}
-                labelEvery={2}
               />
             </Panel>
 
@@ -99,7 +98,6 @@ export default function StatistikPipisScreen() {
                 format={formatRm}
                 axisFormat={compactRm}
                 detail={(index) => (stat.generasi[index] ? stat.generasi[index].ahli + ' ahli' : null)}
-                labelEvery={2}
               />
             </Panel>
           </>

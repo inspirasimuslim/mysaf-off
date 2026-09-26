@@ -168,7 +168,7 @@ export default function StatistikTarbiahScreen() {
               />
             </Panel>
 
-            <Panel title="Perbandingan generasi" caption={'% kehadiran setahun, ' + year + ' · nombor generasi'}>
+            <Panel title="Perbandingan generasi" caption={'% kehadiran setahun, ' + year}>
               <Columns
                 key={'gen' + year}
                 values={stat.generasi_tahunan.map((row) => row.peratus)}
@@ -180,7 +180,6 @@ export default function StatistikTarbiahScreen() {
                   const row = stat.generasi_tahunan[index];
                   return row ? row.hadir + '/' + row.direkod : null;
                 }}
-                labelEvery={2}
               />
             </Panel>
 

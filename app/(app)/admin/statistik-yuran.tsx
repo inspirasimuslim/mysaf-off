@@ -56,7 +56,7 @@ export default function StatistikYuranScreen() {
             <MonthColumns key={year} values={stat.bulanan.map((row) => row.jumlah)} format={formatRm} axisFormat={compactRm} />
           </Panel>
 
-          <Panel title="Tunggakan mengikut generasi" caption={'Termasuk tahun terdahulu hingga ' + year + ' · nombor generasi'}>
+          <Panel title="Tunggakan mengikut generasi" caption={'Termasuk tahun terdahulu hingga ' + year}>
             <Columns
               key={'gen' + year}
               values={stat.tunggakan_generasi.map((row) => row.tunggak)}
@@ -68,7 +68,6 @@ export default function StatistikYuranScreen() {
                 const row = stat.tunggakan_generasi[index];
                 return row ? row.ahli_tertunggak + ' ahli tertunggak' : null;
               }}
-              labelEvery={2}
             />
           </Panel>
         </>

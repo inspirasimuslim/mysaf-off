@@ -3,6 +3,7 @@ import { AccessibilityInfo, Animated, Easing, Pressable, Text, View, useWindowDi
 import { BarChart, PieChart } from 'react-native-gifted-charts';
 
 import { Colors } from '@/constants/theme';
+import { axisLabelProps } from '@/components/stat-charts';
 import { isNoRecord, type StatSlice } from '@/lib/member-statistics';
 
 /**
@@ -292,8 +293,8 @@ function niceMax(value: number): number {
  * soalan di sini ialah bentuk keahlian merentasi zaman, dan menyusun semula
  * akan memadam urutan itu.
  *
- * 27 lajur tidak muat label setiap satu pada skrin telefon, jadi paksi hanya
- * melabel setiap generasi ketiga. Ketuk lajur untuk nilai tepat; generasi
+ * 27 lajur tidak muat label mendatar pada skrin telefon, jadi SEMUA label
+ * diputar menegak (`axisLabelProps`) — tiada label digugurkan. Ketuk lajur untuk nilai tepat; generasi
  * terbesar dipilih secara lalai supaya baris ringkasan tidak pernah kosong.
  */
 export function GenerationColumns({
@@ -329,10 +330,14 @@ export function GenerationColumns({
   const barWidth = count ? Math.max(4, Math.floor((plotWidth - COLUMN_SPACING * (count + 1)) / count)) : 8;
   const max = niceMax(Math.max(0, ...slices.map((slice) => slice.count)));
 
+  const axis = axisLabelProps(
+    slices.map((slice) => slice.label.toLowerCase()),
+    barWidth + COLUMN_SPACING * 2,
+    active,
+  );
   const data = slices.map((slice, index) => ({
     value: slice.count,
-    label: index % 3 === 0 ? slice.label.replace(/^i/i, '') : '',
-    labelWidth: barWidth + COLUMN_SPACING * 2,
+    labelComponent: axis.labelComponent(index),
     frontColor: index === active ? Colors.primaryDark : BAR_COLOR,
     onPress: () => setSelected(index),
   }));
@@ -369,7 +374,7 @@ export function GenerationColumns({
           yAxisTextStyle={{ color: Colors.inkFaint, fontSize: 10 }}
           xAxisThickness={1}
           xAxisColor={Colors.line}
-          xAxisLabelTextStyle={{ color: Colors.inkMuted, fontSize: 9, textAlign: 'center' }}
+          labelsExtraHeight={axis.extraHeight}
           rulesColor={Colors.line}
           rulesType="solid"
           disableScroll
@@ -377,10 +382,10 @@ export function GenerationColumns({
           animationDuration={600}
         />
       ) : (
-        <View style={{ height: COLUMN_HEIGHT + 24 }} />
+        <View style={{ height: COLUMN_HEIGHT + 24 + axis.extraHeight }} />
       )}
 
-      <Text className="mt-1 text-center text-[10px] text-ink-faint">Nombor generasi · ketuk lajur untuk bilangan tepat</Text>
+      <Text className="mt-1 text-center text-[10px] text-ink-faint">Kod generasi · ketuk lajur untuk bilangan tepat</Text>
     </View>
   );
 }

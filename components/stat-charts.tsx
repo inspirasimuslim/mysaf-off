@@ -202,14 +202,71 @@ export function Panel({
 }
 
 // =============================================================================
+// Label paksi-X
+// =============================================================================
+
+/** Tinggi ruang label menegak (px) dan baris teks 9px di dalamnya. */
+const VERTICAL_LABEL_HEIGHT = 24;
+const LABEL_LINE_HEIGHT = 12;
+const CHAR_WIDTH = 5.6;
+
+/**
+ * Label paksi-X yang TIDAK PERNAH digugurkan.
+ *
+ * Setiap lajur sentiasa mendapat labelnya. Bila lebar satu lajur (`slot` =
+ * lebar bar + jarak) tidak cukup untuk label terpanjang secara mendatar, SEMUA
+ * label dalam carta itu diputar menegak (-90°) — seluruh carta serupa, bukan
+ * sebahagian mendatar dan sebahagian menegak. Corak ini dikongsi oleh semua
+ * carta berpaksi bulan atau generasi (dashboard statistik dan Rumusan Ahli).
+ */
+export function axisLabelProps(labels: string[], slot: number, activeIndex: number) {
+  const longest = Math.max(1, ...labels.map((label) => label.length));
+  const vertical = slot < longest * CHAR_WIDTH + 3;
+
+  const labelComponent = (index: number) => () => {
+    const active = index === activeIndex;
+    const style = { fontSize: 9, lineHeight: LABEL_LINE_HEIGHT, color: active ? Colors.ink : Colors.inkMuted, fontWeight: active ? ('700' as const) : ('400' as const) };
+
+    if (!vertical) {
+      return (
+        <View style={{ width: slot, alignItems: 'center' }}>
+          <Text numberOfLines={1} style={[style, { textAlign: 'center' }]}>
+            {labels[index]}
+          </Text>
+        </View>
+      );
+    }
+
+    return (
+      <View style={{ width: slot, height: VERTICAL_LABEL_HEIGHT, alignItems: 'center' }}>
+        <View
+          style={{
+            position: 'absolute',
+            top: (VERTICAL_LABEL_HEIGHT - LABEL_LINE_HEIGHT) / 2,
+            width: VERTICAL_LABEL_HEIGHT,
+            height: LABEL_LINE_HEIGHT,
+            transform: [{ rotate: '-90deg' }],
+          }}>
+          <Text numberOfLines={1} style={[style, { textAlign: 'center' }]}>
+            {labels[index]}
+          </Text>
+        </View>
+      </View>
+    );
+  };
+
+  return { vertical, labelComponent, extraHeight: vertical ? VERTICAL_LABEL_HEIGHT - LABEL_LINE_HEIGHT : 0 };
+}
+
+// =============================================================================
 // Lajur (bulan / generasi)
 // =============================================================================
 
 /**
  * Lajur menegak. Ketuk lajur untuk nilai tepat pada baris ringkasan; lalai
  * ialah lajur tertinggi supaya baris itu tidak pernah kosong. `values[i] ===
- * null` bermakna tiada rekod (dilukis kosong). `labelEvery` menjarangkan label
- * paksi bila lajur banyak (cth. 27 generasi).
+ * null` bermakna tiada rekod (dilukis kosong). Label paksi tidak pernah
+ * digugurkan — lihat `axisLabelProps` (diputar menegak bila sempit).
  */
 export function Columns({
   values,
@@ -218,7 +275,6 @@ export function Columns({
   format,
   axisFormat,
   detail,
-  labelEvery = 1,
 }: {
   values: (number | null)[];
   labels: string[];
@@ -226,7 +282,6 @@ export function Columns({
   format: (value: number) => string;
   axisFormat?: (value: number) => string;
   detail?: (index: number) => string | null;
-  labelEvery?: number;
 }) {
   const desktop = useContext(DesktopContext);
   const { width: windowWidth } = useWindowDimensions();
@@ -249,10 +304,10 @@ export function Columns({
   const barWidth = Math.max(4, Math.floor((plotWidth - spacing * (values.length + 1)) / values.length));
   const max = niceMax(Math.max(0, ...values.map((v) => v ?? 0)));
 
+  const axis = axisLabelProps(labels, barWidth + spacing, active);
   const data = values.map((value, index) => ({
     value: value ?? 0,
-    label: index % labelEvery === 0 ? labels[index] : '',
-    labelWidth: barWidth + spacing * 2,
+    labelComponent: axis.labelComponent(index),
     frontColor: index === active ? Colors.primaryDark : BAR_COLOR,
     onPress: () => setSelected(index),
   }));
@@ -287,7 +342,7 @@ export function Columns({
           yAxisTextStyle={{ color: Colors.inkFaint, fontSize: 10 }}
           xAxisThickness={1}
           xAxisColor={Colors.line}
-          xAxisLabelTextStyle={{ color: Colors.inkMuted, fontSize: 9, textAlign: 'center' }}
+          labelsExtraHeight={axis.extraHeight}
           rulesColor={Colors.line}
           rulesType="solid"
           disableScroll
@@ -295,7 +350,7 @@ export function Columns({
           animationDuration={500}
         />
       ) : (
-        <View style={{ height: height + 24 }} />
+        <View style={{ height: height + 24 + axis.extraHeight }} />
       )}
     </View>
   );
@@ -410,7 +465,7 @@ export function SplitBar({
   );
 }
 
-/** Label generasi pendek untuk paksi: 'i05' → '5'. */
+/** Label generasi untuk paksi: kod ringkas penuh, cth. 'i05' / 'i25' (tidak pernah digugurkan). */
 export function generationAxisLabel(code: string): string {
-  return code.replace(/^i0?/i, '');
+  return code.toLowerCase();
 }
