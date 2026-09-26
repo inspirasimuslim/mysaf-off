@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { FlatList, Pressable, ScrollView, Text, View } from 'react-native';
 
 import { ScreenHeader } from '@/components/screen-header';
-import { ActionRow } from '@/components/ui/action-row';
 import { EmptyState } from '@/components/ui/empty-state';
 import { LoadingScreen } from '@/components/ui/loading-screen';
 import { MemberAvatar } from '@/components/ui/member-avatar';
@@ -192,14 +191,6 @@ export default function AhliScreen() {
           onPress={() => router.push('/(app)/ahli-mbm')}
         />
       </View>
-
-      {/* Dahulu di Tetapan > Lain-lain; dipindahkan ke sini. */}
-      <ActionRow
-        icon="chatbubble-ellipses-outline"
-        title="Maklum Balas"
-        subtitle="Hantar cadangan atau masalah mengenai aplikasi"
-        onPress={() => router.push('/(app)/maklum-balas')}
-      />
 
       <TextField
         label="Cari"

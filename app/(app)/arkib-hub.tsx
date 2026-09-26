@@ -9,7 +9,7 @@ import { Screen } from '@/components/ui/screen';
 type IconName = keyof typeof Ionicons.glyphMap;
 
 /**
- * Tab Arkib — dua pintu sahaja: Album gambar dan Koleksi Dokumen.
+ * Tab Direktori — tiga pintu: Album gambar, Koleksi Dokumen dan Maklum Balas.
  *
  * Label "Koleksi Dokumen" (dan bukan "Arkib") supaya tidak sama dengan nama tab.
  */
@@ -30,6 +30,11 @@ export default function ArkibHubScreen() {
           icon="folder-open-outline"
           title="Koleksi Dokumen"
           onPress={() => router.push('/(app)/document-library')}
+        />
+        <HubButton
+          icon="chatbubble-ellipses-outline"
+          title="Maklum Balas"
+          onPress={() => router.push('/(app)/maklum-balas')}
         />
       </View>
     </Screen>
