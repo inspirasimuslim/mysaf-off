@@ -18,6 +18,8 @@ type Props<T extends string> = {
   clearable?: boolean;
   disabled?: boolean;
   error?: string | null;
+  /** Pemicu rendah (tanpa label di atas) untuk bar alat padat — dropdown dalamnya tidak berubah. */
+  compact?: boolean;
 };
 
 /**
@@ -36,6 +38,7 @@ export function PickerField<T extends string>({
   clearable = true,
   disabled = false,
   error = null,
+  compact = false,
 }: Props<T>) {
   const [open, setOpen] = useState(false);
   const insets = useSafeAreaInsets();
@@ -50,7 +53,7 @@ export function PickerField<T extends string>({
 
   return (
     <View className="gap-2">
-      <Text className="text-sm font-medium text-ink-muted">{label}</Text>
+      {compact ? null : <Text className="text-sm font-medium text-ink-muted">{label}</Text>}
 
       <Pressable
         accessibilityRole="button"
@@ -58,10 +61,10 @@ export function PickerField<T extends string>({
         accessibilityState={{ disabled, expanded: open }}
         disabled={disabled}
         onPress={() => setOpen(true)}
-        className={`h-14 flex-row items-center rounded-field border bg-surface px-4 ${borderClass} ${
+        className={`${compact ? 'h-10 px-3' : 'h-14 px-4'} flex-row items-center rounded-field border bg-surface ${borderClass} ${
           disabled ? 'opacity-50' : 'active:opacity-70'
         }`}>
-        <Text className={`flex-1 text-base ${selected ? 'text-ink' : 'text-ink-faint'}`} numberOfLines={1}>
+        <Text className={`flex-1 ${compact ? 'text-sm' : 'text-base'} ${selected ? 'text-ink' : 'text-ink-faint'}`} numberOfLines={1}>
           {selected?.label ?? placeholder}
         </Text>
         <Ionicons name="chevron-down" size={18} color={Colors.inkMuted} />

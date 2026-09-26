@@ -1,8 +1,18 @@
 import { View } from 'react-native';
 
-import { StatCard } from '@/components/member-stats';
 import { NoAccessScreen } from '@/components/no-access';
-import { Figure, MonthColumns, SplitBar, StatShell, ValueBars, compactRm, formatRm } from '@/components/stat-charts';
+import {
+  Columns,
+  MonthColumns,
+  Panel,
+  SplitBar,
+  StatShell,
+  SummaryStrip,
+  ValueBars,
+  compactRm,
+  formatRm,
+  generationAxisLabel,
+} from '@/components/stat-charts';
 import { LoadingScreen } from '@/components/ui/loading-screen';
 import { Colors } from '@/constants/theme';
 import { usePipisAccess } from '@/lib/department-access';
@@ -26,7 +36,7 @@ export default function StatistikPipisScreen() {
 
   return (
     <StatShell
-      eyebrow="Statistik · PIPIS"
+      eyebrow="Bendahari"
       title="Statistik PIPIS"
       subtitle="Kutipan sumbangan PIPIS ASET"
       year={year}
@@ -34,40 +44,27 @@ export default function StatistikPipisScreen() {
       data={data}
       loading={loading}
       error={error}
-      onRetry={() => void reload()}>
+      onRetry={() => void reload()}
+      summary={(stat) => (
+        <SummaryStrip
+          items={[
+            { value: formatRm(stat.ringkasan.terkumpul), label: 'terkumpul' },
+            { value: formatRm(stat.jumlah_tahun), label: 'kutipan ' + year },
+            { value: stat.ringkasan.ahli_cukup + '/' + stat.ringkasan.jumlah_ahli, label: 'ahli cukup sasaran' },
+          ]}
+        />
+      )}>
       {(stat) => {
         const r = stat.ringkasan;
         return (
           <>
-            <View className="flex-row flex-wrap gap-3">
-              <Figure value={formatRm(r.terkumpul)} label="Terkumpul (keseluruhan)" />
-              <Figure value={formatRm(stat.jumlah_tahun)} label={'Kutipan ' + year} />
-            </View>
+            <Panel title="Kutipan mengikut bulan" caption={'Jumlah sumbangan berjaya, ' + year}>
+              <MonthColumns key={year} values={stat.bulanan.map((row) => row.jumlah)} format={formatRm} axisFormat={compactRm} />
+            </Panel>
 
-            <StatCard title="Kutipan mengikut bulan" caption={'Jumlah sumbangan berjaya, ' + year}>
-              <MonthColumns
-                key={year}
-                values={stat.bulanan.map((row) => row.jumlah)}
-                format={formatRm}
-                axisFormat={compactRm}
-              />
-            </StatCard>
-
-            <StatCard title="Kutipan mengikut generasi" caption="Jumlah terkumpul keseluruhan setiap generasi">
-              <ValueBars
-                rows={stat.generasi.map((row) => ({
-                  key: row.generasi,
-                  label: generationLabel(row.generasi),
-                  value: row.jumlah,
-                  note: row.ahli + ' ahli',
-                }))}
-                format={formatRm}
-              />
-            </StatCard>
-
-            <StatCard
+            <Panel
               title="Terkumpul vs baki"
-              caption={'Sasaran ' + formatRm(r.sasaran_seorang) + ' seorang × ' + r.jumlah_ahli + ' ahli = ' + formatRm(r.sasaran_jumlah)}>
+              caption={'Sasaran ' + formatRm(r.sasaran_seorang) + ' × ' + r.jumlah_ahli + ' ahli = ' + formatRm(r.sasaran_jumlah)}>
               <SplitBar
                 format={formatRm}
                 parts={[
@@ -75,23 +72,36 @@ export default function StatistikPipisScreen() {
                   { label: 'Baki belum dikutip', value: r.baki, color: '#D97706' },
                 ]}
               />
-              <View style={{ height: 12 }} />
+              <View style={{ height: 10 }} />
               <ValueBars
                 rows={[{ key: 'cukup', label: 'Ahli telah cukup sasaran', value: r.ahli_cukup, note: 'daripada ' + r.jumlah_ahli }]}
                 format={(value) => String(value)}
               />
-            </StatCard>
+            </Panel>
 
-            <StatCard title="Baki mengikut generasi" caption="Jumlah baki setiap ahli hingga sasaran (lebihan tidak menolak baki orang lain)">
-              <ValueBars
-                rows={stat.generasi.map((row) => ({
-                  key: row.generasi,
-                  label: generationLabel(row.generasi),
-                  value: row.baki,
-                }))}
+            <Panel title="Kutipan mengikut generasi" caption="Terkumpul keseluruhan · nombor generasi">
+              <Columns
+                values={stat.generasi.map((row) => row.jumlah)}
+                labels={stat.generasi.map((row) => generationAxisLabel(row.generasi))}
+                titles={stat.generasi.map((row) => generationLabel(row.generasi))}
                 format={formatRm}
+                axisFormat={compactRm}
+                detail={(index) => (stat.generasi[index] ? stat.generasi[index].ahli + ' ahli' : null)}
+                labelEvery={2}
               />
-            </StatCard>
+            </Panel>
+
+            <Panel title="Baki mengikut generasi" caption="Baki setiap ahli hingga sasaran (lebihan tidak menolak baki orang lain)">
+              <Columns
+                values={stat.generasi.map((row) => row.baki)}
+                labels={stat.generasi.map((row) => generationAxisLabel(row.generasi))}
+                titles={stat.generasi.map((row) => generationLabel(row.generasi))}
+                format={formatRm}
+                axisFormat={compactRm}
+                detail={(index) => (stat.generasi[index] ? stat.generasi[index].ahli + ' ahli' : null)}
+                labelEvery={2}
+              />
+            </Panel>
           </>
         );
       }}

@@ -17,9 +17,10 @@ type Props<T extends string> = {
   options: Option<T>[];
   onChange: (next: T) => void;
   disabled?: boolean;
+  compact?: boolean;
 };
 
-export function Segmented<T extends string>({ label, value, options, onChange, disabled = false }: Props<T>) {
+export function Segmented<T extends string>({ label, value, options, onChange, disabled = false, compact = false }: Props<T>) {
   return (
     <View className="gap-2">
       {label ? <Text className="text-sm font-medium text-ink-muted">{label}</Text> : null}
@@ -35,10 +36,10 @@ export function Segmented<T extends string>({ label, value, options, onChange, d
               accessibilityLabel={option.label}
               disabled={disabled}
               onPress={() => onChange(option.value)}
-              className={`h-12 flex-1 items-center justify-center rounded-field ${
+              className={`${compact ? 'h-8' : 'h-12'} flex-1 items-center justify-center rounded-field ${
                 active ? 'bg-primary' : 'bg-transparent'
               } ${disabled ? 'opacity-60' : 'active:opacity-70'}`}>
-              <Text className={`text-base font-semibold ${active ? 'text-white' : 'text-ink-muted'}`}>
+              <Text className={`${compact ? 'text-sm' : 'text-base'} font-semibold ${active ? 'text-white' : 'text-ink-muted'}`}>
                 {option.label}
               </Text>
             </Pressable>

@@ -1,8 +1,7 @@
 import { Text, View } from 'react-native';
 
-import { StatCard } from '@/components/member-stats';
 import { NoAccessScreen } from '@/components/no-access';
-import { Figure, MonthColumns, StatShell, ValueBars } from '@/components/stat-charts';
+import { MonthColumns, Panel, StatShell, SummaryStrip, ValueBars } from '@/components/stat-charts';
 import { LoadingScreen } from '@/components/ui/loading-screen';
 import { usePerkaderanAccess } from '@/lib/department-access';
 import { useStat, type PerkaderanStat } from '@/lib/statistik';
@@ -30,7 +29,7 @@ export default function StatistikPerkaderanScreen() {
 
   return (
     <StatShell
-      eyebrow="Statistik · Perkaderan"
+      eyebrow="Perkaderan"
       title="Statistik Perkaderan"
       subtitle="Naqib/naqibah mengikut sekolah dan kekerapan usrah"
       year={year}
@@ -38,23 +37,23 @@ export default function StatistikPerkaderanScreen() {
       data={data}
       loading={loading}
       error={error}
-      onRetry={() => void reload()}>
+      onRetry={() => void reload()}
+      summary={(stat) => (
+        <SummaryStrip
+          items={[
+            { value: String(stat.jumlah_naqib), label: 'naqib/naqibah aktif' },
+            { value: String(stat.sekolah.length), label: 'sekolah' },
+            { value: String(stat.jumlah_sesi), label: 'sesi ' + year },
+          ]}
+        />
+      )}>
       {(stat) => (
         <>
-          <View className="flex-row flex-wrap gap-3">
-            <Figure value={String(stat.jumlah_naqib)} label="Naqib/naqibah aktif" hint="Keadaan semasa" />
-            <Figure value={String(stat.jumlah_sesi)} label={'Sesi usrah ' + year} />
-          </View>
+          <Panel title="Kekerapan usrah mengikut bulan" caption={'Bilangan sesi direkod, ' + year}>
+            <MonthColumns key={year} values={stat.sesi_bulanan.map((row) => row.sesi)} format={(value) => value + ' sesi'} />
+          </Panel>
 
-          <StatCard title="Kekerapan usrah mengikut bulan" caption={'Bilangan sesi direkod, ' + year}>
-            <MonthColumns
-              key={year}
-              values={stat.sesi_bulanan.map((row) => row.sesi)}
-              format={(value) => value + ' sesi'}
-            />
-          </StatCard>
-
-          <StatCard title="Naqib/naqibah mengikut sekolah" caption="Keadaan semasa (tidak bergantung pada tahun)">
+          <Panel title="Naqib/naqibah mengikut sekolah" caption="Keadaan semasa (tidak bergantung pada tahun)">
             <ValueBars
               sorted
               rows={stat.sekolah.map((row) => ({
@@ -64,25 +63,27 @@ export default function StatistikPerkaderanScreen() {
               }))}
               format={(value) => value + ' orang'}
             />
-          </StatCard>
+          </Panel>
 
-          {stat.sekolah.map((row) => (
-            <StatCard
-              key={row.sekolah}
-              title={sekolahLabel(row.sekolah)}
-              caption={row.bilangan_naqib + ' naqib/naqibah'}>
-              <View className="gap-3">
-                {row.naqib.map((naqib, index) => (
-                  <View key={naqib.nama + index} className="flex-row items-baseline gap-2">
-                    <Text className="flex-1 text-sm text-ink" numberOfLines={2}>
-                      {naqib.nama}
-                    </Text>
-                    {naqib.kumpulan ? <Text className="text-xs text-ink-muted">{naqib.mad_u + ' mad’u'}</Text> : null}
-                  </View>
-                ))}
-              </View>
-            </StatCard>
-          ))}
+          <Panel full title="Senarai naqib/naqibah mengikut sekolah">
+            <View className="flex-row flex-wrap gap-x-6 gap-y-3">
+              {stat.sekolah.map((row) => (
+                <View key={row.sekolah} style={{ flexBasis: 240, flexGrow: 1 }}>
+                  <Text className="text-sm font-bold text-ink">
+                    {sekolahLabel(row.sekolah) + ' (' + row.bilangan_naqib + ')'}
+                  </Text>
+                  {row.naqib.map((naqib, index) => (
+                    <View key={naqib.nama + index} className="mt-1 flex-row items-baseline gap-2">
+                      <Text className="flex-1 text-sm text-ink" numberOfLines={2}>
+                        {naqib.nama}
+                      </Text>
+                      {naqib.kumpulan ? <Text className="text-xs text-ink-muted">{naqib.mad_u + ' mad’u'}</Text> : null}
+                    </View>
+                  ))}
+                </View>
+              ))}
+            </View>
+          </Panel>
         </>
       )}
     </StatShell>

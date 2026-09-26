@@ -1,9 +1,17 @@
 import { useMemo, useState } from 'react';
 import { View } from 'react-native';
 
-import { RankedBars, StatCard } from '@/components/member-stats';
 import { NoAccessScreen } from '@/components/no-access';
-import { Figure, MonthColumns, StatShell, ValueBars, formatPercent } from '@/components/stat-charts';
+import {
+  Columns,
+  MonthColumns,
+  Panel,
+  StatShell,
+  SummaryStrip,
+  ValueBars,
+  formatPercent,
+  generationAxisLabel,
+} from '@/components/stat-charts';
 import { LoadingScreen } from '@/components/ui/loading-screen';
 import { PickerField } from '@/components/ui/picker-field';
 import { Segmented } from '@/components/ui/segmented';
@@ -16,7 +24,7 @@ type Metric = 'jumlah' | 'peratus';
 const ALL = '__semua__';
 
 const METRIC_OPTIONS = [
-  { value: 'jumlah' as const, label: 'Bilangan hadir' },
+  { value: 'jumlah' as const, label: 'Hadir' },
   { value: 'peratus' as const, label: 'Peratus' },
 ];
 
@@ -38,7 +46,7 @@ function detailFor(cells: AttendanceCell[]) {
   return (index: number) => {
     const cell = cells.find((row) => row.bulan === index + 1);
     if (!cell || cell.direkod === 0) return null;
-    return cell.hadir + ' hadir daripada ' + cell.direkod + ' direkod · ' + formatPercent(cell.peratus);
+    return cell.hadir + '/' + cell.direkod + ' · ' + formatPercent(cell.peratus);
   };
 }
 
@@ -73,7 +81,7 @@ export default function StatistikTarbiahScreen() {
 
   return (
     <StatShell
-      eyebrow="Statistik · Tarbiah"
+      eyebrow="Tarbiah"
       title="Statistik Tarbiah"
       subtitle="Kehadiran usrah bulanan dan taburan ahli"
       year={year}
@@ -81,29 +89,41 @@ export default function StatistikTarbiahScreen() {
       data={data}
       loading={loading}
       error={error}
-      onRetry={() => void reload()}>
+      onRetry={() => void reload()}
+      summary={(stat) => {
+        const attended = stat.semua_bulanan.reduce((sum, row) => sum + row.hadir, 0);
+        const recorded = stat.semua_bulanan.reduce((sum, row) => sum + row.direkod, 0);
+        return (
+          <SummaryStrip
+            items={[
+              { value: String(stat.jumlah_ahli), label: 'ahli' },
+              { value: String(attended), label: 'kali hadir ' + year },
+              { value: recorded ? formatPercent(Math.round((attended * 1000) / recorded) / 10) : '—', label: 'kehadiran ' + year },
+            ]}
+          />
+        );
+      }}>
       {(stat) => {
         const kawasanCells: AttendanceCell[] =
           kawasan === ALL ? stat.semua_bulanan : stat.kawasan_bulanan.filter((row) => row.kawasan === kawasan);
         const generasiCells: AttendanceCell[] =
           generasi === ALL ? stat.semua_bulanan : stat.generasi_bulanan.filter((row) => row.generasi === generasi);
-        const totalAttended = stat.semua_bulanan.reduce((sum, row) => sum + row.hadir, 0);
 
         return (
           <>
-            <Figure value={String(stat.jumlah_ahli)} label="Jumlah ahli semasa" hint={'Kehadiran direkod ' + year + ': ' + totalAttended + ' kali hadir'} />
-
-            <StatCard title="Kehadiran mengikut kawasan usrah" caption={'Setiap bulan, ' + year}>
-              <PickerField
-                label="Kawasan"
-                value={kawasan}
-                options={kawasanOptions}
-                clearable={false}
-                onChange={(next) => next && setKawasan(next)}
-              />
-              <Spacer />
-              <Segmented value={kawasanMetric} options={METRIC_OPTIONS} onChange={setKawasanMetric} />
-              <Spacer />
+            <Panel
+              title="Kehadiran mengikut kawasan usrah"
+              caption={'Setiap bulan, ' + year}
+              controls={
+                <>
+                  <View className="flex-1">
+                    <PickerField compact label="Kawasan" value={kawasan} options={kawasanOptions} clearable={false} onChange={(next) => next && setKawasan(next)} />
+                  </View>
+                  <View className="flex-1">
+                    <Segmented compact value={kawasanMetric} options={METRIC_OPTIONS} onChange={setKawasanMetric} />
+                  </View>
+                </>
+              }>
               <MonthColumns
                 key={kawasan + kawasanMetric + year}
                 values={series(kawasanCells, kawasanMetric)}
@@ -111,9 +131,31 @@ export default function StatistikTarbiahScreen() {
                 axisFormat={(value) => (kawasanMetric === 'jumlah' ? String(value) : value + '%')}
                 detail={detailFor(kawasanCells)}
               />
-            </StatCard>
+            </Panel>
 
-            <StatCard title="Perbandingan kawasan" caption={'% kehadiran setahun, ' + year}>
+            <Panel
+              title="Kehadiran mengikut generasi"
+              caption={'Setiap bulan, ' + year}
+              controls={
+                <>
+                  <View className="flex-1">
+                    <PickerField compact label="Generasi" value={generasi} options={generasiOptions} clearable={false} onChange={(next) => next && setGenerasi(next)} />
+                  </View>
+                  <View className="flex-1">
+                    <Segmented compact value={generasiMetric} options={METRIC_OPTIONS} onChange={setGenerasiMetric} />
+                  </View>
+                </>
+              }>
+              <MonthColumns
+                key={generasi + generasiMetric + year}
+                values={series(generasiCells, generasiMetric)}
+                format={(value) => (generasiMetric === 'jumlah' ? value + ' hadir' : formatPercent(value))}
+                axisFormat={(value) => (generasiMetric === 'jumlah' ? String(value) : value + '%')}
+                detail={detailFor(generasiCells)}
+              />
+            </Panel>
+
+            <Panel title="Perbandingan kawasan" caption={'% kehadiran setahun, ' + year}>
               <ValueBars
                 sorted
                 rows={stat.kawasan_tahunan.map((row) => ({
@@ -124,50 +166,39 @@ export default function StatistikTarbiahScreen() {
                 }))}
                 format={(value) => formatPercent(value)}
               />
-            </StatCard>
+            </Panel>
 
-            <StatCard title="Kehadiran mengikut generasi" caption={'Setiap bulan, ' + year}>
-              <PickerField
-                label="Generasi"
-                value={generasi}
-                options={generasiOptions}
-                clearable={false}
-                onChange={(next) => next && setGenerasi(next)}
-              />
-              <Spacer />
-              <Segmented value={generasiMetric} options={METRIC_OPTIONS} onChange={setGenerasiMetric} />
-              <Spacer />
-              <MonthColumns
-                key={generasi + generasiMetric + year}
-                values={series(generasiCells, generasiMetric)}
-                format={(value) => (generasiMetric === 'jumlah' ? value + ' hadir' : formatPercent(value))}
-                axisFormat={(value) => (generasiMetric === 'jumlah' ? String(value) : value + '%')}
-                detail={detailFor(generasiCells)}
-              />
-            </StatCard>
-
-            <StatCard title="Perbandingan generasi" caption={'% kehadiran setahun, ' + year}>
-              <ValueBars
-                rows={stat.generasi_tahunan.map((row) => ({
-                  key: row.generasi,
-                  label: generationLabel(row.generasi),
-                  value: row.peratus ?? 0,
-                  note: row.hadir + '/' + row.direkod,
-                }))}
+            <Panel title="Perbandingan generasi" caption={'% kehadiran setahun, ' + year + ' · nombor generasi'}>
+              <Columns
+                key={'gen' + year}
+                values={stat.generasi_tahunan.map((row) => row.peratus)}
+                labels={stat.generasi_tahunan.map((row) => generationAxisLabel(row.generasi))}
+                titles={stat.generasi_tahunan.map((row) => generationLabel(row.generasi))}
                 format={(value) => formatPercent(value)}
+                axisFormat={(value) => value + '%'}
+                detail={(index) => {
+                  const row = stat.generasi_tahunan[index];
+                  return row ? row.hadir + '/' + row.direkod : null;
+                }}
+                labelEvery={2}
               />
-            </StatCard>
+            </Panel>
 
-            <StatCard title="Ahli mengikut kawasan usrah" caption="Keadaan semasa (tidak bergantung pada tahun)">
-              <RankedBars slices={stat.kawasan_ahli} total={stat.jumlah_ahli} formatLabel={kawasanLabel} />
-            </StatCard>
+            <Panel full title="Ahli mengikut kawasan usrah" caption="Keadaan semasa (tidak bergantung pada tahun)">
+              <ValueBars
+                columns={2}
+                rows={stat.kawasan_ahli.map((row) => ({
+                  key: row.label,
+                  label: kawasanLabel(row.label),
+                  value: row.count,
+                  note: Math.round((row.count / Math.max(1, stat.jumlah_ahli)) * 100) + '%',
+                }))}
+                format={(value) => String(value)}
+              />
+            </Panel>
           </>
         );
       }}
     </StatShell>
   );
-}
-
-function Spacer() {
-  return <View style={{ height: 12 }} />;
 }

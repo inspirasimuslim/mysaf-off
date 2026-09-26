@@ -67,16 +67,7 @@ export default function AdminHubScreen() {
     [memberAccess, usrahAccess, programAccess, yuranAccess, pipisAccess, orgChartAccess, generasiAccess, perkaderanAccess].some(
       (access) => access.loading,
     );
-  const statCards = [
-    { show: usrahAccess.canView, icon: 'people-outline', title: 'Tarbiah', subtitle: 'Kehadiran usrah bulanan dan taburan ahli', route: 'statistik-tarbiah' },
-    { show: perkaderanAccess.canView, icon: 'school-outline', title: 'Perkaderan', subtitle: 'Naqib mengikut sekolah dan kekerapan usrah', route: 'statistik-perkaderan' },
-    { show: pipisAccess.canView, icon: 'business-outline', title: 'PIPIS', subtitle: 'Kutipan mengikut bulan dan generasi, terkumpul vs baki', route: 'statistik-pipis' },
-    { show: yuranAccess.canView, icon: 'wallet-outline', title: 'Yuran', subtitle: 'Kutipan bulanan dan tunggakan', route: 'statistik-yuran' },
-  ] as const;
-  const visibleStatCards = statCards.filter((card) => card.show);
-
   const visibleSections = [
-    visibleStatCards.length > 0,
     superAdmin,
     memberAccess.canView,
     usrahAccess.canView,
@@ -219,7 +210,7 @@ export default function AdminHubScreen() {
           <CollapsibleSection
             variant="plain"
             title="Tarbiah"
-            count={usrahAccess.canEdit ? 2 : 1}
+            count={usrahAccess.canEdit ? 3 : 2}
             defaultOpen={openByDefault}>
             <ActionRow
               icon="qr-code-outline"
@@ -230,6 +221,13 @@ export default function AdminHubScreen() {
                   : 'Semak sesi usrah dan muat turun laporan (paparan sahaja)'
               }
               onPress={() => router.push('/(app)/admin/usrah-events')}
+            />
+
+            <ActionRow
+              icon="stats-chart-outline"
+              title="Statistik Tarbiah"
+              subtitle="Kehadiran usrah bulanan mengikut kawasan dan generasi, taburan ahli"
+              onPress={() => router.push('/(app)/admin/statistik-tarbiah')}
             />
 
             {usrahAccess.canEdit ? (
@@ -344,7 +342,7 @@ export default function AdminHubScreen() {
           <CollapsibleSection
             variant="plain"
             title="Perkaderan"
-            count={perkaderanAccess.canEdit ? 2 : 1}
+            count={perkaderanAccess.canEdit ? 3 : 2}
             defaultOpen={openByDefault}>
             {perkaderanAccess.canEdit ? (
               <ActionRow
@@ -364,6 +362,13 @@ export default function AdminHubScreen() {
               }
               onPress={() => router.push('/(app)/admin/perkaderan-groups')}
             />
+
+            <ActionRow
+              icon="stats-chart-outline"
+              title="Statistik Perkaderan"
+              subtitle="Naqib mengikut sekolah dan kekerapan usrah mengikut bulan"
+              onPress={() => router.push('/(app)/admin/statistik-perkaderan')}
+            />
           </CollapsibleSection>
         ) : null}
 
@@ -374,12 +379,14 @@ export default function AdminHubScreen() {
           daripada modul ahli dan usrah. Seorang admin boleh memegang satu
           tanpa yang lain, jadi kadnya berdiri sendiri.
         */}
-        {yuranAccess.canView ? (
+        {yuranAccess.canView || pipisAccess.canView ? (
           <CollapsibleSection
             variant="plain"
             title="Bendahari"
-            count={3}
+            count={(yuranAccess.canView ? 4 : 0) + (pipisAccess.canView ? 1 : 0)}
             defaultOpen={openByDefault}>
+            {yuranAccess.canView ? (
+              <>
             <ActionRow
               icon="wallet-outline"
               title="Yuran"
@@ -418,6 +425,24 @@ export default function AdminHubScreen() {
               }
               onPress={() => router.push('/(app)/admin/adhoc-payment-list')}
             />
+
+              <ActionRow
+                icon="stats-chart-outline"
+                title="Statistik Yuran"
+                subtitle="Kutipan bulanan dan tunggakan mengikut generasi"
+                onPress={() => router.push('/(app)/admin/statistik-yuran')}
+              />
+              </>
+            ) : null}
+
+            {pipisAccess.canView ? (
+              <ActionRow
+                icon="stats-chart-outline"
+                title="Statistik PIPIS"
+                subtitle="Kutipan mengikut bulan dan generasi, terkumpul vs baki"
+                onPress={() => router.push('/(app)/admin/statistik-pipis')}
+              />
+            ) : null}
           </CollapsibleSection>
         ) : null}
 
@@ -442,29 +467,6 @@ export default function AdminHubScreen() {
               }
               onPress={() => router.push('/(app)/admin/pipis-list')}
             />
-          </CollapsibleSection>
-        ) : null}
-
-        {/*
-          Statistik: satu kad setiap department, dipaparkan mengikut kebenaran
-          department yang sama seperti modulnya (Super Admin nampak semua).
-          RPC `stat_*` menguatkuasakannya semula di pangkalan data.
-        */}
-        {visibleStatCards.length > 0 ? (
-          <CollapsibleSection
-            variant="plain"
-            title="Statistik"
-            count={visibleStatCards.length}
-            defaultOpen={openByDefault}>
-            {visibleStatCards.map((card) => (
-              <ActionRow
-                key={card.route}
-                icon={card.icon}
-                title={card.title}
-                subtitle={card.subtitle}
-                onPress={() => router.push(('/(app)/admin/' + card.route) as never)}
-              />
-            ))}
           </CollapsibleSection>
         ) : null}
 

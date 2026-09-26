@@ -1,8 +1,14 @@
-import { View } from 'react-native';
-
-import { StatCard } from '@/components/member-stats';
 import { NoAccessScreen } from '@/components/no-access';
-import { Figure, MonthColumns, StatShell, ValueBars, compactRm, formatRm } from '@/components/stat-charts';
+import {
+  Columns,
+  MonthColumns,
+  Panel,
+  StatShell,
+  SummaryStrip,
+  compactRm,
+  formatRm,
+  generationAxisLabel,
+} from '@/components/stat-charts';
 import { LoadingScreen } from '@/components/ui/loading-screen';
 import { useYuranAccess } from '@/lib/department-access';
 import { useStat, type YuranStat } from '@/lib/statistik';
@@ -26,7 +32,7 @@ export default function StatistikYuranScreen() {
 
   return (
     <StatShell
-      eyebrow="Statistik · Yuran"
+      eyebrow="Bendahari"
       title="Statistik Yuran"
       subtitle="Kutipan dan tunggakan yuran keahlian"
       year={year}
@@ -34,38 +40,37 @@ export default function StatistikYuranScreen() {
       data={data}
       loading={loading}
       error={error}
-      onRetry={() => void reload()}>
+      onRetry={() => void reload()}
+      summary={(stat) => (
+        <SummaryStrip
+          items={[
+            { value: formatRm(stat.jumlah_kutipan_tahun), label: 'kutipan ' + year },
+            { value: formatRm(stat.tunggakan.jumlah), label: 'tunggakan hingga ' + year },
+            { value: stat.tunggakan.ahli_tertunggak + '/' + stat.tunggakan.jumlah_ahli, label: 'ahli tertunggak' },
+          ]}
+        />
+      )}>
       {(stat) => (
         <>
-          <View className="flex-row flex-wrap gap-3">
-            <Figure value={formatRm(stat.jumlah_kutipan_tahun)} label={'Kutipan berjaya ' + year} />
-            <Figure
-              value={formatRm(stat.tunggakan.jumlah)}
-              label={'Jumlah tunggakan hingga ' + year}
-              hint={stat.tunggakan.ahli_tertunggak + ' daripada ' + stat.tunggakan.jumlah_ahli + ' ahli'}
-            />
-          </View>
+          <Panel title="Kutipan berjaya mengikut bulan" caption={'Jumlah bayaran berjaya, ' + year}>
+            <MonthColumns key={year} values={stat.bulanan.map((row) => row.jumlah)} format={formatRm} axisFormat={compactRm} />
+          </Panel>
 
-          <StatCard title="Kutipan berjaya mengikut bulan" caption={'Jumlah bayaran berjaya, ' + year}>
-            <MonthColumns
-              key={year}
-              values={stat.bulanan.map((row) => row.jumlah)}
+          <Panel title="Tunggakan mengikut generasi" caption={'Termasuk tahun terdahulu hingga ' + year + ' · nombor generasi'}>
+            <Columns
+              key={'gen' + year}
+              values={stat.tunggakan_generasi.map((row) => row.tunggak)}
+              labels={stat.tunggakan_generasi.map((row) => generationAxisLabel(row.generasi))}
+              titles={stat.tunggakan_generasi.map((row) => generationLabel(row.generasi))}
               format={formatRm}
               axisFormat={compactRm}
+              detail={(index) => {
+                const row = stat.tunggakan_generasi[index];
+                return row ? row.ahli_tertunggak + ' ahli tertunggak' : null;
+              }}
+              labelEvery={2}
             />
-          </StatCard>
-
-          <StatCard title="Tunggakan mengikut generasi" caption={'Termasuk tahun terdahulu hingga ' + year}>
-            <ValueBars
-              rows={stat.tunggakan_generasi.map((row) => ({
-                key: row.generasi,
-                label: generationLabel(row.generasi),
-                value: row.tunggak,
-                note: row.ahli_tertunggak + ' ahli',
-              }))}
-              format={formatRm}
-            />
-          </StatCard>
+          </Panel>
         </>
       )}
     </StatShell>
