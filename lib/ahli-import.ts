@@ -251,6 +251,10 @@ function mapRow(raw: RawRow): ParsedMember {
     jawatan_pas_2: text(raw.JawatanPas2),
     jawatan_pas_3: text(raw.JawatanPas3),
     no_keahlian_pas: text(raw.NoKeahlianPas),
+    // Fail Excel tiada lajur ini — sama seperti `spouse_member_id`/`nama_anak`
+    // di bawah, muat naik semula menetapkannya semula ke `false` (belum
+    // disahkan), bukan mengekalkan pengesahan yang admin buat dalam app.
+    jawatan_disahkan_tiada: false,
 
     // --- Pendidikan ---
     tahap_pendidikan: text(raw.TahapPendidikan),

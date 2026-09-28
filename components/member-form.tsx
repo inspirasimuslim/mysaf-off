@@ -531,6 +531,21 @@ export function MemberForm({
       {field('Jawatan PAS 2', 'jawatan_pas_2')}
       {field('Jawatan PAS 3', 'jawatan_pas_3')}
       {field('No. keahlian PAS', 'no_keahlian_pas')}
+
+      {/*
+        Statistik Kelengkapan Data (JABATAN DATA & SUMBER MANUSIA) perlu beza
+        "belum sempat isi" daripada "memang tiada jawatan" — tanpa suis ini,
+        seorang ahli tanpa jawatan akan kekal ditanda "belum lengkap"
+        selama-lamanya walaupun dia memang tiada jawatan untuk diisi.
+      */}
+      <ToggleRow
+        icon="close-circle-outline"
+        title="Tiada Jawatan"
+        subtitle="Tandakan jika ahli ini memang tiada jawatan Ikhwan/PAS untuk diisi."
+        value={draft.jawatan_disahkan_tiada}
+        onValueChange={(next) => set('jawatan_disahkan_tiada', next)}
+        disabled={locked}
+      />
     </>
   );
 

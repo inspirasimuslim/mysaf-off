@@ -177,7 +177,7 @@ export default function AdminHubScreen() {
           <CollapsibleSection
             variant="plain"
             title="Data & Sumber Manusia"
-            count={memberAccess.canEdit ? 2 : 1}
+            count={memberAccess.canEdit ? 3 : 2}
             defaultOpen={openByDefault}>
             <ActionRow
               icon="people-outline"
@@ -188,6 +188,13 @@ export default function AdminHubScreen() {
                   : 'Cari dan semak rekod ahli (paparan sahaja)'
               }
               onPress={() => router.push('/(app)/admin/ahli-list')}
+            />
+
+            <ActionRow
+              icon="stats-chart-outline"
+              title="Statistik Kelengkapan Data"
+              subtitle="Peratus kelengkapan profil ahli mengikut kategori, eksport laporan"
+              onPress={() => router.push('/(app)/admin/statistik-kelengkapan-data')}
             />
 
             {memberAccess.canEdit ? (

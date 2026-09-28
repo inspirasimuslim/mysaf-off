@@ -102,6 +102,8 @@ export type Member = {
   jawatan_pas_2: string | null;
   jawatan_pas_3: string | null;
   no_keahlian_pas: string | null;
+  /** Disahkan sendiri oleh ahli/admin — beza "belum sempat isi" (false) daripada "memang tiada jawatan" (true). */
+  jawatan_disahkan_tiada: boolean;
 
   // --- Pendidikan ---
   tahap_pendidikan: string | null;
