@@ -18,8 +18,20 @@ import { pickAvatar, uploadAvatar } from '@/lib/avatar';
 import { displayName, useAuth } from '@/lib/auth-context';
 import { useGoBack } from '@/lib/navigation';
 import { toMalayError } from '@/lib/errors';
+import { fetchMemberBusinesses, saveMemberBusinesses } from '@/lib/member-businesses';
+import { fetchMemberEducation, saveMemberEducation } from '@/lib/member-education';
 import { fetchGenerations, fetchMembersForPicker, fetchMyMember, fetchMyMemberLinked, updateMember } from '@/lib/members';
-import { type Generation, type Member, type MemberPickerRow } from '@/types/database';
+import { fetchAllSchools } from '@/lib/schools';
+import {
+  type Generation,
+  type Member,
+  type MemberBusiness,
+  type MemberBusinessDraft,
+  type MemberEducation,
+  type MemberEducationDraft,
+  type MemberPickerRow,
+  type School,
+} from '@/types/database';
 
 type Banner = { tone: 'positive' | 'negative'; message: string } | null;
 
@@ -39,13 +51,16 @@ export default function ProfilScreen() {
   const [member, setMember] = useState<Member | null>(null);
   const [generations, setGenerations] = useState<Generation[]>([]);
   const [spouseCandidates, setSpouseCandidates] = useState<MemberPickerRow[]>([]);
+  const [businesses, setBusinesses] = useState<MemberBusiness[]>([]);
+  const [schools, setSchools] = useState<School[]>([]);
+  const [education, setEducation] = useState<MemberEducation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [banner, setBanner] = useState<Banner>(null);
   const [saving, setSaving] = useState(false);
   const [version, setVersion] = useState(0);
   // Di sini dan bukan dalam borang: borang dipasang semula selepas setiap simpanan.
-  const [tab, setTab] = useState<ProfileTab>('diri');
+  const [tab, setTab] = useState<ProfileTab>('peribadi');
 
   /*
     Kedudukan dibaca berasingan daripada profil, dan kegagalannya SENYAP.
@@ -99,6 +114,31 @@ export default function ProfilScreen() {
         } catch {
           if (active) setSpouseCandidates([]);
         }
+
+        // Sama falsafah: tab Perniagaan mula kosong jika gagal, bukan menyekat profil.
+        try {
+          const rows = row ? await fetchMemberBusinesses(row.id) : [];
+          if (active) setBusinesses(rows);
+        } catch {
+          if (active) setBusinesses([]);
+        }
+
+        // Sama falsafah lagi: tab Pendidikan mula kosong jika gagal.
+        try {
+          const [schoolRows, educationRows] = await Promise.all([
+            fetchAllSchools(),
+            row ? fetchMemberEducation(row.id) : Promise.resolve([]),
+          ]);
+          if (active) {
+            setSchools(schoolRows);
+            setEducation(educationRows);
+          }
+        } catch {
+          if (active) {
+            setSchools([]);
+            setEducation([]);
+          }
+        }
       } catch (caught) {
         if (active) setError(toMalayError(caught, 'Gagal memuatkan profil anda.'));
       } finally {
@@ -136,15 +176,20 @@ export default function ProfilScreen() {
   }, [avatarBusy, member]);
 
   const save = useCallback(
-    async (patch: Partial<Member>) => {
+    async (patch: Partial<Member>, businessesDraft: MemberBusinessDraft[], educationDraft: MemberEducationDraft[]) => {
       if (!member || saving) return;
 
       setBanner(null);
       setSaving(true);
       try {
-        await updateMember(member.id, patch);
+        if (Object.keys(patch).length > 0) await updateMember(member.id, patch);
+        await saveMemberBusinesses(member.id, businesses, businessesDraft);
+        await saveMemberEducation(member.id, education, educationDraft);
+
         const fresh = userId ? await fetchMyMember(userId) : null;
         setMember(fresh ?? member);
+        setBusinesses(await fetchMemberBusinesses(member.id));
+        setEducation(await fetchMemberEducation(member.id));
         setVersion((current) => current + 1);
         setBanner({ tone: 'positive', message: 'Profil anda telah dikemas kini.' });
       } catch (caught) {
@@ -153,7 +198,7 @@ export default function ProfilScreen() {
         setSaving(false);
       }
     },
-    [member, saving, userId],
+    [businesses, education, member, saving, userId],
   );
 
   if (loading) return <LoadingScreen />;
@@ -208,16 +253,19 @@ export default function ProfilScreen() {
           member={member}
           generations={generations}
           spouseCandidates={spouseCandidates}
+          businesses={businesses}
+          schools={schools}
+          education={education}
           canEditAdminColumns={false}
           busy={saving}
           headerAside={rank ? <AchievementBadge rank={rank} /> : undefined}
           headerNote={
-            <SelfUpdateStatus value={member.self_updated_at} onPress={() => setTab('diri')} />
+            <SelfUpdateStatus value={member.self_updated_at} onPress={() => setTab('peribadi')} />
           }
           onPickAvatar={() => void changeAvatar()}
           avatarBusy={avatarBusy}
           tabs={{ value: tab, onChange: setTab }}
-          onSave={(patch) => void save(patch)}
+          onSave={(patch, businessesDraft, educationDraft) => void save(patch, businessesDraft, educationDraft)}
         />
       </View>
     </Screen>

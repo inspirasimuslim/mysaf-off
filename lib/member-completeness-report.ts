@@ -8,7 +8,7 @@ import { supabase } from './supabase';
 import { deliverWorkbook } from './xlsx-download';
 
 /**
- * Eksport Statistik Kelengkapan Data — satu baris setiap ahli, status lima
+ * Eksport Statistik Kelengkapan Data — satu baris setiap ahli, status enam
  * kategori (Siap/Belum) + peratus keseluruhan + kemaskini terakhir rekod itu.
  *
  * Berasingan daripada `member-export.ts` (`members_full_export`): laporan itu
@@ -24,8 +24,9 @@ export type MemberCompletenessExportRow = {
   data_peribadi: boolean;
   pendidikan: boolean;
   pekerjaan: boolean;
+  perniagaan: boolean;
   keluarga: boolean;
-  jawatan: boolean;
+  komitmen: boolean;
   jumlah_siap: number;
   peratus: number;
   updated_at: string | null;
@@ -62,9 +63,10 @@ function rowToSheetRow(row: MemberCompletenessExportRow): Record<string, string 
     'Data Peribadi': siapBelum(row.data_peribadi),
     Pendidikan: siapBelum(row.pendidikan),
     Pekerjaan: siapBelum(row.pekerjaan),
+    Perniagaan: siapBelum(row.perniagaan),
     Keluarga: siapBelum(row.keluarga),
-    Jawatan: siapBelum(row.jawatan),
-    'Kategori Siap': row.jumlah_siap + ' / 5',
+    Komitmen: siapBelum(row.komitmen),
+    'Kategori Siap': row.jumlah_siap + ' / 6',
     'Peratus Kelengkapan': row.peratus + '%',
     'Kemaskini Terakhir': row.updated_at ? new Date(row.updated_at).toLocaleDateString('ms-MY') : '',
   };

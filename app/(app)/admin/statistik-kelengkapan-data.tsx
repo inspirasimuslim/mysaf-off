@@ -34,14 +34,14 @@ function pct(count: number, total: number): string {
 /**
  * Statistik Kelengkapan Data — JABATAN DATA & SUMBER MANUSIA.
  *
- * Lima kategori (Data Peribadi, Pendidikan, Pekerjaan, Keluarga, Jawatan),
- * setiap satu "Siap" hanya bila SEMUA medan relevan diisi — medan bersyarat
- * yang tidak relevan pada status semasa ahli itu tidak dikira. Lihat
- * `20260929000072_member_data_completeness.sql` untuk logik penuh dan
- * AGENTS.md untuk rekod keputusan kategori.
+ * Enam kategori (Data Peribadi, Pendidikan, Pekerjaan, Perniagaan, Keluarga,
+ * Komitmen), setiap satu "Siap" hanya bila SEMUA medan relevan diisi — medan
+ * bersyarat yang tidak relevan pada status semasa ahli itu tidak dikira.
+ * Lihat `20260929000075_member_data_completeness_v2.sql` untuk logik penuh
+ * dan AGENTS.md untuk rekod keputusan kategori.
  *
  * Urutan kategori dan bucket peratus SENGAJA tetap (bukan disusun ikut
- * kiraan) — admin membaca lima kategori mengikut susunan tab borang ahli, dan
+ * kiraan) — admin membaca enam kategori mengikut susunan tab borang ahli, dan
  * bucket mengikut peratus menurun, bukan mengikut bilangan ahli terbesar.
  */
 export default function StatistikKelengkapanDataScreen() {
@@ -152,8 +152,9 @@ function Summary({
     { key: 'data_peribadi', label: 'Data Peribadi', value: kategori.data_peribadi },
     { key: 'pendidikan', label: 'Pendidikan', value: kategori.pendidikan },
     { key: 'pekerjaan', label: 'Pekerjaan', value: kategori.pekerjaan },
+    { key: 'perniagaan', label: 'Perniagaan', value: kategori.perniagaan },
     { key: 'keluarga', label: 'Keluarga', value: kategori.keluarga },
-    { key: 'jawatan', label: 'Jawatan', value: kategori.jawatan },
+    { key: 'komitmen', label: 'Komitmen', value: kategori.komitmen },
   ].map((row) => ({ ...row, note: pct(row.value, total) }));
 
   return (
@@ -175,7 +176,7 @@ function Summary({
         onPress={onExport}
       />
 
-      <StatCard title="Kelengkapan Keseluruhan" caption="Bilangan kategori siap ÷ 5, setiap ahli">
+      <StatCard title="Kelengkapan Keseluruhan" caption="Bilangan kategori siap ÷ 6, setiap ahli">
         <ValueBars rows={bucketRows} format={(value) => value + ' ahli'} />
       </StatCard>
 

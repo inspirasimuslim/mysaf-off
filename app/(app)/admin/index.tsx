@@ -103,7 +103,7 @@ export default function AdminHubScreen() {
           <CollapsibleSection
             variant="plain"
             title="Organisasi"
-            count={7}
+            count={8}
             defaultOpen={openByDefault}>
             <ActionRow
               icon="business-outline"
@@ -117,6 +117,13 @@ export default function AdminHubScreen() {
               title="Generasi"
               subtitle="Tambah, aktif/nonaktif dan padam generasi"
               onPress={() => router.push('/(app)/admin/generasi')}
+            />
+
+            <ActionRow
+              icon="school-outline"
+              title="Senarai Sekolah"
+              subtitle="Tambah, sunting, aktif/nonaktif dan padam sekolah (dropdown tab Pendidikan)"
+              onPress={() => router.push('/(app)/admin/senarai-sekolah')}
             />
 
             <ActionRow

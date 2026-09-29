@@ -15,9 +15,29 @@ import { toMalayErrorVerbose } from '@/lib/errors';
 import { fetchMembersForPicker } from '@/lib/members';
 import { useGoBack } from '@/lib/navigation';
 import { createGroupWithMadU } from '@/lib/perkaderan';
-import { SEKOLAH_OPTIONS, TINGKATAN_OPTIONS, type MemberPickerRow } from '@/types/database';
+import { TINGKATAN_OPTIONS, type Option, type MemberPickerRow } from '@/types/database';
 
 type PendingMadU = { nama: string; tingkatan: string | null };
+
+/**
+ * Senarai sekolah TETAP untuk kumpulan usrah sekolah (Perkaderan) — TIDAK
+ * berkaitan `members.sekolah_id`/`schools` (rombak tab Pendidikan borang
+ * ahli, 2026-09-29). `sekolah_usrah_groups.sekolah` kekal teks bebas; ini
+ * hanya dropdown kemudahan, bukan FK. Dahulu dikongsi dari
+ * `SEKOLAH_OPTIONS` dalam `types/database.ts` sebelum ia dibuang (khusus
+ * untuk `members.sekolah` lama) — dipindah ke sini kerana skrin ini
+ * satu-satunya pengguna.
+ */
+const SEKOLAH_OPTIONS: Option<string>[] = [
+  { value: 'SMKA FALAHIAH', label: 'SMKA FALAHIAH' },
+  { value: 'SMKA NAIM LILBANAT', label: 'SMKA NAIM LILBANAT' },
+  { value: 'SMKA TOK BACHOK', label: 'SMKA TOK BACHOK' },
+  { value: 'MAAHAD MUHAMMADI PASIR MAS', label: 'MAAHAD MUHAMMADI PASIR MAS' },
+  { value: 'MAAHAD AMIR INDERA PETRA', label: 'MAAHAD AMIR INDERA PETRA' },
+  { value: 'SMA TG AMALIN AISYAH', label: 'SMA TG AMALIN AISYAH' },
+  { value: 'SMK KOTA DAMANSARA', label: 'SMK KOTA DAMANSARA' },
+  { value: 'Lain-lain', label: 'Lain-lain' },
+];
 
 /**
  * Cipta kumpulan usrah sekolah — TIADA sesi dicipta di sini. Sesi pertama

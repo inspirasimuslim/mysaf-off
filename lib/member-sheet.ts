@@ -76,16 +76,8 @@ export const AHLI_COLUMNS = [
  * eksport yang disunting dan dimuat naik semula tidak akan merosakkan apa-apa
  * walaupun admin mengubah nilainya.
  *
- * `StatusPengajian` berada di sini dan bukan dalam `AHLI_COLUMNS` kerana fail
- * asal tidak pernah memilikinya: import menyimpulkannya daripada status
- * pekerjaan dan maklumat institusi. Menambahnya ke tengah fail akan menukar
- * susunan lajur yang admin sudah biasa membacanya.
  */
-export const MEMBER_READONLY_COLUMNS = [
-  'StatusPengajian',
-  'Kemaskini Terakhir Oleh Ahli',
-  'Tarikh Daftar',
-] as const;
+export const MEMBER_READONLY_COLUMNS = ['Kemaskini Terakhir Oleh Ahli', 'Tarikh Daftar'] as const;
 
 /**
  * Lajur di hadapan fail eksport, tiada dalam fail asal.
@@ -108,8 +100,15 @@ export type SheetCell = string | number;
  * `created_at` ditambah di sini dan bukan pada `Member`: skrin lain membaca
  * `members` tanpa memilih kolum itu, jadi meletakkannya pada jenis kongsi akan
  * menjanjikan medan yang tidak selalu ada.
+ *
+ * `sekolah_id` (FK) DIGANTIKAN `sekolah` (teks, nama sekolah) di sini —
+ * `members_full_export()` menyelesaikannya melalui JOIN kepada `schools`
+ * di pelayan supaya lajur eksport kekal nama yang boleh dibaca, bukan uuid.
  */
-export type MemberExportRow = Omit<Member, 'id' | 'user_id' | 'avatar_url'> & { created_at: string | null };
+export type MemberExportRow = Omit<Member, 'id' | 'user_id' | 'avatar_url' | 'sekolah_id'> & {
+  created_at: string | null;
+  sekolah: string | null;
+};
 
 /**
  * Cap masa → tarikh yang boleh dibaca, atau kosong.
@@ -128,9 +127,7 @@ function dateOnly(value: string | null): string {
  *
  * Setiap nilai ditulis dalam bentuk yang `ahli-import` baca semula kepada nilai
  * yang SAMA: label status dan bukan kod dalaman, julat pendapatan seperti
- * tersimpan, generasi sebagai 'Ikhwan 07'. `status_pengajian` tiada lajur dalam
- * fail asal — import menyimpulkannya daripada status pekerjaan dan maklumat
- * institusi.
+ * tersimpan, generasi sebagai 'Ikhwan 07'.
  */
 export function memberToSheetRow(member: MemberExportRow): Record<string, SheetCell> {
   const text = (value: string | null) => value ?? '';
@@ -157,42 +154,48 @@ export function memberToSheetRow(member: MemberExportRow): Record<string, SheetC
       : '',
     StatusBelajarBekerja: member.status_pekerjaan ? optionLabel(STATUS_PEKERJAAN_OPTIONS, member.status_pekerjaan) : '',
     BilAnak: count(member.bil_anak),
-    NamaInstitusi: text(member.nama_institusi),
-    AlamatInstitusi: text(member.alamat_institusi),
-    TahunPengajian: text(member.tahun_pengajian),
-    JurusanPengajian: text(member.jurusan_pengajian),
-    PembiayaanPengajian: text(member.sumber_pembiayaan),
-    NyatakanPembiayaan: text(member.pembiayaan_lain),
-    TahapPendidikan: text(member.tahap_pendidikan),
+    /*
+      7 lajur di bawah bukan lagi kolum `Member` (rombak tab Pendidikan
+      2026-09-29 — peringkat selepas SPM kini `member_education`, 1-ke-banyak,
+      TIDAK disertakan dalam eksport ini) tetapi KEKAL dalam AHLI_COLUMNS
+      sebagai lajur kosong, sama corak kolum legasi kosong sedia ada.
+    */
+    NamaInstitusi: '',
+    AlamatInstitusi: '',
+    TahunPengajian: '',
+    JurusanPengajian: '',
+    PembiayaanPengajian: '',
+    NyatakanPembiayaan: '',
+    TahapPendidikan: '',
     SektorPekerjaan: text(member.sektor_pekerjaan),
     JawatanPekerjaan: text(member.jawatan_pekerjaan),
     NamaMajikanSyarikat: text(member.nama_majikan),
-    AlamatTempatBekerja: text(member.alamat_tempat_kerja),
+    /*
+      9 lajur di bawah bukan lagi kolum `Member` (rombak 6-tab
+      2026-09-29 — lihat AGENTS.md) tetapi KEKAL dalam AHLI_COLUMNS sebagai
+      lajur kosong, sama seperti `NoTel2`/`Pekerjaan`/`Role`/`BilTanggungan`
+      sedia ada — bentuk fail eksport tidak berubah bilangan/susunan lajurnya.
+    */
+    AlamatTempatBekerja: '',
     AnggaranPendapatan: text(member.anggaran_pendapatan_range),
-    JenisPerniagaan: text(member.jenis_perniagaan),
+    JenisPerniagaan: '',
     NyatakanJikaMBM: text(member.nama_pasangan),
     TahunBerkahwin: text(member.tahun_berkahwin),
-    AnggaranPendapatanIsiRumah: text(member.anggaran_pendapatan_isi_rumah_range),
-    BilTanggunganSelainKeluarga: count(member.bil_tanggungan_selain_keluarga),
-    PekerjaanIbu: text(member.pekerjaan_ibu),
-    PekerjaanBapa: text(member.pekerjaan_bapa),
-    BilTanggunganIbuBapa: count(member.bil_tanggungan_ibu_bapa),
+    AnggaranPendapatanIsiRumah: '',
+    BilTanggunganSelainKeluarga: '',
+    PekerjaanIbu: '',
+    PekerjaanBapa: '',
+    BilTanggunganIbuBapa: '',
     BilTanggungan: '',
     JawatanIkhwan1: text(member.jawatan_ikhwan_1),
     JawatanIkhwan2: text(member.jawatan_ikhwan_2),
-    JawatanIkhwan3: text(member.jawatan_ikhwan_3),
+    JawatanIkhwan3: '',
     JawatanPas1: text(member.jawatan_pas_1),
     JawatanPas2: text(member.jawatan_pas_2),
-    JawatanPas3: text(member.jawatan_pas_3),
+    JawatanPas3: '',
     NoKeahlianPas: text(member.no_keahlian_pas),
 
-    /*
-      Tiga lajur bacaan sahaja di hujung fail. `status_pengajian` datang terus
-      daripada pangkalan data: sebelum ini ia dibuang di sini dan import
-      menyimpulkannya semula, jadi nilai yang admin tetapkan secara manual
-      hilang tanpa sesiapa menyedarinya.
-    */
-    StatusPengajian: text(member.status_pengajian),
+    // Dua lajur bacaan sahaja di hujung fail.
     'Kemaskini Terakhir Oleh Ahli': dateOnly(member.self_updated_at),
     'Tarikh Daftar': dateOnly(member.created_at),
   };

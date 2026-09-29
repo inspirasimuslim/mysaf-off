@@ -13,7 +13,8 @@ import type { Option } from '@/types/database';
 
 type Props<T extends string> = {
   label?: string;
-  value: T;
+  /** `null` diterima supaya medan yang belum dijawab tidak memaksa satu pilihan aktif secara silap. */
+  value: T | null;
   options: Option<T>[];
   onChange: (next: T) => void;
   disabled?: boolean;

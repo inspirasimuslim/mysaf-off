@@ -4,28 +4,44 @@ import { ActivityIndicator, Pressable, Switch, Text, View } from 'react-native';
 
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { ChipGroup } from '@/components/ui/chip-group';
+import { IconButton } from '@/components/ui/icon-button';
 import { MemberAvatar } from '@/components/ui/member-avatar';
 import { MemberPickerField } from '@/components/ui/member-picker-field';
 import { Notice } from '@/components/ui/notice';
 import { PickerField } from '@/components/ui/picker-field';
 import { SectionTitle } from '@/components/ui/section-title';
+import { Segmented } from '@/components/ui/segmented';
 import { TabBar } from '@/components/ui/tab-bar';
 import { TextField } from '@/components/ui/text-field';
 import { ToggleRow } from '@/components/ui/toggle-row';
 import { Colors } from '@/constants/theme';
 import {
+  BUSINESS_MODE_OPTIONS,
+  BUSINESS_SUBKATEGORI_OFFLINE_OPTIONS,
+  BUSINESS_SUBKATEGORI_ONLINE_OPTIONS,
+  EDUCATION_PERINGKAT_OPTIONS,
   JANTINA_OPTIONS,
   KAWASAN_USRAH_OPTIONS,
+  NEGERI_OPTIONS,
   PENDAPATAN_RANGE_OPTIONS,
-  SEKOLAH_OPTIONS,
-  STATUS_PEKERJAAN_OPTIONS,
-  STATUS_PENGAJIAN_OPTIONS,
+  SEBAB_PERKAHWINAN_OPTIONS,
+  SEKTOR_PEKERJAAN_OPTIONS,
+  STATUS_PEKERJAAN_TIDAK_BEKERJA_OPTIONS,
+  STATUS_PENGAJIAN_ENTRY_OPTIONS,
   STATUS_PERKAHWINAN_OPTIONS,
+  SUMBER_PEMBIAYAAN_OPTIONS,
   generationLabel,
+  type BusinessSubKategori,
   type Generation,
   type Member,
+  type MemberBusiness,
+  type MemberBusinessDraft,
+  type MemberEducation,
+  type MemberEducationDraft,
   type MemberPickerRow,
   type Option,
+  type School,
 } from '@/types/database';
 
 /**
@@ -50,21 +66,33 @@ import {
  * Borang ini bukan lapisan kawalan — RLS dan trigger tetap penentu muktamad.
  */
 
-export type ProfileTab = 'diri' | 'pendidikan' | 'pekerjaan' | 'keluarga' | 'jawatan';
+export type ProfileTab = 'peribadi' | 'pendidikan' | 'pekerjaan' | 'perniagaan' | 'keluarga' | 'komitmen';
 
 const PROFILE_TABS: Option<ProfileTab>[] = [
-  { value: 'diri', label: 'Maklumat Diri' },
+  { value: 'peribadi', label: 'Peribadi' },
   { value: 'pendidikan', label: 'Pendidikan' },
   { value: 'pekerjaan', label: 'Pekerjaan' },
+  { value: 'perniagaan', label: 'Perniagaan' },
   { value: 'keluarga', label: 'Keluarga' },
-  { value: 'jawatan', label: 'Jawatan' },
+  { value: 'komitmen', label: 'Komitmen' },
 ];
 
 type Props = {
   member: Member;
   generations: Generation[];
-  /** Calon pemilih pasangan (tab Keluarga, status 'berkahwin_mbm') — daripada `list_members_picker()`. */
+  /** Calon pemilih pasangan (tab Keluarga) — daripada `list_members_picker()`. */
   spouseCandidates: MemberPickerRow[];
+  /** Baris `member_businesses` sedia ada ahli ini — tab Perniagaan. */
+  businesses: MemberBusiness[];
+  /**
+   * SEMUA sekolah (aktif + nonaktif) — dropdown tab Pendidikan. Sama sebab
+   * `generations` bukan disempitkan kepada aktif sahaja di sini: sekolah
+   * ahli ini mungkin sudah dinyahaktifkan selepas ditetapkan, dan borang
+   * perlu tahu namanya untuk kekal memaparkannya (lihat `sekolahOptions`).
+   */
+  schools: School[];
+  /** Baris `member_education` sedia ada ahli ini — tab Pendidikan. */
+  education: MemberEducation[];
   canEditAdminColumns: boolean;
   /** Kunci SELURUH borang: pengguna boleh melihat rekod tetapi bukan menyuntingnya. */
   readOnly?: boolean;
@@ -94,18 +122,26 @@ type Props = {
    * borang ini — sekatan masih berkuat kuasa hanya selepas Simpan.
    */
   actions?: (parts: { save: ReactNode; sekat: ReactNode }) => ReactNode;
-  /** Hanya medan yang benar-benar berubah dihantar. */
-  onSave: (patch: Partial<Member>) => void;
+  /**
+   * Hanya medan `Member` yang berubah dihantar dalam `patch`. Baris
+   * `member_businesses`/`member_education` dihantar berasingan dalam
+   * `businesses`/`education` (draf penuh tab masing-masing — pemanggil
+   * mendiff terhadap baris asal, lihat `lib/member-businesses.ts`/
+   * `lib/member-education.ts`) kerana kedua-duanya table berasingan, bukan
+   * medan `Member`.
+   */
+  onSave: (patch: Partial<Member>, businesses: MemberBusinessDraft[], education: MemberEducationDraft[]) => void;
 };
 
 const AVATAR_SIZE = 96;
 
-/** Kapsyen di bawah tab bagi setiap seksyen selain Maklumat Diri. */
+/** Kapsyen di bawah tab bagi setiap seksyen selain Peribadi. */
 const CAPTIONS = {
-  pendidikan: 'Butiran institusi muncul selepas status pengajian dipilih.',
-  pekerjaan: 'Butiran tambahan muncul mengikut status pekerjaan yang dipilih.',
-  keluarga: 'Butiran pasangan muncul selepas status berkahwin dipilih.',
-  jawatan: 'Jawatan dalam Ikhwan dan PAS, jika ada.',
+  pendidikan: 'Tambah setiap peringkat pendidikan selepas SPM secara berasingan, jika ada.',
+  pekerjaan: 'Butiran tambahan muncul selepas suis "Sudah Bekerja" dihidupkan.',
+  perniagaan: 'Maklumat ini akan digunakan untuk membantu mempromosikan perniagaan ahli dalam komuniti MySAFF. Isi selengkap mungkin untuk peluang publisiti percuma!',
+  keluarga: 'Butiran pasangan muncul selepas status perkahwinan dipilih.',
+  komitmen: 'Jawatan atau komitmen dalam Ikhwan dan PAS, jika ada.',
 } as const;
 
 /** Pilihan rasmi, ditambah nilai semasa sebagai "(tidak dikenali)" jika ia di luar senarai. */
@@ -119,8 +155,60 @@ function usrahLabel(code: string | null): string | null {
   return KAWASAN_USRAH_OPTIONS.find((option) => option.value === code)?.label ?? code;
 }
 
+/** Sub-kategori sah untuk satu mod perniagaan — 'kedua_dua' ialah gabungan Online + Offline (tanpa pendua). */
+function subKategoriOptionsForMode(mode: MemberBusinessDraft['mode']): Option<BusinessSubKategori>[] {
+  if (mode === 'online') return BUSINESS_SUBKATEGORI_ONLINE_OPTIONS;
+  if (mode === 'offline') return BUSINESS_SUBKATEGORI_OFFLINE_OPTIONS;
+  const seen = new Set<string>();
+  return [...BUSINESS_SUBKATEGORI_ONLINE_OPTIONS, ...BUSINESS_SUBKATEGORI_OFFLINE_OPTIONS].filter((option) => {
+    if (seen.has(option.value)) return false;
+    seen.add(option.value);
+    return true;
+  });
+}
+
+/** Baris `MemberBusiness` sedia ada → draf borang (buang medan yang bukan input pengguna). */
+function toDraft(business: MemberBusiness): MemberBusinessDraft {
+  return {
+    id: business.id,
+    mode: business.mode,
+    sub_kategori: business.sub_kategori,
+    nama_perniagaan: business.nama_perniagaan,
+    negeri_operasi: business.negeri_operasi,
+    anggaran_pendapatan_range: business.anggaran_pendapatan_range,
+  };
+}
+
+const BLANK_BUSINESS: MemberBusinessDraft = {
+  mode: 'online',
+  sub_kategori: [],
+  nama_perniagaan: null,
+  negeri_operasi: null,
+  anggaran_pendapatan_range: null,
+};
+
+/** Baris `MemberEducation` sedia ada → draf borang (buang medan yang bukan input pengguna). */
+function toEducationDraft(entry: MemberEducation): MemberEducationDraft {
+  return {
+    id: entry.id,
+    peringkat: entry.peringkat,
+    jurusan: entry.jurusan,
+    institusi: entry.institusi,
+    status_pengajian: entry.status_pengajian,
+    sumber_pembiayaan: entry.sumber_pembiayaan,
+  };
+}
+
+const BLANK_EDUCATION: MemberEducationDraft = {
+  peringkat: 'stpm',
+  jurusan: null,
+  institusi: null,
+  status_pengajian: 'tamat',
+  sumber_pembiayaan: null,
+};
+
 /** Kunci medan yang disimpan sebagai nombor. */
-const NUMERIC_FIELDS = ['bil_anak', 'bil_tanggungan_selain_keluarga', 'bil_tanggungan_ibu_bapa'] as const;
+const NUMERIC_FIELDS = ['bil_anak'] as const;
 type NumericField = (typeof NUMERIC_FIELDS)[number];
 
 /** Kunci medan teks bebas. */
@@ -132,6 +220,9 @@ export function MemberForm({
   member,
   generations,
   spouseCandidates,
+  businesses,
+  schools,
+  education,
   canEditAdminColumns,
   readOnly = false,
   busy = false,
@@ -144,6 +235,15 @@ export function MemberForm({
   onSave,
 }: Props) {
   const [draft, setDraft] = useState<Member>(member);
+  const [businessesDraft, setBusinessesDraft] = useState<MemberBusinessDraft[]>(() => businesses.map(toDraft));
+  const [educationDraft, setEducationDraft] = useState<MemberEducationDraft[]>(() => education.map(toEducationDraft));
+
+  /*
+    Pasangan MBM vs Bukan MBM bukan kolum DB — ia ditentukan oleh medan mana
+    (`spouse_member_id` atau `nama_pasangan`) yang ada nilai. Lalai MBM bila
+    kedua-dua kosong (ahli baharu mengisi buat pertama kali).
+  */
+  const [pasanganMbm, setPasanganMbm] = useState<boolean>(!member.nama_pasangan);
 
   /* Satu kunci untuk setiap kawalan dalam borang. Menyimpan sedang berjalan
      dan tiada kebenaran menyunting menghasilkan keadaan UI yang sama, jadi
@@ -190,7 +290,19 @@ export function MemberForm({
     () => withUnrecognised(KAWASAN_USRAH_OPTIONS, draft.kawasan_usrah),
     [draft.kawasan_usrah],
   );
-  const sekolahOptions = useMemo(() => withUnrecognised(SEKOLAH_OPTIONS, draft.sekolah), [draft.sekolah]);
+  /*
+    `schools` membawa SEMUA sekolah (aktif + nonaktif) — sama corak
+    `generationOptions` di atas. Sekolah nonaktif kekal dipapar bila ahli ini
+    sudah ditetapkan padanya, supaya nilai sedia ada tidak hilang senyap
+    menjadi kosong dalam dropdown.
+  */
+  const sekolahOptions = useMemo<Option<string>[]>(
+    () =>
+      schools
+        .filter((school) => school.aktif || school.id === draft.sekolah_id)
+        .map((school) => ({ value: school.id, label: school.nama })),
+    [schools, draft.sekolah_id],
+  );
 
   /*
     Ahli sendiri dibuang (seseorang tidak boleh jadi pasangan dirinya — dikuat
@@ -223,16 +335,26 @@ export function MemberForm({
     return changed;
   }, [draft, member]);
 
-  const dirty = Object.keys(patch).length > 0;
+  /** Draf Perniagaan asal (dikira semula, bukan disimpan — `businesses` prop tidak berubah semasa hayat borang ini). */
+  const originalBusinessesDraft = useMemo(() => businesses.map(toDraft), [businesses]);
+  const businessesDirty = useMemo(
+    () => JSON.stringify(businessesDraft) !== JSON.stringify(originalBusinessesDraft),
+    [businessesDraft, originalBusinessesDraft],
+  );
 
-  const studying = draft.status_pengajian === 'sedang_belajar' || draft.status_pengajian === 'sudah_tamat';
-  const working =
-    draft.status_pekerjaan === 'bekerja' ||
-    draft.status_pekerjaan === 'bekerja_dan_belajar' ||
-    draft.status_pekerjaan === 'pesara';
-  const inBusiness = draft.status_pekerjaan === 'berniaga_usahawan';
-  const married =
-    draft.status_perkahwinan === 'berkahwin_mbm' || draft.status_perkahwinan === 'berkahwin_bukan_mbm';
+  /** Sama corak seperti Perniagaan — draf asal Pendidikan dikira semula, bukan disimpan. */
+  const originalEducationDraft = useMemo(() => education.map(toEducationDraft), [education]);
+  const educationDirty = useMemo(
+    () => JSON.stringify(educationDraft) !== JSON.stringify(originalEducationDraft),
+    [educationDraft, originalEducationDraft],
+  );
+
+  const dirty = Object.keys(patch).length > 0 || businessesDirty || educationDirty;
+
+  const working = draft.status_pekerjaan === 'bekerja';
+  const married = draft.status_perkahwinan === 'berkahwin' || draft.status_perkahwinan === 'pernah_berkahwin';
+  const pernahBerkahwin = draft.status_perkahwinan === 'pernah_berkahwin';
+  const adaPerniagaan = businessesDraft.length > 0;
 
   const field = (label: string, key: TextFieldKey, extra?: { multiline?: boolean; keyboardType?: 'phone-pad' }) => (
     <TextField
@@ -255,6 +377,8 @@ export function MemberForm({
       keyboardType="number-pad"
     />
   );
+
+  const pendapatanNote = <Text className="text-xs text-ink-faint">Untuk rekod dalaman persatuan sahaja.</Text>;
 
   /* Ikon kamera hanya muncul bila borang boleh disunting DAN pemanggil
      menyediakan pengendali — paparan sahaja tidak sepatutnya mengisyaratkan
@@ -392,90 +516,284 @@ export function MemberForm({
     </>
   );
 
+  const updateEducation = (index: number, patchRow: Partial<MemberEducationDraft>) => {
+    setEducationDraft((current) => current.map((row, i) => (i === index ? { ...row, ...patchRow } : row)));
+  };
+
+  const educationCards = educationDraft.map((row, index) => (
+    <Card key={row.id ?? 'baharu-' + index} className="gap-4">
+      <View className="flex-row items-center justify-between">
+        <Text className="text-base font-semibold text-ink">Tahap {index + 1}</Text>
+        {!readOnly ? (
+          <IconButton
+            icon="trash-outline"
+            accessibilityLabel={'Padam tahap pendidikan ' + (index + 1)}
+            tone="danger"
+            disabled={locked}
+            onPress={() => setEducationDraft((current) => current.filter((_, i) => i !== index))}
+          />
+        ) : null}
+      </View>
+
+      <Segmented
+        label="Peringkat"
+        value={row.peringkat}
+        options={EDUCATION_PERINGKAT_OPTIONS}
+        onChange={(next) => updateEducation(index, { peringkat: next })}
+        disabled={locked}
+      />
+
+      <TextField
+        label="Jurusan / Bidang"
+        value={row.jurusan ?? ''}
+        onChangeText={(value) => updateEducation(index, { jurusan: value.trim() === '' ? null : value })}
+        editable={!locked}
+        autoCapitalize="sentences"
+        autoCorrect={false}
+      />
+
+      <TextField
+        label="Institusi"
+        value={row.institusi ?? ''}
+        onChangeText={(value) => updateEducation(index, { institusi: value.trim() === '' ? null : value })}
+        editable={!locked}
+        autoCapitalize="words"
+        autoCorrect={false}
+      />
+
+      <Segmented
+        label="Status Pengajian"
+        value={row.status_pengajian}
+        options={STATUS_PENGAJIAN_ENTRY_OPTIONS}
+        onChange={(next) =>
+          updateEducation(index, {
+            status_pengajian: next,
+            // Sumber pembiayaan hanya bermakna semasa sedang menjalani —
+            // tukar balik ke "Tamat" melepaskannya, sama corak toggle-off lain.
+            sumber_pembiayaan: next === 'sedang_menjalani' ? row.sumber_pembiayaan : null,
+          })
+        }
+        disabled={locked}
+      />
+
+      {row.status_pengajian === 'sedang_menjalani' ? (
+        <Segmented
+          label="Sumber Pembiayaan Sekarang"
+          value={row.sumber_pembiayaan}
+          options={SUMBER_PEMBIAYAAN_OPTIONS}
+          onChange={(next) => updateEducation(index, { sumber_pembiayaan: next })}
+          disabled={locked}
+        />
+      ) : null}
+    </Card>
+  ));
+
   const pendidikanFields = (
     <>
-      {field('Tahap pendidikan tertinggi', 'tahap_pendidikan')}
       <PickerField
         label="Sekolah"
-        value={draft.sekolah}
+        value={draft.sekolah_id}
         options={sekolahOptions}
-        onChange={(next) => set('sekolah', next)}
+        onChange={(next) => set('sekolah_id', next)}
         disabled={locked}
       />
 
-      <PickerField
-        label="Status pengajian"
-        value={draft.status_pengajian}
-        options={STATUS_PENGAJIAN_OPTIONS}
-        onChange={(next) => set('status_pengajian', next)}
-        disabled={locked}
-      />
+      <Text className="text-base font-semibold text-ink">Tahap Pendidikan (bermula selepas SPM)</Text>
 
-      {studying ? (
-        <>
-          {field('Nama institusi', 'nama_institusi')}
-          {field('Alamat institusi', 'alamat_institusi')}
-          {field('Tahun pengajian', 'tahun_pengajian')}
-          {field('Jurusan pengajian', 'jurusan_pengajian')}
-          {field('Sumber pembiayaan', 'sumber_pembiayaan')}
-          {field('Nyatakan pembiayaan lain', 'pembiayaan_lain')}
-        </>
+      {educationCards}
+
+      {!readOnly ? (
+        <Button
+          label="+ Tambah Tahap"
+          variant="secondary"
+          disabled={locked}
+          onPress={() => setEducationDraft((current) => [...current, { ...BLANK_EDUCATION }])}
+        />
       ) : null}
     </>
   );
 
   const pekerjaanFields = (
     <>
-      <PickerField
-        label="Status pekerjaan"
-        value={draft.status_pekerjaan}
-        options={STATUS_PEKERJAAN_OPTIONS}
-        onChange={(next) => set('status_pekerjaan', next)}
+      <ToggleRow
+        icon="briefcase-outline"
+        title="Sudah Bekerja"
+        subtitle="Hidupkan jika ahli ini sedang bekerja secara aktif."
+        value={working}
+        onValueChange={(next) =>
+          setDraft((current) => ({
+            ...current,
+            // Bertukar OFF melepaskan 'bekerja' supaya ahli memilih semula
+            // salah satu 3 status secara eksplisit — bukan diandaikan.
+            status_pekerjaan: next ? 'bekerja' : null,
+          }))
+        }
         disabled={locked}
       />
 
       {working ? (
         <>
-          {field('Sektor pekerjaan', 'sektor_pekerjaan')}
-          {field('Jawatan', 'jawatan_pekerjaan')}
-          {field('Nama majikan / syarikat', 'nama_majikan')}
-          {field('Alamat tempat kerja', 'alamat_tempat_kerja')}
+          <Segmented
+            label="Sektor Pekerjaan"
+            value={draft.sektor_pekerjaan}
+            options={SEKTOR_PEKERJAAN_OPTIONS}
+            onChange={(next) => set('sektor_pekerjaan', next)}
+            disabled={locked}
+          />
+          {field('Apa jawatan atau bidang kerja anda?', 'jawatan_pekerjaan')}
+          {field('Nama tempat kerja / majikan', 'nama_majikan')}
+          <PickerField
+            label="Negeri tempat kerja"
+            value={draft.negeri_tempat_kerja}
+            options={NEGERI_OPTIONS}
+            onChange={(next) => set('negeri_tempat_kerja', next)}
+            disabled={locked}
+          />
+          <View className="gap-2">
+            <PickerField
+              label="Anggaran pendapatan sebulan"
+              value={draft.anggaran_pendapatan_range}
+              options={PENDAPATAN_RANGE_OPTIONS}
+              onChange={(next) => set('anggaran_pendapatan_range', next)}
+              disabled={locked}
+            />
+            {pendapatanNote}
+          </View>
         </>
-      ) : null}
-
-      {inBusiness ? (
-        <>
-          {field('Jenis perniagaan', 'jenis_perniagaan')}
-          {field('Nama syarikat', 'nama_majikan')}
-          {field('Alamat tempat perniagaan', 'alamat_tempat_kerja')}
-        </>
-      ) : null}
-
-      {working || inBusiness ? (
+      ) : (
         <PickerField
-          label="Anggaran pendapatan sebulan"
-          value={draft.anggaran_pendapatan_range}
-          options={PENDAPATAN_RANGE_OPTIONS}
-          onChange={(next) => set('anggaran_pendapatan_range', next)}
+          label="Status Pekerjaan"
+          value={draft.status_pekerjaan}
+          options={STATUS_PEKERJAAN_TIDAK_BEKERJA_OPTIONS}
+          onChange={(next) => set('status_pekerjaan', next)}
           disabled={locked}
         />
+      )}
+    </>
+  );
+
+  const updateBusiness = (index: number, patchRow: Partial<MemberBusinessDraft>) => {
+    setBusinessesDraft((current) => current.map((row, i) => (i === index ? { ...row, ...patchRow } : row)));
+  };
+
+  const businessCards = businessesDraft.map((row, index) => {
+    const subOptions = subKategoriOptionsForMode(row.mode);
+    return (
+      <Card key={row.id ?? 'baharu-' + index} className="gap-4">
+        <View className="flex-row items-center justify-between">
+          <Text className="text-base font-semibold text-ink">Perniagaan {index + 1}</Text>
+          {!readOnly ? (
+            <IconButton
+              icon="trash-outline"
+              accessibilityLabel="Padam perniagaan ini"
+              tone="danger"
+              disabled={locked}
+              onPress={() => setBusinessesDraft((current) => current.filter((_, i) => i !== index))}
+            />
+          ) : null}
+        </View>
+
+        <Segmented
+          label="Mod"
+          value={row.mode}
+          options={BUSINESS_MODE_OPTIONS}
+          onChange={(nextMode) =>
+            updateBusiness(index, {
+              mode: nextMode,
+              // Sub-kategori disempitkan semula ikut mod baharu — pilihan luar
+              // senarai mod baharu tidak boleh terus tersimpan secara senyap.
+              sub_kategori: row.sub_kategori.filter((value) =>
+                subKategoriOptionsForMode(nextMode).some((option) => option.value === value),
+              ),
+            })
+          }
+          disabled={locked}
+        />
+
+        <ChipGroup
+          label="Sub-kategori"
+          values={row.sub_kategori}
+          options={subOptions}
+          onChange={(next) => updateBusiness(index, { sub_kategori: next })}
+          disabled={locked}
+        />
+
+        <TextField
+          label="Nama Perniagaan"
+          value={row.nama_perniagaan ?? ''}
+          onChangeText={(value) => updateBusiness(index, { nama_perniagaan: value.trim() === '' ? null : value })}
+          editable={!locked}
+          autoCapitalize="words"
+          autoCorrect={false}
+        />
+
+        <PickerField
+          label="Negeri Operasi"
+          value={row.negeri_operasi}
+          options={NEGERI_OPTIONS}
+          onChange={(next) => updateBusiness(index, { negeri_operasi: next })}
+          disabled={locked}
+        />
+
+        <View className="gap-2">
+          <PickerField
+            label="Anggaran Pendapatan Perniagaan"
+            value={row.anggaran_pendapatan_range}
+            options={PENDAPATAN_RANGE_OPTIONS}
+            onChange={(next) => updateBusiness(index, { anggaran_pendapatan_range: next })}
+            disabled={locked}
+          />
+          {pendapatanNote}
+        </View>
+      </Card>
+    );
+  });
+
+  const perniagaanFields = (
+    <>
+      <ToggleRow
+        icon="storefront-outline"
+        title="Ada Perniagaan"
+        subtitle="Hidupkan jika ahli ini memiliki sebarang perniagaan."
+        value={adaPerniagaan}
+        onValueChange={(next) => setBusinessesDraft(next ? [BLANK_BUSINESS] : [])}
+        disabled={locked}
+      />
+
+      {adaPerniagaan ? (
+        <>
+          {businessCards}
+          {!readOnly ? (
+            <Button
+              label="+ Tambah Perniagaan"
+              variant="secondary"
+              disabled={locked}
+              onPress={() => setBusinessesDraft((current) => [...current, { ...BLANK_BUSINESS }])}
+            />
+          ) : null}
+        </>
       ) : null}
     </>
   );
 
   const keluargaFields = (
     <>
-      <PickerField
-        label="Status perkahwinan"
+      <Segmented
+        label="Status Perkahwinan"
         value={draft.status_perkahwinan}
         options={STATUS_PERKAHWINAN_OPTIONS}
         onChange={(next) =>
           setDraft((current) => ({
             ...current,
             status_perkahwinan: next,
-            // Pasangan ahli hanya bermakna bila status MBM — tukar keluar
-            // daripada MBM melepaskan pautan supaya ia tidak tersangkut senyap.
-            spouse_member_id: next === 'berkahwin_mbm' ? current.spouse_member_id : null,
+            // Bujang melepaskan semua butiran pasangan/anak/sebab — ia tidak
+            // bermakna lagi bila status bertukar keluar daripada berkahwin.
+            spouse_member_id: next === 'bujang' ? null : current.spouse_member_id,
+            nama_pasangan: next === 'bujang' ? null : current.nama_pasangan,
+            tahun_berkahwin: next === 'bujang' ? null : current.tahun_berkahwin,
+            bil_anak: next === 'bujang' ? null : current.bil_anak,
+            // Sebab hanya bermakna bila "Pernah Berkahwin".
+            sebab_bercerai_kematian: next === 'pernah_berkahwin' ? current.sebab_bercerai_kematian : null,
           }))
         }
         disabled={locked}
@@ -483,7 +801,28 @@ export function MemberForm({
 
       {married ? (
         <>
-          {draft.status_perkahwinan === 'berkahwin_mbm' ? (
+          <Segmented
+            label="Pasangan"
+            value={pasanganMbm ? 'mbm' : 'bukan_mbm'}
+            options={[
+              { value: 'mbm', label: 'Pasangan (Ahli)' },
+              { value: 'bukan_mbm', label: 'Pasangan (Bukan Ahli)' },
+            ]}
+            onChange={(next) => {
+              const isMbm = next === 'mbm';
+              setPasanganMbm(isMbm);
+              // Tukar mod melepaskan medan mod SEBELUMNYA — pautan/nama lama
+              // tidak sepatutnya tersangkut senyap di sebalik mod yang tidak dipaparkan lagi.
+              setDraft((current) => ({
+                ...current,
+                spouse_member_id: isMbm ? current.spouse_member_id : null,
+                nama_pasangan: isMbm ? null : current.nama_pasangan,
+              }));
+            }}
+            disabled={locked}
+          />
+
+          {pasanganMbm ? (
             <MemberPickerField
               label="Pasangan (Ahli)"
               value={draft.spouse_member_id}
@@ -494,6 +833,17 @@ export function MemberForm({
           ) : (
             field('Nama pasangan', 'nama_pasangan')
           )}
+
+          {pernahBerkahwin ? (
+            <Segmented
+              label="Sebab"
+              value={draft.sebab_bercerai_kematian}
+              options={SEBAB_PERKAHWINAN_OPTIONS}
+              onChange={(next) => set('sebab_bercerai_kematian', next)}
+              disabled={locked}
+            />
+          ) : null}
+
           {field('Tahun berkahwin', 'tahun_berkahwin')}
           {numberField('Bilangan anak', 'bil_anak')}
           <TextField
@@ -507,45 +857,43 @@ export function MemberForm({
           />
         </>
       ) : null}
-
-      <PickerField
-        label="Anggaran pendapatan isi rumah"
-        value={draft.anggaran_pendapatan_isi_rumah_range}
-        options={PENDAPATAN_RANGE_OPTIONS}
-        onChange={(next) => set('anggaran_pendapatan_isi_rumah_range', next)}
-        disabled={locked}
-      />
-      {numberField('Bilangan tanggungan selain keluarga', 'bil_tanggungan_selain_keluarga')}
-      {field('Pekerjaan ibu', 'pekerjaan_ibu')}
-      {field('Pekerjaan bapa', 'pekerjaan_bapa')}
-      {numberField('Bilangan tanggungan ibu bapa', 'bil_tanggungan_ibu_bapa')}
     </>
   );
 
-  const jawatanFields = (
+  const komitmenFields = (
     <>
-      {field('Jawatan Ikhwan 1', 'jawatan_ikhwan_1')}
-      {field('Jawatan Ikhwan 2', 'jawatan_ikhwan_2')}
-      {field('Jawatan Ikhwan 3', 'jawatan_ikhwan_3')}
-      {field('Jawatan PAS 1', 'jawatan_pas_1')}
-      {field('Jawatan PAS 2', 'jawatan_pas_2')}
-      {field('Jawatan PAS 3', 'jawatan_pas_3')}
-      {field('No. keahlian PAS', 'no_keahlian_pas')}
-
-      {/*
-        Statistik Kelengkapan Data (JABATAN DATA & SUMBER MANUSIA) perlu beza
-        "belum sempat isi" daripada "memang tiada jawatan" — tanpa suis ini,
-        seorang ahli tanpa jawatan akan kekal ditanda "belum lengkap"
-        selama-lamanya walaupun dia memang tiada jawatan untuk diisi.
-      */}
       <ToggleRow
-        icon="close-circle-outline"
-        title="Tiada Jawatan"
-        subtitle="Tandakan jika ahli ini memang tiada jawatan Ikhwan/PAS untuk diisi."
-        value={draft.jawatan_disahkan_tiada}
-        onValueChange={(next) => set('jawatan_disahkan_tiada', next)}
+        icon="people-outline"
+        title="Ikhwan"
+        subtitle="Hidupkan jika ahli ini ada jawatan atau komitmen dalam Ikhwan."
+        value={draft.jawatan_ikhwan_aktif}
+        onValueChange={(next) => set('jawatan_ikhwan_aktif', next)}
         disabled={locked}
       />
+      {draft.jawatan_ikhwan_aktif ? (
+        <>
+          <Text className="text-sm text-ink-muted">Jawatan atau komitmen dalam Ikhwan.</Text>
+          {field('Jawatan Ikhwan 1', 'jawatan_ikhwan_1')}
+          {field('Jawatan Ikhwan 2', 'jawatan_ikhwan_2')}
+        </>
+      ) : null}
+
+      <ToggleRow
+        icon="flag-outline"
+        title="PAS"
+        subtitle="Hidupkan jika ahli ini ada jawatan atau komitmen dalam PAS."
+        value={draft.jawatan_pas_aktif}
+        onValueChange={(next) => set('jawatan_pas_aktif', next)}
+        disabled={locked}
+      />
+      {draft.jawatan_pas_aktif ? (
+        <>
+          <Text className="text-sm text-ink-muted">Jawatan atau komitmen dalam PAS.</Text>
+          {field('Jawatan PAS 1', 'jawatan_pas_1')}
+          {field('Jawatan PAS 2', 'jawatan_pas_2')}
+          {field('No. keahlian PAS', 'no_keahlian_pas')}
+        </>
+      ) : null}
     </>
   );
 
@@ -595,7 +943,7 @@ export function MemberForm({
         label="Simpan Perubahan"
         loading={busy}
         disabled={busy || !dirty || !draft.full_name.trim()}
-        onPress={() => onSave(patch)}
+        onPress={() => onSave(patch, businessesDraft, educationDraft)}
       />
     </>
   );
@@ -605,7 +953,7 @@ export function MemberForm({
      pengguna beralih ke "Keluarga", dan satu butang Simpan menghantar kesemuanya.
      Kepala dibaca daripada rekod tersimpan, bukan draf, supaya ia tidak berubah
      sebelum simpanan berjaya. */
-  const caption = tabs.value === 'diri' ? null : CAPTIONS[tabs.value];
+  const caption = tabs.value === 'peribadi' ? null : CAPTIONS[tabs.value];
 
   return (
     <View className="gap-6">
@@ -646,7 +994,7 @@ export function MemberForm({
       </View>
 
       <View className="gap-4">
-        {tabs.value === 'diri' ? (
+        {tabs.value === 'peribadi' ? (
           <>
             {canEditAdminColumns ? keahlian : null}
             {peribadiFields}
@@ -654,8 +1002,9 @@ export function MemberForm({
         ) : null}
         {tabs.value === 'pendidikan' ? pendidikanFields : null}
         {tabs.value === 'pekerjaan' ? pekerjaanFields : null}
+        {tabs.value === 'perniagaan' ? perniagaanFields : null}
         {tabs.value === 'keluarga' ? keluargaFields : null}
-        {tabs.value === 'jawatan' ? jawatanFields : null}
+        {tabs.value === 'komitmen' ? komitmenFields : null}
       </View>
 
       {actions ? actions({ save: saveButton, sekat: sekatCompact }) : saveButton}

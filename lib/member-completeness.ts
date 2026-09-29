@@ -3,9 +3,9 @@ import { supabase } from './supabase';
 /**
  * Statistik Kelengkapan Data Ahli — JABATAN DATA & SUMBER MANUSIA.
  *
- * Lima kategori (Data Peribadi, Pendidikan, Pekerjaan, Keluarga, Jawatan),
- * setiap satu dikira "Siap" di pelayan sahaja — lihat
- * `20260929000072_member_data_completeness.sql` untuk logik penuh setiap
+ * Enam kategori (Data Peribadi, Pendidikan, Pekerjaan, Perniagaan, Keluarga,
+ * Komitmen), setiap satu dikira "Siap" di pelayan sahaja — lihat
+ * `20260929000075_member_data_completeness_v2.sql` untuk logik penuh setiap
  * kategori (termasuk medan bersyarat yang tidak dikira bila tidak relevan).
  *
  * Klien di sini HANYA memaparkan agregat; tiada baris ahli individu dibaca.
@@ -21,10 +21,11 @@ export type MemberCompletenessSummary = {
     data_peribadi: number;
     pendidikan: number;
     pekerjaan: number;
+    perniagaan: number;
     keluarga: number;
-    jawatan: number;
+    komitmen: number;
   };
-  /** Enam baris tetap (100/80/60/40/20/0), tersusun menurun. */
+  /** Tujuh baris tetap (100/83/67/50/33/17/0), tersusun menurun. */
   mengikut_bucket: CompletenessBucket[];
 };
 

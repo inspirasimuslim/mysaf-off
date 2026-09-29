@@ -61,20 +61,47 @@ export type Generation = {
   is_active: boolean;
 };
 
-export type StatusPengajian = 'tidak_belajar' | 'sedang_belajar' | 'sudah_tamat';
+export type StatusPekerjaan = 'bekerja' | 'suri_rumah' | 'tidak_bekerja' | 'pesara';
 
-export type StatusPekerjaan =
-  | 'bekerja'
-  | 'berniaga_usahawan'
-  | 'suri_rumah'
-  | 'belajar_sepenuh_masa'
-  | 'bekerja_dan_belajar'
-  | 'pesara'
-  | 'tidak_bekerja';
+export type EducationPeringkat =
+  | 'stpm'
+  | 'diploma'
+  | 'matrikulasi'
+  | 'asasi'
+  | 'sijil_tvet'
+  | 'program_perguruan'
+  | 'sarjana_muda'
+  | 'sarjana'
+  | 'phd'
+  | 'lain_lain';
 
-export type StatusPerkahwinan = 'bujang' | 'berkahwin_mbm' | 'berkahwin_bukan_mbm';
+/** Status pengajian SATU baris `member_education` — bukan lagi medan tunggal `Member`. */
+export type StatusPengajianEntry = 'tamat' | 'sedang_menjalani';
+
+/** Hanya bermakna bila baris itu `status_pengajian = 'sedang_menjalani'`. */
+export type SumberPembiayaan = 'ptptn' | 'jpa' | 'biasiswa_lain' | 'sendiri' | 'lain_lain';
+
+export type SektorPekerjaan = 'kerajaan' | 'swasta' | 'separuh_kerajaan_glc';
+
+export type StatusPerkahwinan = 'bujang' | 'berkahwin' | 'pernah_berkahwin';
+
+export type SebabPerkahwinanBerakhir = 'bercerai' | 'kematian_pasangan';
 
 export type PendapatanRange = '<1000' | '1000-2999' | '3000-4999' | '5000-9999' | '10000+';
+
+export type BusinessMode = 'online' | 'offline' | 'kedua_dua';
+
+export type BusinessSubKategori =
+  | 'e_dagang'
+  | 'reseller_dropship'
+  | 'perkhidmatan_digital'
+  | 'affiliate_marketing'
+  | 'runcit_kedai'
+  | 'makanan_minuman'
+  | 'perkhidmatan'
+  | 'pertanian_ternakan'
+  | 'automotif'
+  | 'lain_lain';
 
 export type Member = {
   id: string;
@@ -94,51 +121,41 @@ export type Member = {
   avatar_url: string | null;
   disekat: boolean;
 
-  // --- Jawatan ---
+  // --- Komitmen (Ikhwan/PAS) ---
+  /** Suis berasingan — ON bermaksud ahli ada komitmen Ikhwan untuk diisi (bukan sekadar medan kosong belum diisi). */
+  jawatan_ikhwan_aktif: boolean;
   jawatan_ikhwan_1: string | null;
   jawatan_ikhwan_2: string | null;
-  jawatan_ikhwan_3: string | null;
+  /** Suis berasingan — ON bermaksud ahli ada komitmen PAS untuk diisi. */
+  jawatan_pas_aktif: boolean;
   jawatan_pas_1: string | null;
   jawatan_pas_2: string | null;
-  jawatan_pas_3: string | null;
   no_keahlian_pas: string | null;
-  /** Disahkan sendiri oleh ahli/admin — beza "belum sempat isi" (false) daripada "memang tiada jawatan" (true). */
-  jawatan_disahkan_tiada: boolean;
 
   // --- Pendidikan ---
-  tahap_pendidikan: string | null;
-  status_pengajian: StatusPengajian | null;
-  sekolah: string | null;
-  nama_institusi: string | null;
-  alamat_institusi: string | null;
-  tahun_pengajian: string | null;
-  jurusan_pengajian: string | null;
-  sumber_pembiayaan: string | null;
-  pembiayaan_lain: string | null;
+  /** FK `schools.id` — diurus admin (Super Admin), GANTI teks bebas lama. Peringkat selepas SPM kini `MemberEducation` (1-ke-banyak), bukan medan flat di sini. */
+  sekolah_id: string | null;
 
   // --- Pekerjaan ---
+  /** Toggle "Sudah Bekerja" ON/OFF diderivasi daripada nilai ini (=== 'bekerja'), bukan kolum berasingan. */
   status_pekerjaan: StatusPekerjaan | null;
-  sektor_pekerjaan: string | null;
+  sektor_pekerjaan: SektorPekerjaan | null;
   jawatan_pekerjaan: string | null;
   nama_majikan: string | null;
-  alamat_tempat_kerja: string | null;
+  negeri_tempat_kerja: string | null;
   anggaran_pendapatan_range: PendapatanRange | null;
-  jenis_perniagaan: string | null;
 
   // --- Keluarga ---
   status_perkahwinan: StatusPerkahwinan | null;
   /** Teks bebas — pasangan BUKAN ahli sahaja. Pasangan ahli guna `spouse_member_id`. */
   nama_pasangan: string | null;
-  /** Rekod ahli PASANGAN, hanya bila pasangan turut ahli ('berkahwin_mbm'). Dua hala — lihat trigger `sync_spouse_link`. */
+  /** Rekod ahli PASANGAN. Dua hala — lihat trigger `sync_spouse_link`. Mana satu (ini/`nama_pasangan`) yang terisi menentukan paparan MBM/Bukan MBM dalam borang — bukan kolum berasingan. */
   spouse_member_id: string | null;
   tahun_berkahwin: string | null;
   bil_anak: number | null;
   nama_anak: string | null;
-  anggaran_pendapatan_isi_rumah_range: PendapatanRange | null;
-  bil_tanggungan_selain_keluarga: number | null;
-  pekerjaan_ibu: string | null;
-  pekerjaan_bapa: string | null;
-  bil_tanggungan_ibu_bapa: number | null;
+  /** Hanya bermakna bila `status_perkahwinan = 'pernah_berkahwin'`. */
+  sebab_bercerai_kematian: SebabPerkahwinanBerakhir | null;
 
   // --- Pautan akaun ---
   user_id: string | null;
@@ -202,22 +219,24 @@ export type MbmCouple = {
  */
 const DIRECTORY_PEKERJAAN_LABEL: Record<StatusPekerjaan, string> = {
   bekerja: 'Bekerja',
-  berniaga_usahawan: 'Berniaga',
   suri_rumah: 'Suri Rumah',
-  belajar_sepenuh_masa: 'Belajar',
-  bekerja_dan_belajar: 'Bekerja & Belajar',
-  pesara: 'Pesara',
   tidak_bekerja: 'Tidak Bekerja',
+  pesara: 'Pesara',
 };
 
 export function directoryPekerjaanLabel(value: StatusPekerjaan | null): string {
   return value ? DIRECTORY_PEKERJAAN_LABEL[value] : '—';
 }
 
+const DIRECTORY_PERKAHWINAN_LABEL: Record<StatusPerkahwinan, string> = {
+  bujang: 'Bujang',
+  berkahwin: 'Berkahwin',
+  pernah_berkahwin: 'Pernah Berkahwin',
+};
+
 /** Direktori tidak membezakan MBM / bukan MBM — itu butiran dalaman rekod. */
 export function directoryPerkahwinanLabel(value: StatusPerkahwinan | null): string {
-  if (!value) return '—';
-  return value === 'bujang' ? 'Bujang' : 'Berkahwin';
+  return value ? DIRECTORY_PERKAHWINAN_LABEL[value] : '—';
 }
 
 /** 'i07' → 7, supaya generasi disusun mengikut nombor dan bukan abjad. */
@@ -246,26 +265,62 @@ export const MEMBER_ADMIN_COLUMNS = ['nombor_ahli', 'generasi', 'email', 'diseka
 
 export type Option<T extends string> = { value: T; label: string };
 
-export const STATUS_PENGAJIAN_OPTIONS: Option<StatusPengajian>[] = [
-  { value: 'tidak_belajar', label: 'Tidak belajar' },
-  { value: 'sedang_belajar', label: 'Sedang belajar' },
-  { value: 'sudah_tamat', label: 'Sudah tamat pengajian' },
+export const EDUCATION_PERINGKAT_OPTIONS: Option<EducationPeringkat>[] = [
+  { value: 'stpm', label: 'STPM' },
+  { value: 'diploma', label: 'Diploma' },
+  { value: 'matrikulasi', label: 'Matrikulasi' },
+  { value: 'asasi', label: 'Asasi' },
+  { value: 'sijil_tvet', label: 'Sijil / TVET' },
+  { value: 'program_perguruan', label: 'Program Perguruan' },
+  { value: 'sarjana_muda', label: 'Sarjana Muda' },
+  { value: 'sarjana', label: 'Sarjana' },
+  { value: 'phd', label: 'Doktor Falsafah (PhD)' },
+  { value: 'lain_lain', label: 'Lain-lain' },
 ];
 
+export const STATUS_PENGAJIAN_ENTRY_OPTIONS: Option<StatusPengajianEntry>[] = [
+  { value: 'tamat', label: 'Tamat Pengajian' },
+  { value: 'sedang_menjalani', label: 'Sedang Menjalani Pengajian' },
+];
+
+export const SUMBER_PEMBIAYAAN_OPTIONS: Option<SumberPembiayaan>[] = [
+  { value: 'ptptn', label: 'PTPTN' },
+  { value: 'jpa', label: 'JPA' },
+  { value: 'biasiswa_lain', label: 'Biasiswa Lain' },
+  { value: 'sendiri', label: 'Sendiri' },
+  { value: 'lain_lain', label: 'Lain-lain' },
+];
+
+/** Label penuh (4 nilai) — untuk paparan/laporan. Borang guna dropdown OFF-state di bawah untuk pilih. */
 export const STATUS_PEKERJAAN_OPTIONS: Option<StatusPekerjaan>[] = [
   { value: 'bekerja', label: 'Bekerja' },
-  { value: 'berniaga_usahawan', label: 'Berniaga / Usahawan' },
   { value: 'suri_rumah', label: 'Suri rumah' },
-  { value: 'belajar_sepenuh_masa', label: 'Belajar sepenuh masa' },
-  { value: 'bekerja_dan_belajar', label: 'Bekerja & belajar' },
-  { value: 'pesara', label: 'Pesara' },
   { value: 'tidak_bekerja', label: 'Tidak bekerja' },
+  { value: 'pesara', label: 'Pesara' },
+];
+
+/** Dropdown 3-pilihan bila toggle "Sudah Bekerja" OFF — TIDAK termasuk 'bekerja'. */
+export const STATUS_PEKERJAAN_TIDAK_BEKERJA_OPTIONS: Option<StatusPekerjaan>[] = [
+  { value: 'suri_rumah', label: 'Suri Rumah' },
+  { value: 'tidak_bekerja', label: 'Tidak Bekerja' },
+  { value: 'pesara', label: 'Pesara' },
+];
+
+export const SEKTOR_PEKERJAAN_OPTIONS: Option<SektorPekerjaan>[] = [
+  { value: 'kerajaan', label: 'Kerajaan' },
+  { value: 'swasta', label: 'Swasta' },
+  { value: 'separuh_kerajaan_glc', label: 'Separuh Kerajaan (GLC)' },
 ];
 
 export const STATUS_PERKAHWINAN_OPTIONS: Option<StatusPerkahwinan>[] = [
   { value: 'bujang', label: 'Bujang' },
-  { value: 'berkahwin_mbm', label: 'Berkahwin (MBM)' },
-  { value: 'berkahwin_bukan_mbm', label: 'Berkahwin (bukan MBM)' },
+  { value: 'berkahwin', label: 'Berkahwin' },
+  { value: 'pernah_berkahwin', label: 'Pernah Berkahwin' },
+];
+
+export const SEBAB_PERKAHWINAN_OPTIONS: Option<SebabPerkahwinanBerakhir>[] = [
+  { value: 'bercerai', label: 'Bercerai' },
+  { value: 'kematian_pasangan', label: 'Kematian Pasangan' },
 ];
 
 export const PENDAPATAN_RANGE_OPTIONS: Option<PendapatanRange>[] = [
@@ -275,6 +330,75 @@ export const PENDAPATAN_RANGE_OPTIONS: Option<PendapatanRange>[] = [
   { value: '5000-9999', label: 'RM5,000 – RM9,999' },
   { value: '10000+', label: 'RM10,000 ke atas' },
 ];
+
+/**
+ * 16 negeri/wilayah persekutuan — ejaan SAMA PERSIS seperti senarai
+ * pengesanan negeri daripada teks alamat dalam `member_statistics()`
+ * (`20260913000020_member_statistics.sql`), untuk konsisten merentas app.
+ */
+export const NEGERI_OPTIONS: Option<string>[] = [
+  { value: 'Selangor', label: 'Selangor' },
+  { value: 'Kuala Lumpur', label: 'Kuala Lumpur' },
+  { value: 'Johor', label: 'Johor' },
+  { value: 'Perak', label: 'Perak' },
+  { value: 'Kedah', label: 'Kedah' },
+  { value: 'Pulau Pinang', label: 'Pulau Pinang' },
+  { value: 'Pahang', label: 'Pahang' },
+  { value: 'Terengganu', label: 'Terengganu' },
+  { value: 'Kelantan', label: 'Kelantan' },
+  { value: 'Negeri Sembilan', label: 'Negeri Sembilan' },
+  { value: 'Melaka', label: 'Melaka' },
+  { value: 'Perlis', label: 'Perlis' },
+  { value: 'Sabah', label: 'Sabah' },
+  { value: 'Sarawak', label: 'Sarawak' },
+  { value: 'Putrajaya', label: 'Putrajaya' },
+  { value: 'Labuan', label: 'Labuan' },
+];
+
+export const BUSINESS_MODE_OPTIONS: Option<BusinessMode>[] = [
+  { value: 'online', label: 'Online' },
+  { value: 'offline', label: 'Offline' },
+  { value: 'kedua_dua', label: 'Kedua-dua' },
+];
+
+export const BUSINESS_SUBKATEGORI_ONLINE_OPTIONS: Option<BusinessSubKategori>[] = [
+  { value: 'e_dagang', label: 'E-dagang' },
+  { value: 'reseller_dropship', label: 'Reseller / Dropship' },
+  { value: 'perkhidmatan_digital', label: 'Perkhidmatan Digital' },
+  { value: 'affiliate_marketing', label: 'Affiliate Marketing' },
+  { value: 'lain_lain', label: 'Lain-lain' },
+];
+
+export const BUSINESS_SUBKATEGORI_OFFLINE_OPTIONS: Option<BusinessSubKategori>[] = [
+  { value: 'runcit_kedai', label: 'Runcit / Kedai' },
+  { value: 'makanan_minuman', label: 'Makanan & Minuman' },
+  { value: 'perkhidmatan', label: 'Perkhidmatan' },
+  { value: 'pertanian_ternakan', label: 'Pertanian / Ternakan' },
+  { value: 'automotif', label: 'Automotif' },
+  { value: 'lain_lain', label: 'Lain-lain' },
+];
+
+/**
+ * Satu baris `member_businesses` — tab Perniagaan. Satu ahli boleh ada
+ * BANYAK baris (0..N), diurus tempatan dalam borang sebagai array, bukan
+ * medan flat pada `Member`. Lihat `lib/member-businesses.ts`.
+ */
+export type MemberBusiness = {
+  id: string;
+  member_id: string;
+  mode: BusinessMode;
+  sub_kategori: BusinessSubKategori[];
+  nama_perniagaan: string | null;
+  negeri_operasi: string | null;
+  anggaran_pendapatan_range: PendapatanRange | null;
+  created_at: string;
+  updated_at: string;
+};
+
+/** Draf tempatan sebelum disimpan — `id` opsyenal untuk baris baharu (belum ada di DB). */
+export type MemberBusinessDraft = Omit<MemberBusiness, 'id' | 'member_id' | 'created_at' | 'updated_at'> & {
+  id?: string;
+};
 
 /**
  * Kawasan usrah disimpan sebagai kod pendek. Data import asalnya menulis nama
@@ -293,23 +417,38 @@ export const KAWASAN_USRAH_OPTIONS: Option<string>[] = [
 ];
 
 /**
- * Sekolah — senarai TETAP, dengan ejaan yang SAMA persis seperti padanan dalam
- * `member_statistics()`. Dropdown memastikan nilai baharu sentiasa padan;
- * sebelum ini teks bebas menghasilkan pelbagai variasi ejaan.
- *
- * 'Lain-lain' disimpan terus sebagai nilai (tiada medan teks tambahan) dan
- * dikira dalam baldi "Lain-lain / Tiada Rekod" oleh Rumusan Ahli.
+ * Satu baris `schools` — senarai kini DINAMIK, diurus Super Admin (skrin
+ * `admin/senarai-sekolah.tsx`), GANTI `SEKOLAH_OPTIONS` tetap lama. Dropdown
+ * borang hanya memuatkan baris `aktif = true`.
  */
-export const SEKOLAH_OPTIONS: Option<string>[] = [
-  { value: 'SMKA FALAHIAH', label: 'SMKA FALAHIAH' },
-  { value: 'SMKA NAIM LILBANAT', label: 'SMKA NAIM LILBANAT' },
-  { value: 'SMKA TOK BACHOK', label: 'SMKA TOK BACHOK' },
-  { value: 'MAAHAD MUHAMMADI PASIR MAS', label: 'MAAHAD MUHAMMADI PASIR MAS' },
-  { value: 'MAAHAD AMIR INDERA PETRA', label: 'MAAHAD AMIR INDERA PETRA' },
-  { value: 'SMA TG AMALIN AISYAH', label: 'SMA TG AMALIN AISYAH' },
-  { value: 'SMK KOTA DAMANSARA', label: 'SMK KOTA DAMANSARA' },
-  { value: 'Lain-lain', label: 'Lain-lain' },
-];
+export type School = {
+  id: string;
+  nama: string;
+  aktif: boolean;
+};
+
+/**
+ * Satu baris `member_education` — tab Pendidikan, peringkat SELEPAS SPM.
+ * Satu ahli boleh ada BANYAK baris (0..N), diurus tempatan dalam borang
+ * sebagai array. Lihat `lib/member-education.ts`.
+ */
+export type MemberEducation = {
+  id: string;
+  member_id: string;
+  peringkat: EducationPeringkat;
+  jurusan: string | null;
+  institusi: string | null;
+  status_pengajian: StatusPengajianEntry;
+  /** Hanya bermakna bila `status_pengajian = 'sedang_menjalani'`. */
+  sumber_pembiayaan: SumberPembiayaan | null;
+  created_at: string;
+  updated_at: string;
+};
+
+/** Draf tempatan sebelum disimpan — `id` opsyenal untuk baris baharu (belum ada di DB). */
+export type MemberEducationDraft = Omit<MemberEducation, 'id' | 'member_id' | 'created_at' | 'updated_at'> & {
+  id?: string;
+};
 
 /** Tingkatan mad'u Usrah Sekolah — senarai TETAP, 3 pilihan sahaja. */
 export const TINGKATAN_OPTIONS: Option<string>[] = [

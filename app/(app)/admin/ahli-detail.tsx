@@ -17,13 +17,25 @@ import { Colors } from '@/constants/theme';
 import { pickAvatar, uploadAvatar } from '@/lib/avatar';
 import { useMemberAccess, useUsrahAccess } from '@/lib/department-access';
 import { toMalayError } from '@/lib/errors';
+import { fetchMemberBusinesses, saveMemberBusinesses } from '@/lib/member-businesses';
+import { fetchMemberEducation, saveMemberEducation } from '@/lib/member-education';
 import { deleteMemberAccount, fetchGenerations, fetchMember, fetchMembersForPicker, updateMember } from '@/lib/members';
 import { useGoBack } from '@/lib/navigation';
 import { toWhatsAppNumber } from '@/lib/phone';
 import { usePermissions } from '@/lib/permissions';
+import { fetchAllSchools } from '@/lib/schools';
 import { useIsDesktop } from '@/lib/use-desktop';
 import { TEMP_PASSWORD, resetMemberPassword } from '@/lib/temp-password';
-import { type Generation, type Member, type MemberPickerRow } from '@/types/database';
+import {
+  type Generation,
+  type Member,
+  type MemberBusiness,
+  type MemberBusinessDraft,
+  type MemberEducation,
+  type MemberEducationDraft,
+  type MemberPickerRow,
+  type School,
+} from '@/types/database';
 
 type Banner = { tone: 'positive' | 'negative'; message: string } | null;
 
@@ -60,13 +72,16 @@ export function AhliDetailView({
   const [member, setMember] = useState<Member | null>(null);
   const [generations, setGenerations] = useState<Generation[]>([]);
   const [spouseCandidates, setSpouseCandidates] = useState<MemberPickerRow[]>([]);
+  const [businesses, setBusinesses] = useState<MemberBusiness[]>([]);
+  const [schools, setSchools] = useState<School[]>([]);
+  const [education, setEducation] = useState<MemberEducation[]>([]);
   const [loading, setLoading] = useState(true);
   const [banner, setBanner] = useState<Banner>(null);
   const [saving, setSaving] = useState(false);
   /** Dinaikkan selepas setiap simpanan berjaya untuk memaksa borang dibina semula. */
   const [version, setVersion] = useState(0);
   // Di sini dan bukan dalam borang: borang dipasang semula selepas setiap simpanan.
-  const [tab, setTab] = useState<ProfileTab>('diri');
+  const [tab, setTab] = useState<ProfileTab>('peribadi');
 
   useEffect(() => {
     if (accessLoading || !canView || !id) return;
@@ -87,6 +102,31 @@ export function AhliDetailView({
           if (active) setSpouseCandidates(candidates);
         } catch {
           if (active) setSpouseCandidates([]);
+        }
+
+        // Sama falsafah: tab Perniagaan mula kosong jika gagal, bukan menyekat rekod.
+        try {
+          const rows = row ? await fetchMemberBusinesses(row.id) : [];
+          if (active) setBusinesses(rows);
+        } catch {
+          if (active) setBusinesses([]);
+        }
+
+        // Sama falsafah lagi: tab Pendidikan mula kosong jika gagal.
+        try {
+          const [schoolRows, educationRows] = await Promise.all([
+            fetchAllSchools(),
+            row ? fetchMemberEducation(row.id) : Promise.resolve([]),
+          ]);
+          if (active) {
+            setSchools(schoolRows);
+            setEducation(educationRows);
+          }
+        } catch {
+          if (active) {
+            setSchools([]);
+            setEducation([]);
+          }
         }
       } catch (caught) {
         if (active)
@@ -125,17 +165,22 @@ export function AhliDetailView({
   }, [avatarBusy, member]);
 
   const save = useCallback(
-    async (patch: Partial<Member>) => {
+    async (patch: Partial<Member>, businessesDraft: MemberBusinessDraft[], educationDraft: MemberEducationDraft[]) => {
       if (!member || saving) return;
 
       setBanner(null);
       setSaving(true);
       try {
-        await updateMember(member.id, patch);
+        if (Object.keys(patch).length > 0) await updateMember(member.id, patch);
+        await saveMemberBusinesses(member.id, businesses, businessesDraft);
+        await saveMemberEducation(member.id, education, educationDraft);
+
         // Baca semula supaya `updated_at` dan sebarang nilai yang dinormalkan
         // oleh pangkalan data terpapar, bukan andaian tempatan.
         const fresh = await fetchMember(member.id);
         setMember(fresh);
+        setBusinesses(await fetchMemberBusinesses(member.id));
+        setEducation(await fetchMemberEducation(member.id));
         setVersion((current) => current + 1);
         setBanner({ tone: 'positive', message: 'Perubahan telah disimpan.' });
         onChanged?.();
@@ -145,7 +190,7 @@ export function AhliDetailView({
         setSaving(false);
       }
     },
-    [member, onChanged, saving],
+    [businesses, education, member, onChanged, saving],
   );
 
   // --- Tempoh log masuk sementara -------------------------------------------
@@ -285,6 +330,9 @@ export function AhliDetailView({
             member={member}
             generations={generations}
             spouseCandidates={spouseCandidates}
+            businesses={businesses}
+            schools={schools}
+            education={education}
             /* Panel Admin sentiasa berurusan dengan kolum keahlian; yang
              menentukan sama ada ia boleh disunting ialah `readOnly` di bawah. */
             canEditAdminColumns
@@ -294,7 +342,7 @@ export function AhliDetailView({
             onPickAvatar={() => void changeAvatar()}
             avatarBusy={avatarBusy}
             tabs={{ value: tab, onChange: setTab }}
-            onSave={(patch) => void save(patch)}
+            onSave={(patch, businessesDraft, educationDraft) => void save(patch, businessesDraft, educationDraft)}
             actions={({ save: saveNode, sekat }) => (
               <ActionPanel
                 save={saveNode}

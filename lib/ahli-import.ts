@@ -5,7 +5,6 @@ import {
   type Member,
   type PendapatanRange,
   type StatusPekerjaan,
-  type StatusPengajian,
   type StatusPerkahwinan,
 } from '@/types/database';
 
@@ -122,16 +121,19 @@ export function toGenerationCode(value: unknown): string | null {
   return 'i' + String(number).padStart(2, '0');
 }
 
+/**
+ * Format sumber lama tiada konsep "Pernah Berkahwin" — hanya Bujang/Berkahwin
+ * (MBM atau bukan). Beza MBM/bukan-MBM kini ditentukan oleh medan mana
+ * (`spouse_member_id`/`nama_pasangan`) yang terisi, bukan oleh nilai enum ini
+ * — lihat `NyatakanJikaMBM` di `mapRow` yang tetap mengisi `nama_pasangan`.
+ */
 export function toStatusPerkahwinan(value: unknown): StatusPerkahwinan | null {
   const raw = text(value);
   if (raw === null) return null;
 
   const key = normalise(raw);
   if (key === 'BUJANG') return 'bujang';
-  if (key.includes('BUKAN MBM')) return 'berkahwin_bukan_mbm';
-  if (key.includes('MBM')) return 'berkahwin_mbm';
-  // 'BERKAHWIN' tanpa penjelasan — anggap bukan MBM (pilihan paling selamat).
-  if (key.includes('BERKAHWIN')) return 'berkahwin_bukan_mbm';
+  if (key.includes('BERKAHWIN')) return 'berkahwin';
   return null;
 }
 
@@ -142,16 +144,22 @@ export function toStatusPekerjaan(value: unknown): StatusPekerjaan | null {
   const key = normalise(raw);
   const has = (needle: string) => key.includes(needle);
 
-  // Urutan penting: gabungan diperiksa dahulu supaya 'BEKERJA & BELAJAR'
-  // tidak tersangkut pada padanan 'BEKERJA' yang lebih longgar.
-  if (has('BEKERJA') && has('BELAJAR')) return 'bekerja_dan_belajar';
-  if (has('BERNIAGA') || has('USAHAWAN')) return 'berniaga_usahawan';
+  /*
+    Perniagaan kini tab berasingan (member_businesses) — import tidak
+    mereka-reka mod/sub-kategori daripada teks bebas lama, jadi 'BERNIAGA'/
+    'USAHAWAN' sengaja dibiarkan TIDAK dipetakan (pulang null; amaran sedia
+    ada di `parseRows` menangkapnya secara automatik).
+
+    'BELAJAR' bersendirian (tiada 'BEKERJA') memang benar bermaksud tidak
+    bekerja — status_pengajian yang menjejaki fakta "belajar" secara
+    berasingan, jadi ini bukan rekaan.
+  */
   if (has('SURI RUMAH') || has('SURIRUMAH')) return 'suri_rumah';
   if (has('PESARA')) return 'pesara';
-  if (has('BELAJAR') || has('PELAJAR')) return 'belajar_sepenuh_masa';
   // 'TIDAK BEKERJA' mengandungi 'BEKERJA', jadi ia mesti diperiksa dahulu.
   if (has('MENGANGGUR') || has('TIDAK BEKERJA')) return 'tidak_bekerja';
   if (has('BEKERJA')) return 'bekerja';
+  if (has('BELAJAR') || has('PELAJAR')) return 'tidak_bekerja';
   return null;
 }
 
@@ -178,22 +186,6 @@ export function toPendapatanRange(value: unknown): PendapatanRange | null {
   return '10000+';
 }
 
-/**
- * Fail sumber tiada kolum status pengajian — ia disimpulkan daripada status
- * bekerja/belajar, dengan sandaran kepada kehadiran maklumat institusi supaya
- * data pengajian yang sedia ada tidak tersembunyi di sebalik borang bersyarat.
- */
-function inferStatusPengajian(
-  statusPekerjaan: StatusPekerjaan | null,
-  hasStudyDetails: boolean,
-): StatusPengajian | null {
-  if (statusPekerjaan === 'belajar_sepenuh_masa' || statusPekerjaan === 'bekerja_dan_belajar') {
-    return 'sedang_belajar';
-  }
-  if (hasStudyDetails) return 'sudah_tamat';
-  return null;
-}
-
 // =============================================================================
 // Pemetaan kolum
 // =============================================================================
@@ -218,15 +210,11 @@ export const TEMPLATE_EXAMPLE_NAME = 'CONTOH NAMA AHLI';
 function mapRow(raw: RawRow): ParsedMember {
   const statusPekerjaan = toStatusPekerjaan(raw.StatusBelajarBekerja);
 
-  const namaInstitusi = text(raw.NamaInstitusi);
-  const jurusanPengajian = text(raw.JurusanPengajian);
-  const tahunPengajian = text(raw.TahunPengajian);
-  const alamatInstitusi = text(raw.AlamatInstitusi);
-  const sumberPembiayaan = text(raw.PembiayaanPengajian);
-
-  const hasStudyDetails = Boolean(
-    namaInstitusi || jurusanPengajian || tahunPengajian || alamatInstitusi || sumberPembiayaan,
-  );
+  const jawatanIkhwan1 = text(raw.JawatanIkhwan1);
+  const jawatanIkhwan2 = text(raw.JawatanIkhwan2);
+  const jawatanPas1 = text(raw.JawatanPas1);
+  const jawatanPas2 = text(raw.JawatanPas2);
+  const noKeahlianPas = text(raw.NoKeahlianPas);
 
   return {
     // --- Identiti --- (tanpa lajur NomborAhli, nombor diberikan oleh assignMemberNumbers)
@@ -243,38 +231,36 @@ function mapRow(raw: RawRow): ParsedMember {
     kawasan_usrah: text(raw.KawasanUsrah),
     disekat: bool(raw.Disekat),
 
-    // --- Jawatan ---
-    jawatan_ikhwan_1: text(raw.JawatanIkhwan1),
-    jawatan_ikhwan_2: text(raw.JawatanIkhwan2),
-    jawatan_ikhwan_3: text(raw.JawatanIkhwan3),
-    jawatan_pas_1: text(raw.JawatanPas1),
-    jawatan_pas_2: text(raw.JawatanPas2),
-    jawatan_pas_3: text(raw.JawatanPas3),
-    no_keahlian_pas: text(raw.NoKeahlianPas),
-    // Fail Excel tiada lajur ini — sama seperti `spouse_member_id`/`nama_anak`
-    // di bawah, muat naik semula menetapkannya semula ke `false` (belum
-    // disahkan), bukan mengekalkan pengesahan yang admin buat dalam app.
-    jawatan_disahkan_tiada: false,
+    // --- Komitmen (Ikhwan/PAS) ---
+    // Suis diderivasi daripada kehadiran data sendiri (bukan sentiasa `false`
+    // seperti `jawatan_disahkan_tiada` lama) — medan ini DATANG daripada fail
+    // Excel, jadi `false` selalu akan menyembunyikan jawatan yang baru diimport.
+    jawatan_ikhwan_aktif: Boolean(jawatanIkhwan1 || jawatanIkhwan2),
+    jawatan_ikhwan_1: jawatanIkhwan1,
+    jawatan_ikhwan_2: jawatanIkhwan2,
+    jawatan_pas_aktif: Boolean(jawatanPas1 || jawatanPas2 || noKeahlianPas),
+    jawatan_pas_1: jawatanPas1,
+    jawatan_pas_2: jawatanPas2,
+    no_keahlian_pas: noKeahlianPas,
 
     // --- Pendidikan ---
-    tahap_pendidikan: text(raw.TahapPendidikan),
-    status_pengajian: inferStatusPengajian(statusPekerjaan, hasStudyDetails),
-    sekolah: text(raw.Sekolah),
-    nama_institusi: namaInstitusi,
-    alamat_institusi: alamatInstitusi,
-    tahun_pengajian: tahunPengajian,
-    jurusan_pengajian: jurusanPengajian,
-    sumber_pembiayaan: sumberPembiayaan,
-    pembiayaan_lain: text(raw.NyatakanPembiayaan),
+    // `sekolah` (teks bebas Excel) tidak dipetakan kepada `sekolah_id` — nama
+    // sekolah lama tidak boleh dipadan dengan selamat kepada FK `schools`
+    // baharu (senarai itu diurus admin, bukan diterbitkan daripada teks
+    // bebas). Peringkat selepas SPM (`member_education`) juga BUKAN diisi
+    // oleh import — ia table berasingan, diisi kemudian dalam borang.
+    sekolah_id: null,
 
     // --- Pekerjaan ---
     status_pekerjaan: statusPekerjaan,
-    sektor_pekerjaan: text(raw.SektorPekerjaan),
+    // Sektor kini chip terhad (kerajaan/swasta/separuh_kerajaan_glc); fail
+    // Excel tidak membawa kod itu, jadi tidak dipetakan oleh import.
+    sektor_pekerjaan: null,
     jawatan_pekerjaan: text(raw.JawatanPekerjaan),
     nama_majikan: text(raw.NamaMajikanSyarikat),
-    alamat_tempat_kerja: text(raw.AlamatTempatBekerja),
+    // Negeri tempat kerja BAHARU — fail Excel tiada lajur ini, diisi kemudian dalam borang.
+    negeri_tempat_kerja: null,
     anggaran_pendapatan_range: toPendapatanRange(raw.AnggaranPendapatan),
-    jenis_perniagaan: text(raw.JenisPerniagaan),
 
     // --- Keluarga ---
     status_perkahwinan: toStatusPerkahwinan(raw.StatusPerkahwinan),
@@ -285,11 +271,9 @@ function mapRow(raw: RawRow): ParsedMember {
     tahun_berkahwin: text(raw.TahunBerkahwin),
     bil_anak: int(raw.BilAnak),
     nama_anak: null,
-    anggaran_pendapatan_isi_rumah_range: toPendapatanRange(raw.AnggaranPendapatanIsiRumah),
-    bil_tanggungan_selain_keluarga: int(raw.BilTanggunganSelainKeluarga),
-    pekerjaan_ibu: text(raw.PekerjaanIbu),
-    pekerjaan_bapa: text(raw.PekerjaanBapa),
-    bil_tanggungan_ibu_bapa: int(raw.BilTanggunganIbuBapa),
+    // "Pernah Berkahwin" dan sebabnya ialah konsep BAHARU — fail Excel lama
+    // tiada isyarat untuknya, diisi kemudian dalam borang.
+    sebab_bercerai_kematian: null,
   };
 }
 
