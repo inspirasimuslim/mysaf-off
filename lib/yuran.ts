@@ -175,6 +175,8 @@ export type YuranReportRow = {
   tertunggak: number;
   kredit: number;
   status: string;
+  /** `caj_tahun` ialah baki permulaan (hutang terkumpul), bukan caj setahun. Tiada sebelum migration 094. */
+  caj_ialah_baki_permulaan?: boolean;
 };
 
 /**

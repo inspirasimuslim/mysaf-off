@@ -119,7 +119,7 @@ function buildGridSheet(members: MemberRows[]): XLSX.WorkSheet {
     const months = member.months.map((month) => cell(month?.attended));
     const attended = months.filter((value) => value === 'HADIR').length;
 
-    const record: Record<string, string> = {
+    const record: Record<string, string | number> = {
       'Nombor Ahli': member.nombor_ahli ?? '',
       Nama: member.full_name,
       Generasi: generationLabel(member.generasi),
@@ -129,7 +129,7 @@ function buildGridSheet(members: MemberRows[]): XLSX.WorkSheet {
       record[label] = months[index] ?? '';
     });
 
-    return { ...record, 'Jumlah Hadir': String(attended) };
+    return { ...record, 'Jumlah Hadir': attended };
   });
 
   return XLSX.utils.json_to_sheet(sheetRows);

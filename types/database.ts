@@ -1069,6 +1069,8 @@ export type PerkaderanExportRow = {
   kumpulan: string;
   naqib: string;
   sekolah: string;
+  /** 'Aktif' atau 'Diarkib' (`sekolah_usrah_groups.is_active`). */
+  status_kumpulan?: string;
   tarikh: string;
   lokasi: string | null;
   topik: string | null;
@@ -1080,7 +1082,10 @@ export type PerkaderanExportRow = {
 
 export type PerkaderanExportDetailRow = {
   kumpulan: string;
+  status_kumpulan?: string;
   nama_mad_u: string;
+  /** 'Aktif' atau 'Tidak Aktif' (`sekolah_usrah_mad_u.is_active`). */
+  status_mad_u?: string;
   tingkatan: string | null;
   tarikh_sesi: string;
   hadir: boolean;

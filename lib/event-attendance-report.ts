@@ -85,14 +85,16 @@ export async function downloadEventAttendance(
       'Nombor Ahli': row.nombor_ahli ?? '',
       Nama: row.full_name,
       Generasi: generationLabel(row.generasi),
-      // Waktu tempatan peranti — fail ini dibaca oleh orang yang berada di acara itu.
-      'Masa Hadir': new Date(row.scanned_at).toLocaleString('ms-MY'),
-      Method: METHOD_LABEL[row.method] ?? row.method,
+      // Objek Date sebenar (bukan teks) supaya boleh disusun/ditapis mengikut masa
+      // dalam Excel. Waktu tempatan peranti, sama seperti eksport transaksi.
+      'Masa Hadir': new Date(row.scanned_at),
+      Kaedah: METHOD_LABEL[row.method] ?? row.method,
       'Mod Kehadiran': row.attendance_mode === 'online' ? 'Online' : 'Bersemuka',
       // '-' dan bukan sel kosong: kosong dibaca sebagai "jarak sifar" oleh
       // orang yang mengimbas lajur, dan sifar bermaksud tepat di atas pin.
       'Jarak (meter)': distanceCell(row.distance_meters),
     })),
+    { cellDates: true, dateNF: 'yyyy-mm-dd hh:mm:ss' },
   );
   const book = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(book, sheet, 'Kehadiran');

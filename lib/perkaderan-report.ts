@@ -34,6 +34,7 @@ export async function downloadPerkaderanReport(
       Kumpulan: row.kumpulan,
       Naqib: row.naqib,
       Sekolah: row.sekolah,
+      'Status Kumpulan': row.status_kumpulan ?? '',
       Tarikh: row.tarikh,
       Lokasi: row.lokasi ?? '',
       Topik: row.topik ?? '',
@@ -46,7 +47,9 @@ export async function downloadPerkaderanReport(
   const detailSheet = XLSX.utils.json_to_sheet(
     report.kehadiran_terperinci.map((row) => ({
       Kumpulan: row.kumpulan,
+      'Status Kumpulan': row.status_kumpulan ?? '',
       'Nama Mad\'u': row.nama_mad_u,
+      'Status Mad\'u': row.status_mad_u ?? '',
       Tingkatan: row.tingkatan ?? '',
       'Tarikh Sesi': row.tarikh_sesi,
       Hadir: row.hadir ? 'Ya' : 'Tidak',
@@ -54,7 +57,7 @@ export async function downloadPerkaderanReport(
       'Partner Hadir': row.partner_naqib === null ? '' : row.partner_hadir ? 'Ya' : 'Tidak',
     })),
     {
-      header: ['Kumpulan', 'Nama Mad\'u', 'Tingkatan', 'Tarikh Sesi', 'Hadir', 'Partner Naqib', 'Partner Hadir'],
+      header: ['Kumpulan', 'Status Kumpulan', 'Nama Mad\'u', 'Status Mad\'u', 'Tingkatan', 'Tarikh Sesi', 'Hadir', 'Partner Naqib', 'Partner Hadir'],
     },
   );
 

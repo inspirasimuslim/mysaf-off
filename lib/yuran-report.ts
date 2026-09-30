@@ -14,6 +14,8 @@ import { fetchYuranReport } from './yuran';
  * fail dan skrin tidak boleh memberi dua jawapan berbeza tentang wang orang
  * yang sama.
  *
+ * Baris tahun permulaan masuk lajur "Baki Permulaan Terkumpul", bukan "Caj".
+ *
  * Kolum "Jumlah Tertunggak" ialah baki KESELURUHAN dan bukan baki tahun itu:
  * laporan ini dicetak untuk mengejar hutang, dan hutang tidak berhenti di
  * sempadan tahun.
@@ -33,11 +35,20 @@ export async function downloadYuranReport(year: number, mode: DeliveryMode): Pro
     throw new UserError('Tiada rekod yuran untuk tahun ' + year + '.');
   }
 
+  /*
+    Baris tahun permulaan (mis. 2025) ialah HUTANG TERKUMPUL bertahun-tahun,
+    bukan caj setahun — jadi ia diasingkan ke lajurnya sendiri dan tidak
+    dilabel "Caj". Lajur itu hanya wujud bila ada sekurang-kurangnya satu ahli.
+  */
+  const openingLabel = 'Baki Permulaan Terkumpul ' + year;
+  const hasOpening = rows.some((row) => row.caj_ialah_baki_permulaan);
+
   const sheetRows = rows.map((row) => ({
     'Nombor Ahli': row.nombor_ahli ?? '',
     Nama: row.full_name,
     Generasi: generationLabel(row.generasi),
-    ['Caj ' + year]: row.caj_tahun,
+    ['Caj ' + year]: row.caj_ialah_baki_permulaan ? '' : row.caj_tahun,
+    ...(hasOpening ? { [openingLabel]: row.caj_ialah_baki_permulaan ? row.caj_tahun : '' } : {}),
     ['Bayaran ' + year]: row.bayar_tahun,
     'Jumlah Tertunggak': row.tertunggak,
     Kredit: row.kredit,

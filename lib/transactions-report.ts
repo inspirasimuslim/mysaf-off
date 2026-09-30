@@ -44,6 +44,13 @@ type TransactionRow = {
   method: string;
   status: string;
   gateway_bill_code: string | null;
+  /** Tiada sebelum migration 094 — sel kosong. */
+  gateway_reference?: string | null;
+  /** Yuran sahaja (`undefined` bagi PIPIS) — tahun bayaran itu dikreditkan. */
+  tahun?: number | null;
+  /** Yuran sahaja — terisi bila bayaran datang daripada Bayaran Kumpulan. */
+  rujukan_kumpulan?: string | null;
+  direkod_oleh?: string | null;
   note: string | null;
 };
 
@@ -65,6 +72,8 @@ function sheetRows(rows: TransactionRow[]): Record<string, string | number | Dat
     'Nombor Ahli': row.nombor_ahli ?? '',
     Nama: row.full_name,
     Generasi: generationLabel(row.generasi),
+    // Lajur Tahun hanya untuk yuran; PIPIS tiada tahun (sekali seumur hidup).
+    ...(row.tahun !== undefined ? { Tahun: row.tahun ?? '' } : {}),
     // Objek Date sebenar (bukan teks) supaya Excel mengiktirafnya sebagai
     // datetime — bendahari boleh sort/filter ikut masa. Waktu tempatan
     // peranti, sama seperti fail lain — fail ini dibaca oleh bendahari,
@@ -74,9 +83,15 @@ function sheetRows(rows: TransactionRow[]): Record<string, string | number | Dat
     // Jumlah yang ahli MINTA bayar, berbanding yang benar-benar masuk. Bagi
     // bayaran gagal, kolum ini satu-satunya petunjuk berapa dia cuba bayar.
     'Jumlah Diminta': amountCell(row.requested_amount),
-    Method: METHOD_LABEL[row.method] ?? row.method,
+    // Bayaran kumpulan disimpan sebagai `manual_adjustment` — dilabel berasingan
+    // supaya tidak kelihatan seperti pelarasan biasa.
+    Kaedah: row.rujukan_kumpulan ? 'Bayaran kumpulan' : (METHOD_LABEL[row.method] ?? row.method),
     Status: STATUS_LABEL[row.status] ?? row.status,
     'Kod Bil ToyyibPay': row.gateway_bill_code ?? '',
+    'Rujukan ToyyibPay': row.gateway_reference ?? '',
+    ...(row.rujukan_kumpulan !== undefined ? { 'Rujukan Kumpulan': row.rujukan_kumpulan ?? '' } : {}),
+    // Nama admin yang merekod (import atau pelarasan manual) — jejak audit; kosong bagi bayaran online.
+    'Direkod Oleh': row.direkod_oleh ?? '',
     Nota: row.note ?? '',
   }));
 }
