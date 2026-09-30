@@ -4,6 +4,7 @@ import { UserError } from './errors';
 import type { DeliveryMode, DeliveryResult } from './file-delivery';
 import {
   AHLI_COLUMNS,
+  MEMBER_EXPORT_ONLY_COLUMNS,
   MEMBER_NUMBER_COLUMN,
   MEMBER_READONLY_COLUMNS,
   memberToSheetRow,
@@ -49,7 +50,7 @@ export async function downloadMembersFullExport(mode: DeliveryMode): Promise<Mem
   if (!rows.length) throw new UserError('Tiada rekod ahli untuk dieksport.');
 
   const sheet = XLSX.utils.json_to_sheet(rows.map(memberToSheetRow), {
-    header: [MEMBER_NUMBER_COLUMN, ...AHLI_COLUMNS, ...MEMBER_READONLY_COLUMNS],
+    header: [MEMBER_NUMBER_COLUMN, ...AHLI_COLUMNS, ...MEMBER_EXPORT_ONLY_COLUMNS, ...MEMBER_READONLY_COLUMNS],
   });
   const book = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(book, sheet, 'user_data');

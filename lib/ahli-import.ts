@@ -51,6 +51,9 @@ export type ParsedMember = Omit<
   | 'bidang_pekerjaan_lama'
   // Jawapan Baitul Muslim diisi ahli dalam borang — tiada dalam fail Excel.
   | 'cenderung_baitul_muslim'
+  // Pautan pasangan MBM hanya diubah melalui borang ahli/admin — import Excel
+  // tidak pernah menyentuhnya (menghantar `null` akan memutuskan pautan dua hala).
+  | 'spouse_member_id'
 >;
 
 export type ImportIssueLevel = 'ralat' | 'amaran';
@@ -237,8 +240,13 @@ const REQUIRED_COLUMNS = ['UserName', 'Generasi'] as const;
  */
 export const TEMPLATE_EXAMPLE_NAME = 'CONTOH NAMA AHLI';
 
+/** `StatusBelajarBekerja` = nama lajur lama (fail sebelum 2026-09-30) — masih diterima. */
+function statusPekerjaanRaw(raw: RawRow) {
+  return raw.StatusPekerjaan ?? raw.StatusBelajarBekerja;
+}
+
 function mapRow(raw: RawRow): ParsedMember {
-  const statusPekerjaan = toStatusPekerjaan(raw.StatusBelajarBekerja);
+  const statusPekerjaan = toStatusPekerjaan(statusPekerjaanRaw(raw));
 
   const jawatanIkhwan1 = text(raw.JawatanIkhwan1);
   const jawatanIkhwan2 = text(raw.JawatanIkhwan2);
@@ -293,9 +301,8 @@ function mapRow(raw: RawRow): ParsedMember {
     // --- Keluarga ---
     status_perkahwinan: toStatusPerkahwinan(raw.StatusPerkahwinan),
     nama_pasangan: text(raw.NyatakanJikaMBM),
-    // Fail Excel tidak membawa pautan pasangan — kedua-duanya
-    // diisi kemudian dalam borang profil, bukan oleh import.
-    spouse_member_id: null,
+    // `spouse_member_id` tiada di sini — lihat `ParsedMember`; pautan pasangan
+    // diurus dalam borang profil sahaja.
     tahun_berkahwin: text(raw.TahunBerkahwin),
     bil_anak: int(raw.BilAnak),
     // "Pernah Berkahwin" dan sebabnya ialah konsep BAHARU — fail Excel lama
@@ -405,12 +412,12 @@ export function parseRows(rows: RawRow[]): ParseResult {
     }
 
     // --- Amaran: data diterima, tetapi patut disemak oleh admin ---
-    if (raw.StatusBelajarBekerja && !member.status_pekerjaan) {
+    if (statusPekerjaanRaw(raw) && !member.status_pekerjaan) {
       issues.push({
         level: 'amaran',
         row: rowNumber,
         name,
-        message: 'Status pekerjaan "' + String(raw.StatusBelajarBekerja) + '" tidak dapat dipetakan.',
+        message: 'Status pekerjaan "' + String(statusPekerjaanRaw(raw)) + '" tidak dapat dipetakan.',
       });
     }
 
