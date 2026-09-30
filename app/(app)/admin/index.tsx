@@ -10,6 +10,7 @@ import { Screen } from '@/components/ui/screen';
 import {
   useDepartmentAccess,
   useGenerasiAccess,
+  useKebajikanAccess,
   useMemberAccess,
   usePerkaderanAccess,
   usePipisAccess,
@@ -51,6 +52,7 @@ export default function AdminHubScreen() {
   const orgChartAccess = useDepartmentAccess(ORG_CHART_DEPARTMENT);
   const generasiAccess = useGenerasiAccess();
   const perkaderanAccess = usePerkaderanAccess();
+  const kebajikanAccess = useKebajikanAccess();
 
   const superAdmin = isSuperAdmin();
   const naqib = isActiveNaqib();
@@ -64,9 +66,17 @@ export default function AdminHubScreen() {
   */
   const accessLoading =
     permissionsLoading ||
-    [memberAccess, usrahAccess, programAccess, yuranAccess, pipisAccess, orgChartAccess, generasiAccess, perkaderanAccess].some(
-      (access) => access.loading,
-    );
+    [
+      memberAccess,
+      usrahAccess,
+      programAccess,
+      yuranAccess,
+      pipisAccess,
+      orgChartAccess,
+      generasiAccess,
+      perkaderanAccess,
+      kebajikanAccess,
+    ].some((access) => access.loading);
   const visibleSections = [
     superAdmin,
     memberAccess.canView,
@@ -77,6 +87,7 @@ export default function AdminHubScreen() {
     orgChartAccess.canView,
     generasiAccess.canView,
     perkaderanAccess.canView,
+    kebajikanAccess.canView,
     naqib,
   ].filter(Boolean).length;
   const nothingAvailable = visibleSections === 0;
@@ -343,6 +354,18 @@ export default function AdminHubScreen() {
               title="Penarafan Ahli dan Generasi"
               subtitle="Ahli paling aktif, generasi terbaik dan ahli paling tidak aktif mengikut tempoh"
               onPress={() => router.push('/(app)/admin/aktiviti-terbaik')}
+            />
+          </CollapsibleSection>
+        ) : null}
+
+        {/* Data kesihatan ahli — LAJNAH KEBAJIKAN sahaja (bukan JABATAN DATA). */}
+        {kebajikanAccess.canView ? (
+          <CollapsibleSection variant="plain" title="Kebajikan" count={1} defaultOpen={openByDefault}>
+            <ActionRow
+              icon="medkit-outline"
+              title="Eksport Data Kesihatan"
+              subtitle="Muat turun masalah kesihatan yang direkodkan ahli (sensitif)"
+              onPress={() => router.push('/(app)/admin/eksport-kesihatan')}
             />
           </CollapsibleSection>
         ) : null}

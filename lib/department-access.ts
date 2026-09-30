@@ -154,6 +154,18 @@ export function useGenerasiAccess(): DepartmentAccess {
  */
 export const PERKADERAN_DEPARTMENT = 'LAJNAH PERKADERAN';
 
+/**
+ * Mesti sepadan dengan `can_view_health()` dalam
+ * `20260929000085_member_health_issues.sql` dan `members_export_kesihatan()`
+ * dalam `20260929000095_member_export_sheets.sql`.
+ */
+export const KEBAJIKAN_DEPARTMENT = 'LAJNAH KEBAJIKAN';
+
+/** Pintasan untuk eksport data Kesihatan (LAJNAH KEBAJIKAN). */
+export function useKebajikanAccess(): DepartmentAccess {
+  return useDepartmentAccess(KEBAJIKAN_DEPARTMENT);
+}
+
 /** Pintasan untuk modul Usrah Sekolah (Naqib/Naqibah). */
 export function usePerkaderanAccess(): DepartmentAccess {
   return useDepartmentAccess(PERKADERAN_DEPARTMENT);

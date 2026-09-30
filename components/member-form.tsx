@@ -224,6 +224,22 @@ const YA_TIDAK_OPTIONS: Option<'ya' | 'tidak'>[] = [
 
 /** Kunci medan yang disimpan sebagai nombor. */
 const NUMERIC_FIELDS = ['bil_anak'] as const;
+
+/** Semua medan cabang "Bekerja" pada `members` — dikosongkan bila ahli bertukar ke Tidak Bekerja. */
+const NOT_WORKING_CLEARED: Partial<Member> = {
+  sektor_pekerjaan: null,
+  bidang_kerajaan: null,
+  bidang_kerajaan_lain_teks: null,
+  kumpulan_bidang_swasta: null,
+  bidang_khusus_swasta: null,
+  bidang_khusus_swasta_lain_teks: null,
+  jenis_kerja_sendiri: null,
+  bidang_kerja_sendiri_lain_teks: null,
+  jawatan_pekerjaan: null,
+  nama_majikan: null,
+  negeri_tempat_kerja: null,
+  anggaran_pendapatan_range: null,
+};
 type NumericField = (typeof NUMERIC_FIELDS)[number];
 
 /** Kunci medan teks bebas. */
@@ -676,6 +692,9 @@ export function MemberForm({
             // salah satu 3 sub-status secara eksplisit — bukan diandaikan.
             status_pekerjaan: next === 'bekerja' ? 'bekerja' : null,
             bidang_pekerjaan_lama: null,
+            // Tidak Bekerja menyembunyikan seluruh cabang kerja — kosongkan supaya tiada
+            // sektor/bidang/jenis lama tersangkut senyap dan muncul semula dalam eksport.
+            ...(next === 'bekerja' ? {} : NOT_WORKING_CLEARED),
           }))
         }
         disabled={locked}

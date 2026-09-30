@@ -10,6 +10,16 @@ import {
   memberToSheetRow,
   type MemberExportRow,
 } from './member-sheet';
+import {
+  keluargaSheet,
+  komitmenSheet,
+  pekerjaanSheet,
+  pendidikanSheet,
+  perniagaanSheet,
+  type BusinessExportRow,
+  type EducationExportRow,
+  type ExportSheet,
+} from './member-export-sheets';
 import { supabase } from './supabase';
 import { deliverWorkbook } from './xlsx-download';
 
@@ -27,15 +37,16 @@ import { deliverWorkbook } from './xlsx-download';
 /** PostgREST menghadkan 1000 baris setiap permintaan secara lalai. */
 const PAGE_SIZE = 1000;
 
-export async function fetchMembersFullExport(): Promise<MemberExportRow[]> {
-  const rows: MemberExportRow[] = [];
+/** Baca semua baris satu RPC eksport, halaman demi halaman. */
+export async function fetchAllRpcRows<T>(fn: string): Promise<T[]> {
+  const rows: T[] = [];
 
   for (let page = 0; ; page += 1) {
     const from = page * PAGE_SIZE;
-    const { data, error } = await supabase.rpc('members_full_export').range(from, from + PAGE_SIZE - 1);
+    const { data, error } = await supabase.rpc(fn).range(from, from + PAGE_SIZE - 1);
     if (error) throw error;
 
-    const batch = (data as MemberExportRow[] | null) ?? [];
+    const batch = (data as T[] | null) ?? [];
     rows.push(...batch);
     if (batch.length < PAGE_SIZE) break;
   }
@@ -43,10 +54,23 @@ export async function fetchMembersFullExport(): Promise<MemberExportRow[]> {
   return rows;
 }
 
+export function fetchMembersFullExport(): Promise<MemberExportRow[]> {
+  return fetchAllRpcRows<MemberExportRow>('members_full_export');
+}
+
+/** Tambah satu sheet bacaan sahaja; sheet tanpa baris tetap dipaparkan dengan tajuk lajur. */
+export function appendExportSheet(book: XLSX.WorkBook, sheet: ExportSheet): void {
+  XLSX.utils.book_append_sheet(book, XLSX.utils.json_to_sheet(sheet.rows, { header: sheet.header }), sheet.name);
+}
+
 export type MemberExportResult = { rows: number; fileName: string; result: DeliveryResult };
 
 export async function downloadMembersFullExport(mode: DeliveryMode): Promise<MemberExportResult> {
-  const rows = await fetchMembersFullExport();
+  const [rows, education, businesses] = await Promise.all([
+    fetchMembersFullExport(),
+    fetchAllRpcRows<EducationExportRow>('members_export_pendidikan'),
+    fetchAllRpcRows<BusinessExportRow>('members_export_perniagaan'),
+  ]);
   if (!rows.length) throw new UserError('Tiada rekod ahli untuk dieksport.');
 
   const sheet = XLSX.utils.json_to_sheet(rows.map(memberToSheetRow), {
@@ -54,6 +78,21 @@ export async function downloadMembersFullExport(mode: DeliveryMode): Promise<Mem
   });
   const book = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(book, sheet, 'user_data');
+
+  /*
+    Sheet bacaan sahaja bagi setiap tab borang. `user_data` kekal sheet pertama —
+    import hanya membaca sheet itu. Kesihatan SENGAJA tiada di sini
+    (lihat `member-health-export.ts`).
+  */
+  for (const extra of [
+    pendidikanSheet(education),
+    perniagaanSheet(businesses),
+    pekerjaanSheet(rows),
+    keluargaSheet(rows),
+    komitmenSheet(rows),
+  ]) {
+    appendExportSheet(book, extra);
+  }
 
   const today = new Date();
   const stamp =
