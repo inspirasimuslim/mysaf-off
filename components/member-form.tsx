@@ -515,6 +515,7 @@ export function MemberForm({
         label="Jantina"
         value={draft.jantina}
         options={JANTINA_OPTIONS}
+        clearLabel="Sila pilih"
         onChange={(next) => set('jantina', next)}
         disabled={locked}
       />
@@ -1088,7 +1089,7 @@ export function MemberForm({
     "disabled" masih mengisyaratkan simpanan mungkin berjaya suatu ketika,
     sedangkan kebenaran department tidak akan berubah di skrin ini.
   */
-  const saveButton = readOnly ? null : (
+  const saveButton = readOnly || tabs.value === 'kesihatan' ? null : (
     <>
       {!draft.full_name.trim() ? <Notice tone="negative" message="Nama penuh tidak boleh dikosongkan." /> : null}
       {/* Suis Sekat dalam panel tindakan jauh dari medan lain — ingatkan ia belum berkuat kuasa. */}
@@ -1115,13 +1116,13 @@ export function MemberForm({
      pengguna beralih ke "Keluarga", dan satu butang Simpan menghantar kesemuanya.
      Kepala dibaca daripada rekod tersimpan, bukan draf, supaya ia tidak berubah
      sebelum simpanan berjaya. */
-  // Data Utama: satu baris setiap item. Nama jawatan (tanpa label) hanya bila ada.
+  // Data Utama: dua baris setiap item (label, kemudian nilai). Jawatan hanya bila ada.
   const dataUtama = (
     <>
       <InfoLine label="Generasi" value={generationLabel(member.generasi)} />
       <InfoLine label="Emel" value={member.email} />
       <InfoLine label="Kawasan Usrah" value={usrahLabel(member.kawasan_usrah)} />
-      {jawatan?.trim() ? <Text className="text-sm font-semibold text-ink" numberOfLines={1}>{jawatan.trim()}</Text> : null}
+      {jawatan?.trim() ? <InfoLine label="Jawatan" value={jawatan.trim()} /> : null}
     </>
   );
 
@@ -1195,13 +1196,15 @@ function ReadOnlyField({ label, value }: { label: string; value: string | null }
   );
 }
 
-/** Baris ringkasan kepala profil — label kecil di atas nilai, ikon di kiri. */
+/** Ringkasan kepala profil — label kecil pada baris pertama, nilai pada baris kedua. */
 function InfoLine({ label, value }: { label: string; value: string | null }) {
   return (
-    <Text className="text-sm text-ink" numberOfLines={1}>
-      <Text className="text-ink-muted">{label}: </Text>
-      {value || 'Tiada'}
-    </Text>
+    <View>
+      <Text className="text-xs text-ink-muted">{label}</Text>
+      <Text className="text-sm text-ink" numberOfLines={1}>
+        {value || 'Tiada'}
+      </Text>
+    </View>
   );
 }
 

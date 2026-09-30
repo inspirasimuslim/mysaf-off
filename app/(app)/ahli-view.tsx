@@ -100,7 +100,7 @@ export function AhliViewBody({ member }: { member: AhliViewMember }) {
           <Text className="text-center text-xl font-bold text-ink">{fullName}</Text>
           <Text className="text-sm text-ink-muted">{generationLabel(generasi)}</Text>
           {/* Tiada jawatan rasmi = tiada baris langsung (bukan baris kosong). */}
-          {jawatan ? <Text className="text-sm font-semibold text-ink">{jawatan}</Text> : null}
+          {jawatan ? <Text className="text-sm font-semibold text-ink">{'Jawatan: ' + jawatan}</Text> : null}
         </View>
       </Card>
 

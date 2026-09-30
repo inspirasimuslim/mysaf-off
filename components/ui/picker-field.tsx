@@ -16,6 +16,8 @@ type Props<T extends string> = {
   placeholder?: string;
   /** Papar pilihan "Tiada" di puncak senarai supaya nilai boleh dikosongkan. */
   clearable?: boolean;
+  /** Label baris pengosongan (lalai "Tiada"). */
+  clearLabel?: string;
   disabled?: boolean;
   error?: string | null;
   /** Pemicu rendah (tanpa label di atas) untuk bar alat padat — dropdown dalamnya tidak berubah. */
@@ -36,6 +38,7 @@ export function PickerField<T extends string>({
   onChange,
   placeholder = 'Sila pilih',
   clearable = true,
+  clearLabel = 'Tiada',
   disabled = false,
   error = null,
   compact = false,
@@ -99,7 +102,7 @@ export function PickerField<T extends string>({
             <ScrollView style={{ flexShrink: 1 }} showsVerticalScrollIndicator={false}>
               <View className="gap-3 pb-1">
                 {clearable ? (
-                  <Row label="Tiada" selected={value === null} onPress={() => choose(null)} muted />
+                  <Row label={clearLabel} selected={value === null} onPress={() => choose(null)} muted />
                 ) : null}
 
                 {options.map((option) => (
