@@ -403,3 +403,22 @@ pada `members` mesti disusuli imbasan grep semua fungsi plpgsql untuk nama kolum
 Komponen lain tidak berubah (salinan tepat versi 091). Kesan: ahli dengan
 `no_keahlian_pas` sahaja (suis dibackfill ON oleh 074) kini dapat 1 markah;
 suis dimatikan = 0 walaupun teks jawatan masih ada.
+
+## Segerak `bil_anak` + `tahun_berkahwin` antara pasangan MBM (2026-09-30, migration 098)
+
+Rujukan: `20260929000098_sync_bil_anak_pasangan.sql` (snapshot
+`backup_20260929.members_pasangan_pre_sync`). Kedua-dua medan per-ahli tidak
+pernah disegerakkan, jadi pasangan dipautkan boleh berbeza dan `list_mbm_couples()`
+(`coalesce(a, b)`) memaparkan nilai salah seorang sahaja.
+
+- **Peraturan: kemas kini TERAKHIR menang** (setiap medan berasingan). Ubah medan
+  pada ahli berpasangan (pautan DUA HALA) -> pasangan diikutkan (trigger
+  `members_sync_spouse_shared_fields`, hanya medan yang berubah). Pautan baharu
+  (`sync_spouse_link()` dilanjutkan): diubah dalam simpanan yang sama menang;
+  satu kosong -> yang terisi; kedua-dua terisi & berbeza -> `self_updated_at`
+  lebih baru, sama/kosong -> nilai lebih besar. Logik dalam `pick_bil_anak()` /
+  `pick_tahun_berkahwin()`, dikongsi dengan pembaikan data.
+- Pembaikan data 2026-09-30: 1 pasangan (0145/0133) diselaraskan. Selepas itu
+  `ahli-mbm.tsx` tidak perlu diubah — dua nilai sentiasa sama.
+- **Known minor issue (belum disentuh, semak lain hari):** ahli 0145 dipautkan
+  MBM tetapi `status_perkahwinan` NULL. Senarai Ahli MBM tidak bergantung padanya.
