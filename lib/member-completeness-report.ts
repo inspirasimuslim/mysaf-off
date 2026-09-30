@@ -68,7 +68,7 @@ function rowToSheetRow(row: MemberCompletenessExportRow): Record<string, string 
     Komitmen: siapBelum(row.komitmen),
     'Kategori Siap': row.jumlah_siap + ' / 6',
     'Peratus Kelengkapan': row.peratus + '%',
-    'Kemaskini Terakhir': row.updated_at ? new Date(row.updated_at).toLocaleDateString('ms-MY') : '',
+    'Kemaskini Terakhir': row.updated_at ? new Date(row.updated_at).toLocaleString('ms-MY') : '',
   };
 }
 

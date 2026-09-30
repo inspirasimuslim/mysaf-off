@@ -177,6 +177,7 @@ const KELUARGA_HEADER = [
   'Generasi',
   'Status Perkahwinan',
   'Nama Pasangan',
+  'Status MBM / Bukan MBM',
   'Tahun Berkahwin',
   'Sebab Berakhir Perkahwinan',
   'Cenderung Baitul Muslim',
@@ -193,6 +194,7 @@ export function keluargaSheet(members: MemberExportRow[]): ExportSheet {
       'Status Perkahwinan': label(STATUS_PERKAHWINAN_OPTIONS, member.status_perkahwinan),
       // Sudah diselesaikan pelayan: nama ahli pasangan (MBM) atau teks Bukan MBM.
       'Nama Pasangan': text(member.nama_pasangan),
+      'Status MBM / Bukan MBM': text(member.status_pasangan),
       'Tahun Berkahwin': text(member.tahun_berkahwin),
       'Sebab Berakhir Perkahwinan': label(SEBAB_PERKAHWINAN_OPTIONS, member.sebab_bercerai_kematian),
       'Cenderung Baitul Muslim': yesNo(member.cenderung_baitul_muslim),

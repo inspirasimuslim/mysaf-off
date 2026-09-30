@@ -68,6 +68,7 @@ export const AHLI_COLUMNS = [
  */
 export const MEMBER_EXPORT_ONLY_COLUMNS = [
   'NamaPanggilan',
+  'StatusPasangan',
   'NegeriTempatKerja',
   'BidangKerajaan',
   'BidangKerajaanLain',
@@ -92,6 +93,69 @@ export const MEMBER_EXPORT_ONLY_COLUMNS = [
  * admin mengubah nilainya.
  */
 export const MEMBER_READONLY_COLUMNS = ['Kemaskini Terakhir Oleh Ahli', 'Tarikh Daftar'] as const;
+
+/**
+ * Susunan lajur sheet `user_data` dalam fail eksport — dikumpul ikut tab borang
+ * (Peribadi, Pendidikan, Pekerjaan, Keluarga, Komitmen), dengan Nama + Generasi
+ * bersebelahan di kiri. Hanya susunan: import membaca lajur mengikut NAMA tajuk,
+ * bukan kedudukan, jadi fail yang disusun begini tetap boleh dimuat naik semula.
+ * `AHLI_COLUMNS` kekal susunan template (fail asal).
+ *
+ * `NomborAhli` kekal paling kiri — ia kunci kemas kini import — dan `UserName`
+ * (Nama) kekal nama tajuk asal kerana import wajib mencarinya.
+ */
+export const MEMBER_EXPORT_COLUMN_ORDER = [
+  // Kunci
+  'NomborAhli',
+  'UserName',
+  'Generasi',
+  // Peribadi
+  'NamaPanggilan',
+  'Jantina',
+  'Nric',
+  'Email',
+  'NoTel',
+  'Alamat',
+  'AlamatSemasa',
+  'KawasanUsrah',
+  'Disekat',
+  // Pendidikan — medan flat sahaja; senarai peringkat ada di sheet Pendidikan
+  'Sekolah',
+  // Pekerjaan
+  'StatusPekerjaan',
+  'SektorPekerjaan',
+  'BidangKerajaan',
+  'BidangKerajaanLain',
+  'KumpulanBidangSwasta',
+  'BidangKhususSwasta',
+  'BidangKhususSwastaLain',
+  'JenisKerjaSendiri',
+  'NamaPekerjaanSendiri',
+  'JawatanPekerjaan',
+  'NamaMajikanSyarikat',
+  'NegeriTempatKerja',
+  'AnggaranPendapatan',
+  'BidangPekerjaanLama',
+  // Keluarga
+  'StatusPerkahwinan',
+  'StatusPasangan',
+  'NyatakanJikaMBM',
+  'TahunBerkahwin',
+  'SebabBerakhirPerkahwinan',
+  'CenderungBaitulMuslim',
+  'BilAnak',
+  // Komitmen
+  'JawatanIkhwanAktif',
+  'JawatanIkhwan1',
+  'JawatanIkhwan2',
+  'JawatanPasAktif',
+  'JawatanPas1',
+  'JawatanPas2',
+  'NoKeahlianPas',
+  'JawatanCartaOrganisasi',
+  // Bacaan sahaja
+  ...MEMBER_READONLY_COLUMNS,
+] as const;
 
 /**
  * Lajur di hadapan fail eksport, tiada dalam fail asal.
@@ -122,20 +186,20 @@ export type SheetCell = string | number;
 export type MemberExportRow = Omit<Member, 'id' | 'user_id' | 'avatar_url' | 'sekolah_id' | 'spouse_member_id'> & {
   created_at: string | null;
   sekolah: string | null;
+  /** 'MBM' (spouse_member_id terisi), 'Bukan MBM' (hanya nama teks), atau null. */
+  status_pasangan: 'MBM' | 'Bukan MBM' | null;
   /** "{jawatan} - {bahagian}" daripada carta organisasi, format sama dengan direktori. */
   jawatan: string | null;
 };
 
 /**
- * Cap masa → tarikh yang boleh dibaca, atau kosong.
- *
- * Tarikh sahaja dan bukan jam: soalannya ialah "bila kali terakhir dia
- * menyentuh profilnya", dan jawapan kepada itu tidak pernah memerlukan minit.
+ * Cap masa → tarikh + masa yang boleh dibaca (waktu peranti), atau kosong.
+ * Format sama dengan lajur "Tarikh & Masa" eksport log aktiviti.
  */
-function dateOnly(value: string | null): string {
+function dateTime(value: string | null): string {
   if (!value) return '';
   const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? '' : parsed.toLocaleDateString('ms-MY');
+  return Number.isNaN(parsed.getTime()) ? '' : parsed.toLocaleString('ms-MY');
 }
 
 /**
@@ -192,6 +256,8 @@ export function memberToSheetRow(member: MemberExportRow): Record<string, SheetC
 
     // Lajur eksport sahaja (`MEMBER_EXPORT_ONLY_COLUMNS`) — import tidak membacanya.
     NamaPanggilan: text(member.nama_panggilan),
+    // 'MBM' / 'Bukan MBM' — ditentukan pelayan daripada spouse_member_id vs teks nama_pasangan.
+    StatusPasangan: text(member.status_pasangan),
     NegeriTempatKerja: text(member.negeri_tempat_kerja),
     BidangKerajaan: label(BIDANG_KERAJAAN_OPTIONS, member.bidang_kerajaan),
     BidangKerajaanLain: text(member.bidang_kerajaan_lain_teks),
@@ -208,7 +274,7 @@ export function memberToSheetRow(member: MemberExportRow): Record<string, SheetC
     JawatanCartaOrganisasi: text(member.jawatan),
 
     // Dua lajur bacaan sahaja di hujung fail.
-    'Kemaskini Terakhir Oleh Ahli': dateOnly(member.self_updated_at),
-    'Tarikh Daftar': dateOnly(member.created_at),
+    'Kemaskini Terakhir Oleh Ahli': dateTime(member.self_updated_at),
+    'Tarikh Daftar': dateTime(member.created_at),
   };
 }
