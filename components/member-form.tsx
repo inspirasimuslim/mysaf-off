@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ChipGroup } from '@/components/ui/chip-group';
 import { IconButton } from '@/components/ui/icon-button';
+import { MemberHealthTab } from '@/components/member-health-tab';
 import { MemberAvatar } from '@/components/ui/member-avatar';
 import { MemberPickerField } from '@/components/ui/member-picker-field';
 import { Notice } from '@/components/ui/notice';
@@ -16,13 +17,18 @@ import { TabBar } from '@/components/ui/tab-bar';
 import { TextField } from '@/components/ui/text-field';
 import { ToggleRow } from '@/components/ui/toggle-row';
 import { Colors } from '@/constants/theme';
+import { ageFromNric } from '@/lib/nric';
 import {
+  BIDANG_KERAJAAN_OPTIONS,
+  BIDANG_KHUSUS_SWASTA_OPTIONS,
   BUSINESS_MODE_OPTIONS,
   BUSINESS_SUBKATEGORI_OFFLINE_OPTIONS,
   BUSINESS_SUBKATEGORI_ONLINE_OPTIONS,
   EDUCATION_PERINGKAT_OPTIONS,
   JANTINA_OPTIONS,
+  JENIS_KERJA_SENDIRI_OPTIONS,
   KAWASAN_USRAH_OPTIONS,
+  KUMPULAN_BIDANG_SWASTA_OPTIONS,
   NEGERI_OPTIONS,
   PENDAPATAN_RANGE_OPTIONS,
   SEBAB_PERKAHWINAN_OPTIONS,
@@ -66,7 +72,7 @@ import {
  * Borang ini bukan lapisan kawalan — RLS dan trigger tetap penentu muktamad.
  */
 
-export type ProfileTab = 'peribadi' | 'pendidikan' | 'pekerjaan' | 'perniagaan' | 'keluarga' | 'komitmen';
+export type ProfileTab = 'peribadi' | 'pendidikan' | 'pekerjaan' | 'perniagaan' | 'keluarga' | 'komitmen' | 'kesihatan';
 
 const PROFILE_TABS: Option<ProfileTab>[] = [
   { value: 'peribadi', label: 'Peribadi' },
@@ -75,6 +81,7 @@ const PROFILE_TABS: Option<ProfileTab>[] = [
   { value: 'perniagaan', label: 'Perniagaan' },
   { value: 'keluarga', label: 'Keluarga' },
   { value: 'komitmen', label: 'Komitmen' },
+  { value: 'kesihatan', label: 'Kesihatan' },
 ];
 
 type Props = {
@@ -94,6 +101,8 @@ type Props = {
   /** Baris `member_education` sedia ada ahli ini — tab Pendidikan. */
   education: MemberEducation[];
   canEditAdminColumns: boolean;
+  /** Jawatan pertama ahli dalam carta organisasi (`org_positions`) — dipaparkan automatik; tiada = tiada baris. */
+  jawatan?: string | null;
   /** Kunci SELURUH borang: pengguna boleh melihat rekod tetapi bukan menyuntingnya. */
   readOnly?: boolean;
   busy?: boolean;
@@ -138,10 +147,11 @@ const AVATAR_SIZE = 96;
 /** Kapsyen di bawah tab bagi setiap seksyen selain Peribadi. */
 const CAPTIONS = {
   pendidikan: 'Tambah setiap peringkat pendidikan selepas SPM secara berasingan, jika ada.',
-  pekerjaan: 'Butiran tambahan muncul selepas suis "Sudah Bekerja" dihidupkan.',
+  pekerjaan: 'Butiran tambahan muncul selepas "Bekerja" dipilih.',
   perniagaan: 'Maklumat ini akan digunakan untuk membantu mempromosikan perniagaan ahli dalam komuniti MySAFF. Isi selengkap mungkin untuk peluang publisiti percuma!',
   keluarga: 'Butiran pasangan muncul selepas status perkahwinan dipilih.',
   komitmen: 'Jawatan atau komitmen dalam Ikhwan dan PAS, jika ada.',
+  kesihatan: 'Disimpan berasingan daripada tab lain, dengan butang Simpan sendiri.',
 } as const;
 
 /** Pilihan rasmi, ditambah nilai semasa sebagai "(tidak dikenali)" jika ia di luar senarai. */
@@ -207,6 +217,11 @@ const BLANK_EDUCATION: MemberEducationDraft = {
   sumber_pembiayaan: null,
 };
 
+const YA_TIDAK_OPTIONS: Option<'ya' | 'tidak'>[] = [
+  { value: 'ya', label: 'Ya' },
+  { value: 'tidak', label: 'Tidak' },
+];
+
 /** Kunci medan yang disimpan sebagai nombor. */
 const NUMERIC_FIELDS = ['bil_anak'] as const;
 type NumericField = (typeof NUMERIC_FIELDS)[number];
@@ -224,6 +239,7 @@ export function MemberForm({
   schools,
   education,
   canEditAdminColumns,
+  jawatan = null,
   readOnly = false,
   busy = false,
   onPickAvatar,
@@ -535,11 +551,14 @@ export function MemberForm({
         ) : null}
       </View>
 
-      <Segmented
+      <PickerField
         label="Peringkat"
         value={row.peringkat}
         options={EDUCATION_PERINGKAT_OPTIONS}
-        onChange={(next) => updateEducation(index, { peringkat: next })}
+        clearable={false}
+        onChange={(next) => {
+          if (next) updateEducation(index, { peringkat: next });
+        }}
         disabled={locked}
       />
 
@@ -604,7 +623,7 @@ export function MemberForm({
 
       {!readOnly ? (
         <Button
-          label="+ Tambah Tahap"
+          label="Tambah"
           variant="secondary"
           disabled={locked}
           onPress={() => setEducationDraft((current) => [...current, { ...BLANK_EDUCATION }])}
@@ -613,19 +632,49 @@ export function MemberForm({
     </>
   );
 
+  const sendiri = draft.sektor_pekerjaan === 'sendiri';
+
+  const jawatanField = field('Jawatan', 'jawatan_pekerjaan');
+  const majikanField = sendiri
+    ? field('Syarikat/Jenama yang Berkaitan (jika ada)', 'nama_majikan')
+    : field('Nama tempat kerja / majikan', 'nama_majikan');
+  const negeriPendapatanFields = (
+    <>
+      <PickerField
+        label="Negeri tempat kerja"
+        value={draft.negeri_tempat_kerja}
+        options={NEGERI_OPTIONS}
+        onChange={(next) => set('negeri_tempat_kerja', next)}
+        disabled={locked}
+      />
+      <View className="gap-2">
+        <PickerField
+          label="Anggaran pendapatan sebulan"
+          value={draft.anggaran_pendapatan_range}
+          options={PENDAPATAN_RANGE_OPTIONS}
+          onChange={(next) => set('anggaran_pendapatan_range', next)}
+          disabled={locked}
+        />
+        {pendapatanNote}
+      </View>
+    </>
+  );
+
   const pekerjaanFields = (
     <>
-      <ToggleRow
-        icon="briefcase-outline"
-        title="Sudah Bekerja"
-        subtitle="Hidupkan jika ahli ini sedang bekerja secara aktif."
-        value={working}
-        onValueChange={(next) =>
+      <Segmented
+        value={working ? 'bekerja' : 'tidak_bekerja'}
+        options={[
+          { value: 'bekerja', label: 'Bekerja' },
+          { value: 'tidak_bekerja', label: 'Tidak Bekerja' },
+        ]}
+        onChange={(next) =>
           setDraft((current) => ({
             ...current,
-            // Bertukar OFF melepaskan 'bekerja' supaya ahli memilih semula
-            // salah satu 3 status secara eksplisit — bukan diandaikan.
-            status_pekerjaan: next ? 'bekerja' : null,
+            // Bertukar ke Tidak Bekerja melepaskan 'bekerja' supaya ahli memilih semula
+            // salah satu 3 sub-status secara eksplisit — bukan diandaikan.
+            status_pekerjaan: next === 'bekerja' ? 'bekerja' : null,
+            bidang_pekerjaan_lama: null,
           }))
         }
         disabled={locked}
@@ -633,41 +682,146 @@ export function MemberForm({
 
       {working ? (
         <>
-          <Segmented
+          <PickerField
             label="Sektor Pekerjaan"
             value={draft.sektor_pekerjaan}
             options={SEKTOR_PEKERJAAN_OPTIONS}
-            onChange={(next) => set('sektor_pekerjaan', next)}
+            onChange={(next) =>
+              setDraft((current) => {
+                const swasta = next === 'swasta' || next === 'glc';
+                return {
+                  ...current,
+                  sektor_pekerjaan: next,
+                  // Bidang bergantung pada sektor — pilihan sektor lain dilepaskan
+                  // supaya tiada nilai tersangkut senyap di sebalik dropdown tersembunyi.
+                  // Swasta <-> GLC berkongsi dropdown yang sama, jadi kekal.
+                  ...(next === 'kerajaan' ? {} : { bidang_kerajaan: null, bidang_kerajaan_lain_teks: null }),
+                  ...(swasta
+                    ? {}
+                    : { kumpulan_bidang_swasta: null, bidang_khusus_swasta: null, bidang_khusus_swasta_lain_teks: null }),
+                  ...(next === 'sendiri' ? {} : { jenis_kerja_sendiri: null, bidang_kerja_sendiri_lain_teks: null }),
+                };
+              })
+            }
             disabled={locked}
           />
-          {field('Apa jawatan atau bidang kerja anda?', 'jawatan_pekerjaan')}
-          {field('Nama tempat kerja / majikan', 'nama_majikan')}
-          <PickerField
-            label="Negeri tempat kerja"
-            value={draft.negeri_tempat_kerja}
-            options={NEGERI_OPTIONS}
-            onChange={(next) => set('negeri_tempat_kerja', next)}
-            disabled={locked}
-          />
-          <View className="gap-2">
-            <PickerField
-              label="Anggaran pendapatan sebulan"
-              value={draft.anggaran_pendapatan_range}
-              options={PENDAPATAN_RANGE_OPTIONS}
-              onChange={(next) => set('anggaran_pendapatan_range', next)}
+          {draft.sektor_pekerjaan === 'kerajaan' ? (
+            <>
+              <PickerField
+                label="Bidang"
+                value={draft.bidang_kerajaan}
+                options={BIDANG_KERAJAAN_OPTIONS}
+                onChange={(next) =>
+                  setDraft((current) => ({
+                    ...current,
+                    bidang_kerajaan: next,
+                    bidang_kerajaan_lain_teks: next === 'lain_lain' ? current.bidang_kerajaan_lain_teks : null,
+                  }))
+                }
+                disabled={locked}
+              />
+              {draft.bidang_kerajaan === 'lain_lain' ? field('Nyatakan bidang', 'bidang_kerajaan_lain_teks') : null}
+            </>
+          ) : null}
+          {draft.sektor_pekerjaan === 'swasta' || draft.sektor_pekerjaan === 'glc' ? (
+            <>
+              <PickerField
+                label="Kumpulan Bidang"
+                value={draft.kumpulan_bidang_swasta}
+                options={KUMPULAN_BIDANG_SWASTA_OPTIONS}
+                onChange={(next) =>
+                  setDraft((current) => ({
+                    ...current,
+                    kumpulan_bidang_swasta: next,
+                    // Bidang Khusus bergantung pada kumpulan — tukar kumpulan mengosongkannya.
+                    ...(next === current.kumpulan_bidang_swasta
+                      ? {}
+                      : { bidang_khusus_swasta: null, bidang_khusus_swasta_lain_teks: null }),
+                  }))
+                }
+                disabled={locked}
+              />
+              {draft.kumpulan_bidang_swasta ? (
+                <PickerField
+                  label="Bidang Khusus"
+                  value={draft.bidang_khusus_swasta}
+                  options={BIDANG_KHUSUS_SWASTA_OPTIONS[draft.kumpulan_bidang_swasta]}
+                  onChange={(next) =>
+                    setDraft((current) => ({
+                      ...current,
+                      bidang_khusus_swasta: next,
+                      bidang_khusus_swasta_lain_teks:
+                        next === 'lain_lain' ? current.bidang_khusus_swasta_lain_teks : null,
+                    }))
+                  }
+                  disabled={locked}
+                />
+              ) : null}
+              {draft.bidang_khusus_swasta === 'lain_lain'
+                ? field('Nyatakan bidang', 'bidang_khusus_swasta_lain_teks')
+                : null}
+            </>
+          ) : null}
+          {sendiri ? (
+            // Berkongsi state dengan suis "Ada Perniagaan" di tab Perniagaan.
+            <Segmented
+              value={adaPerniagaan ? 'berniaga' : 'tidak_berniaga'}
+              options={[
+                { value: 'berniaga', label: 'Berniaga' },
+                { value: 'tidak_berniaga', label: 'Tidak Berniaga' },
+              ]}
+              onChange={(next) => {
+                const berniaga = next === 'berniaga';
+                if (berniaga === adaPerniagaan) return;
+                setBusinessesDraft(berniaga ? [BLANK_BUSINESS] : []);
+                if (berniaga) {
+                  setDraft((current) => ({ ...current, jenis_kerja_sendiri: null, bidang_kerja_sendiri_lain_teks: null }));
+                }
+              }}
               disabled={locked}
             />
-            {pendapatanNote}
-          </View>
+          ) : null}
+          {/* Selagi sektor belum dipilih ("Sila pilih"), tiada medan lain dipaparkan. */}
+          {!draft.sektor_pekerjaan ? null : sendiri && adaPerniagaan ? (
+            <Notice tone="info" message="Sila lengkapkan maklumat perniagaan anda di tab Perniagaan." />
+          ) : (
+            <>
+              {sendiri ? (
+                <>
+                  <PickerField
+                    label="Jenis Pekerjaan"
+                    value={draft.jenis_kerja_sendiri}
+                    options={JENIS_KERJA_SENDIRI_OPTIONS}
+                    onChange={(next) => set('jenis_kerja_sendiri', next)}
+                    disabled={locked}
+                  />
+                  {field('Nama Pekerjaan', 'bidang_kerja_sendiri_lain_teks')}
+                </>
+              ) : (
+                jawatanField
+              )}
+              {majikanField}
+              {negeriPendapatanFields}
+            </>
+          )}
         </>
       ) : (
-        <PickerField
-          label="Status Pekerjaan"
-          value={draft.status_pekerjaan}
-          options={STATUS_PEKERJAAN_TIDAK_BEKERJA_OPTIONS}
-          onChange={(next) => set('status_pekerjaan', next)}
-          disabled={locked}
-        />
+        <>
+          <PickerField
+            label="Status Pekerjaan"
+            value={draft.status_pekerjaan}
+            options={STATUS_PEKERJAAN_TIDAK_BEKERJA_OPTIONS}
+            onChange={(next) =>
+              setDraft((current) => ({
+                ...current,
+                status_pekerjaan: next,
+                bidang_pekerjaan_lama: next === 'pesara' ? current.bidang_pekerjaan_lama : null,
+              }))
+            }
+            disabled={locked}
+          />
+          {draft.status_pekerjaan === 'pesara' ? field('Bidang Pekerjaan Lama', 'bidang_pekerjaan_lama') : null}
+        </>
       )}
     </>
   );
@@ -751,12 +905,17 @@ export function MemberForm({
 
   const perniagaanFields = (
     <>
-      <ToggleRow
-        icon="storefront-outline"
-        title="Ada Perniagaan"
-        subtitle="Hidupkan jika ahli ini memiliki sebarang perniagaan."
-        value={adaPerniagaan}
-        onValueChange={(next) => setBusinessesDraft(next ? [BLANK_BUSINESS] : [])}
+      <Segmented
+        value={adaPerniagaan ? 'berniaga' : 'tidak_berniaga'}
+        options={[
+          { value: 'berniaga', label: 'Berniaga' },
+          { value: 'tidak_berniaga', label: 'Tidak Berniaga' },
+        ]}
+        onChange={(next) => {
+          const berniaga = next === 'berniaga';
+          if (berniaga === adaPerniagaan) return;
+          setBusinessesDraft(berniaga ? [BLANK_BUSINESS] : []);
+        }}
         disabled={locked}
       />
 
@@ -786,6 +945,8 @@ export function MemberForm({
           setDraft((current) => ({
             ...current,
             status_perkahwinan: next,
+            // Soalan Baitul Muslim hanya untuk bujang — status lain melepaskan jawapannya.
+            cenderung_baitul_muslim: next === 'bujang' ? current.cenderung_baitul_muslim : null,
             // Bujang melepaskan semua butiran pasangan/anak/sebab — ia tidak
             // bermakna lagi bila status bertukar keluar daripada berkahwin.
             spouse_member_id: next === 'bujang' ? null : current.spouse_member_id,
@@ -798,6 +959,16 @@ export function MemberForm({
         }
         disabled={locked}
       />
+
+      {draft.status_perkahwinan === 'bujang' && (ageFromNric(draft.nric) ?? 0) > 22 ? (
+        <PickerField
+          label="Adakah anda cenderung untuk memilih pasangan Baitul Muslim?"
+          value={draft.cenderung_baitul_muslim === null ? null : draft.cenderung_baitul_muslim ? 'ya' : 'tidak'}
+          options={YA_TIDAK_OPTIONS}
+          onChange={(next) => set('cenderung_baitul_muslim', next === null ? null : next === 'ya')}
+          disabled={locked}
+        />
+      ) : null}
 
       {married ? (
         <>
@@ -846,15 +1017,6 @@ export function MemberForm({
 
           {field('Tahun berkahwin', 'tahun_berkahwin')}
           {numberField('Bilangan anak', 'bil_anak')}
-          <TextField
-            label="Nama anak"
-            value={draft.nama_anak ?? ''}
-            onChangeText={setText('nama_anak')}
-            editable={!locked}
-            autoCapitalize="sentences"
-            autoCorrect={false}
-            multiline
-          />
         </>
       ) : null}
     </>
@@ -953,6 +1115,16 @@ export function MemberForm({
      pengguna beralih ke "Keluarga", dan satu butang Simpan menghantar kesemuanya.
      Kepala dibaca daripada rekod tersimpan, bukan draf, supaya ia tidak berubah
      sebelum simpanan berjaya. */
+  // Data Utama: satu baris setiap item. Nama jawatan (tanpa label) hanya bila ada.
+  const dataUtama = (
+    <>
+      <InfoLine label="Generasi" value={generationLabel(member.generasi)} />
+      <InfoLine label="Emel" value={member.email} />
+      <InfoLine label="Kawasan Usrah" value={usrahLabel(member.kawasan_usrah)} />
+      {jawatan?.trim() ? <Text className="text-sm font-semibold text-ink" numberOfLines={1}>{jawatan.trim()}</Text> : null}
+    </>
+  );
+
   const caption = tabs.value === 'peribadi' ? null : CAPTIONS[tabs.value];
 
   return (
@@ -971,18 +1143,14 @@ export function MemberForm({
       */}
       {headerAside ? (
         <View className="flex-row items-stretch gap-3">
-          <Card className="gap-4" style={{ flex: 57 }}>
-            <InfoRow icon="layers-outline" label="Generasi" value={generationLabel(member.generasi)} />
-            <InfoRow icon="mail-outline" label="Emel" value={member.email} />
-            <InfoRow icon="location-outline" label="Kawasan usrah" value={usrahLabel(member.kawasan_usrah)} />
+          <Card className="gap-1.5" style={{ flex: 57 }}>
+            {dataUtama}
           </Card>
           <View style={{ flex: 43 }}>{headerAside}</View>
         </View>
       ) : (
-        <Card className="gap-4">
-          <InfoRow icon="layers-outline" label="Generasi" value={generationLabel(member.generasi)} />
-          <InfoRow icon="mail-outline" label="Emel" value={member.email} />
-          <InfoRow icon="location-outline" label="Kawasan usrah" value={usrahLabel(member.kawasan_usrah)} />
+        <Card className="gap-1.5">
+          {dataUtama}
         </Card>
       )}
 
@@ -1005,6 +1173,7 @@ export function MemberForm({
         {tabs.value === 'perniagaan' ? perniagaanFields : null}
         {tabs.value === 'keluarga' ? keluargaFields : null}
         {tabs.value === 'komitmen' ? komitmenFields : null}
+        {tabs.value === 'kesihatan' ? <MemberHealthTab memberId={member.id} /> : null}
       </View>
 
       {actions ? actions({ save: saveButton, sekat: sekatCompact }) : saveButton}
@@ -1027,6 +1196,15 @@ function ReadOnlyField({ label, value }: { label: string; value: string | null }
 }
 
 /** Baris ringkasan kepala profil — label kecil di atas nilai, ikon di kiri. */
+function InfoLine({ label, value }: { label: string; value: string | null }) {
+  return (
+    <Text className="text-sm text-ink" numberOfLines={1}>
+      <Text className="text-ink-muted">{label}: </Text>
+      {value || 'Tiada'}
+    </Text>
+  );
+}
+
 function InfoRow({
   icon,
   label,

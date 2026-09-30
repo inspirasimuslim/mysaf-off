@@ -81,13 +81,90 @@ export type StatusPengajianEntry = 'tamat' | 'sedang_menjalani';
 /** Hanya bermakna bila baris itu `status_pengajian = 'sedang_menjalani'`. */
 export type SumberPembiayaan = 'ptptn' | 'jpa' | 'biasiswa_lain' | 'sendiri' | 'lain_lain';
 
-export type SektorPekerjaan = 'kerajaan' | 'swasta' | 'separuh_kerajaan_glc';
+export type SektorPekerjaan = 'kerajaan' | 'swasta' | 'glc' | 'sendiri';
+
+export type BidangKerajaan =
+  | 'pentadbiran'
+  | 'pendidikan'
+  | 'kesihatan'
+  | 'kejuruteraan'
+  | 'teknologi_maklumat'
+  | 'kewangan'
+  | 'perundangan'
+  | 'keselamatan'
+  | 'penguatkuasaan'
+  | 'pertanian_perikanan'
+  | 'sains_penyelidikan'
+  | 'kebajikan_sosial'
+  | 'agama'
+  | 'media_kebudayaan'
+  | 'kemahiran_sokongan'
+  | 'lain_lain';
+
+export type KumpulanBidangSwasta =
+  | 'perkhidmatan_perdagangan'
+  | 'perindustrian_sumber_asli'
+  | 'profesional_pengurusan'
+  | 'kreatif_media'
+  | 'kemahiran_tvet';
+
+/** Nilai unik merentas kumpulan, kecuali 'lain_lain' yang wujud di hujung setiap kumpulan. */
+export type BidangKhususSwasta =
+  | 'peruncitan_perdagangan'
+  | 'logistik_pengangkutan'
+  | 'pelancongan_hospitaliti'
+  | 'makanan_minuman_fnb'
+  | 'hartanah'
+  | 'automotif_servis'
+  | 'keselamatan'
+  | 'sukan_kecergasan'
+  | 'warga_emas_penjagaan'
+  | 'pendidikan_swasta'
+  | 'kesihatan_swasta'
+  | 'kebajikan_sosial_ngo'
+  | 'agama_swasta'
+  | 'penguatkuasaan_swasta'
+  | 'pembuatan'
+  | 'minyak_gas_tenaga'
+  | 'perladangan_agrikultur'
+  | 'perikanan_akuakultur'
+  | 'penternakan'
+  | 'perlombongan_kuari'
+  | 'ekonomi_hijau_esg'
+  | 'perundangan'
+  | 'kejuruteraan'
+  | 'seni_bina_perancangan_bandar'
+  | 'sumber_manusia_perundingan'
+  | 'pemasaran_pengiklanan'
+  | 'pentadbiran'
+  | 'teknologi_maklumat'
+  | 'kewangan'
+  | 'sains_penyelidikan'
+  | 'media_penyiaran'
+  | 'industri_kreatif'
+  | 'pencipta_kandungan'
+  | 'fesyen_kraf'
+  | 'kebudayaan'
+  | 'pertukangan'
+  | 'kecantikan_dandanan'
+  | 'pembaikan'
+  | 'penyelenggaraan'
+  | 'lain_lain';
+
+export type JenisKerjaSendiri = 'pekerja_gig' | 'freelance' | 'pencipta_kandungan' | 'lain_lain';
 
 export type StatusPerkahwinan = 'bujang' | 'berkahwin' | 'pernah_berkahwin';
 
 export type SebabPerkahwinanBerakhir = 'bercerai' | 'kematian_pasangan';
 
-export type PendapatanRange = '<1000' | '1000-2999' | '3000-4999' | '5000-9999' | '10000+';
+export type PendapatanRange =
+  | '<1000'
+  | '1000-2999'
+  | '3000-4999'
+  | '5000-9999'
+  | '10000-14999'
+  | '15000-19999'
+  | '20000+';
 
 export type BusinessMode = 'online' | 'offline' | 'kedua_dua';
 
@@ -140,6 +217,21 @@ export type Member = {
   /** Toggle "Sudah Bekerja" ON/OFF diderivasi daripada nilai ini (=== 'bekerja'), bukan kolum berasingan. */
   status_pekerjaan: StatusPekerjaan | null;
   sektor_pekerjaan: SektorPekerjaan | null;
+  /** Hanya bermakna bila `sektor_pekerjaan = 'kerajaan'`. */
+  bidang_kerajaan: BidangKerajaan | null;
+  /** Teks bebas — hanya bila `bidang_kerajaan = 'lain_lain'`. */
+  bidang_kerajaan_lain_teks: string | null;
+  /** Hanya bermakna bila sektor `swasta` atau `glc`. */
+  kumpulan_bidang_swasta: KumpulanBidangSwasta | null;
+  bidang_khusus_swasta: BidangKhususSwasta | null;
+  /** Teks bebas — hanya bila `bidang_khusus_swasta = 'lain_lain'`. */
+  bidang_khusus_swasta_lain_teks: string | null;
+  /** Hanya bermakna bila sektor `sendiri` DAN ahli TIADA baris `member_businesses`. Tiada lagi teks "lain_lain" berasingan — lihat `bidang_kerja_sendiri_lain_teks`. */
+  jenis_kerja_sendiri: JenisKerjaSendiri | null;
+  /** Teks bebas "Bidang" — sentiasa dipaparkan untuk sektor `sendiri` (tidak berniaga); nama kolum kekal walau tidak lagi khusus `lain_lain`. */
+  bidang_kerja_sendiri_lain_teks: string | null;
+  /** Teks bebas — hanya bila `status_pekerjaan = 'pesara'`. */
+  bidang_pekerjaan_lama: string | null;
   jawatan_pekerjaan: string | null;
   nama_majikan: string | null;
   negeri_tempat_kerja: string | null;
@@ -153,7 +245,12 @@ export type Member = {
   spouse_member_id: string | null;
   tahun_berkahwin: string | null;
   bil_anak: number | null;
-  nama_anak: string | null;
+  /**
+   * Jawapan "Adakah anda cenderung untuk memilih pasangan Baitul Muslim?" —
+   * hanya ditanya bila bujang DAN umur > 22 (dikira daripada NRIC), jadi
+   * nullable. true = Ya, false = Tidak.
+   */
+  cenderung_baitul_muslim: boolean | null;
   /** Hanya bermakna bila `status_perkahwinan = 'pernah_berkahwin'`. */
   sebab_bercerai_kematian: SebabPerkahwinanBerakhir | null;
 
@@ -186,6 +283,8 @@ export type DirectoryMember = {
   avatar_url: string | null;
   status_pekerjaan: StatusPekerjaan | null;
   status_perkahwinan: StatusPerkahwinan | null;
+  /** Jawatan PERTAMA ahli dalam carta organisasi (`org_positions`), atau null. */
+  jawatan: string | null;
 };
 
 /**
@@ -210,7 +309,6 @@ export type MbmCouple = {
   generasi_isteri: string | null;
   tahun_berkahwin: string | null;
   bil_anak: number | null;
-  nama_anak: string | null;
 };
 
 /**
@@ -309,7 +407,100 @@ export const STATUS_PEKERJAAN_TIDAK_BEKERJA_OPTIONS: Option<StatusPekerjaan>[] =
 export const SEKTOR_PEKERJAAN_OPTIONS: Option<SektorPekerjaan>[] = [
   { value: 'kerajaan', label: 'Kerajaan' },
   { value: 'swasta', label: 'Swasta' },
-  { value: 'separuh_kerajaan_glc', label: 'Separuh Kerajaan (GLC)' },
+  { value: 'glc', label: 'GLC' },
+  { value: 'sendiri', label: 'Sendiri' },
+];
+
+export const BIDANG_KERAJAAN_OPTIONS: Option<BidangKerajaan>[] = [
+  { value: 'pentadbiran', label: 'Pentadbiran' },
+  { value: 'pendidikan', label: 'Pendidikan' },
+  { value: 'kesihatan', label: 'Kesihatan' },
+  { value: 'kejuruteraan', label: 'Kejuruteraan' },
+  { value: 'teknologi_maklumat', label: 'Teknologi Maklumat' },
+  { value: 'kewangan', label: 'Kewangan' },
+  { value: 'perundangan', label: 'Perundangan' },
+  { value: 'keselamatan', label: 'Keselamatan' },
+  { value: 'penguatkuasaan', label: 'Penguatkuasaan' },
+  { value: 'pertanian_perikanan', label: 'Pertanian & Perikanan' },
+  { value: 'sains_penyelidikan', label: 'Sains & Penyelidikan' },
+  { value: 'kebajikan_sosial', label: 'Kebajikan & Sosial' },
+  { value: 'agama', label: 'Agama' },
+  { value: 'media_kebudayaan', label: 'Media & Kebudayaan' },
+  { value: 'kemahiran_sokongan', label: 'Kemahiran & Sokongan' },
+  { value: 'lain_lain', label: 'Lain-lain' },
+];
+
+export const KUMPULAN_BIDANG_SWASTA_OPTIONS: Option<KumpulanBidangSwasta>[] = [
+  { value: 'perkhidmatan_perdagangan', label: 'Perkhidmatan & Perdagangan' },
+  { value: 'perindustrian_sumber_asli', label: 'Perindustrian & Sumber Asli' },
+  { value: 'profesional_pengurusan', label: 'Profesional & Pengurusan' },
+  { value: 'kreatif_media', label: 'Kreatif & Media' },
+  { value: 'kemahiran_tvet', label: 'Kemahiran & Teknikal/TVET' },
+];
+
+/** Pilihan Bidang Khusus mengikut Kumpulan Bidang — 'Lain-lain' di hujung setiap kumpulan. */
+export const BIDANG_KHUSUS_SWASTA_OPTIONS: Record<KumpulanBidangSwasta, Option<BidangKhususSwasta>[]> = {
+  perkhidmatan_perdagangan: [
+    { value: 'peruncitan_perdagangan', label: 'Peruncitan & perdagangan' },
+    { value: 'logistik_pengangkutan', label: 'Logistik & pengangkutan' },
+    { value: 'pelancongan_hospitaliti', label: 'Pelancongan & hospitaliti' },
+    { value: 'makanan_minuman_fnb', label: 'Makanan & minuman (F&B)' },
+    { value: 'hartanah', label: 'Hartanah' },
+    { value: 'automotif_servis', label: 'Automotif & servis' },
+    { value: 'keselamatan', label: 'Keselamatan' },
+    { value: 'sukan_kecergasan', label: 'Sukan & kecergasan' },
+    { value: 'warga_emas_penjagaan', label: 'Warga emas & penjagaan' },
+    { value: 'pendidikan_swasta', label: 'Pendidikan (swasta)' },
+    { value: 'kesihatan_swasta', label: 'Kesihatan (swasta)' },
+    { value: 'kebajikan_sosial_ngo', label: 'Kebajikan & sosial (swasta/NGO)' },
+    { value: 'agama_swasta', label: 'Agama (swasta)' },
+    { value: 'penguatkuasaan_swasta', label: 'Penguatkuasaan (swasta)' },
+    { value: 'lain_lain', label: 'Lain-lain' },
+  ],
+  perindustrian_sumber_asli: [
+    { value: 'pembuatan', label: 'Pembuatan' },
+    { value: 'minyak_gas_tenaga', label: 'Minyak/gas & tenaga' },
+    { value: 'perladangan_agrikultur', label: 'Perladangan & agrikultur' },
+    { value: 'perikanan_akuakultur', label: 'Perikanan & akuakultur' },
+    { value: 'penternakan', label: 'Penternakan' },
+    { value: 'perlombongan_kuari', label: 'Perlombongan & kuari' },
+    { value: 'ekonomi_hijau_esg', label: 'Ekonomi hijau & ESG' },
+    { value: 'lain_lain', label: 'Lain-lain' },
+  ],
+  profesional_pengurusan: [
+    { value: 'perundangan', label: 'Perundangan' },
+    { value: 'kejuruteraan', label: 'Kejuruteraan' },
+    { value: 'seni_bina_perancangan_bandar', label: 'Seni bina & perancangan bandar' },
+    { value: 'sumber_manusia_perundingan', label: 'Sumber manusia & perundingan' },
+    { value: 'pemasaran_pengiklanan', label: 'Pemasaran & pengiklanan' },
+    { value: 'pentadbiran', label: 'Pentadbiran' },
+    { value: 'teknologi_maklumat', label: 'Teknologi Maklumat' },
+    { value: 'kewangan', label: 'Kewangan' },
+    { value: 'sains_penyelidikan', label: 'Sains & Penyelidikan' },
+    { value: 'lain_lain', label: 'Lain-lain' },
+  ],
+  kreatif_media: [
+    { value: 'media_penyiaran', label: 'Media & penyiaran' },
+    { value: 'industri_kreatif', label: 'Industri kreatif' },
+    { value: 'pencipta_kandungan', label: 'Pencipta kandungan' },
+    { value: 'fesyen_kraf', label: 'Fesyen & kraf' },
+    { value: 'kebudayaan', label: 'Kebudayaan' },
+    { value: 'lain_lain', label: 'Lain-lain' },
+  ],
+  kemahiran_tvet: [
+    { value: 'pertukangan', label: 'Pertukangan' },
+    { value: 'kecantikan_dandanan', label: 'Kecantikan & dandanan' },
+    { value: 'pembaikan', label: 'Pembaikan' },
+    { value: 'penyelenggaraan', label: 'Penyelenggaraan' },
+    { value: 'lain_lain', label: 'Lain-lain' },
+  ],
+};
+
+export const JENIS_KERJA_SENDIRI_OPTIONS: Option<JenisKerjaSendiri>[] = [
+  { value: 'pekerja_gig', label: 'Pekerja Gig' },
+  { value: 'freelance', label: 'Freelance' },
+  { value: 'pencipta_kandungan', label: 'Pencipta Kandungan' },
+  { value: 'lain_lain', label: 'Lain-lain' },
 ];
 
 export const STATUS_PERKAHWINAN_OPTIONS: Option<StatusPerkahwinan>[] = [
@@ -328,7 +519,9 @@ export const PENDAPATAN_RANGE_OPTIONS: Option<PendapatanRange>[] = [
   { value: '1000-2999', label: 'RM1,000 – RM2,999' },
   { value: '3000-4999', label: 'RM3,000 – RM4,999' },
   { value: '5000-9999', label: 'RM5,000 – RM9,999' },
-  { value: '10000+', label: 'RM10,000 ke atas' },
+  { value: '10000-14999', label: 'RM10,000 – RM15,000' },
+  { value: '15000-19999', label: 'RM15,000 – RM20,000' },
+  { value: '20000+', label: 'RM20,000 ke atas' },
 ];
 
 /**
@@ -939,3 +1132,61 @@ export type SessionViewDetail = {
   sekolah: string;
   attendees: { nama: string; tingkatan: string | null }[];
 };
+
+// -----------------------------------------------------------------------------
+// Kesihatan (`member_health_issues`) — DATA SENSITIF, RLS ketat
+// (`can_view_health`/`can_edit_health`). Lihat `lib/member-health.ts`.
+// -----------------------------------------------------------------------------
+
+export type JenisMasalahKesihatan =
+  | 'fizikal'
+  | 'mental'
+  | 'emosi'
+  | 'penyakit_kronik'
+  | 'oku'
+  | 'deria'
+  | 'pertuturan_komunikasi'
+  | 'pembelajaran'
+  | 'tidur'
+  | 'pemakanan'
+  | 'ketagihan'
+  | 'tiada'
+  | 'lain_lain'
+  | 'tidak_mahu_nyatakan';
+
+export const JENIS_MASALAH_KESIHATAN_OPTIONS: Option<JenisMasalahKesihatan>[] = [
+  { value: 'fizikal', label: 'Fizikal' },
+  { value: 'mental', label: 'Mental' },
+  { value: 'emosi', label: 'Emosi' },
+  { value: 'penyakit_kronik', label: 'Penyakit kronik' },
+  { value: 'oku', label: 'Ketidakupayaan / OKU' },
+  { value: 'deria', label: 'Deria (penglihatan, pendengaran)' },
+  { value: 'pertuturan_komunikasi', label: 'Pertuturan & komunikasi' },
+  { value: 'pembelajaran', label: 'Pembelajaran (contoh: disleksia)' },
+  { value: 'tidur', label: 'Tidur' },
+  { value: 'pemakanan', label: 'Pemakanan' },
+  { value: 'ketagihan', label: 'Ketagihan' },
+  { value: 'tiada', label: 'Tiada' },
+  { value: 'lain_lain', label: 'Lain-lain (nyatakan)' },
+  { value: 'tidak_mahu_nyatakan', label: 'Tidak mahu nyatakan' },
+];
+
+export type MemberHealthIssue = {
+  id: string;
+  member_id: string;
+  jenis_masalah: JenisMasalahKesihatan;
+  nama_penyakit: string | null;
+  /** true = Ya, false = Tidak, null = belum dijawab. */
+  ada_temujanji_hospital: boolean | null;
+  /** Hanya bermakna bila `jenis_masalah = 'lain_lain'`. */
+  keterangan_lain: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type MemberHealthIssueDraft = Omit<MemberHealthIssue, 'id' | 'member_id' | 'created_at' | 'updated_at'> & {
+  id?: string;
+};
+
+/** Hasil `get_rais_lajnah_kebajikan()` — kosong jika jawatan tiada pemegang. */
+export type RaisLajnahKebajikan = { nama: string; no_tel: string | null };

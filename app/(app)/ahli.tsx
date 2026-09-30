@@ -136,6 +136,7 @@ export default function AhliScreen() {
           avatar: member.avatar_url ?? '',
           pekerjaan: member.status_pekerjaan ?? '',
           perkahwinan: member.status_perkahwinan ?? '',
+          jawatan: member.jawatan ?? '',
         },
       });
     },
@@ -276,6 +277,7 @@ export default function AhliScreen() {
                     avatar: selected.avatar_url ?? '',
                     pekerjaan: selected.status_pekerjaan ?? '',
                     perkahwinan: selected.status_perkahwinan ?? '',
+                    jawatan: selected.jawatan ?? '',
                   }}
                 />
               </ScrollView>

@@ -104,7 +104,7 @@ function CoupleCard({ row }: { row: MbmCouple }) {
         <Spouse label="Isteri" nama={row.nama_isteri} generasi={row.generasi_isteri} />
       </View>
 
-      {row.tahun_berkahwin || row.bil_anak !== null || row.nama_anak ? (
+      {row.tahun_berkahwin || row.bil_anak !== null ? (
         <View className="gap-1.5 border-t border-line pt-3">
           {row.tahun_berkahwin ? (
             <DetailRow icon="calendar-outline" text={'Berkahwin ' + row.tahun_berkahwin} />
@@ -112,7 +112,6 @@ function CoupleCard({ row }: { row: MbmCouple }) {
           {row.bil_anak !== null ? (
             <DetailRow icon="people-outline" text={row.bil_anak + ' orang anak'} />
           ) : null}
-          {row.nama_anak ? <DetailRow icon="happy-outline" text={row.nama_anak} /> : null}
         </View>
       ) : null}
     </View>

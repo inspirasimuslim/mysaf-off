@@ -41,6 +41,7 @@ export default function AhliViewScreen() {
     avatar?: string;
     pekerjaan?: string;
     perkahwinan?: string;
+    jawatan?: string;
   }>();
 
   return (
@@ -56,6 +57,7 @@ export default function AhliViewScreen() {
           avatar: params.avatar,
           pekerjaan: params.pekerjaan,
           perkahwinan: params.perkahwinan,
+          jawatan: params.jawatan,
         }}
       />
     </Screen>
@@ -71,6 +73,7 @@ export type AhliViewMember = {
   avatar?: string;
   pekerjaan?: string;
   perkahwinan?: string;
+  jawatan?: string;
 };
 
 /**
@@ -84,6 +87,7 @@ export function AhliViewBody({ member }: { member: AhliViewMember }) {
   const phone = member.tel?.trim() || null;
   const avatarUrl = member.avatar?.trim() || null;
   const pekerjaan = (member.pekerjaan?.trim() || null) as StatusPekerjaan | null;
+  const jawatan = member.jawatan?.trim() || null;
   const perkahwinan = (member.perkahwinan?.trim() || null) as StatusPerkahwinan | null;
 
   const whatsApp = toWhatsAppNumber(phone);
@@ -95,6 +99,8 @@ export function AhliViewBody({ member }: { member: AhliViewMember }) {
           <MemberAvatar fullName={fullName} avatarUrl={avatarUrl} size={AVATAR_SIZE} />
           <Text className="text-center text-xl font-bold text-ink">{fullName}</Text>
           <Text className="text-sm text-ink-muted">{generationLabel(generasi)}</Text>
+          {/* Tiada jawatan rasmi = tiada baris langsung (bukan baris kosong). */}
+          {jawatan ? <Text className="text-sm font-semibold text-ink">{jawatan}</Text> : null}
         </View>
       </Card>
 

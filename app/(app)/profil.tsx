@@ -20,6 +20,7 @@ import { useGoBack } from '@/lib/navigation';
 import { toMalayError } from '@/lib/errors';
 import { fetchMemberBusinesses, saveMemberBusinesses } from '@/lib/member-businesses';
 import { fetchMemberEducation, saveMemberEducation } from '@/lib/member-education';
+import { fetchOrgChart, jawatanForMember } from '@/lib/org-chart';
 import { fetchGenerations, fetchMembersForPicker, fetchMyMember, fetchMyMemberLinked, updateMember } from '@/lib/members';
 import { fetchAllSchools } from '@/lib/schools';
 import {
@@ -61,6 +62,7 @@ export default function ProfilScreen() {
   const [version, setVersion] = useState(0);
   // Di sini dan bukan dalam borang: borang dipasang semula selepas setiap simpanan.
   const [tab, setTab] = useState<ProfileTab>('peribadi');
+  const [jawatan, setJawatan] = useState<string | null>(null);
 
   /*
     Kedudukan dibaca berasingan daripada profil, dan kegagalannya SENYAP.
@@ -121,6 +123,14 @@ export default function ProfilScreen() {
           if (active) setBusinesses(rows);
         } catch {
           if (active) setBusinesses([]);
+        }
+
+        // Jawatan daripada carta organisasi — kegagalan hanya bermakna baris jawatan tidak dipaparkan.
+        try {
+          const chart = row ? await fetchOrgChart() : [];
+          if (active) setJawatan(row ? jawatanForMember(chart, row.id) : null);
+        } catch {
+          if (active) setJawatan(null);
         }
 
         // Sama falsafah lagi: tab Pendidikan mula kosong jika gagal.
@@ -257,6 +267,7 @@ export default function ProfilScreen() {
           schools={schools}
           education={education}
           canEditAdminColumns={false}
+          jawatan={jawatan}
           busy={saving}
           headerAside={rank ? <AchievementBadge rank={rank} /> : undefined}
           headerNote={

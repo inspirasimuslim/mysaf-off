@@ -125,3 +125,26 @@ export function swapAt<T>(items: T[], index: number, direction: -1 | 1): T[] {
   [next[index], next[target]] = [next[target] as T, next[index] as T];
   return next;
 }
+
+/**
+ * Nama jawatan PERTAMA seorang ahli dalam carta (urutan carta: `display_order`,
+ * kemudian `created_at`), atau `null` bila ahli itu tiada rekod.
+ *
+ * Format "{jawatan} - {bahagian}", dengan akhiran kurungan pada
+ * bahagian dibuang: jawatan "Rais" + bahagian "Lajnah Kebajikan (LK)" ->
+ * "Rais - Lajnah Kebajikan". Selari dengan `list_members_directory().jawatan`
+ * (SQL) — ubah kedua-duanya bersama.
+ */
+export function jawatanForMember(rows: OrgPosition[], memberId: string): string | null {
+  const first = [...rows]
+    .sort((a, b) => a.display_order - b.display_order)
+    .find((row) => row.member_id === memberId);
+  if (!first) return null;
+
+  const jawatan = first.jawatan.trim();
+  const bahagian = first.bahagian.replace(/\s*\([^)]*\)/g, '').trim();
+  if (!jawatan) return null;
+  // Jangan gandakan bila jawatan sudah menyebut bahagian.
+  if (!bahagian || jawatan.toLowerCase().includes(bahagian.toLowerCase())) return jawatan;
+  return jawatan + ' - ' + bahagian;
+}

@@ -19,8 +19,15 @@ import { useMemberAccess, useUsrahAccess } from '@/lib/department-access';
 import { toMalayError } from '@/lib/errors';
 import { fetchMemberBusinesses, saveMemberBusinesses } from '@/lib/member-businesses';
 import { fetchMemberEducation, saveMemberEducation } from '@/lib/member-education';
-import { deleteMemberAccount, fetchGenerations, fetchMember, fetchMembersForPicker, updateMember } from '@/lib/members';
+import {
+  deleteMemberAccount,
+  fetchGenerations,
+  fetchMember,
+  fetchMembersForPicker,
+  updateMember,
+} from '@/lib/members';
 import { useGoBack } from '@/lib/navigation';
+import { fetchOrgChart, jawatanForMember } from '@/lib/org-chart';
 import { toWhatsAppNumber } from '@/lib/phone';
 import { usePermissions } from '@/lib/permissions';
 import { fetchAllSchools } from '@/lib/schools';
@@ -76,6 +83,7 @@ export function AhliDetailView({
   const [schools, setSchools] = useState<School[]>([]);
   const [education, setEducation] = useState<MemberEducation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [jawatan, setJawatan] = useState<string | null>(null);
   const [banner, setBanner] = useState<Banner>(null);
   const [saving, setSaving] = useState(false);
   /** Dinaikkan selepas setiap simpanan berjaya untuk memaksa borang dibina semula. */
@@ -102,6 +110,14 @@ export function AhliDetailView({
           if (active) setSpouseCandidates(candidates);
         } catch {
           if (active) setSpouseCandidates([]);
+        }
+
+        // Jawatan daripada carta organisasi — kegagalan hanya bermakna baris jawatan tidak dipaparkan.
+        try {
+          const chart = await fetchOrgChart();
+          if (active) setJawatan(jawatanForMember(chart, id));
+        } catch {
+          if (active) setJawatan(null);
         }
 
         // Sama falsafah: tab Perniagaan mula kosong jika gagal, bukan menyekat rekod.
@@ -336,6 +352,7 @@ export function AhliDetailView({
             /* Panel Admin sentiasa berurusan dengan kolum keahlian; yang
              menentukan sama ada ia boleh disunting ialah `readOnly` di bawah. */
             canEditAdminColumns
+            jawatan={jawatan}
             readOnly={!canEdit}
             busy={saving}
             headerNote={<SelfUpdateAdminNote value={member.self_updated_at} />}

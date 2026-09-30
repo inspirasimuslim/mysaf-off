@@ -31,7 +31,27 @@ export type RawRow = Record<string, unknown>;
  * `avatar_url` turut ditinggalkan — fail Excel tiada gambar, jadi import tidak
  * sepatutnya menulis kolum itu langsung dan menimpa apa yang mungkin ada.
  */
-export type ParsedMember = Omit<Member, 'id' | 'user_id' | 'avatar_url' | 'self_updated_at'>;
+export type ParsedMember = Omit<
+  Member,
+  | 'id'
+  | 'user_id'
+  | 'avatar_url'
+  | 'self_updated_at'
+  // Sektor + medan Bidang (rombak Pekerjaan) sengaja TIDAK dihantar: fail
+  // Excel tiada kod itu, dan menghantar `null` akan menimpa pilihan borang
+  // pada setiap muat naik semula (upsert menulis setiap kunci yang ada).
+  | 'sektor_pekerjaan'
+  | 'bidang_kerajaan'
+  | 'bidang_kerajaan_lain_teks'
+  | 'kumpulan_bidang_swasta'
+  | 'bidang_khusus_swasta'
+  | 'bidang_khusus_swasta_lain_teks'
+  | 'jenis_kerja_sendiri'
+  | 'bidang_kerja_sendiri_lain_teks'
+  | 'bidang_pekerjaan_lama'
+  // Jawapan Baitul Muslim diisi ahli dalam borang — tiada dalam fail Excel.
+  | 'cenderung_baitul_muslim'
+>;
 
 export type ImportIssueLevel = 'ralat' | 'amaran';
 
@@ -163,7 +183,15 @@ export function toStatusPekerjaan(value: unknown): StatusPekerjaan | null {
   return null;
 }
 
-const PENDAPATAN_RANGES: readonly string[] = ['<1000', '1000-2999', '3000-4999', '5000-9999', '10000+'];
+const PENDAPATAN_RANGES: readonly string[] = [
+  '<1000',
+  '1000-2999',
+  '3000-4999',
+  '5000-9999',
+  '10000-14999',
+  '15000-19999',
+  '20000+',
+];
 
 /** Nombor pendapatan mentah → julat. Nilai <= 0 dianggap tiada maklumat. */
 export function toPendapatanRange(value: unknown): PendapatanRange | null {
@@ -171,7 +199,7 @@ export function toPendapatanRange(value: unknown): PendapatanRange | null {
     Nilai yang sudah berbentuk julat diterima apa adanya. Fail eksport menulis
     julat seperti tersimpan ('3000-4999'); tanpa semakan ini `int()` membuang
     sengkang dan membacanya sebagai 30004999, jadi setiap ahli yang dieksport
-    dan dimuat naik semula akan melompat ke '10000+'.
+    dan dimuat naik semula akan melompat ke bracket teratas.
   */
   const raw = text(value);
   if (raw !== null && PENDAPATAN_RANGES.includes(raw)) return raw as PendapatanRange;
@@ -183,7 +211,9 @@ export function toPendapatanRange(value: unknown): PendapatanRange | null {
   if (amount < 3000) return '1000-2999';
   if (amount < 5000) return '3000-4999';
   if (amount < 10000) return '5000-9999';
-  return '10000+';
+  if (amount < 15000) return '10000-14999';
+  if (amount < 20000) return '15000-19999';
+  return '20000+';
 }
 
 // =============================================================================
@@ -253,9 +283,7 @@ function mapRow(raw: RawRow): ParsedMember {
 
     // --- Pekerjaan ---
     status_pekerjaan: statusPekerjaan,
-    // Sektor kini chip terhad (kerajaan/swasta/separuh_kerajaan_glc); fail
-    // Excel tidak membawa kod itu, jadi tidak dipetakan oleh import.
-    sektor_pekerjaan: null,
+    // `sektor_pekerjaan` + medan Bidang tiada di sini — lihat `ParsedMember`.
     jawatan_pekerjaan: text(raw.JawatanPekerjaan),
     nama_majikan: text(raw.NamaMajikanSyarikat),
     // Negeri tempat kerja BAHARU — fail Excel tiada lajur ini, diisi kemudian dalam borang.
@@ -265,12 +293,11 @@ function mapRow(raw: RawRow): ParsedMember {
     // --- Keluarga ---
     status_perkahwinan: toStatusPerkahwinan(raw.StatusPerkahwinan),
     nama_pasangan: text(raw.NyatakanJikaMBM),
-    // Fail Excel tidak membawa pautan pasangan atau nama anak — kedua-duanya
+    // Fail Excel tidak membawa pautan pasangan — kedua-duanya
     // diisi kemudian dalam borang profil, bukan oleh import.
     spouse_member_id: null,
     tahun_berkahwin: text(raw.TahunBerkahwin),
     bil_anak: int(raw.BilAnak),
-    nama_anak: null,
     // "Pernah Berkahwin" dan sebabnya ialah konsep BAHARU — fail Excel lama
     // tiada isyarat untuknya, diisi kemudian dalam borang.
     sebab_bercerai_kematian: null,

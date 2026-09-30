@@ -2,18 +2,17 @@ import { Ionicons } from '@expo/vector-icons';
 import { Pressable, Text, View } from 'react-native';
 
 import { BIRTHDAY_GOLD, Colors } from '@/constants/theme';
-import { MONTH_NAMES } from '@/types/database';
 
-/** "hari ini" / "semalam" / "3 hari lalu" dalam seminggu; selepas itu tarikh penuh. */
+const SHORT_MONTHS = ['Jan', 'Feb', 'Mac', 'Apr', 'Mei', 'Jun', 'Jul', 'Ogo', 'Sep', 'Okt', 'Nov', 'Dis'];
+
+/** Tarikh + masa sebenar, contoh "30 Sep 2026, 11:14 AM" (jam 12 jam, waktu peranti). */
 export function formatSelfUpdated(iso: string): string {
   const then = new Date(iso);
-  const startOf = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
-  const days = Math.round((startOf(new Date()) - startOf(then)) / 86_400_000);
-
-  if (days <= 0) return 'hari ini';
-  if (days === 1) return 'semalam';
-  if (days < 7) return `${days} hari lalu`;
-  return `${then.getDate()} ${MONTH_NAMES[then.getMonth()]} ${then.getFullYear()}`;
+  const hours = then.getHours();
+  const hour12 = hours % 12 === 0 ? 12 : hours % 12;
+  const minutes = String(then.getMinutes()).padStart(2, '0');
+  const meridiem = hours < 12 ? 'AM' : 'PM';
+  return `${then.getDate()} ${SHORT_MONTHS[then.getMonth()]} ${then.getFullYear()}, ${hour12}:${minutes} ${meridiem}`;
 }
 
 /*
