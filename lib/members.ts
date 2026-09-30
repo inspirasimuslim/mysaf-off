@@ -242,6 +242,25 @@ export async function edgeMessage(error: unknown, fallback: string): Promise<str
 
 export type ImportProgress = { done: number; total: number };
 
+/** `nombor_ahli` ahli yang sudah berpaut kepada pasangan MBM. */
+async function linkedSpouseNumbers(): Promise<Set<string>> {
+  const found = new Set<string>();
+  const PAGE = 1000;
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await supabase
+      .from('members')
+      .select('nombor_ahli')
+      .not('spouse_member_id', 'is', null)
+      .not('nombor_ahli', 'is', null)
+      .order('nombor_ahli')
+      .range(from, from + PAGE - 1);
+    if (error) throw error;
+    for (const row of data ?? []) found.add(row.nombor_ahli as string);
+    if ((data?.length ?? 0) < PAGE) break;
+  }
+  return found;
+}
+
 /**
  * Masukkan baris yang telah diterjemah ke dalam `members`.
  *
@@ -254,12 +273,29 @@ export async function importMembers(
   onProgress?: (progress: ImportProgress) => void,
 ): Promise<number> {
   let done = 0;
+  const linked = await linkedSpouseNumbers();
 
   for (let index = 0; index < members.length; index += INSERT_CHUNK) {
     const chunk = members.slice(index, index + INSERT_CHUNK);
 
-    const { error } = await supabase.from('members').upsert(chunk, { onConflict: 'nombor_ahli' });
-    if (error) throw error;
+    /*
+      Ahli yang sudah berpaut kepada pasangan MBM (`spouse_member_id`) TIDAK
+      dihantar `nama_pasangan`: mana satu medan terisi menentukan MBM/Bukan MBM,
+      dan menulis nama teks di sebelah pautan akan mengelirukan (serta melanggar
+      `sync_spouse_link`). Upsert PostgREST menulis SEMUA kunci yang ada pada
+      kumpulan — kunci yang tiada pada satu baris menjadi null — jadi dua
+      kumpulan dihantar berasingan, bukan satu kumpulan bercampur.
+    */
+    const unlinked = chunk.filter((member) => !member.nombor_ahli || !linked.has(member.nombor_ahli));
+    const withLink = chunk
+      .filter((member) => member.nombor_ahli && linked.has(member.nombor_ahli))
+      .map(({ nama_pasangan: _skip, ...rest }) => rest);
+
+    for (const batch of [unlinked, withLink]) {
+      if (!batch.length) continue;
+      const { error } = await supabase.from('members').upsert(batch, { onConflict: 'nombor_ahli' });
+      if (error) throw error;
+    }
 
     done += chunk.length;
     onProgress?.({ done, total: members.length });

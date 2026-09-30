@@ -54,6 +54,12 @@ export type ParsedMember = Omit<
   // Pautan pasangan MBM hanya diubah melalui borang ahli/admin — import Excel
   // tidak pernah menyentuhnya (menghantar `null` akan memutuskan pautan dua hala).
   | 'spouse_member_id'
+  // Diisi/dipilih dalam borang sahaja — fail Excel tiada lajurnya, dan menghantar
+  // `null` akan menimpa nilai borang pada setiap muat naik semula.
+  | 'nama_panggilan'
+  | 'sekolah_id'
+  | 'negeri_tempat_kerja'
+  | 'sebab_bercerai_kematian'
 >;
 
 export type ImportIssueLevel = 'ralat' | 'amaran';
@@ -259,7 +265,6 @@ function mapRow(raw: RawRow): ParsedMember {
     nombor_ahli: memberNumber(raw.NomborAhli),
     generasi: toGenerationCode(raw.Generasi),
     full_name: text(raw.UserName) ?? '',
-    nama_panggilan: null,
     jantina: text(raw.Jantina),
     nric: text(raw.Nric),
     email: text(raw.Email),
@@ -282,32 +287,27 @@ function mapRow(raw: RawRow): ParsedMember {
     no_keahlian_pas: noKeahlianPas,
 
     // --- Pendidikan ---
-    // `sekolah` (teks bebas Excel) tidak dipetakan kepada `sekolah_id` — nama
-    // sekolah lama tidak boleh dipadan dengan selamat kepada FK `schools`
-    // baharu (senarai itu diurus admin, bukan diterbitkan daripada teks
-    // bebas). Peringkat selepas SPM (`member_education`) juga BUKAN diisi
-    // oleh import — ia table berasingan, diisi kemudian dalam borang.
-    sekolah_id: null,
+    // `sekolah` (teks bebas Excel) tidak dipetakan kepada `sekolah_id` — lihat
+    // `ParsedMember`; nama lama tidak boleh dipadan dengan selamat kepada FK
+    // `schools`. Peringkat selepas SPM (`member_education`) juga BUKAN diisi
+    // oleh import — table berasingan, diisi dalam borang.
 
     // --- Pekerjaan ---
     status_pekerjaan: statusPekerjaan,
     // `sektor_pekerjaan` + medan Bidang tiada di sini — lihat `ParsedMember`.
     jawatan_pekerjaan: text(raw.JawatanPekerjaan),
     nama_majikan: text(raw.NamaMajikanSyarikat),
-    // Negeri tempat kerja BAHARU — fail Excel tiada lajur ini, diisi kemudian dalam borang.
-    negeri_tempat_kerja: null,
     anggaran_pendapatan_range: toPendapatanRange(raw.AnggaranPendapatan),
 
     // --- Keluarga ---
     status_perkahwinan: toStatusPerkahwinan(raw.StatusPerkahwinan),
+    // Ahli yang sudah berpaut (`spouse_member_id`) tidak dihantar medan ini —
+    // ditapis dalam `importMembers` (perlu semak DB).
     nama_pasangan: text(raw.NyatakanJikaMBM),
     // `spouse_member_id` tiada di sini — lihat `ParsedMember`; pautan pasangan
     // diurus dalam borang profil sahaja.
     tahun_berkahwin: text(raw.TahunBerkahwin),
     bil_anak: int(raw.BilAnak),
-    // "Pernah Berkahwin" dan sebabnya ialah konsep BAHARU — fail Excel lama
-    // tiada isyarat untuknya, diisi kemudian dalam borang.
-    sebab_bercerai_kematian: null,
   };
 }
 
