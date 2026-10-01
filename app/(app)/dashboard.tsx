@@ -38,9 +38,6 @@ type Banner = { tone: 'positive' | 'info' | 'negative'; message: string } | null
 /** Lebar poster carousel di desktop; tinggi mengikut nisbah 3:4 dalam `PosterCarousel`. */
 const DESK_POSTER_WIDTH = 176;
 
-/** Tinggi band desktop (Yuran | PIPIS | carousel iklan). */
-const DESK_BAND_HEIGHT = 190;
-
 /**
  * Desktop: bungkus seksyen dalam kad putih bersempadan nipis supaya bahagian grid
  * terpisah jelas. Mobile: tiada pembungkus — pokok komponen sama seperti dahulu.
@@ -194,9 +191,6 @@ export default function DashboardScreen() {
     posterUrl: row.poster_url,
   }));
 
-  const openBusinessAd = (id: string) => router.push({ pathname: '/(app)/bisnes-info', params: { id } });
-  const seeAllBusinesses = () => router.push('/(app)/bisnes-ahli');
-
   return (
     <Screen padTop={false} wide>
       <ScreenHeader
@@ -236,47 +230,29 @@ export default function DashboardScreen() {
         {banner ? <ToastBanner tone={banner.tone} message={banner.message} /> : null}
 
         {/*
-          Desktop: satu band di atas merentas kedua-dua lajur — Yuran | PIPIS |
-          carousel iklan, setinggi sama (stretch). Carousel tidak mengambil ruang
-          bila tiada iklan aktif, jadi dua kad mengisi band penuh tanpa lubang.
-        */}
-        {desktop ? (
-          <View className="flex-row items-stretch gap-5" style={{ height: DESK_BAND_HEIGHT }}>
-            <YuranCard summary={yuran} onPress={() => router.push('/(app)/yuran')} />
-            <PipisCard summary={pipis} onPress={() => router.push('/(app)/pipis')} />
-            {businessAds.length ? (
-              <View style={{ flex: 2.2, minWidth: 0 }}>
-                <BusinessAdCarousel variant="band" ads={businessAds} onPress={openBusinessAd} onSeeAll={seeAllBusinesses} />
-              </View>
-            ) : null}
-          </View>
-        ) : null}
-
-        {/*
-          Satu set komponen, dua susun atur. Telefon: satu lajur menegak.
-          Desktop: dua lajur — kiri (lebih lebar) untuk status peribadi, kanan
-          untuk kandungan poster.
+          Satu set komponen, dua susun atur. Telefon: satu lajur menegak (sama
+          seperti dahulu). Desktop: dua lajur — kiri (lebih lebar) untuk status
+          peribadi, kanan untuk kandungan poster.
         */}
         <View className={desktop ? 'flex-row items-start gap-6' : 'gap-8'}>
           <View className={desktop ? 'gap-6' : 'gap-8'} style={desktop ? { flex: 3, minWidth: 0 } : undefined}>
             {/*
-              Telefon: dua kad separuh lebar (jarak 20px supaya jelas dua kad
-              berasingan), kemudian carousel iklan sebagai baris sendiri di
-              bawahnya — tepi kiri/kanan sama dengan kad. Yuran ialah satu-satunya
-              perkara di skrin ini yang menuntut tindakan daripada ahli, jadi ia
-              di kiri; PIPIS melaporkan sumbangan yang sudah dibuat.
+              Dua kad separuh lebar. Yuran ialah satu-satunya perkara di skrin ini
+              yang menuntut tindakan daripada ahli, jadi ia mengambil tempat kiri —
+              di mana mata jatuh dahulu — dan PIPIS di sebelahnya melaporkan
+              sumbangan yang sudah dibuat, bukan sesuatu yang perlu dilangsaikan.
             */}
-            {desktop ? null : (
-              <>
-                <View className="flex-row gap-5" style={{ minHeight: 104 }}>
-                  <YuranCard summary={yuran} onPress={() => router.push('/(app)/yuran')} />
-                  <PipisCard summary={pipis} onPress={() => router.push('/(app)/pipis')} />
-                </View>
+            <View className="flex-row gap-4" style={desktop ? { minHeight: 168 } : undefined}>
+              <YuranCard summary={yuran} onPress={() => router.push('/(app)/yuran')} />
+              <PipisCard summary={pipis} onPress={() => router.push('/(app)/pipis')} />
+            </View>
 
-                {/* Tiada iklan aktif -> komponen ini tidak memaparkan apa-apa langsung. */}
-                <BusinessAdCarousel ads={businessAds} onPress={openBusinessAd} onSeeAll={seeAllBusinesses} />
-              </>
-            )}
+            {/* Tiada iklan aktif -> komponen ini tidak memaparkan apa-apa langsung. */}
+            <BusinessAdCarousel
+              ads={businessAds}
+              onPress={(id) => router.push({ pathname: '/(app)/bisnes-info', params: { id } })}
+              onSeeAll={() => router.push('/(app)/bisnes-ahli')}
+            />
 
             <UsrahStrip userId={user?.id ?? null} />
 
@@ -565,6 +541,9 @@ const PIPIS_GRADIENT = ['#A8E6CF', '#56C596'] as const;
 const PIPIS_BAR = ['#2E9E63', '#0F5132'] as const;
 const PIPIS_INK = '#0B3D2A';
 
+/** Yuran tahunan tetap — label rujukan pada kad sahaja, bukan sumber pengiraan. */
+const YURAN_TAHUNAN_LABEL = 'RM30';
+
 const SOFT_SHADOW: TextStyle = {
   textShadowColor: 'rgba(0,0,0,0.18)',
   textShadowOffset: { width: 0, height: 1 },
@@ -596,7 +575,7 @@ function GradientStatCard({
   icon: ReactNode;
   iconColor: string;
   title: string;
-  subtitle?: string;
+  subtitle: string;
   ink: string;
   shadow?: boolean;
   accessibilityLabel: string;
@@ -615,7 +594,7 @@ function GradientStatCard({
         colors={colors}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={{ flex: 1, minHeight: 104, borderRadius: 20, padding: 12 }}>
+        style={{ flex: 1, minHeight: 96, borderRadius: 20, padding: 10 }}>
         <View className="flex-row items-start gap-2">
           <View
             className="h-8 w-8 items-center justify-center rounded-xl"
@@ -627,11 +606,9 @@ function GradientStatCard({
             <Text className="text-[13px] font-bold" style={[{ color: ink }, textShadow]} numberOfLines={2}>
               {title}
             </Text>
-            {subtitle ? (
-              <Text className="text-[11px]" style={[{ color: ink, opacity: 0.8 }, textShadow]} numberOfLines={1}>
-                {subtitle}
-              </Text>
-            ) : null}
+            <Text className="text-[11px]" style={[{ color: ink, opacity: 0.8 }, textShadow]} numberOfLines={1}>
+              {subtitle}
+            </Text>
           </View>
 
           <View
@@ -664,6 +641,7 @@ function YuranCard({ summary, onPress }: { summary: YuranSummary | null; onPress
       icon={<Ionicons name="calendar-outline" size={16} color={colors[1]} />}
       iconColor="#FFFFFF"
       title="Yuran Tahunan"
+      subtitle={YURAN_TAHUNAN_LABEL}
       ink="#FFFFFF"
       shadow
       accessibilityLabel="Status yuran"
@@ -709,6 +687,7 @@ function PipisCard({ summary, onPress }: { summary: PipisSummary | null; onPress
       icon={<MaterialCommunityIcons name="sprout" size={16} color={PIPIS_BAR[1]} />}
       iconColor={PIPIS_INK}
       title="PIPIS ASET"
+      subtitle="Jumlah Kutipan"
       ink={PIPIS_INK}
       accessibilityLabel="Sumbangan PIPIS ASET"
       onPress={onPress}>
