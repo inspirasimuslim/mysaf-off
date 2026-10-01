@@ -34,6 +34,19 @@ export async function pickImage(aspect?: [number, number]): Promise<string | nul
   return result.assets[0]?.uri ?? null;
 }
 
+/** Ambil gambar dengan kamera (peranti sahaja). `null` bermakna pengguna membatalkan. */
+export async function takePhoto(): Promise<string | null> {
+  const permission = await ImagePicker.requestCameraPermissionsAsync();
+  if (!permission.granted) {
+    throw new ImageUploadError('Kebenaran kamera diperlukan untuk mengambil gambar.');
+  }
+
+  const result = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 1 });
+
+  if (result.canceled || !result.assets.length) return null;
+  return result.assets[0]?.uri ?? null;
+}
+
 /**
  * Sama seperti `pickImage`, tetapi benarkan pilih BERBILANG gambar sekali gus
  * — untuk Album Gambar Event, bukan avatar/poster (yang kekal satu gambar,

@@ -32,6 +32,11 @@ export default function ArkibHubScreen() {
           onPress={() => router.push('/(app)/document-library')}
         />
         <HubButton
+          icon="storefront-outline"
+          title="Bisnes Ahli"
+          onPress={() => router.push('/(app)/bisnes-ahli')}
+        />
+        <HubButton
           icon="chatbubble-ellipses-outline"
           title="Maklum Balas"
           onPress={() => router.push('/(app)/maklum-balas')}

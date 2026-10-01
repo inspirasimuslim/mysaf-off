@@ -4,6 +4,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Animated, Easing, Platform, Pressable, Text, View, type TextStyle } from 'react-native';
 
+import { BusinessAdCarousel } from '@/components/business-ad-carousel';
 import { PosterCarousel, type PosterItem } from '@/components/poster-carousel';
 import { BIRTHDAY_GOLD, RANK_GOLD } from '@/constants/theme';
 import { ScreenHeader } from '@/components/screen-header';
@@ -16,6 +17,7 @@ import { fetchMyActivityRank, type MyActivityRank } from '@/lib/activity-rank';
 import { useAndroidExitPrompt } from '@/lib/android-back';
 import { fetchVisibleAnnouncements } from '@/lib/announcements';
 import { displayName, useAuth } from '@/lib/auth-context';
+import { fetchActiveBusinessAds, type ActiveBusinessAd } from '@/lib/business-ads';
 import { fetchBirthdaysToday, type BirthdayToday } from '@/lib/birthdays';
 import { fetchMyMemberLinked } from '@/lib/members';
 import {
@@ -62,6 +64,7 @@ export default function DashboardScreen() {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [yuran, setYuran] = useState<YuranSummary | null>(null);
   const [pipis, setPipis] = useState<PipisSummary | null>(null);
+  const [businessAds, setBusinessAds] = useState<ActiveBusinessAd[]>([]);
   const [profile, setProfile] = useState<{ fullName: string; greetingName: string; avatarUrl: string | null } | null>(null);
   const [birthdays, setBirthdays] = useState<BirthdayToday[]>([]);
   const [rank, setRank] = useState<MyActivityRank | null>(null);
@@ -113,6 +116,16 @@ export default function DashboardScreen() {
           if (active) setRank(row);
         } catch {
           if (active) setRank(null);
+        }
+      })();
+
+      // Gagal -> carousel tersembunyi (sama seperti bahagian lain di skrin ini).
+      void (async () => {
+        try {
+          const rows = await fetchActiveBusinessAds();
+          if (active) setBusinessAds(rows);
+        } catch {
+          if (active) setBusinessAds([]);
         }
       })();
 
@@ -233,6 +246,13 @@ export default function DashboardScreen() {
               <YuranCard summary={yuran} onPress={() => router.push('/(app)/yuran')} />
               <PipisCard summary={pipis} onPress={() => router.push('/(app)/pipis')} />
             </View>
+
+            {/* Tiada iklan aktif -> komponen ini tidak memaparkan apa-apa langsung. */}
+            <BusinessAdCarousel
+              ads={businessAds}
+              onPress={(id) => router.push({ pathname: '/(app)/bisnes-info', params: { id } })}
+              onSeeAll={() => router.push('/(app)/bisnes-ahli')}
+            />
 
             <UsrahStrip userId={user?.id ?? null} />
 

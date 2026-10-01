@@ -35,6 +35,9 @@ const PARENT: Record<string, string> = {
   'hari-jadi-bulan': 'dashboard',
   'event-info': 'dashboard',
   'announcement-info': 'dashboard',
+  'bisnes-ahli': 'dashboard',
+  'bisnes-upload': 'dashboard',
+  'bisnes-info': 'dashboard',
 };
 
 /**

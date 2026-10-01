@@ -313,6 +313,9 @@ function AppGate() {
       <Tabs.Screen name="event-info" options={{ href: null }} />
       <Tabs.Screen name="event-album" options={{ href: null }} />
       <Tabs.Screen name="announcement-info" options={{ href: null }} />
+      <Tabs.Screen name="bisnes-ahli" options={{ href: null }} />
+      <Tabs.Screen name="bisnes-upload" options={{ href: null }} />
+      <Tabs.Screen name="bisnes-info" options={{ href: null }} />
     </Tabs>
   );
 

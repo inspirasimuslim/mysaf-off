@@ -479,7 +479,7 @@ export default function AdminHubScreen() {
           <CollapsibleSection
             variant="plain"
             title="Ekonomi & Aset"
-            count={2}
+            count={3}
             defaultOpen={openByDefault}>
             <ActionRow
               icon="business-outline"
@@ -497,6 +497,18 @@ export default function AdminHubScreen() {
               title="Statistik PIPIS"
               subtitle="Kutipan mengikut bulan dan generasi, terkumpul vs baki"
               onPress={() => router.push('/(app)/admin/statistik-pipis')}
+            />
+
+            {/* Iklan perniagaan ahli — department yang sama (LAJNAH EKONOMI DAN ASET). */}
+            <ActionRow
+              icon="storefront-outline"
+              title="Iklan Perniagaan"
+              subtitle={
+                pipisAccess.canEdit
+                  ? 'Semak, lulus atau tolak iklan bisnes yang dihantar ahli'
+                  : 'Lihat iklan bisnes yang menunggu semakan (paparan sahaja)'
+              }
+              onPress={() => router.push('/(app)/admin/semakan-iklan')}
             />
           </CollapsibleSection>
         ) : null}
