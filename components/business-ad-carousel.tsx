@@ -16,10 +16,16 @@ import type { ActiveBusinessAd } from '@/lib/business-ads';
 const SLIDE_MS = 3000;
 /** Selepas pengguna menyeret/menekan titik, auto-slide berhenti sebentar. */
 const PAUSE_AFTER_TOUCH_MS = 6000;
-/** Nisbah tinggi/lebar sebuah slaid (16:10) — pita, bukan poster penuh; poster penuh ada di skrin Detail. */
-const ASPECT = 0.625;
+/** Nisbah tinggi/lebar slaid 16:9 (poster landscape); poster penuh ada di skrin Detail. */
+const ASPECT = 9 / 16;
 
 type Props = {
+  /**
+   * `row` (lalai, telefon): tajuk + slaid 16:9 + titik, baris sendiri.
+   * `band` (desktop): mengisi tinggi induk (band stretch); pautan dan titik
+   * dilapiskan di atas poster supaya tinggi tidak bertambah.
+   */
+  variant?: 'row' | 'band';
   ads: ActiveBusinessAd[];
   onPress: (id: string) => void;
   onSeeAll: () => void;
@@ -33,9 +39,11 @@ type Props = {
  * kosong), sama seperti `PosterCarousel`. Susunan datang daripada
  * `list_active_business_ads()` (paling lama dilulus dahulu).
  */
-export function BusinessAdCarousel({ ads, onPress, onSeeAll }: Props) {
+export function BusinessAdCarousel({ ads, onPress, onSeeAll, variant = 'row' }: Props) {
+  const band = variant === 'band';
   const scrollRef = useRef<ScrollView>(null);
   const [width, setWidth] = useState(0);
+  const [boxHeight, setBoxHeight] = useState(0);
   const [index, setIndex] = useState(0);
   const [pausedUntil, setPausedUntil] = useState(0);
 
@@ -75,19 +83,55 @@ export function BusinessAdCarousel({ ads, onPress, onSeeAll }: Props) {
 
   if (count === 0) return null;
 
-  return (
-    <View>
-      <View className="mb-3 flex-row items-center justify-between">
-        <Text className="text-base font-bold text-ink">Bisnes Ahli</Text>
-        <Pressable accessibilityRole="button" onPress={onSeeAll} hitSlop={8} className="active:opacity-60">
-          <Text className="text-sm font-semibold text-primary">Lihat Semua Bisnes</Text>
-        </Pressable>
+  const slideHeight = band ? boxHeight : Math.round(width * ASPECT);
+
+  const dots =
+    count > 1 ? (
+      <View
+        className={`flex-row items-center justify-center gap-2 ${band ? '' : 'mt-3'}`}
+        style={band ? { position: 'absolute', left: 0, right: 0, bottom: 44 } : undefined}
+        pointerEvents="box-none">
+        {ads.map((ad, i) => (
+          <Pressable
+            key={ad.id}
+            accessibilityRole="button"
+            accessibilityLabel={'Poster ' + (i + 1)}
+            hitSlop={8}
+            onPress={() => {
+              pause();
+              goTo(i);
+            }}>
+            <View
+              style={{
+                width: i === index ? 18 : 8,
+                height: 8,
+                borderRadius: 4,
+                backgroundColor: i === index ? Colors.primary : band ? 'rgba(255,255,255,0.8)' : Colors.line,
+              }}
+            />
+          </Pressable>
+        ))}
       </View>
+    ) : null;
+
+  return (
+    <View style={band ? { flex: 1 } : undefined}>
+      {band ? null : (
+        <View className="mb-3 flex-row items-center justify-between">
+          <Text className="text-base font-bold text-ink">Bisnes Ahli</Text>
+          <Pressable accessibilityRole="button" onPress={onSeeAll} hitSlop={8} className="active:opacity-60">
+            <Text className="text-sm font-semibold text-primary">Lihat Semua Bisnes</Text>
+          </Pressable>
+        </View>
+      )}
 
       <View
-        onLayout={(event) => setWidth(Math.round(event.nativeEvent.layout.width))}
-        style={{ borderRadius: 16, overflow: 'hidden' }}>
-        {width > 0 ? (
+        onLayout={(event) => {
+          setWidth(Math.round(event.nativeEvent.layout.width));
+          setBoxHeight(Math.round(event.nativeEvent.layout.height));
+        }}
+        style={{ borderRadius: 20, overflow: 'hidden', ...(band ? { flex: 1 } : null) }}>
+        {width > 0 && slideHeight > 0 ? (
           <ScrollView
             ref={scrollRef}
             horizontal
@@ -102,11 +146,11 @@ export function BusinessAdCarousel({ ads, onPress, onSeeAll }: Props) {
                 accessibilityRole="button"
                 accessibilityLabel={ad.nama_bisnes}
                 onPress={() => onPress(ad.id)}
-                style={{ width, height: Math.round(width * ASPECT) }}
+                style={{ width, height: slideHeight }}
                 className="active:opacity-80">
                 <Image
                   source={{ uri: ad.url_poster }}
-                  style={{ width, height: Math.round(width * ASPECT) }}
+                  style={{ width, height: slideHeight }}
                   contentFit="cover"
                   transition={150}
                   accessibilityLabel={'Poster ' + ad.nama_bisnes}
@@ -122,32 +166,21 @@ export function BusinessAdCarousel({ ads, onPress, onSeeAll }: Props) {
             ))}
           </ScrollView>
         ) : null}
+
+        {band ? (
+          <Pressable
+            accessibilityRole="button"
+            onPress={onSeeAll}
+            hitSlop={8}
+            style={{ position: 'absolute', top: 8, right: 8, backgroundColor: 'rgba(0,0,0,0.5)' }}
+            className="rounded-pill px-3 py-1 active:opacity-70">
+            <Text className="text-xs font-semibold text-white">Lihat Semua Bisnes</Text>
+          </Pressable>
+        ) : null}
+        {band ? dots : null}
       </View>
 
-      {count > 1 ? (
-        <View className="mt-3 flex-row items-center justify-center gap-2">
-          {ads.map((ad, i) => (
-            <Pressable
-              key={ad.id}
-              accessibilityRole="button"
-              accessibilityLabel={'Poster ' + (i + 1)}
-              hitSlop={8}
-              onPress={() => {
-                pause();
-                goTo(i);
-              }}>
-              <View
-                style={{
-                  width: i === index ? 18 : 8,
-                  height: 8,
-                  borderRadius: 4,
-                  backgroundColor: i === index ? Colors.primary : Colors.line,
-                }}
-              />
-            </Pressable>
-          ))}
-        </View>
-      ) : null}
+      {band ? null : dots}
     </View>
   );
 }
