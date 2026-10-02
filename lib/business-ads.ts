@@ -104,6 +104,30 @@ export async function fetchPendingBusinessAds(): Promise<PendingBusinessAd[]> {
   return (data as PendingBusinessAd[] | null) ?? [];
 }
 
+export type AdminBusinessAd = {
+  id: string;
+  member_id: string;
+  nama_pemilik: string;
+  no_keahlian: string | null;
+  nama_bisnes: string;
+  url_poster: string;
+  penerangan: string | null;
+  teks_cta: string | null;
+  no_whatsapp: string;
+  status_paparan: BusinessAdStatus;
+  sebab_tolak: string | null;
+  submitted_at: string;
+  tarikh_mula: string | null;
+  tarikh_tamat: string | null;
+};
+
+/** Semua iklan (mana-mana status) — untuk tab "Semua Iklan" admin memadam iklan yang sudah diluluskan/ditolak/tamat. */
+export async function fetchAllBusinessAdsAdmin(): Promise<AdminBusinessAd[]> {
+  const { data, error } = await supabase.rpc('list_all_business_ads_admin');
+  if (error) throw error;
+  return (data as AdminBusinessAd[] | null) ?? [];
+}
+
 /** Iklan milik pemanggil yang masih menggunakan slot (menunggu + aktif). */
 export function countMyActiveAds(rows: DirectoryBusinessAd[]): number {
   return rows.filter((row) => row.is_mine && (row.status_paparan === 'menunggu' || row.status_paparan === 'diluluskan'))
