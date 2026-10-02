@@ -25,7 +25,19 @@
         "googleMaps": {
           "apiKey": "AIzaSyCL-FL_X1opxAHRG8mhXZE2E90Ftk-QPHk"
         }
-      }
+      },
+      "permissions": [
+        "android.permission.USE_BIOMETRIC",
+        "android.permission.USE_FINGERPRINT",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.READ_MEDIA_VISUAL_USER_SELECTED",
+        "android.permission.READ_MEDIA_IMAGES"
+      ]
     },
     "web": {
       "output": "static",
@@ -81,13 +93,22 @@
         {
           "photosPermission": "MySAFF perlu capaian galeri untuk membaca kod QR daripada gambar yang anda pilih.",
           "savePhotosPermission": "MySAFF perlu kebenaran untuk menyimpan kod QR dan gambar ke galeri anda.",
-          "granularPermissions": ["photo"]
+          "granularPermissions": [
+            "photo"
+          ]
         }
       ]
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "5212c1fc-3e32-4621-b563-9c5a507bbb21"
+      }
+    },
+    "owner": "inspirasimuslim"
   }
 }
