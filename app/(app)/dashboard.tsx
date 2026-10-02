@@ -648,7 +648,7 @@ function YuranCard({ summary, onPress }: { summary: YuranSummary | null; onPress
       onPress={onPress}>
       <Text
         className="text-stat-sm font-bold text-white"
-        style={SOFT_SHADOW}
+        style={[SOFT_SHADOW, { marginLeft: -28 }]}
         numberOfLines={1}
         adjustsFontSizeToFit
         minimumFontScale={0.55}>
@@ -709,7 +709,7 @@ function PipisCard({ summary, onPress }: { summary: PipisSummary | null; onPress
       */}
       <Text
         className="text-[26px] font-bold leading-[28px]"
-        style={{ color: PIPIS_INK }}
+        style={{ color: PIPIS_INK, marginLeft: -28 }}
         numberOfLines={1}
         adjustsFontSizeToFit
         minimumFontScale={0.4}>
