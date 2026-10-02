@@ -219,7 +219,7 @@ export default function DashboardScreen() {
         }
       />
 
-      <View className="gap-8 px-gutter pt-6">
+      <View className="gap-8 px-gutter pt-[5px]">
         {banner ? <ToastBanner tone={banner.tone} message={banner.message} /> : null}
 
         {/*
@@ -235,7 +235,7 @@ export default function DashboardScreen() {
               di mana mata jatuh dahulu — dan PIPIS di sebelahnya melaporkan
               sumbangan yang sudah dibuat, bukan sesuatu yang perlu dilangsaikan.
             */}
-            <View className="flex-row gap-4" style={desktop ? { minHeight: 168 } : undefined}>
+            <View className="flex-row gap-[5px]" style={desktop ? { minHeight: 168 } : undefined}>
               <YuranCard summary={yuran} onPress={() => router.push('/(app)/yuran')} />
               <PipisCard summary={pipis} onPress={() => router.push('/(app)/pipis')} />
             </View>
