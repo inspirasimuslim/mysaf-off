@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
@@ -16,6 +17,7 @@ import { SectionTitle } from '@/components/ui/section-title';
 import { DetailPlaceholder, SplitPane } from '@/components/ui/split-pane';
 import { TextField } from '@/components/ui/text-field';
 import { ToastBanner } from '@/components/ui/toast';
+import { Colors } from '@/constants/theme';
 import { useYuranAccess } from '@/lib/department-access';
 import { toMalayError } from '@/lib/errors';
 import { deliveryMessage, type DeliveryMode } from '@/lib/file-delivery';
@@ -311,22 +313,46 @@ export default function YuranListScreen() {
             {canEdit ? (
               <Button
                 label={'Jana Yuran ' + (yearValid ? parsedYear : '')}
+                icon={<Ionicons name="add-circle-outline" size={18} color={Colors.white} />}
                 loading={busy}
                 disabled={busy || !yearValid}
                 onPress={requestGenerate}
               />
             ) : null}
 
-            {canEdit && yearValid && parsedYear >= FIRST_GENERATED_YEAR ? (
-              <Button
-                label={'Batal Penjanaan Yuran ' + parsedYear}
-                variant="danger"
-                size="sm"
-                loading={undoBusy}
-                disabled={busy || undoBusy}
-                onPress={requestUndo}
-              />
+            {/*
+              Dua tindakan admin jarang-guna (undo & setup sekali-sahaja)
+              dipasangkan sebaris, lebih kecil daripada CTA utama — berat
+              visualnya sepadan dengan kekerapan pakainya.
+            */}
+            {canEdit ? (
+              <View className="flex-row gap-3">
+                {yearValid && parsedYear >= FIRST_GENERATED_YEAR ? (
+                  <View className="flex-1">
+                    <Button
+                      label="Batal Penjanaan"
+                      variant="danger"
+                      size="sm"
+                      icon={<Ionicons name="arrow-undo-outline" size={16} color={Colors.negative} />}
+                      loading={undoBusy}
+                      disabled={busy || undoBusy}
+                      onPress={requestUndo}
+                    />
+                  </View>
+                ) : null}
+                <View className="flex-1">
+                  <Button
+                    label="Import Baki 2025"
+                    variant="secondary"
+                    size="sm"
+                    icon={<Ionicons name="cloud-upload-outline" size={16} color={Colors.ink} />}
+                    onPress={() => router.push('/(app)/admin/yuran-upload')}
+                  />
+                </View>
+              </View>
             ) : null}
+
+            <View className="h-px bg-line" />
 
             {/*
               Eksport ialah bacaan, jadi `can_view` sudah memadai — bendahari
@@ -353,14 +379,6 @@ export default function YuranListScreen() {
             />
           </View>
         </View>
-
-        {canEdit ? (
-          <Button
-            label="Import Baki Permulaan 2025"
-            variant="ghost"
-            onPress={() => router.push('/(app)/admin/yuran-upload')}
-          />
-        ) : null}
 
         <View className="pb-8">
           <SectionTitle title={'Senarai Ahli (' + filtered.length + ')'} />

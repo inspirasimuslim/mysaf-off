@@ -20,14 +20,7 @@ import { displayName, useAuth } from '@/lib/auth-context';
 import { fetchActiveBusinessAds, type ActiveBusinessAd } from '@/lib/business-ads';
 import { fetchBirthdaysToday, type BirthdayToday } from '@/lib/birthdays';
 import { fetchMyMemberLinked } from '@/lib/members';
-import {
-  PIPIS_TARGET,
-  fetchPipisSummary,
-  peratusLabel,
-  ringgitBulat,
-  ringgitPipis,
-  type PipisSummary,
-} from '@/lib/pipis';
+import { fetchPipisSummary, peratusLabel, ringgitPipis, type PipisSummary } from '@/lib/pipis';
 import { useIsDesktop } from '@/lib/use-desktop';
 import { fetchUpcomingEvents } from '@/lib/usrah-events';
 import { fetchYuranSummary, ringgit, type YuranSummary } from '@/lib/yuran';
@@ -541,9 +534,6 @@ const PIPIS_GRADIENT = ['#A8E6CF', '#56C596'] as const;
 const PIPIS_BAR = ['#2E9E63', '#0F5132'] as const;
 const PIPIS_INK = '#0B3D2A';
 
-/** Yuran tahunan tetap — label rujukan pada kad sahaja, bukan sumber pengiraan. */
-const YURAN_TAHUNAN_LABEL = 'RM30';
-
 const SOFT_SHADOW: TextStyle = {
   textShadowColor: 'rgba(0,0,0,0.18)',
   textShadowOffset: { width: 0, height: 1 },
@@ -555,32 +545,41 @@ function ringgitRingkas(amount: number): string {
   return Number.isInteger(amount) ? 'RM' + amount : ringgit(amount);
 }
 
+/** Tinggi tetap kad Yuran/PIPIS — padat, satu baris, muat dalam ruang sempit dashboard. */
+const STAT_CARD_HEIGHT = 50;
+
 /**
- * Rangka bersama dua kad: gradient penuh, kotak ikon, tajuk, chevron.
- * Pressable menjadi pembalut supaya SELURUH kad boleh diketuk.
+ * Rangka bersama dua kad: gradient penuh, satu BARIS — ikon kiri, tajuk+amaun
+ * tengah, status/peratus kanan. Pressable menjadi pembalut supaya SELURUH kad
+ * boleh diketuk.
+ *
+ * Padat secara sengaja pada {@link STAT_CARD_HEIGHT}px: subtitle statik versi
+ * lama ("RM30" / "Jumlah Kutipan") digugurkan — tajuk sudah cukup menjelaskan
+ * kad, dan ruang yang terbuka itu diberi kepada status (Tunggakan/Lunas,
+ * peratus PIPIS) yang lebih berguna pada pandangan pertama.
  */
 function GradientStatCard({
   colors,
   icon,
-  iconColor,
   title,
-  subtitle,
+  amount,
+  amountMinScale = 0.65,
+  rightLabel,
   ink,
   shadow,
   accessibilityLabel,
   onPress,
-  children,
 }: {
   colors: readonly [string, string];
   icon: ReactNode;
-  iconColor: string;
   title: string;
-  subtitle: string;
+  amount: string;
+  amountMinScale?: number;
+  rightLabel: string;
   ink: string;
   shadow?: boolean;
   accessibilityLabel: string;
   onPress: () => void;
-  children: ReactNode;
 }) {
   const textShadow = shadow ? SOFT_SHADOW : undefined;
 
@@ -594,31 +593,45 @@ function GradientStatCard({
         colors={colors}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={{ flex: 1, minHeight: 96, borderRadius: 20, padding: 10 }}>
-        <View className="flex-row items-start gap-2">
-          <View
-            className="h-8 w-8 items-center justify-center rounded-xl"
-            style={{ backgroundColor: 'rgba(255,255,255,0.9)' }}>
-            {icon}
-          </View>
-
-          <View className="flex-1">
-            <Text className="text-[13px] font-bold" style={[{ color: ink }, textShadow]} numberOfLines={2}>
-              {title}
-            </Text>
-            <Text className="text-[11px]" style={[{ color: ink, opacity: 0.8 }, textShadow]} numberOfLines={1}>
-              {subtitle}
-            </Text>
-          </View>
-
-          <View
-            className="h-[22px] w-[22px] items-center justify-center rounded-pill"
-            style={{ backgroundColor: 'rgba(255,255,255,0.35)' }}>
-            <Ionicons name="chevron-forward" size={12} color={iconColor} />
-          </View>
+        style={{
+          height: STAT_CARD_HEIGHT,
+          borderRadius: 14,
+          paddingHorizontal: 10,
+          flexDirection: 'row',
+          alignItems: 'center',
+        }}>
+        <View
+          className="h-[30px] w-[30px] items-center justify-center rounded-xl"
+          style={{ backgroundColor: 'rgba(255,255,255,0.9)' }}>
+          {icon}
         </View>
 
-        <View className="mt-1.5 flex-1 justify-end">{children}</View>
+        <View className="ml-2 flex-1 justify-center">
+          <Text
+            className="text-[9.5px] font-bold leading-[11px]"
+            style={[{ color: ink, opacity: 0.85 }, textShadow]}
+            numberOfLines={1}>
+            {title}
+          </Text>
+          <Text
+            className="text-[16px] font-extrabold leading-[19px]"
+            style={[{ color: ink }, textShadow]}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={amountMinScale}>
+            {amount}
+          </Text>
+        </View>
+
+        <View className="ml-1.5 flex-row items-center gap-0.5">
+          <Text
+            className="text-[9.5px] font-bold"
+            style={[{ color: ink, opacity: 0.9 }, textShadow]}
+            numberOfLines={1}>
+            {rightLabel}
+          </Text>
+          <Ionicons name="chevron-forward" size={11} color={ink} style={{ opacity: 0.7 }} />
+        </View>
       </LinearGradient>
     </Pressable>
   );
@@ -627,9 +640,9 @@ function GradientStatCard({
 /**
  * Status yuran — gradient merah jambu bila ada tunggakan, hijau bila lunas.
  *
- * Keadaan "belum dibaca" memaparkan em dash di atas gradient kelabu dan BUKAN
- * sifar. Sifar bermakna "anda tidak berhutang", dan itu jawapan yang tidak
- * boleh diberikan sebelum bacaan selesai.
+ * Keadaan "belum dibaca" memaparkan em dash dan BUKAN sifar. Sifar bermakna
+ * "anda tidak berhutang", dan itu jawapan yang tidak boleh diberikan sebelum
+ * bacaan selesai.
  */
 function YuranCard({ summary, onPress }: { summary: YuranSummary | null; onPress: () => void }) {
   const settled = summary !== null && summary.tertunggak === 0;
@@ -638,105 +651,45 @@ function YuranCard({ summary, onPress }: { summary: YuranSummary | null; onPress
   return (
     <GradientStatCard
       colors={colors}
-      icon={<Ionicons name="calendar-outline" size={16} color={colors[1]} />}
-      iconColor="#FFFFFF"
+      icon={<Ionicons name="calendar-outline" size={15} color={colors[1]} />}
       title="Yuran Tahunan"
-      subtitle={YURAN_TAHUNAN_LABEL}
+      amount={summary === null ? '—' : settled ? 'RM0' : ringgitRingkas(summary.tertunggak)}
       ink="#FFFFFF"
       shadow
+      rightLabel={
+        summary === null ? '' : settled ? (summary.kredit > 0 ? 'Kredit' : 'Lunas') : 'Tunggakan'
+      }
       accessibilityLabel="Status yuran"
-      onPress={onPress}>
-      <Text
-        className="text-stat-sm font-bold text-white"
-        style={[SOFT_SHADOW, { marginLeft: -28 }]}
-        numberOfLines={1}
-        adjustsFontSizeToFit
-        minimumFontScale={0.55}>
-        {summary === null ? '—' : settled ? 'RM0' : ringgitRingkas(summary.tertunggak)}
-      </Text>
-      <Text className="text-[10px] font-semibold text-white" style={SOFT_SHADOW} numberOfLines={1}>
-        {summary === null
-          ? 'Memuatkan'
-          : settled
-            ? summary.kredit > 0
-              ? 'Lunas · Kredit ' + ringgitRingkas(summary.kredit)
-              : 'Lunas'
-            : 'Tunggakan'}
-      </Text>
-    </GradientStatCard>
+      onPress={onPress}
+    />
   );
 }
 
 /**
- * Sumbangan PIPIS ASET — amaun, bar kemajuan dan peratus daripada sasaran.
+ * Sumbangan PIPIS ASET — amaun dan peratus daripada sasaran di kanan.
  *
- * Bar dihadkan pada 100% lebar kerana sumbangan tiada siling: bar yang
- * melimpah keluar kad kelihatan rosak. Peratus SEBENAR (boleh melebihi 100%)
- * tetap dipapar sebagai teks di sebelahnya, jadi tiada maklumat hilang.
+ * Bar kemajuan versi lama digugurkan pada ketinggian padat ini (tiada ruang
+ * untuk dilukis dengan kemas); peratus SEBENAR tetap dipaparkan sebagai teks
+ * supaya tiada maklumat hilang, hanya bentuknya yang berubah.
  *
- * Keadaan "belum dibaca" memaparkan em dash dan bar kosong, BUKAN RM0 / 0% —
- * sifar bermakna "anda belum menyumbang", dan itu jawapan yang tidak boleh
- * diberikan sebelum bacaan selesai.
+ * Keadaan "belum dibaca" memaparkan em dash dan BUKAN RM0/0% — sifar bermakna
+ * "anda belum menyumbang", dan itu jawapan yang tidak boleh diberikan sebelum
+ * bacaan selesai.
  */
 function PipisCard({ summary, onPress }: { summary: PipisSummary | null; onPress: () => void }) {
-  const fill = summary === null ? 0 : Math.max(0, Math.min(summary.peratus, 100));
-
   return (
     <GradientStatCard
       colors={PIPIS_GRADIENT}
-      icon={<MaterialCommunityIcons name="sprout" size={16} color={PIPIS_BAR[1]} />}
-      iconColor={PIPIS_INK}
+      icon={<MaterialCommunityIcons name="sprout" size={15} color={PIPIS_BAR[1]} />}
       title="PIPIS ASET"
-      subtitle="Jumlah Kutipan"
+      // Sen dikekalkan ('RM1,437.40') — skala minimum lebih rendah daripada
+      // kad Yuran kerana angka di sini biasanya beberapa aksara lebih panjang.
+      amount={summary === null ? '—' : ringgitPipis(summary.jumlah)}
+      amountMinScale={0.5}
       ink={PIPIS_INK}
+      rightLabel={summary === null ? '' : peratusLabel(summary.peratus)}
       accessibilityLabel="Sumbangan PIPIS ASET"
-      onPress={onPress}>
-      {/*
-        Sen DIKEKALKAN, dan saiz font yang mengalah. Membundarkan 'RM1,437.40'
-        kepada 'RM1,437' menyembunyikan wang sebenar yang telah disumbangkan;
-        `adjustsFontSizeToFit` menyelesaikan masalah ruang tanpa menyembunyikan
-        apa-apa. Skala minimum lebih rendah daripada kad Yuran kerana angka di
-        sini tiga aksara lebih panjang.
-      */}
-      {/*
-        Dua piksel lebih kecil daripada nombor kad Yuran, dan itu disengajakan.
-        `adjustsFontSizeToFit` TIDAK dilaksanakan oleh react-native-web — di web
-        teks yang terlalu panjang dipotong dengan elipsis dan bukan dikecilkan.
-        'RM1,437.40' memerlukan 157px pada 28px sedangkan kad hanya memberi
-        147px, jadi saiz asasnya diturunkan sehingga ia muat tanpa bergantung
-        pada ciri yang hanya wujud pada telefon. Prop itu dikekalkan untuk
-        jumlah luar biasa panjang di iOS dan Android.
-      */}
-      <Text
-        className="text-[26px] font-bold leading-[28px]"
-        style={{ color: PIPIS_INK, marginLeft: -28 }}
-        numberOfLines={1}
-        adjustsFontSizeToFit
-        minimumFontScale={0.4}>
-        {summary === null ? '—' : ringgitPipis(summary.jumlah)}
-      </Text>
-
-      <View className="mt-1.5 flex-row items-center gap-1.5">
-        <View
-          className="h-1.5 flex-1 overflow-hidden rounded-pill"
-          style={{ backgroundColor: 'rgba(255,255,255,0.55)' }}>
-          {fill > 0 ? (
-            <LinearGradient
-              colors={PIPIS_BAR}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={{ width: `${fill}%`, height: '100%', borderRadius: 999 }}
-            />
-          ) : null}
-        </View>
-        <Text className="text-[10px] font-bold" style={{ color: PIPIS_INK }}>
-          {summary === null ? '—' : peratusLabel(summary.peratus)}
-        </Text>
-      </View>
-
-      <Text className="mt-0.5 text-[10px]" style={{ color: PIPIS_INK, opacity: 0.8 }} numberOfLines={1}>
-        {'Sasaran ' + ringgitBulat(summary?.sasaran ?? PIPIS_TARGET)}
-      </Text>
-    </GradientStatCard>
+      onPress={onPress}
+    />
   );
 }
