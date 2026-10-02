@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { CellText, DataTable } from '@/components/ui/data-table';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { EmptyState } from '@/components/ui/empty-state';
 import { LoadingScreen } from '@/components/ui/loading-screen';
 import { Screen } from '@/components/ui/screen';
@@ -22,7 +23,13 @@ import { useGoBack } from '@/lib/navigation';
 import { useIsDesktop } from '@/lib/use-desktop';
 import { downloadYuranTransactions } from '@/lib/transactions-report';
 import { downloadYuranReport } from '@/lib/yuran-report';
-import { fetchYuranReport, generateYuranYear, ringgit, type YuranReportRow } from '@/lib/yuran';
+import {
+  fetchYuranReport,
+  generateYuranYear,
+  ringgit,
+  undoGenerateYuranYear,
+  type YuranReportRow,
+} from '@/lib/yuran';
 import { generationLabel } from '@/types/database';
 
 import { YuranDetailView } from './yuran-detail';
@@ -67,6 +74,13 @@ export default function YuranListScreen() {
   const [busy, setBusy] = useState(false);
   const [exporting, setExporting] = useState<DeliveryMode | null>(null);
   const [exportingTrx, setExportingTrx] = useState<DeliveryMode | null>(null);
+
+  // Jana yuran menjejaskan SEMUA ahli dan sukar dibatalkan sepenuhnya selepas
+  // ada bayaran — dua pengesahan berturutan sebelum RPC sebenar dipanggil.
+  const [confirmStage, setConfirmStage] = useState<'none' | 'first' | 'second'>('none');
+  // Undo: hanya padam rekod yang tiada bayaran (lihat `undoGenerateYuranYear`).
+  const [undoConfirming, setUndoConfirming] = useState(false);
+  const [undoBusy, setUndoBusy] = useState(false);
 
   const parsedYear = Number.parseInt(year, 10);
   const yearValid = Number.isFinite(parsedYear) && parsedYear >= 2000 && parsedYear <= 2100;
@@ -116,7 +130,13 @@ export default function YuranListScreen() {
     [rows],
   );
 
-  const generate = useCallback(async () => {
+  // Pratonton sebelum jana: berapa ahli yang BELUM ada rekod tahun ini
+  // (caj_tahun === 0) berbanding yang sudah ada — dikira daripada `rows` yang
+  // sudah dimuatkan untuk `parsedYear`, tanpa RPC tambahan.
+  const pendingCount = useMemo(() => rows.filter((row) => row.caj_tahun === 0).length, [rows]);
+  const alreadyCount = rows.length - pendingCount;
+
+  const requestGenerate = useCallback(() => {
     if (busy || !yearValid) return;
 
     if (parsedYear < FIRST_GENERATED_YEAR) {
@@ -128,6 +148,11 @@ export default function YuranListScreen() {
     }
 
     setBanner(null);
+    setConfirmStage('first');
+  }, [busy, parsedYear, yearValid]);
+
+  const generate = useCallback(async () => {
+    setConfirmStage('none');
     setBusy(true);
     try {
       const created = await generateYuranYear(parsedYear);
@@ -144,7 +169,42 @@ export default function YuranListScreen() {
     } finally {
       setBusy(false);
     }
-  }, [busy, load, parsedYear, yearValid]);
+  }, [load, parsedYear]);
+
+  const requestUndo = useCallback(() => {
+    if (busy || undoBusy || !yearValid || parsedYear < FIRST_GENERATED_YEAR) return;
+    setBanner(null);
+    setUndoConfirming(true);
+  }, [busy, parsedYear, undoBusy, yearValid]);
+
+  const undoGenerate = useCallback(async () => {
+    setUndoConfirming(false);
+    setUndoBusy(true);
+    try {
+      const { dipadam, dikekalkan } = await undoGenerateYuranYear(parsedYear);
+      setBanner({
+        tone: dipadam > 0 ? 'positive' : 'info',
+        message:
+          dipadam > 0
+            ? 'Rekod yuran ' +
+              parsedYear +
+              ' dibatalkan untuk ' +
+              dipadam +
+              ' ahli.' +
+              (dikekalkan > 0
+                ? ' ' + dikekalkan + ' ahli lain sudah ada bayaran — rekod itu dikekalkan.'
+                : '')
+            : dikekalkan > 0
+              ? 'Tiada yang boleh dibatalkan — semua ' + dikekalkan + ' rekod tahun ' + parsedYear + ' sudah ada bayaran.'
+              : 'Tiada rekod yuran ' + parsedYear + ' untuk dibatalkan.',
+      });
+      await load(parsedYear);
+    } catch (caught) {
+      setBanner({ tone: 'negative', message: toMalayError(caught, 'Gagal membatalkan penjanaan yuran.') });
+    } finally {
+      setUndoBusy(false);
+    }
+  }, [load, parsedYear]);
 
   const exportReport = useCallback(
     async (mode: DeliveryMode) => {
@@ -224,6 +284,7 @@ export default function YuranListScreen() {
   );
 
   const body = (
+    <>
       <View className={desktop ? 'gap-6 px-4 pb-8 pt-4' : 'gap-6 px-gutter pt-6'}>
         {banner ? <ToastBanner tone={banner.tone} message={banner.message} /> : null}
 
@@ -252,7 +313,18 @@ export default function YuranListScreen() {
                 label={'Jana Yuran ' + (yearValid ? parsedYear : '')}
                 loading={busy}
                 disabled={busy || !yearValid}
-                onPress={() => void generate()}
+                onPress={requestGenerate}
+              />
+            ) : null}
+
+            {canEdit && yearValid && parsedYear >= FIRST_GENERATED_YEAR ? (
+              <Button
+                label={'Batal Penjanaan Yuran ' + parsedYear}
+                variant="danger"
+                size="sm"
+                loading={undoBusy}
+                disabled={busy || undoBusy}
+                onPress={requestUndo}
               />
             ) : null}
 
@@ -374,6 +446,57 @@ export default function YuranListScreen() {
           )}
         </View>
       </View>
+
+      <ConfirmDialog
+        visible={confirmStage === 'first'}
+        title={'Jana Yuran ' + parsedYear + '?'}
+        message={
+          'Ini akan cipta caj RM30 untuk ' +
+          pendingCount +
+          ' ahli yang belum ada rekod yuran tahun ' +
+          parsedYear +
+          '.' +
+          (alreadyCount > 0
+            ? ' ' + alreadyCount + ' ahli lain sudah ada rekod tahun ini dan tidak akan disentuh.'
+            : '')
+        }
+        confirmLabel="Teruskan"
+        onConfirm={() => setConfirmStage('second')}
+        onCancel={() => setConfirmStage('none')}
+      />
+
+      <ConfirmDialog
+        visible={confirmStage === 'second'}
+        title="Sahkan sekali lagi"
+        message={
+          'Tindakan ini melibatkan ' +
+          rows.length +
+          ' ahli dan SUKAR dibatalkan sepenuhnya selepas ahli mula membuat bayaran (lihat butang "Batal Penjanaan" — ia hanya boleh buang rekod yang belum ada bayaran). Teruskan jana yuran ' +
+          parsedYear +
+          ' sekarang?'
+        }
+        confirmLabel="Jana Sekarang"
+        destructive
+        busy={busy}
+        onConfirm={() => void generate()}
+        onCancel={() => setConfirmStage('none')}
+      />
+
+      <ConfirmDialog
+        visible={undoConfirming}
+        title={'Batalkan penjanaan yuran ' + parsedYear + '?'}
+        message={
+          'Ini memadam rekod caj RM30 tahun ' +
+          parsedYear +
+          ' bagi ahli yang BELUM membuat sebarang bayaran. Ahli yang sudah bayar (termasuk bayaran online) tidak akan disentuh.'
+        }
+        confirmLabel="Batalkan"
+        destructive
+        busy={undoBusy}
+        onConfirm={() => void undoGenerate()}
+        onCancel={() => setUndoConfirming(false)}
+      />
+    </>
   );
 
   if (desktop) {

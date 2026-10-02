@@ -117,6 +117,29 @@ export async function generateYuranYear(year: number): Promise<number> {
   return toNumber(data);
 }
 
+export type UndoGenerateYuranResult = {
+  /** Rekod yang berjaya dipadam — tiada bayaran, jadi selamat dibuang. */
+  dipadam: number;
+  /** Rekod yang DIKEKALKAN sebab sudah ada bayaran — tidak disentuh. */
+  dikekalkan: number;
+};
+
+/**
+ * Batalkan penjanaan yuran tahun tertentu — hanya rekod yang TIADA sebarang
+ * bayaran dipadam. Rekod yang sudah ada bayaran dikekalkan (lihat
+ * migration `undo_generate_yuran_year`) dan dikira dalam `dikekalkan`.
+ */
+export async function undoGenerateYuranYear(year: number): Promise<UndoGenerateYuranResult> {
+  const { data, error } = await supabase.rpc('undo_generate_yuran_year', { p_year: year });
+  if (error) throw new Error(error.message);
+
+  const row = ((data as { dipadam: unknown; dikekalkan: unknown }[] | null) ?? [])[0];
+  return {
+    dipadam: toNumber(row?.dipadam),
+    dikekalkan: toNumber(row?.dikekalkan),
+  };
+}
+
 export type ManualAdjustmentInput = {
   memberId: string;
   year: number;
