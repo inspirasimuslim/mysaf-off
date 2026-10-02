@@ -1,18 +1,19 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Linking, Text, View } from 'react-native';
 
 import { ScreenHeader } from '@/components/screen-header';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { EmptyState } from '@/components/ui/empty-state';
 import { LoadingScreen } from '@/components/ui/loading-screen';
 import { Notice } from '@/components/ui/notice';
 import { Screen } from '@/components/ui/screen';
 import { Colors } from '@/constants/theme';
-import { fetchBusinessAd, type BusinessAdDetail } from '@/lib/business-ads';
+import { businessAdError, deleteBusinessAd, fetchBusinessAd, type BusinessAdDetail } from '@/lib/business-ads';
 import { useGoBack } from '@/lib/navigation';
 import { toWhatsAppNumber } from '@/lib/phone';
 
@@ -25,12 +26,17 @@ import { toWhatsAppNumber } from '@/lib/phone';
  * tidak terpotong (sama seperti skrin Pengumuman).
  */
 export default function BisnesInfoScreen() {
+  const router = useRouter();
   const goBack = useGoBack();
   const { id } = useLocalSearchParams<{ id?: string }>();
 
   const [ad, setAd] = useState<BusinessAdDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [linkError, setLinkError] = useState<string | null>(null);
+
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) {
@@ -77,6 +83,19 @@ export default function BisnesInfoScreen() {
     if (!whatsApp) return;
     setLinkError(null);
     Linking.openURL('https://wa.me/' + whatsApp).catch(() => setLinkError('WhatsApp tidak dapat dibuka pada peranti ini.'));
+  };
+
+  const confirmDelete = async () => {
+    if (deleting) return;
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      await deleteBusinessAd(ad.id);
+      router.replace('/(app)/bisnes-ahli');
+    } catch (caught) {
+      setDeleteError(businessAdError(caught, 'Gagal memadam iklan. Sila cuba lagi.'));
+      setDeleting(false);
+    }
   };
 
   return (
@@ -127,7 +146,30 @@ export default function BisnesInfoScreen() {
             onPress={contact}
           />
         ) : null}
+
+        {ad.is_mine ? (
+          <>
+            {deleteError ? <Notice tone="negative" message={deleteError} /> : null}
+            <Button
+              label="Padam Iklan"
+              variant="danger"
+              icon={<Ionicons name="trash-outline" size={18} color={Colors.negative} />}
+              onPress={() => setConfirmingDelete(true)}
+            />
+          </>
+        ) : null}
       </View>
+
+      <ConfirmDialog
+        visible={confirmingDelete}
+        title="Padam iklan ini?"
+        message={'Iklan "' + ad.nama_bisnes + '" akan dipadam kekal, termasuk poster. Tindakan ini tidak boleh diundur.'}
+        confirmLabel="Padam"
+        destructive
+        busy={deleting}
+        onConfirm={() => void confirmDelete()}
+        onCancel={() => setConfirmingDelete(false)}
+      />
     </Screen>
   );
 }

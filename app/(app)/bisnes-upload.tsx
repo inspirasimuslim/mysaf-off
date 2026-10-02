@@ -1,6 +1,6 @@
 import { Image } from 'expo-image';
-import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
 import { Platform, View } from 'react-native';
 
 import { ScreenHeader } from '@/components/screen-header';
@@ -71,6 +71,20 @@ export default function BisnesUploadScreen() {
       active = false;
     };
   }, [user?.id]);
+
+  // Skrin ini boleh kekal dalam stack navigasi dan difokus semula (cth. ahli
+  // menghantar iklan pertama, `router.replace` ke Bisnes Ahli, kemudian tekan
+  // "Upload Bisnes" semula) — reset borang setiap kali difokus supaya tiada
+  // gambar/teks daripada iklan pertama tertinggal pada iklan kedua.
+  useFocusEffect(
+    useCallback(() => {
+      setPosterUri(null);
+      setNama('');
+      setPenerangan('');
+      setCta('');
+      setError(null);
+    }, []),
+  );
 
   const choose = async (source: 'galeri' | 'kamera') => {
     setError(null);

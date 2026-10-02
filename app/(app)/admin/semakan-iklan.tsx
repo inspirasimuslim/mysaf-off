@@ -6,6 +6,7 @@ import { NoAccessScreen } from '@/components/no-access';
 import { ScreenHeader } from '@/components/screen-header';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { EmptyState } from '@/components/ui/empty-state';
 import { LoadingScreen } from '@/components/ui/loading-screen';
 import { Notice } from '@/components/ui/notice';
@@ -14,6 +15,7 @@ import { TextField } from '@/components/ui/text-field';
 import { ToastBanner } from '@/components/ui/toast';
 import {
   businessAdError,
+  deleteBusinessAd,
   fetchPendingBusinessAds,
   reviewBusinessAd,
   type PendingBusinessAd,
@@ -49,6 +51,11 @@ export default function SemakanIklanScreen() {
   const [sebab, setSebab] = useState('');
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+
+  // Padam terus — berasingan daripada aliran Lulus/Tolak di atas.
+  const [deleteTarget, setDeleteTarget] = useState<PendingBusinessAd | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -96,6 +103,22 @@ export default function SemakanIklanScreen() {
       setActionError(businessAdError(caught, 'Gagal menyimpan keputusan.'));
     } finally {
       setBusy(false);
+    }
+  };
+
+  const confirmDeleteAd = async () => {
+    if (!deleteTarget || deleting) return;
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      await deleteBusinessAd(deleteTarget.id);
+      setBanner('Iklan "' + deleteTarget.nama_bisnes + '" dipadam.');
+      setDeleteTarget(null);
+      await load();
+    } catch (caught) {
+      setDeleteError(businessAdError(caught, 'Gagal memadam iklan.'));
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -158,6 +181,10 @@ export default function SemakanIklanScreen() {
               </View>
             ) : null}
 
+            {canEdit && openId !== ad.id ? (
+              <Button label="Padam Terus" size="sm" variant="ghost" onPress={() => setDeleteTarget(ad)} />
+            ) : null}
+
             {canEdit && openId === ad.id ? (
               <View className="gap-3">
                 {mode === 'lulus' ? (
@@ -198,6 +225,27 @@ export default function SemakanIklanScreen() {
           </Card>
         ))}
       </View>
+
+      {deleteError ? (
+        <View className="px-gutter pb-4">
+          <Notice tone="negative" message={deleteError} />
+        </View>
+      ) : null}
+
+      <ConfirmDialog
+        visible={deleteTarget !== null}
+        title="Padam iklan ini?"
+        message={
+          deleteTarget
+            ? 'Iklan "' + deleteTarget.nama_bisnes + '" (' + deleteTarget.nama_pemilik + ') akan dipadam kekal, termasuk poster.'
+            : ''
+        }
+        confirmLabel="Padam"
+        destructive
+        busy={deleting}
+        onConfirm={() => void confirmDeleteAd()}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </Screen>
   );
 }

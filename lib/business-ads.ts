@@ -138,6 +138,12 @@ export async function submitBusinessAd(input: SubmitBusinessAdInput): Promise<vo
   if (error) throw error;
 }
 
+/** Pemilik (mana-mana status) atau admin Lajnah Ekonomi (can_review_business_ads()) sahaja. */
+export async function deleteBusinessAd(id: string): Promise<void> {
+  const { error } = await supabase.rpc('delete_business_ad', { p_ad_id: id });
+  if (error) throw error;
+}
+
 export async function reviewBusinessAd(
   id: string,
   decision: { keputusan: 'diluluskan'; durasiHari: number } | { keputusan: 'ditolak'; sebab: string },
