@@ -138,10 +138,26 @@ export async function submitBusinessAd(input: SubmitBusinessAdInput): Promise<vo
   if (error) throw error;
 }
 
-/** Pemilik (mana-mana status) atau admin Lajnah Ekonomi (can_review_business_ads()) sahaja. */
+/**
+ * Pemilik (mana-mana status) atau admin Lajnah Ekonomi (can_review_business_ads())
+ * sahaja. RPC memadam baris DB dan memulangkan `url_poster`; fail storage
+ * dipadam DI SINI melalui Storage API (Supabase menyekat DELETE terus pada
+ * `storage.objects` melalui SQL) — kegagalan pemadaman fail ditelan senyap
+ * sebab baris DB sudah berjaya dipadam (fail tertinggal tidak berbahaya).
+ */
 export async function deleteBusinessAd(id: string): Promise<void> {
-  const { error } = await supabase.rpc('delete_business_ad', { p_ad_id: id });
+  const { data, error } = await supabase.rpc('delete_business_ad', { p_ad_id: id });
   if (error) throw error;
+
+  const urlPoster = typeof data === 'string' ? data : null;
+  const fileName = urlPoster?.split('/' + BUCKET + '/')[1]?.split('?')[0];
+  if (fileName) {
+    try {
+      await supabase.storage.from(BUCKET).remove([fileName]);
+    } catch {
+      // Baris DB sudah dipadam; fail anak yatim di storage bukan masalah kritikal.
+    }
+  }
 }
 
 export async function reviewBusinessAd(
