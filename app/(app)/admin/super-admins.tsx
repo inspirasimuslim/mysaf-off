@@ -227,6 +227,7 @@ export default function SuperAdminsScreen() {
           onChangeText={setSearch}
           autoCapitalize="none"
           autoCorrect={false}
+          topAnchored
         />
 
         {candidates.length === 0 ? (

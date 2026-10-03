@@ -1,9 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Colors } from '@/constants/theme';
+import { KeyboardAwareProvider, useKeyboardAware } from '@/lib/keyboard-aware';
 import { generationLabel, type MemberPickerRow } from '@/types/database';
 
 import { TextField } from './text-field';
@@ -38,6 +39,16 @@ export function MemberPickerField({
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const insets = useSafeAreaInsets();
+  const rootRef = useRef<View>(null);
+  const scrollRef = useRef<ScrollView>(null);
+  /*
+    Modal ini sebelum ini TIDAK mengurus papan kekunci langsung — helaian
+    diam di bawah skrin, papan kekunci menindih bahagian bawahnya terus
+    (termasuk senarai keputusan carian). Sama corak `FormModal`: tindihan
+    diukur pada akar skrin penuh, dikenakan sebagai padding di situ supaya
+    helaian naik di atas papan kekunci.
+  */
+  const keyboard = useKeyboardAware(scrollRef, rootRef);
 
   const selected = candidates.find((candidate) => candidate.id === value) ?? null;
   const borderClass = error ? 'border-negative' : open ? 'border-primary' : 'border-line';
@@ -76,7 +87,7 @@ export function MemberPickerField({
       {error ? <Text className="text-sm text-negative">{error}</Text> : null}
 
       <Modal visible={open} animationType="slide" transparent onRequestClose={() => setOpen(false)}>
-        <View className="flex-1 justify-end bg-black/40">
+        <View ref={rootRef} className="flex-1 justify-end bg-black/40" style={{ paddingBottom: keyboard.inset }}>
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Tutup"
@@ -85,49 +96,63 @@ export function MemberPickerField({
           />
 
           <View
-            className="w-full self-center rounded-t-[28px] bg-background px-gutter pt-6"
-            style={{ maxWidth: MAX_SHEET_WIDTH, maxHeight: '80%', paddingBottom: insets.bottom + 24 }}>
-            <View className="mb-4 flex-row items-center gap-4">
-              <Text className="flex-1 text-xl font-bold text-ink">{label}</Text>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Tutup"
-                hitSlop={10}
-                onPress={() => setOpen(false)}
-                className="h-9 w-9 items-center justify-center rounded-pill border border-line bg-surface active:opacity-70">
-                <Ionicons name="close" size={18} color={Colors.ink} />
-              </Pressable>
-            </View>
-
-            <View className="mb-3">
-              <TextField
-                label="Cari"
-                placeholder="Nama ahli"
-                value={search}
-                onChangeText={setSearch}
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
-            </View>
-
-            <ScrollView style={{ flexShrink: 1 }} showsVerticalScrollIndicator={false}>
-              <View className="gap-3 pb-1">
-                <Row label="Tiada" selected={value === null} onPress={() => choose(null)} muted />
-
-                {filtered.map((candidate) => (
-                  <Row
-                    key={candidate.id}
-                    label={candidate.full_name + (candidate.generasi ? ' · ' + generationLabel(candidate.generasi) : '')}
-                    selected={candidate.id === value}
-                    onPress={() => choose(candidate.id)}
-                  />
-                ))}
-
-                {filtered.length === 0 ? (
-                  <Text className="px-1 py-4 text-center text-sm text-ink-faint">Tiada ahli sepadan.</Text>
-                ) : null}
+            style={{ maxHeight: '90%', flexShrink: 1 }}>
+            <View
+              className="w-full self-center rounded-t-[28px] bg-background px-gutter pt-6"
+              style={{ maxWidth: MAX_SHEET_WIDTH, flexShrink: 1, paddingBottom: insets.bottom + 24 }}>
+              <View className="mb-4 flex-row items-center gap-4">
+                <Text className="flex-1 text-xl font-bold text-ink">{label}</Text>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Tutup"
+                  hitSlop={10}
+                  onPress={() => setOpen(false)}
+                  className="h-9 w-9 items-center justify-center rounded-pill border border-line bg-surface active:opacity-70">
+                  <Ionicons name="close" size={18} color={Colors.ink} />
+                </Pressable>
               </View>
-            </ScrollView>
+
+              <ScrollView
+                ref={scrollRef}
+                style={{ flexShrink: 1 }}
+                keyboardShouldPersistTaps="handled"
+                onScroll={keyboard.onScroll}
+                scrollEventThrottle={16}
+                showsVerticalScrollIndicator={false}>
+                <KeyboardAwareProvider value={keyboard.api}>
+                  <View className="mb-3">
+                    <TextField
+                      label="Cari"
+                      placeholder="Nama ahli"
+                      value={search}
+                      onChangeText={setSearch}
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      topAnchored
+                    />
+                  </View>
+
+                  <View className="gap-3 pb-1">
+                    <Row label="Tiada" selected={value === null} onPress={() => choose(null)} muted />
+
+                    {filtered.map((candidate) => (
+                      <Row
+                        key={candidate.id}
+                        label={
+                          candidate.full_name + (candidate.generasi ? ' · ' + generationLabel(candidate.generasi) : '')
+                        }
+                        selected={candidate.id === value}
+                        onPress={() => choose(candidate.id)}
+                      />
+                    ))}
+
+                    {filtered.length === 0 ? (
+                      <Text className="px-1 py-4 text-center text-sm text-ink-faint">Tiada ahli sepadan.</Text>
+                    ) : null}
+                  </View>
+                </KeyboardAwareProvider>
+              </ScrollView>
+            </View>
           </View>
         </View>
       </Modal>

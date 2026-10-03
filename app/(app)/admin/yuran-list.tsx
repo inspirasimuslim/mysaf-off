@@ -391,6 +391,7 @@ export default function YuranListScreen() {
               onChangeText={setSearch}
               autoCapitalize="none"
               autoCorrect={false}
+              topAnchored
             />
           </View>
 

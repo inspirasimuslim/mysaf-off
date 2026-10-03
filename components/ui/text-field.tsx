@@ -12,6 +12,15 @@ type Props = Omit<TextInputProps, 'style' | 'className'> & {
   secure?: boolean;
   /** Rujukan ke TextInput di dalam, supaya induk boleh memindahkan fokus. */
   inputRef?: Ref<TextInput>;
+  /**
+   * Untuk medan CARIAN yang keputusannya terus di bawah medan ini (senarai
+   * ditapis semasa menaip). Bila papan kekunci terbuka, medan ditatal ke ATAS
+   * bekas (bukan ke bawah berdekatan papan kekunci seperti biasa) supaya
+   * ruang antara medan dan papan kekunci dimaksimumkan untuk keputusan itu —
+   * tanpa ini keputusan tersembunyi di belakang papan kekunci. Lihat
+   * `lib/keyboard-aware.tsx`.
+   */
+  topAnchored?: boolean;
 };
 
 export function TextField({
@@ -19,6 +28,7 @@ export function TextField({
   error,
   secure = false,
   inputRef,
+  topAnchored = false,
   onFocus,
   onBlur,
   onContentSizeChange,
@@ -64,7 +74,7 @@ export function TextField({
           {...rest}
           onFocus={(event) => {
             setFocused(true);
-            keyboard?.focus(containerRef.current);
+            keyboard?.focus(containerRef.current, topAnchored ? { anchor: 'top' } : undefined);
             onFocus?.(event);
           }}
           onBlur={(event) => {
@@ -74,7 +84,7 @@ export function TextField({
           }}
           onContentSizeChange={(event) => {
             // Medan multiline membesar semasa menaip — kekalkan bawahnya kelihatan.
-            if (focused && rest.multiline) keyboard?.focus(containerRef.current);
+            if (focused && rest.multiline) keyboard?.focus(containerRef.current, topAnchored ? { anchor: 'top' } : undefined);
             onContentSizeChange?.(event);
           }}
         />

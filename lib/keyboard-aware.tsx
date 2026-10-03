@@ -59,9 +59,31 @@ function measure(node: Measurable | null | undefined): Promise<Frame | null> {
   });
 }
 
+/** Jarak dari atas bekas tatal yang ditatal selepas anchor 'top'. */
+const TOP_MARGIN = 12;
+
+type Anchor = 'top' | 'bottom';
+
+type FocusOptions = {
+  /**
+   * 'bottom' (lalai): tatal secukupnya supaya BAWAH medan kelihatan di atas
+   * papan kekunci — sesuai untuk borang biasa, tiada apa penting di bawah
+   * medan yang sedang ditaip.
+   *
+   * 'top': tatal medan ke ATAS bekas (lepas header/padding), bukan ke bawah
+   * berdekatan papan kekunci — untuk medan CARIAN yang keputusannya terus di
+   * bawah medan itu sendiri. Anchor 'bottom' akan meletakkan medan carian
+   * tepat di atas papan kekunci, menolak kesemua keputusan di bawahnya ke
+   * belakang papan kekunci — punca bug "kena tutup papan kekunci baru nampak
+   * hasil carian". Anchor 'top' sebaliknya memaksimumkan ruang di bawah
+   * medan (antara medan dan papan kekunci) untuk keputusan carian itu.
+   */
+  anchor?: Anchor;
+};
+
 type KeyboardAwareApi = {
   /** Medan difokus (atau membesar): daftar dan tatal jika perlu. */
-  focus: (target: Measurable | null) => void;
+  focus: (target: Measurable | null, options?: FocusOptions) => void;
   /** Medan kehilangan fokus. */
   blur: (target: Measurable | null) => void;
 };
@@ -89,6 +111,7 @@ export function useKeyboardAware(
   const offset = useRef(0);
   const keyboardTop = useRef<number | null>(null);
   const target = useRef<Measurable | null>(null);
+  const anchor = useRef<Anchor>('bottom');
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   const later = useCallback((run: () => void, delay = LAYOUT_DELAY_MS) => {
@@ -102,6 +125,16 @@ export function useKeyboardAware(
 
     const [frame, field] = await Promise.all([measure(scroll), measure(target.current)]);
     if (!frame || !field) return;
+
+    if (anchor.current === 'top') {
+      // Tatal medan ke ATAS bekas supaya ruang ANTARA medan dan papan kekunci
+      // dimaksimumkan untuk keputusan carian di bawahnya — lihat `FocusOptions`.
+      const delta = field.y - (frame.y + TOP_MARGIN);
+      if (Math.abs(delta) > 1) {
+        scroll.scrollTo({ y: Math.max(0, offset.current + delta), animated: true });
+      }
+      return;
+    }
 
     const visibleBottom = Math.min(frame.y + frame.height, top);
     const overflow = field.y + field.height + MARGIN - visibleBottom;
@@ -143,10 +176,11 @@ export function useKeyboardAware(
 
   const api = useMemo<KeyboardAwareApi>(
     () => ({
-      focus: (node) => {
+      focus: (node, options) => {
         if (!node) return;
         const changed = target.current !== node;
         target.current = node;
+        anchor.current = options?.anchor ?? 'bottom';
         if (keyboardTop.current === null) return;
         // Papan kekunci sudah terbuka (bertukar medan, atau multiline membesar).
         if (changed) later(() => void applyInset());

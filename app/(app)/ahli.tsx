@@ -200,6 +200,7 @@ export default function AhliScreen() {
         onChangeText={setSearch}
         autoCapitalize="none"
         autoCorrect={false}
+        topAnchored
       />
     </>
   );

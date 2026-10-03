@@ -59,7 +59,9 @@ export default function AppFeedbackScreen() {
       <View className="gap-3 px-gutter pb-8 pt-6">
         {error ? <Notice tone="negative" message={error} /> : null}
 
-        {rows.length > 5 ? <TextField label="Cari" placeholder="Nama ahli" value={query} onChangeText={setQuery} /> : null}
+        {rows.length > 5 ? (
+          <TextField label="Cari" placeholder="Nama ahli" value={query} onChangeText={setQuery} topAnchored />
+        ) : null}
 
         {filtered.length ? (
           filtered.map((row) => (

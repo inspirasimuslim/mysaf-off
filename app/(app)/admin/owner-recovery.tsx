@@ -157,6 +157,7 @@ export default function OwnerRecoveryScreen() {
                 onChangeText={setQuery}
                 autoCapitalize="none"
                 autoCorrect={false}
+                topAnchored
               />
               <Button
                 label="Cari"

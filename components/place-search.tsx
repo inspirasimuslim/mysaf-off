@@ -85,6 +85,7 @@ export function PlaceSearch({ onSelect, disabled = false }: Props) {
         onChangeText={setQuery}
         editable={!disabled && placesConfigured}
         autoCorrect={false}
+        topAnchored
       />
       {!placesConfigured ? (
         <Text className="text-xs text-ink-muted">Carian tempat belum aktif (kunci Google Maps belum dimasukkan).</Text>

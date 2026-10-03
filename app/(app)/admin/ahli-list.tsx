@@ -216,6 +216,7 @@ export default function AhliListScreen() {
             onChangeText={setSearch}
             autoCapitalize="none"
             autoCorrect={false}
+            topAnchored
           />
 
           <PickerField

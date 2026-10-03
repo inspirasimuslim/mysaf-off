@@ -232,6 +232,7 @@ export default function DocumentLibraryScreen() {
                 onChangeText={setSearch}
                 autoCapitalize="none"
                 returnKeyType="search"
+                topAnchored
               />
               {categories.length > 0 ? (
                 <PickerField

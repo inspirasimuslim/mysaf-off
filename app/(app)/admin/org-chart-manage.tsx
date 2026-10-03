@@ -106,6 +106,7 @@ function MemberSearch({
         autoCapitalize="none"
         autoCorrect={false}
         editable={!disabled}
+        topAnchored
       />
 
       {term.trim() ? (

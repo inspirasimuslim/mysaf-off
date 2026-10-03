@@ -238,6 +238,7 @@ export default function PipisListScreen() {
               onChangeText={setSearch}
               autoCapitalize="none"
               autoCorrect={false}
+              topAnchored
             />
           </View>
 

@@ -230,6 +230,7 @@ export default function ActivityLogScreen() {
             onChangeText={setSearch}
             autoCapitalize="none"
             autoCorrect={false}
+            topAnchored
           />
 
           <PickerField

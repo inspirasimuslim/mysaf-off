@@ -361,6 +361,7 @@ export default function AdminsScreen() {
               onChangeText={setSearch}
               autoCapitalize="none"
               autoCorrect={false}
+              topAnchored
             />
 
             {candidates.length === 0 ? (

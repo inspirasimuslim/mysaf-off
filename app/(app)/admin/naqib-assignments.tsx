@@ -219,6 +219,7 @@ export default function NaqibAssignmentsScreen() {
           onChangeText={setSearch}
           autoCapitalize="none"
           autoCorrect={false}
+          topAnchored
         />
 
         {pickerCandidates.length === 0 ? (

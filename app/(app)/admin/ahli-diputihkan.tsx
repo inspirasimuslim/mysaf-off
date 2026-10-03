@@ -187,6 +187,7 @@ export default function AhliDiputihkanScreen() {
               onChangeText={setSearch}
               autoCapitalize="none"
               autoCorrect={false}
+              topAnchored
             />
           ) : null}
 
