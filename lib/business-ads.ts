@@ -251,6 +251,37 @@ export async function resubmitBusinessAd(id: string, input: SubmitBusinessAdInpu
   if (error) throw error;
 }
 
+export type SubmitBusinessAdAdminInput = SubmitBusinessAdInput & {
+  /** Ahli pemilik dipilih oleh admin — bukan `my_member_id()` pemanggil. */
+  member_id: string;
+  /** Durasi paparan (hari, 1–365) — iklan terus 'diluluskan', tiada langkah Lulus berasingan. */
+  durasi_hari: number;
+};
+
+/**
+ * Admin Lajnah Ekonomi (`can_review_business_ads()`) menghantar iklan BAGI
+ * PIHAK ahli lain (migration 108, diminta 2026-10-03) — TIADA had queue (20)
+ * atau had 3/ahli (unlimited untuk laluan admin ini), dan terus berstatus
+ * 'diluluskan' (admin yang menghantar sudahlah admin yang mengulas). Gambar
+ * yang dimuat naik mesti milik ADMIN sendiri (`uploadBusinessImage` dipanggil
+ * dengan ID admin, bukan ID ahli dipilih) — storage RLS menuntut ini, dan
+ * `submit_business_ad_admin()` mengesahkan perkara sama di sisi DB.
+ */
+export async function submitBusinessAdAdmin(input: SubmitBusinessAdAdminInput): Promise<void> {
+  const { error } = await supabase.rpc('submit_business_ad_admin', {
+    p_member_id: input.member_id,
+    p_nama_bisnes: input.nama_bisnes,
+    p_url_poster: input.url_poster,
+    p_penerangan: input.penerangan,
+    p_teks_cta: input.teks_cta,
+    p_no_whatsapp: input.no_whatsapp,
+    p_durasi_hari: input.durasi_hari,
+    p_url_gambar_2: input.url_gambar_2 ?? null,
+    p_url_gambar_3: input.url_gambar_3 ?? null,
+  });
+  if (error) throw error;
+}
+
 /**
  * Pemilik (mana-mana status) atau admin Lajnah Ekonomi (can_review_business_ads())
  * sahaja. RPC memadam baris DB dan memulangkan SEMUA url gambar bukan-null

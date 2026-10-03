@@ -5,6 +5,7 @@ import { View } from 'react-native';
 import { BusinessAdListRow } from '@/components/business-ad-list-row';
 import { NoAccessScreen } from '@/components/no-access';
 import { ScreenHeader } from '@/components/screen-header';
+import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { EmptyState } from '@/components/ui/empty-state';
 import { LoadingScreen } from '@/components/ui/loading-screen';
@@ -43,6 +44,11 @@ const TAB_OPTIONS: { value: Tab; label: string }[] = [
  *
  * Lihat senarai = `can_view` (`can_view_business_ads_admin()`); tindakan di
  * skrin detail DAN butang Padam di sini = `can_edit` (`can_review_business_ads()`).
+ *
+ * Butang "+ Tambah Iklan" (migration 108, diminta 2026-10-03) — admin
+ * menghantar iklan BAGI PIHAK ahli yang tidak mahir aplikasi; iklan itu
+ * terus aktif dan TIDAK dikira dalam had queue/3-ahli (lihat
+ * `admin/iklan-tambah.tsx`). Sama kebenaran `canEdit` seperti butang Padam.
  */
 export default function SemakanIklanScreen() {
   const router = useRouter();
@@ -120,6 +126,14 @@ export default function SemakanIklanScreen() {
 
       <View className="gap-4 px-gutter pb-8 pt-5">
         <Segmented value={tab} options={TAB_OPTIONS} onChange={setTab} compact />
+
+        {canEdit ? (
+          <Button
+            label="+ Tambah Iklan (Bagi Pihak Ahli)"
+            variant="secondary"
+            onPress={() => router.push('/(app)/admin/iklan-tambah')}
+          />
+        ) : null}
 
         {error ? <Notice tone="negative" message={error} /> : null}
         {deleteError ? <Notice tone="negative" message={deleteError} /> : null}

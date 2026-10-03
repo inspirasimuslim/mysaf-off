@@ -3,6 +3,7 @@ import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { Platform, Text, View } from 'react-native';
 
+import { OptionalImageSlot } from '@/components/business-ad-image-slot';
 import { ScreenHeader } from '@/components/screen-header';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -27,58 +28,6 @@ import { fetchMyMemberLinked } from '@/lib/members';
 import { useGoBack } from '@/lib/navigation';
 import { toWhatsAppNumber } from '@/lib/phone';
 import type { Member } from '@/types/database';
-
-/**
- * Satu slot gambar PILIHAN (2 atau 3) — bebas orientation (keputusan
- * 2026-10-03, bukan seperti Gambar 1/poster yang wajib nisbah tetap), jadi
- * pratonton guna bekas segi empat sama + `contentFit="contain"` (tidak
- * memotong apa-apa orientation) berbanding `aspectRatio` tetap seperti
- * poster. Dikongsi oleh Gambar 2 & Gambar 3 — kedua-dua slot sama rupa,
- * hanya label/state berbeza.
- */
-function OptionalImageSlot({
-  label,
-  previewUri,
-  onChoose,
-  onTakePhoto,
-  onRemove,
-  disabled,
-}: {
-  label: string;
-  previewUri: string | null;
-  onChoose: () => void;
-  onTakePhoto?: () => void;
-  onRemove: () => void;
-  disabled: boolean;
-}) {
-  return (
-    <View className="gap-3 rounded-card border border-line bg-surface p-4">
-      <Text className="text-sm font-semibold text-ink">{label}</Text>
-
-      {previewUri ? (
-        <Image
-          source={{ uri: previewUri }}
-          style={{ width: '100%', aspectRatio: 1, borderRadius: 16 }}
-          contentFit="contain"
-          accessibilityLabel={label}
-        />
-      ) : null}
-
-      <View className="flex-row gap-3">
-        <View className="flex-1">
-          <Button label={previewUri ? 'Tukar' : 'Pilih Gambar'} variant="secondary" onPress={onChoose} disabled={disabled} />
-        </View>
-        {onTakePhoto ? (
-          <View className="flex-1">
-            <Button label="Kamera" variant="secondary" onPress={onTakePhoto} disabled={disabled} />
-          </View>
-        ) : null}
-      </View>
-
-      {previewUri ? <Button label="Buang Gambar Ini" variant="danger" onPress={onRemove} disabled={disabled} /> : null}
-    </View>
-  );
-}
 
 /**
  * Hantar iklan bisnes untuk semakan Lajnah Ekonomi — ATAU sunting & hantar
