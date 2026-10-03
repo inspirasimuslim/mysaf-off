@@ -34,8 +34,8 @@ function items(rank: MyActivityRank): Item[] {
     { label: 'Yuran', done: rank.yuran_lunas },
     { label: 'PIPIS', done: rank.pipis_sumbang },
     { label: 'Usrah ' + rank.usrah_bulan + 'b', done: rank.usrah_bulan > 0 },
-    { label: 'Jawatan Org', done: rank.ada_jawatan_org },
-    { label: 'Jawatan PAS', done: rank.ada_jawatan_pas },
+    { label: 'Komitmen Ikhwan', done: rank.ada_jawatan_org },
+    { label: 'Komitmen PAS', done: rank.ada_jawatan_pas },
   ];
 }
 
