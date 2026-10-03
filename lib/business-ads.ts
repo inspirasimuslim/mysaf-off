@@ -13,6 +13,29 @@ import { supabase } from './supabase';
 
 const BUCKET = 'business-ads';
 
+/**
+ * Pagar keselamatan — pernah berlaku UI admin "jadi loading" selama-lamanya
+ * selepas satu padam berjaya (punca sebenar: senarai dimuat semula SEBELUM
+ * status loading di-reset — lihat `semakan-iklan.tsx`). Had masa di sini
+ * ialah lapisan kedua supaya satu panggilan rangkaian yang tersekat tidak
+ * boleh mengunci UI buat selama-lamanya walau apa jua puncanya.
+ */
+function withTimeout<T>(promise: PromiseLike<T>, ms: number, label: string): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(label + ' mengambil masa terlalu lama. Sila cuba lagi.')), ms);
+    Promise.resolve(promise).then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (err) => {
+        clearTimeout(timer);
+        reject(err);
+      },
+    );
+  });
+}
+
 /** Poster dipapar penuh lebar telefon; 1080px lebih daripada cukup (had bucket 5MB). */
 const POSTER_MAX_WIDTH = 1080;
 
@@ -170,14 +193,18 @@ export async function submitBusinessAd(input: SubmitBusinessAdInput): Promise<vo
  * sebab baris DB sudah berjaya dipadam (fail tertinggal tidak berbahaya).
  */
 export async function deleteBusinessAd(id: string): Promise<void> {
-  const { data, error } = await supabase.rpc('delete_business_ad', { p_ad_id: id });
+  const { data, error } = await withTimeout(
+    supabase.rpc('delete_business_ad', { p_ad_id: id }),
+    15000,
+    'Padam iklan',
+  );
   if (error) throw error;
 
   const urlPoster = typeof data === 'string' ? data : null;
   const fileName = urlPoster?.split('/' + BUCKET + '/')[1]?.split('?')[0];
   if (fileName) {
     try {
-      await supabase.storage.from(BUCKET).remove([fileName]);
+      await withTimeout(supabase.storage.from(BUCKET).remove([fileName]), 8000, 'Padam fail poster');
     } catch {
       // Baris DB sudah dipadam; fail anak yatim di storage bukan masalah kritikal.
     }

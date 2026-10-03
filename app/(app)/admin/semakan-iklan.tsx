@@ -126,7 +126,7 @@ export default function SemakanIklanScreen() {
       await reviewBusinessAd(ad.id, decision);
       setOpenId(null);
       setBanner(mode === 'lulus' ? 'Iklan "' + ad.nama_bisnes + '" diluluskan.' : 'Iklan "' + ad.nama_bisnes + '" ditolak.');
-      await load();
+      void load();
     } catch (caught) {
       setActionError(businessAdError(caught, 'Gagal menyimpan keputusan.'));
     } finally {
@@ -136,13 +136,18 @@ export default function SemakanIklanScreen() {
 
   const confirmDeleteAd = async () => {
     if (!deleteTarget || deleting) return;
+    const target = deleteTarget;
     setDeleting(true);
     setDeleteError(null);
     try {
-      await deleteBusinessAd(deleteTarget.id);
-      setBanner('Iklan "' + deleteTarget.nama_bisnes + '" dipadam.');
+      await deleteBusinessAd(target.id);
+      setBanner('Iklan "' + target.nama_bisnes + '" dipadam.');
       setDeleteTarget(null);
-      await load();
+      // Muat semula senarai BERASINGAN daripada status "deleting" — jika ia
+      // perlahan/tersekat, butang Padam untuk iklan seterusnya tidak patut
+      // terkunci dalam keadaan loading sehingga perlu restart app (bug
+      // dilaporkan 2026-10-03).
+      void load();
     } catch (caught) {
       setDeleteError(businessAdError(caught, 'Gagal memadam iklan.'));
     } finally {
