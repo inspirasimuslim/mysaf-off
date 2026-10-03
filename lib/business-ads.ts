@@ -144,11 +144,18 @@ export type AdminBusinessAd = {
   tarikh_tamat: string | null;
 };
 
-/** Semua iklan (mana-mana status) — untuk tab "Semua Iklan" admin memadam iklan yang sudah diluluskan/ditolak/tamat. */
+/** Semua iklan (mana-mana status) — senarai ringkas admin hub. */
 export async function fetchAllBusinessAdsAdmin(): Promise<AdminBusinessAd[]> {
   const { data, error } = await supabase.rpc('list_all_business_ads_admin');
   if (error) throw error;
   return (data as AdminBusinessAd[] | null) ?? [];
+}
+
+/** Satu iklan, mana-mana status/pemilik — skrin detail admin (admin/iklan-detail.tsx). */
+export async function fetchBusinessAdAdmin(id: string): Promise<AdminBusinessAd | null> {
+  const { data, error } = await supabase.rpc('get_business_ad_admin', { p_ad_id: id });
+  if (error) throw error;
+  return ((data as AdminBusinessAd[] | null) ?? [])[0] ?? null;
 }
 
 /** Iklan milik pemanggil yang masih menggunakan slot (menunggu + aktif). */
@@ -176,6 +183,24 @@ export type SubmitBusinessAdInput = {
 
 export async function submitBusinessAd(input: SubmitBusinessAdInput): Promise<void> {
   const { error } = await supabase.rpc('submit_business_ad', {
+    p_nama_bisnes: input.nama_bisnes,
+    p_url_poster: input.url_poster,
+    p_penerangan: input.penerangan,
+    p_teks_cta: input.teks_cta,
+    p_no_whatsapp: input.no_whatsapp,
+  });
+  if (error) throw error;
+}
+
+/**
+ * Sunting & hantar semula iklan yang DITOLAK — baris sedia ada dikemaskini
+ * (bukan row baharu), status kembali 'menunggu'. Ditolak oleh RPC jika
+ * status bukan 'ditolak' atau bukan milik pemanggil. Iklan DILULUSKAN tidak
+ * boleh disunting — tiada fungsi setara untuk status itu.
+ */
+export async function resubmitBusinessAd(id: string, input: SubmitBusinessAdInput): Promise<void> {
+  const { error } = await supabase.rpc('resubmit_business_ad', {
+    p_ad_id: id,
     p_nama_bisnes: input.nama_bisnes,
     p_url_poster: input.url_poster,
     p_penerangan: input.penerangan,

@@ -150,6 +150,14 @@ export default function BisnesInfoScreen() {
         {ad.is_mine ? (
           <>
             {deleteError ? <Notice tone="negative" message={deleteError} /> : null}
+            {ad.status_paparan === 'ditolak' ? (
+              <Button
+                label="Edit & Hantar Semula"
+                variant="secondary"
+                icon={<Ionicons name="create-outline" size={18} color={Colors.ink} />}
+                onPress={() => router.push({ pathname: '/(app)/bisnes-upload', params: { id: ad.id } })}
+              />
+            ) : null}
             <Button
               label="Padam Iklan"
               variant="danger"
