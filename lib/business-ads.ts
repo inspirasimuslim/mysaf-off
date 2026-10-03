@@ -193,6 +193,20 @@ export function countMyActiveAds(rows: DirectoryBusinessAd[]): number {
 }
 
 /**
+ * Carian no. telefon SATU ahli (migration 109) — untuk pra-isi medan
+ * WhatsApp di `admin/iklan-tambah.tsx` bila admin memilih ahli pemilik.
+ * RPC khusus, disekat `can_review_business_ads()` — bukan `list_members_picker()`
+ * (terbuka semua ahli, tiada no_tel) atau `list_members_directory()` (tiada
+ * `id`, tidak boleh dipadankan). `null` bermaksud ahli tiada no_tel direkod
+ * — medan WhatsApp kekal kosong, admin isi sendiri.
+ */
+export async function fetchMemberPhoneForBusinessAd(memberId: string): Promise<string | null> {
+  const { data, error } = await supabase.rpc('get_member_phone_for_business_ad', { p_member_id: memberId });
+  if (error) throw error;
+  return (data as string | null) ?? null;
+}
+
+/**
  * Muat naik SATU gambar iklan (slot 1/2/3, sama bucket+corak nama) ke
  * `business-ads/<member_id>_<epoch ms>.jpg` — corak nama yang dikuatkuasakan
  * `storage_name_ok()` dan disemak semula oleh `submit_business_ad()` (gambar

@@ -1,9 +1,8 @@
-import { Image } from 'expo-image';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Platform, Text, View } from 'react-native';
+import { View } from 'react-native';
 
-import { OptionalImageSlot } from '@/components/business-ad-image-slot';
+import { ImageUploadRow } from '@/components/business-ad-image-slot';
 import { NoAccessScreen } from '@/components/no-access';
 import { ScreenHeader } from '@/components/screen-header';
 import { Button } from '@/components/ui/button';
@@ -13,9 +12,15 @@ import { Notice } from '@/components/ui/notice';
 import { Screen } from '@/components/ui/screen';
 import { TextField } from '@/components/ui/text-field';
 import { useAuth } from '@/lib/auth-context';
-import { businessAdError, POSTER_ASPECT_RATIO, submitBusinessAdAdmin, uploadBusinessImage } from '@/lib/business-ads';
+import {
+  businessAdError,
+  fetchMemberPhoneForBusinessAd,
+  POSTER_ASPECT_RATIO,
+  submitBusinessAdAdmin,
+  uploadBusinessImage,
+} from '@/lib/business-ads';
 import { EKONOMI_DEPARTMENT, useDepartmentAccess } from '@/lib/department-access';
-import { pickImage, takePhoto } from '@/lib/image-upload';
+import { pickImage } from '@/lib/image-upload';
 import { fetchMembersForPicker, fetchMyMemberLinked } from '@/lib/members';
 import { useGoBack } from '@/lib/navigation';
 import { toWhatsAppNumber } from '@/lib/phone';
@@ -33,6 +38,12 @@ const DEFAULT_DURATION = '30';
  * Gambar dimuat naik bawah ID ADMIN sendiri (bukan ID ahli dipilih) — RLS
  * storage menuntut ini; `submit_business_ad_admin()` mengesahkan perkara
  * sama di sisi DB. Dibuka daripada butang "+ Tambah Iklan" di `semakan-iklan.tsx`.
+ *
+ * Medan WhatsApp (migration 109, susulan 2026-10-03): lalai = no_tel ahli
+ * yang DIPILIH (`get_member_phone_for_business_ad()`, diisi semula setiap
+ * kali `ownerId` bertukar), tetapi medan itu kekal boleh disunting terus —
+ * admin menaip nombor lain (cth. nombor khusus bisnes) menimpanya sebelum
+ * hantar, sama corak prafill nombor sendiri di `bisnes-upload.tsx`.
  */
 export default function AdminIklanTambahScreen() {
   const router = useRouter();
@@ -96,14 +107,27 @@ export default function AdminIklanTambahScreen() {
     }, []),
   );
 
-  const chooseInto = async (source: 'galeri' | 'kamera', setUri: (uri: string) => void) => {
+  const chooseInto = async (setUri: (uri: string) => void) => {
     setError(null);
     try {
-      const uri = source === 'kamera' ? await takePhoto() : await pickImage();
+      const uri = await pickImage();
       if (uri) setUri(uri);
     } catch (caught) {
       setError(businessAdError(caught, 'Gagal memilih gambar.'));
     }
+  };
+
+  const handleOwnerChange = (next: string | null) => {
+    setOwnerId(next);
+    if (!next) return;
+    void (async () => {
+      try {
+        const phone = await fetchMemberPhoneForBusinessAd(next);
+        setWhatsapp(phone ?? '');
+      } catch {
+        // Carian nombor gagal — bukan kritikal, admin boleh taip sendiri.
+      }
+    })();
   };
 
   const submit = async () => {
@@ -180,56 +204,29 @@ export default function AdminIklanTambahScreen() {
           message="Iklan yang dihantar di sini terus berstatus AKTIF (bukan Pending) dan tidak dikira dalam had queue/3-iklan setiap ahli."
         />
 
-        <MemberPickerField label="Ahli Pemilik Bisnes" value={ownerId} candidates={candidates} onChange={setOwnerId} />
+        <MemberPickerField label="Ahli Pemilik Bisnes" value={ownerId} candidates={candidates} onChange={handleOwnerChange} />
 
-        <Text className="text-sm font-semibold text-ink">Gambar 1 — Utama (dipaparkan di Dashboard)</Text>
-
-        {posterUri ? (
-          <Image
-            source={{ uri: posterUri }}
-            style={{ width: '100%', aspectRatio: POSTER_ASPECT_RATIO, borderRadius: 20 }}
-            contentFit="contain"
-            accessibilityLabel="Pratonton poster"
-          />
-        ) : null}
-
+        <ImageUploadRow
+          label="Gambar 1 — Utama (dipaparkan di Dashboard)"
+          previewUri={posterUri}
+          aspectRatio={POSTER_ASPECT_RATIO}
+          onChoose={() => void chooseInto(setPosterUri)}
+          disabled={submitting}
+        />
         <Notice tone="info" message="Reka Gambar 1 pada nisbah 1024×550px (landskap) sebelum dimuat naik." />
 
-        <View className="flex-row gap-3">
-          <View className="flex-1">
-            <Button
-              label={posterUri ? 'Tukar Gambar' : 'Pilih Gambar Utama'}
-              variant="secondary"
-              onPress={() => void chooseInto('galeri', setPosterUri)}
-              disabled={submitting}
-            />
-          </View>
-          {Platform.OS !== 'web' ? (
-            <View className="flex-1">
-              <Button
-                label="Ambil Gambar"
-                variant="secondary"
-                onPress={() => void chooseInto('kamera', setPosterUri)}
-                disabled={submitting}
-              />
-            </View>
-          ) : null}
-        </View>
-
-        <OptionalImageSlot
+        <ImageUploadRow
           label="Gambar 2 — Pilihan (bebas orientation)"
           previewUri={gambar2Uri}
-          onChoose={() => void chooseInto('galeri', setGambar2Uri)}
-          onTakePhoto={Platform.OS !== 'web' ? () => void chooseInto('kamera', setGambar2Uri) : undefined}
+          onChoose={() => void chooseInto(setGambar2Uri)}
           onRemove={() => setGambar2Uri(null)}
           disabled={submitting}
         />
 
-        <OptionalImageSlot
+        <ImageUploadRow
           label="Gambar 3 — Pilihan (bebas orientation)"
           previewUri={gambar3Uri}
-          onChoose={() => void chooseInto('galeri', setGambar3Uri)}
-          onTakePhoto={Platform.OS !== 'web' ? () => void chooseInto('kamera', setGambar3Uri) : undefined}
+          onChoose={() => void chooseInto(setGambar3Uri)}
           onRemove={() => setGambar3Uri(null)}
           disabled={submitting}
         />
@@ -252,7 +249,7 @@ export default function AdminIklanTambahScreen() {
           editable={!submitting}
         />
         <TextField
-          label="No. WhatsApp"
+          label="No. WhatsApp (lalai: nombor ahli dipilih — tukar jika perlu)"
           value={whatsapp}
           onChangeText={setWhatsapp}
           keyboardType="phone-pad"

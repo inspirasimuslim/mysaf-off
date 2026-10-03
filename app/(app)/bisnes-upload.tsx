@@ -1,9 +1,8 @@
-import { Image } from 'expo-image';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Platform, Text, View } from 'react-native';
+import { View } from 'react-native';
 
-import { OptionalImageSlot } from '@/components/business-ad-image-slot';
+import { ImageUploadRow } from '@/components/business-ad-image-slot';
 import { ScreenHeader } from '@/components/screen-header';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -23,7 +22,7 @@ import {
   submitBusinessAd,
   uploadBusinessImage,
 } from '@/lib/business-ads';
-import { pickImage, takePhoto } from '@/lib/image-upload';
+import { pickImage } from '@/lib/image-upload';
 import { fetchMyMemberLinked } from '@/lib/members';
 import { useGoBack } from '@/lib/navigation';
 import { toWhatsAppNumber } from '@/lib/phone';
@@ -39,9 +38,11 @@ import type { Member } from '@/types/database';
  * Iklan" — nisbah tetap `POSTER_ASPECT_RATIO` (1024×550). Gambar 2/3
  * PILIHAN, bebas orientation, hanya dipaparkan dalam galeri skrin detail
  * (`bisnes-info.tsx`/`admin/iklan-detail.tsx`) — TIDAK PERNAH pada
- * dashboard/carousel. Setiap gambar dimuat naik DAHULU ke
- * `business-ads/<member_id>_<epoch>.jpg` (dikecilkan JPEG sebelum muat
- * naik), kemudian `submit_business_ad()`/`resubmit_business_ad()` menyemak
+ * dashboard/carousel. Setiap slot satu baris ringkas (label + butang
+ * "Upload"/"Tukar" sebaris, keputusan 2026-10-03) — kamera DIBUANG kekal,
+ * semua gambar dimuat naik daripada storan/galeri peranti sahaja. Gambar
+ * dimuat naik DAHULU ke `business-ads/<member_id>_<epoch>.jpg` (dikecilkan
+ * JPEG sebelum muat naik), kemudian `submit_business_ad()`/`resubmit_business_ad()` menyemak
  * had dan mencipta/mengemaskini SATU baris dengan ketiga-tiga URL. Jika RPC
  * menolak (queue penuh, had 3/ahli), fail yang sudah dimuat naik tertinggal
  * tanpa baris — sama kesan seperti muat naik lain yang dibatalkan; ahli
@@ -139,10 +140,10 @@ export default function BisnesUploadScreen() {
     }, [id]),
   );
 
-  const chooseInto = async (source: 'galeri' | 'kamera', setUri: (uri: string) => void) => {
+  const chooseInto = async (setUri: (uri: string) => void) => {
     setError(null);
     try {
-      const uri = source === 'kamera' ? await takePhoto() : await pickImage();
+      const uri = await pickImage();
       if (uri) setUri(uri);
     } catch (caught) {
       setError(businessAdError(caught, 'Gagal memilih gambar.'));
@@ -247,45 +248,19 @@ export default function BisnesUploadScreen() {
           />
         )}
 
-        <Text className="text-sm font-semibold text-ink">Gambar 1 — Utama (dipaparkan di Dashboard)</Text>
-
-        {previewUri ? (
-          <Image
-            source={{ uri: previewUri }}
-            style={{ width: '100%', aspectRatio: POSTER_ASPECT_RATIO, borderRadius: 20 }}
-            contentFit="contain"
-            accessibilityLabel="Pratonton poster"
-          />
-        ) : null}
-
+        <ImageUploadRow
+          label="Gambar 1 — Utama (dipaparkan di Dashboard)"
+          previewUri={previewUri}
+          aspectRatio={POSTER_ASPECT_RATIO}
+          onChoose={() => void chooseInto(setPosterUri)}
+          disabled={submitting}
+        />
         <Notice tone="info" message="Reka Gambar 1 pada nisbah 1024×550px (landskap) sebelum dimuat naik — gambar ini sahaja dipaparkan di Dashboard & carousel, jadi kelihatan penuh dan tidak terpotong." />
 
-        <View className="flex-row gap-3">
-          <View className="flex-1">
-            <Button
-              label={previewUri ? 'Tukar Gambar' : 'Pilih Gambar Utama'}
-              variant="secondary"
-              onPress={() => void chooseInto('galeri', setPosterUri)}
-              disabled={submitting}
-            />
-          </View>
-          {Platform.OS !== 'web' ? (
-            <View className="flex-1">
-              <Button
-                label="Ambil Gambar"
-                variant="secondary"
-                onPress={() => void chooseInto('kamera', setPosterUri)}
-                disabled={submitting}
-              />
-            </View>
-          ) : null}
-        </View>
-
-        <OptionalImageSlot
+        <ImageUploadRow
           label="Gambar 2 — Pilihan (bebas orientation)"
           previewUri={gambar2Uri ?? existingGambar2Url}
-          onChoose={() => void chooseInto('galeri', setGambar2Uri)}
-          onTakePhoto={Platform.OS !== 'web' ? () => void chooseInto('kamera', setGambar2Uri) : undefined}
+          onChoose={() => void chooseInto(setGambar2Uri)}
           onRemove={() => {
             setGambar2Uri(null);
             setExistingGambar2Url(null);
@@ -293,11 +268,10 @@ export default function BisnesUploadScreen() {
           disabled={submitting}
         />
 
-        <OptionalImageSlot
+        <ImageUploadRow
           label="Gambar 3 — Pilihan (bebas orientation)"
           previewUri={gambar3Uri ?? existingGambar3Url}
-          onChoose={() => void chooseInto('galeri', setGambar3Uri)}
-          onTakePhoto={Platform.OS !== 'web' ? () => void chooseInto('kamera', setGambar3Uri) : undefined}
+          onChoose={() => void chooseInto(setGambar3Uri)}
           onRemove={() => {
             setGambar3Uri(null);
             setExistingGambar3Url(null);
