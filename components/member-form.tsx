@@ -338,15 +338,22 @@ export function MemberForm({
 
   /*
     Ahli sendiri dibuang (seseorang tidak boleh jadi pasangan dirinya — dikuat
-    kuasa juga oleh constraint `members_spouse_not_self`), dan calon disempitkan
-    kepada jantina BERLAWANAN bila diketahui — pilihan yang lebih pantas dicari
-    dalam senarai 300+ ahli. Jantina tidak diketahui tidak menyekat carian.
+    kuasa juga oleh constraint `members_spouse_not_self`).
+
+    SEBELUM INI calon juga disempitkan kepada jantina BERLAWANAN — dibuang
+    (bukan sekadar diutamakan) selepas bug dilaporkan: pasangan sebenar
+    hilang TERUS daripada carian pada KEDUA-DUA belah akaun, sebab data
+    `jantina` salah pada rekod Excel asal sesetengah ahli (cth. ahli
+    perempuan tersilap ditanda "Muslimin"). Menapis keluar calon berdasarkan
+    medan yang mungkin salah itu menyembunyikannya tanpa sebarang cara untuk
+    jumpa semula dalam borang — jadi carian kini merentasi SEMUA ahli (selain
+    diri sendiri), apa jua jantina direkodkan. `MemberPickerField` sendiri
+    menyusun senarai mengikut abjad, bukan mengikut urutan di sini.
   */
-  const spousePool = useMemo(() => {
-    const others = spouseCandidates.filter((candidate) => candidate.id !== member.id);
-    if (!draft.jantina) return others;
-    return others.filter((candidate) => !candidate.jantina || candidate.jantina !== draft.jantina);
-  }, [draft.jantina, member.id, spouseCandidates]);
+  const spousePool = useMemo(
+    () => spouseCandidates.filter((candidate) => candidate.id !== member.id),
+    [member.id, spouseCandidates],
+  );
 
   /**
    * Medan yang berubah sahaja — mengelak menulis semula kolum yang tidak disentuh.
