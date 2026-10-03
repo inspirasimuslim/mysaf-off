@@ -3,6 +3,7 @@ import { Image } from 'expo-image';
 import { Pressable, Text, View } from 'react-native';
 
 import { Badge } from '@/components/ui/badge';
+import { IconButton } from '@/components/ui/icon-button';
 import { Colors } from '@/constants/theme';
 import type { BusinessAdStatus } from '@/lib/business-ads';
 
@@ -24,15 +25,24 @@ type Props = {
   subtitle: string;
   status: BusinessAdStatus;
   onPress: () => void;
+  /**
+   * Butang Padam pilihan di hujung baris — digunakan oleh admin (tab "Semua
+   * Iklan" `semakan-iklan.tsx`) supaya iklan aktif/tamat boleh dipadam terus
+   * daripada senarai tanpa perlu buka skrin detail. Dibuang `onPress` baris
+   * sepenuhnya menggantikan chevron bila diberikan — butang ini `Pressable`
+   * berasingan jadi tekanan padam tidak turut membuka detail baris.
+   */
+  onDelete?: () => void;
+  deleting?: boolean;
 };
 
 /**
  * Satu iklan bisnes dalam senarai — baris padat setinggi thumbnail, sama
- * corak `EventListRow` (Program Usrah di admin hub). Tiada menu tindakan
- * di sini: tekan baris terus buka skrin detail penuh, di situlah semua
- * tindakan (lulus/tolak/sunting/padam) berada — senarai kekal ringkas.
+ * corak `EventListRow` (Program Usrah di admin hub). Tekan baris terus buka
+ * skrin detail penuh (lulus/tolak/sunting/padam sendiri ada di situ); `onDelete`
+ * ialah pengecualian sengaja untuk padam terus daripada senarai (lihat atas).
  */
-export function BusinessAdListRow({ posterUrl, title, subtitle, status, onPress }: Props) {
+export function BusinessAdListRow({ posterUrl, title, subtitle, status, onPress, onDelete, deleting = false }: Props) {
   const statusInfo = BUSINESS_AD_STATUS_LABEL[status];
   return (
     <Pressable
@@ -68,7 +78,11 @@ export function BusinessAdListRow({ posterUrl, title, subtitle, status, onPress 
         </View>
       </View>
 
-      <Ionicons name="chevron-forward" size={18} color={Colors.inkFaint} />
+      {onDelete ? (
+        <IconButton icon="trash-outline" accessibilityLabel={'Padam ' + title} tone="danger" busy={deleting} onPress={onDelete} />
+      ) : (
+        <Ionicons name="chevron-forward" size={18} color={Colors.inkFaint} />
+      )}
     </Pressable>
   );
 }
