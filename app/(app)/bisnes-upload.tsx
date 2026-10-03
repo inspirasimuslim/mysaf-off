@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Platform, View } from 'react-native';
+import { Platform, Text, View } from 'react-native';
 
 import { ScreenHeader } from '@/components/screen-header';
 import { Button } from '@/components/ui/button';
@@ -20,7 +20,7 @@ import {
   fetchBusinessDirectory,
   resubmitBusinessAd,
   submitBusinessAd,
-  uploadBusinessPoster,
+  uploadBusinessImage,
 } from '@/lib/business-ads';
 import { pickImage, takePhoto } from '@/lib/image-upload';
 import { fetchMyMemberLinked } from '@/lib/members';
@@ -29,22 +29,81 @@ import { toWhatsAppNumber } from '@/lib/phone';
 import type { Member } from '@/types/database';
 
 /**
+ * Satu slot gambar PILIHAN (2 atau 3) — bebas orientation (keputusan
+ * 2026-10-03, bukan seperti Gambar 1/poster yang wajib nisbah tetap), jadi
+ * pratonton guna bekas segi empat sama + `contentFit="contain"` (tidak
+ * memotong apa-apa orientation) berbanding `aspectRatio` tetap seperti
+ * poster. Dikongsi oleh Gambar 2 & Gambar 3 — kedua-dua slot sama rupa,
+ * hanya label/state berbeza.
+ */
+function OptionalImageSlot({
+  label,
+  previewUri,
+  onChoose,
+  onTakePhoto,
+  onRemove,
+  disabled,
+}: {
+  label: string;
+  previewUri: string | null;
+  onChoose: () => void;
+  onTakePhoto?: () => void;
+  onRemove: () => void;
+  disabled: boolean;
+}) {
+  return (
+    <View className="gap-3 rounded-card border border-line bg-surface p-4">
+      <Text className="text-sm font-semibold text-ink">{label}</Text>
+
+      {previewUri ? (
+        <Image
+          source={{ uri: previewUri }}
+          style={{ width: '100%', aspectRatio: 1, borderRadius: 16 }}
+          contentFit="contain"
+          accessibilityLabel={label}
+        />
+      ) : null}
+
+      <View className="flex-row gap-3">
+        <View className="flex-1">
+          <Button label={previewUri ? 'Tukar' : 'Pilih Gambar'} variant="secondary" onPress={onChoose} disabled={disabled} />
+        </View>
+        {onTakePhoto ? (
+          <View className="flex-1">
+            <Button label="Kamera" variant="secondary" onPress={onTakePhoto} disabled={disabled} />
+          </View>
+        ) : null}
+      </View>
+
+      {previewUri ? <Button label="Buang Gambar Ini" variant="danger" onPress={onRemove} disabled={disabled} /> : null}
+    </View>
+  );
+}
+
+/**
  * Hantar iklan bisnes untuk semakan Lajnah Ekonomi — ATAU sunting & hantar
  * semula iklan DITOLAK sendiri (dibuka dengan param `id` daripada
  * `bisnes-info.tsx`).
  *
- * Poster dimuat naik DAHULU ke `business-ads/<member_id>_<epoch>.jpg`
- * (dikecilkan ke 1080px JPEG sebelum muat naik, jadi jauh di bawah had 5MB),
- * kemudian `submit_business_ad()`/`resubmit_business_ad()` menyemak had dan
- * mencipta/mengemaskini baris. Jika RPC menolak (queue penuh, had 3/ahli),
- * fail yang sudah dimuat naik tertinggal tanpa baris — sama kesan seperti
- * muat naik lain yang dibatalkan; ahli tidak boleh memadamnya semula kerana
- * nama fail mengandungi epoch.
+ * Sehingga 3 gambar setiap iklan (keputusan 2026-10-03, migration 107):
+ * Gambar 1 (poster) WAJIB, khas untuk paparan dashboard/carousel/"Semua
+ * Iklan" — nisbah tetap `POSTER_ASPECT_RATIO` (1024×550). Gambar 2/3
+ * PILIHAN, bebas orientation, hanya dipaparkan dalam galeri skrin detail
+ * (`bisnes-info.tsx`/`admin/iklan-detail.tsx`) — TIDAK PERNAH pada
+ * dashboard/carousel. Setiap gambar dimuat naik DAHULU ke
+ * `business-ads/<member_id>_<epoch>.jpg` (dikecilkan JPEG sebelum muat
+ * naik), kemudian `submit_business_ad()`/`resubmit_business_ad()` menyemak
+ * had dan mencipta/mengemaskini SATU baris dengan ketiga-tiga URL. Jika RPC
+ * menolak (queue penuh, had 3/ahli), fail yang sudah dimuat naik tertinggal
+ * tanpa baris — sama kesan seperti muat naik lain yang dibatalkan; ahli
+ * tidak boleh memadamnya semula kerana nama fail mengandungi epoch.
  *
  * Mod sunting: gambar/nama/penerangan/cta/whatsapp iklan ditolak diprafill.
- * Poster SEDIA ADA (`existingPosterUrl`, URL jauh) dipaparkan terus — ahli
- * hanya perlu pilih gambar baharu (`posterUri`, tempatan) jika mahu
- * menukarnya; jika tidak, poster asal dikekalkan tanpa muat naik semula.
+ * Gambar SEDIA ADA (`existing...Url`, URL jauh) dipaparkan terus — ahli
+ * hanya perlu pilih gambar baharu (`...Uri`, tempatan) jika mahu
+ * menukarnya; jika tidak, gambar asal dikekalkan tanpa muat naik semula.
+ * Membuang Gambar 2/3 sedia ada (butang "Buang Gambar Ini") menghantar
+ * `null` eksplisit supaya ia benar-benar dibuang, bukan kekal tersimpan.
  */
 export default function BisnesUploadScreen() {
   const router = useRouter();
@@ -60,6 +119,10 @@ export default function BisnesUploadScreen() {
 
   const [posterUri, setPosterUri] = useState<string | null>(null);
   const [existingPosterUrl, setExistingPosterUrl] = useState<string | null>(null);
+  const [gambar2Uri, setGambar2Uri] = useState<string | null>(null);
+  const [existingGambar2Url, setExistingGambar2Url] = useState<string | null>(null);
+  const [gambar3Uri, setGambar3Uri] = useState<string | null>(null);
+  const [existingGambar3Url, setExistingGambar3Url] = useState<string | null>(null);
   const [nama, setNama] = useState('');
   const [penerangan, setPenerangan] = useState('');
   const [cta, setCta] = useState('');
@@ -91,6 +154,8 @@ export default function BisnesUploadScreen() {
             setCta(editRow.teks_cta ?? '');
             setWhatsapp(editRow.no_whatsapp);
             setExistingPosterUrl(editRow.url_poster);
+            setExistingGambar2Url(editRow.url_gambar_2 ?? null);
+            setExistingGambar3Url(editRow.url_gambar_3 ?? null);
           }
         } else {
           setWhatsapp(me?.no_tel ?? '');
@@ -116,6 +181,8 @@ export default function BisnesUploadScreen() {
     useCallback(() => {
       if (id) return;
       setPosterUri(null);
+      setGambar2Uri(null);
+      setGambar3Uri(null);
       setNama('');
       setPenerangan('');
       setCta('');
@@ -123,11 +190,11 @@ export default function BisnesUploadScreen() {
     }, [id]),
   );
 
-  const choose = async (source: 'galeri' | 'kamera') => {
+  const chooseInto = async (source: 'galeri' | 'kamera', setUri: (uri: string) => void) => {
     setError(null);
     try {
       const uri = source === 'kamera' ? await takePhoto() : await pickImage();
-      if (uri) setPosterUri(uri);
+      if (uri) setUri(uri);
     } catch (caught) {
       setError(businessAdError(caught, 'Gagal memilih gambar.'));
     }
@@ -146,10 +213,20 @@ export default function BisnesUploadScreen() {
 
     setSubmitting(true);
     try {
-      const url = posterUri ? await uploadBusinessPoster(member.id, posterUri) : (existingPosterUrl as string);
+      // Muat naik gambar yang ditukar/ditambah dahulu; gambar sedia ada yang
+      // tidak disentuh dikekalkan terus (tiada muat naik semula), dan gambar
+      // 2/3 yang dibuang (butang "Buang Gambar Ini") menghantar `null`
+      // eksplisit — lihat komen besar di atas fail ini.
+      const [url, urlGambar2, urlGambar3] = await Promise.all([
+        posterUri ? uploadBusinessImage(member.id, posterUri) : Promise.resolve(existingPosterUrl as string),
+        gambar2Uri ? uploadBusinessImage(member.id, gambar2Uri) : Promise.resolve(existingGambar2Url),
+        gambar3Uri ? uploadBusinessImage(member.id, gambar3Uri) : Promise.resolve(existingGambar3Url),
+      ]);
       const input = {
         nama_bisnes: nama.trim(),
         url_poster: url,
+        url_gambar_2: urlGambar2,
+        url_gambar_3: urlGambar3,
         penerangan: penerangan.trim(),
         teks_cta: cta.trim(),
         no_whatsapp: waNumber,
@@ -221,6 +298,8 @@ export default function BisnesUploadScreen() {
           />
         )}
 
+        <Text className="text-sm font-semibold text-ink">Gambar 1 — Utama (dipaparkan di Dashboard)</Text>
+
         {previewUri ? (
           <Image
             source={{ uri: previewUri }}
@@ -230,14 +309,14 @@ export default function BisnesUploadScreen() {
           />
         ) : null}
 
-        <Notice tone="info" message="Reka poster anda pada nisbah 1024×550px (landskap) sebelum dimuat naik supaya kelihatan penuh dan tidak terpotong." />
+        <Notice tone="info" message="Reka Gambar 1 pada nisbah 1024×550px (landskap) sebelum dimuat naik — gambar ini sahaja dipaparkan di Dashboard & carousel, jadi kelihatan penuh dan tidak terpotong." />
 
         <View className="flex-row gap-3">
           <View className="flex-1">
             <Button
-              label={previewUri ? 'Tukar Gambar' : 'Pilih Gambar Poster'}
+              label={previewUri ? 'Tukar Gambar' : 'Pilih Gambar Utama'}
               variant="secondary"
-              onPress={() => void choose('galeri')}
+              onPress={() => void chooseInto('galeri', setPosterUri)}
               disabled={submitting}
             />
           </View>
@@ -246,12 +325,36 @@ export default function BisnesUploadScreen() {
               <Button
                 label="Ambil Gambar"
                 variant="secondary"
-                onPress={() => void choose('kamera')}
+                onPress={() => void chooseInto('kamera', setPosterUri)}
                 disabled={submitting}
               />
             </View>
           ) : null}
         </View>
+
+        <OptionalImageSlot
+          label="Gambar 2 — Pilihan (bebas orientation)"
+          previewUri={gambar2Uri ?? existingGambar2Url}
+          onChoose={() => void chooseInto('galeri', setGambar2Uri)}
+          onTakePhoto={Platform.OS !== 'web' ? () => void chooseInto('kamera', setGambar2Uri) : undefined}
+          onRemove={() => {
+            setGambar2Uri(null);
+            setExistingGambar2Url(null);
+          }}
+          disabled={submitting}
+        />
+
+        <OptionalImageSlot
+          label="Gambar 3 — Pilihan (bebas orientation)"
+          previewUri={gambar3Uri ?? existingGambar3Url}
+          onChoose={() => void chooseInto('galeri', setGambar3Uri)}
+          onTakePhoto={Platform.OS !== 'web' ? () => void chooseInto('kamera', setGambar3Uri) : undefined}
+          onRemove={() => {
+            setGambar3Uri(null);
+            setExistingGambar3Url(null);
+          }}
+          disabled={submitting}
+        />
 
         <TextField label="Nama Bisnes" value={nama} onChangeText={setNama} maxLength={80} editable={!submitting} />
         <TextField

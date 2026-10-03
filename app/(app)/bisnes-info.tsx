@@ -13,7 +13,13 @@ import { LoadingScreen } from '@/components/ui/loading-screen';
 import { Notice } from '@/components/ui/notice';
 import { Screen } from '@/components/ui/screen';
 import { Colors } from '@/constants/theme';
-import { businessAdError, deleteBusinessAd, fetchBusinessAd, POSTER_ASPECT_RATIO, type BusinessAdDetail } from '@/lib/business-ads';
+import {
+  businessAdError,
+  deleteBusinessAd,
+  fetchBusinessAd,
+  POSTER_ASPECT_RATIO,
+  type BusinessAdDetail,
+} from '@/lib/business-ads';
 import { useGoBack } from '@/lib/navigation';
 import { toWhatsAppNumber } from '@/lib/phone';
 
@@ -176,6 +182,42 @@ export default function BisnesInfoScreen() {
           </View>
         ) : null}
 
+        {/*
+          Gambar 2/3 — pilihan, bebas orientation (tiada aspectRatio tetap
+          seperti poster). `contentFit="contain"` di dalam bekas segi empat
+          sama mengelakkan sebarang pemotongan tidak kira potret/landskap;
+          bekas `bg-background` menyamarkan jalur kosong (letterbox) jika ada.
+        */}
+        {ad.url_gambar_2 || ad.url_gambar_3 ? (
+          <View className="gap-2">
+            <Text className="text-xs font-semibold uppercase tracking-wide text-ink-faint">Gambar Tambahan</Text>
+            <View className="flex-row gap-3">
+              {ad.url_gambar_2 ? (
+                <View className="flex-1 overflow-hidden rounded-field bg-background" style={{ aspectRatio: 1 }}>
+                  <Image
+                    source={{ uri: ad.url_gambar_2 }}
+                    style={{ width: '100%', height: '100%' }}
+                    contentFit="contain"
+                    transition={150}
+                    accessibilityLabel={'Gambar tambahan 1 — ' + ad.nama_bisnes}
+                  />
+                </View>
+              ) : null}
+              {ad.url_gambar_3 ? (
+                <View className="flex-1 overflow-hidden rounded-field bg-background" style={{ aspectRatio: 1 }}>
+                  <Image
+                    source={{ uri: ad.url_gambar_3 }}
+                    style={{ width: '100%', height: '100%' }}
+                    contentFit="contain"
+                    transition={150}
+                    accessibilityLabel={'Gambar tambahan 2 — ' + ad.nama_bisnes}
+                  />
+                </View>
+              ) : null}
+            </View>
+          </View>
+        ) : null}
+
         <View className="flex-row items-center gap-2">
           <Ionicons name="person-outline" size={16} color={Colors.inkMuted} />
           <Text className="text-sm text-ink-muted">{ad.nama_pemilik}</Text>
@@ -205,7 +247,7 @@ export default function BisnesInfoScreen() {
       <ConfirmDialog
         visible={confirmingDelete}
         title="Padam iklan ini?"
-        message={'Iklan "' + ad.nama_bisnes + '" akan dipadam kekal, termasuk poster. Tindakan ini tidak boleh diundur.'}
+        message={'Iklan "' + ad.nama_bisnes + '" akan dipadam kekal, termasuk semua gambar. Tindakan ini tidak boleh diundur.'}
         confirmLabel="Padam"
         destructive
         busy={deleting}

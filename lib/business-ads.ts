@@ -90,20 +90,29 @@ export type DirectoryBusinessAd = {
   tarikh_tamat: string | null;
 };
 
-export type BusinessAdDetail = Pick<
-  DirectoryBusinessAd,
-  | 'id'
-  | 'member_id'
-  | 'nama_pemilik'
-  | 'nama_bisnes'
-  | 'url_poster'
-  | 'penerangan'
-  | 'teks_cta'
-  | 'no_whatsapp'
-  | 'status_paparan'
-  | 'sebab_tolak'
-  | 'is_mine'
->;
+/**
+ * Jenis sendiri (bukan lagi `Pick<DirectoryBusinessAd, ...>`) — `get_business_ad()`
+ * membawa `url_gambar_2`/`url_gambar_3` (galeri, migration 107) yang TIDAK
+ * wujud dalam `list_business_directory()` (senarai ringkas tidak perlukan
+ * galeri), jadi kedua-dua bentuk sudah bercabang.
+ */
+export type BusinessAdDetail = {
+  id: string;
+  member_id: string;
+  nama_pemilik: string;
+  nama_bisnes: string;
+  /** Gambar 1 — wajib, nisbah tetap `POSTER_ASPECT_RATIO`. */
+  url_poster: string;
+  /** Gambar 2/3 — pilihan, bebas orientation, hanya untuk galeri skrin detail. */
+  url_gambar_2: string | null;
+  url_gambar_3: string | null;
+  penerangan: string | null;
+  teks_cta: string | null;
+  no_whatsapp: string;
+  status_paparan: BusinessAdStatus;
+  sebab_tolak: string | null;
+  is_mine: boolean;
+};
 
 export type PendingBusinessAd = {
   id: string;
@@ -150,6 +159,9 @@ export type AdminBusinessAd = {
   no_keahlian: string | null;
   nama_bisnes: string;
   url_poster: string;
+  /** Galeri pilihan (migration 107) — null untuk kedua-dua jika ahli tidak muat naik. */
+  url_gambar_2?: string | null;
+  url_gambar_3?: string | null;
   penerangan: string | null;
   teks_cta: string | null;
   no_whatsapp: string;
@@ -181,17 +193,26 @@ export function countMyActiveAds(rows: DirectoryBusinessAd[]): number {
 }
 
 /**
- * Muat naik poster ke `business-ads/<member_id>_<epoch ms>.jpg` — corak nama
- * yang dikuatkuasakan `storage_name_ok()` dan disemak semula oleh
- * `submit_business_ad()` (poster mesti milik pemanggil sendiri).
+ * Muat naik SATU gambar iklan (slot 1/2/3, sama bucket+corak nama) ke
+ * `business-ads/<member_id>_<epoch ms>.jpg` — corak nama yang dikuatkuasakan
+ * `storage_name_ok()` dan disemak semula oleh `submit_business_ad()` (gambar
+ * mesti milik pemanggil sendiri). Setiap panggilan menghasilkan epoch
+ * berlainan, jadi dipanggil 1-3 kali (satu setiap slot diisi) tanpa
+ * konflik nama — tiada migration storage diperlukan untuk galeri.
+ *
+ * Dinamakan semula daripada `uploadBusinessPoster` (nama lama — kini
+ * dikongsi oleh ketiga-tiga slot gambar, bukan khusus poster sahaja).
  */
-export async function uploadBusinessPoster(memberId: string, uri: string): Promise<string> {
+export async function uploadBusinessImage(memberId: string, uri: string): Promise<string> {
   return uploadImage(BUCKET, memberId + '_' + Date.now() + '.jpg', uri, POSTER_MAX_WIDTH);
 }
 
 export type SubmitBusinessAdInput = {
   nama_bisnes: string;
   url_poster: string;
+  /** Galeri pilihan (migration 107) — `null` membuang gambar itu (penting semasa sunting semula). */
+  url_gambar_2?: string | null;
+  url_gambar_3?: string | null;
   penerangan: string;
   teks_cta: string;
   no_whatsapp: string;
@@ -204,6 +225,8 @@ export async function submitBusinessAd(input: SubmitBusinessAdInput): Promise<vo
     p_penerangan: input.penerangan,
     p_teks_cta: input.teks_cta,
     p_no_whatsapp: input.no_whatsapp,
+    p_url_gambar_2: input.url_gambar_2 ?? null,
+    p_url_gambar_3: input.url_gambar_3 ?? null,
   });
   if (error) throw error;
 }
@@ -222,13 +245,16 @@ export async function resubmitBusinessAd(id: string, input: SubmitBusinessAdInpu
     p_penerangan: input.penerangan,
     p_teks_cta: input.teks_cta,
     p_no_whatsapp: input.no_whatsapp,
+    p_url_gambar_2: input.url_gambar_2 ?? null,
+    p_url_gambar_3: input.url_gambar_3 ?? null,
   });
   if (error) throw error;
 }
 
 /**
  * Pemilik (mana-mana status) atau admin Lajnah Ekonomi (can_review_business_ads())
- * sahaja. RPC memadam baris DB dan memulangkan `url_poster`; fail storage
+ * sahaja. RPC memadam baris DB dan memulangkan SEMUA url gambar bukan-null
+ * (poster + galeri 2/3, migration 107 — dulu hanya poster); fail storage
  * dipadam DI SINI melalui Storage API (Supabase menyekat DELETE terus pada
  * `storage.objects` melalui SQL) — kegagalan pemadaman fail ditelan senyap
  * sebab baris DB sudah berjaya dipadam (fail tertinggal tidak berbahaya).
@@ -241,11 +267,11 @@ export async function deleteBusinessAd(id: string): Promise<void> {
   );
   if (error) throw error;
 
-  const urlPoster = typeof data === 'string' ? data : null;
-  const fileName = urlPoster?.split('/' + BUCKET + '/')[1]?.split('?')[0];
-  if (fileName) {
+  const urls = Array.isArray(data) ? (data as unknown[]).filter((value): value is string => typeof value === 'string') : [];
+  const fileNames = urls.map((url) => url.split('/' + BUCKET + '/')[1]?.split('?')[0]).filter((name): name is string => !!name);
+  if (fileNames.length > 0) {
     try {
-      await withTimeout(supabase.storage.from(BUCKET).remove([fileName]), 8000, 'Padam fail poster');
+      await withTimeout(supabase.storage.from(BUCKET).remove(fileNames), 8000, 'Padam fail gambar');
     } catch {
       // Baris DB sudah dipadam; fail anak yatim di storage bukan masalah kritikal.
     }

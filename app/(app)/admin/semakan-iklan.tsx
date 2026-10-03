@@ -156,7 +156,7 @@ export default function SemakanIklanScreen() {
       <ConfirmDialog
         visible={deleteTarget !== null}
         title="Padam iklan ini?"
-        message={deleteTarget ? 'Iklan "' + deleteTarget.nama_bisnes + '" akan dipadam kekal, termasuk poster. Tindakan ini tidak boleh diundur.' : ''}
+        message={deleteTarget ? 'Iklan "' + deleteTarget.nama_bisnes + '" akan dipadam kekal, termasuk semua gambar. Tindakan ini tidak boleh diundur.' : ''}
         confirmLabel="Padam"
         destructive
         busy={deleting}

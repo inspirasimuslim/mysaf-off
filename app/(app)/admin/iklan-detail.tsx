@@ -146,6 +146,35 @@ export default function AdminIklanDetailScreen() {
           </View>
         ) : null}
 
+        {/* Gambar 2/3 — pilihan, bebas orientation; sama rawatan dengan bisnes-info.tsx. */}
+        {ad.url_gambar_2 || ad.url_gambar_3 ? (
+          <View className="gap-2">
+            <Text className="text-xs font-semibold uppercase tracking-wide text-ink-faint">Gambar Tambahan</Text>
+            <View className="flex-row gap-3">
+              {ad.url_gambar_2 ? (
+                <View className="flex-1 overflow-hidden rounded-field bg-background" style={{ aspectRatio: 1 }}>
+                  <Image
+                    source={{ uri: ad.url_gambar_2 }}
+                    style={{ width: '100%', height: '100%' }}
+                    contentFit="contain"
+                    accessibilityLabel={'Gambar tambahan 1 — ' + ad.nama_bisnes}
+                  />
+                </View>
+              ) : null}
+              {ad.url_gambar_3 ? (
+                <View className="flex-1 overflow-hidden rounded-field bg-background" style={{ aspectRatio: 1 }}>
+                  <Image
+                    source={{ uri: ad.url_gambar_3 }}
+                    style={{ width: '100%', height: '100%' }}
+                    contentFit="contain"
+                    accessibilityLabel={'Gambar tambahan 2 — ' + ad.nama_bisnes}
+                  />
+                </View>
+              ) : null}
+            </View>
+          </View>
+        ) : null}
+
         <View className="gap-1">
           <Text className="text-sm text-ink-muted">
             {ad.nama_pemilik}
