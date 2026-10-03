@@ -1,6 +1,8 @@
 import { Image } from 'expo-image';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  Animated,
+  Easing,
   Pressable,
   ScrollView,
   Text,
@@ -18,12 +20,64 @@ const SLIDE_MS = 3000;
 const PAUSE_AFTER_TOUCH_MS = 6000;
 /** Nisbah tinggi/lebar sebuah slaid (16:10) — pita, bukan poster penuh; poster penuh ada di skrin Detail. */
 const ASPECT = 0.625;
+/**
+ * Poster "bernafas" perlahan ke kiri (kesan Ken Burns), bukan statik —
+ * satu hala sehala memakan `PAN_MS`, kemudian patah balik dengan masa yang
+ * sama (loop berulang). `PAN_ZOOM` lebihan lebar imej berbanding bekas,
+ * ruang itulah yang ditatal semasa animasi; bekas `overflow: hidden`
+ * memotong lebihan supaya tiada tepi kosong kelihatan.
+ */
+const PAN_MS = 9000;
+const PAN_ZOOM = 1.16;
 
 type Props = {
   ads: ActiveBusinessAd[];
   onPress: (id: string) => void;
   onSeeAll: () => void;
 };
+
+/**
+ * Satu poster + kesan gerakan perlahan ke kiri (dan balik) — imej dilukis
+ * lebih lebar daripada bekasnya (`PAN_ZOOM`) dan ditatal dalam bekas yang
+ * memotong lebihannya, supaya ia nampak "bernafas" walaupun ahli tidak
+ * menyentuh carousel langsung.
+ */
+function PanningPoster({ uri, width, height, label }: { uri: string; width: number; height: number; label: string }) {
+  const translateX = useRef(new Animated.Value(0)).current;
+  const panWidth = Math.round(width * PAN_ZOOM);
+  const offset = panWidth - width;
+
+  useEffect(() => {
+    translateX.setValue(0);
+    if (offset <= 0) return undefined;
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(translateX, {
+          toValue: -offset,
+          duration: PAN_MS,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+        Animated.timing(translateX, {
+          toValue: 0,
+          duration: PAN_MS,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [offset, translateX]);
+
+  return (
+    <View style={{ width, height, overflow: 'hidden' }}>
+      <Animated.View style={{ width: panWidth, height, transform: [{ translateX }] }}>
+        <Image source={{ uri }} style={{ width: panWidth, height }} contentFit="cover" transition={150} accessibilityLabel={label} />
+      </Animated.View>
+    </View>
+  );
+}
 
 /**
  * Carousel iklan perniagaan di skrin Utama — SATU poster sekali, auto-slide
@@ -104,12 +158,11 @@ export function BusinessAdCarousel({ ads, onPress, onSeeAll }: Props) {
                 onPress={() => onPress(ad.id)}
                 style={{ width, height: Math.round(width * ASPECT) }}
                 className="active:opacity-80">
-                <Image
-                  source={{ uri: ad.url_poster }}
-                  style={{ width, height: Math.round(width * ASPECT) }}
-                  contentFit="cover"
-                  transition={150}
-                  accessibilityLabel={'Poster ' + ad.nama_bisnes}
+                <PanningPoster
+                  uri={ad.url_poster}
+                  width={width}
+                  height={Math.round(width * ASPECT)}
+                  label={'Poster ' + ad.nama_bisnes}
                 />
                 <View
                   style={{ position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.45)' }}
