@@ -534,14 +534,24 @@ export function MemberForm({
         autoCapitalize="words"
         autoCorrect={false}
       />
-      <PickerField
-        label="Jantina"
-        value={draft.jantina}
-        options={JANTINA_OPTIONS}
-        clearLabel="Sila pilih"
-        onChange={(next) => set('jantina', next)}
-        disabled={locked}
-      />
+      {/*
+        Jantina DITETAPKAN ADMIN SAHAJA — pernah berlaku ahli tersilap tukar
+        sendiri (atau data asal Excel tersilap) menyebabkan carian pasangan
+        (MemberPickerField, tab Keluarga) gagal jumpa pasangan sebenar pada
+        kedua-dua belah akaun. Sama corak Nombor Ahli/Generasi/Emel di atas.
+      */}
+      {canEditAdminColumns ? (
+        <PickerField
+          label="Jantina"
+          value={draft.jantina}
+          options={JANTINA_OPTIONS}
+          clearLabel="Sila pilih"
+          onChange={(next) => set('jantina', next)}
+          disabled={locked}
+        />
+      ) : (
+        <ReadOnlyField label="Jantina" value={draft.jantina} />
+      )}
       {field('No. kad pengenalan', 'nric')}
       {field('No. telefon', 'no_tel', { keyboardType: 'phone-pad' })}
       <PickerField
