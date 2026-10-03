@@ -39,6 +39,20 @@ export default function BisnesInfoScreen() {
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
+    /*
+      Laluan ini statik (`/(app)/bisnes-info?id=...`, bukan segmen dinamik
+      `[id]`), jadi Expo Router kadangkala guna SEMULA instance skrin yang
+      sama bila ahli tekan terus daripada satu iklan ke iklan lain (contoh:
+      padam iklan pertama -> `router.replace` balik ke senarai -> tekan
+      iklan kedua). Tanpa reset ini, status `deleting`/`confirmingDelete`
+      daripada padaman SEBELUM ini terbawa ke iklan seterusnya, menyebabkan
+      dialog Padam terus "loading" walaupun belum ditekan langsung (bug
+      dilaporkan 2026-10-03, sama bentuk dengan `semakan-iklan.tsx`).
+    */
+    setConfirmingDelete(false);
+    setDeleting(false);
+    setDeleteError(null);
+
     if (!id) {
       setLoading(false);
       return;
@@ -91,6 +105,12 @@ export default function BisnesInfoScreen() {
     setDeleteError(null);
     try {
       await deleteBusinessAd(ad.id);
+      // Reset status SEBELUM navigasi keluar — sebelum ini hanya laluan
+      // ralat yang reset `deleting`, bergantung semata-mata pada skrin
+      // dibuang untuk membersihkan status berjaya; tidak selamat bila
+      // instance skrin digunakan semula (lihat komen di `useEffect` id).
+      setConfirmingDelete(false);
+      setDeleting(false);
       router.replace('/(app)/bisnes-ahli');
     } catch (caught) {
       setDeleteError(businessAdError(caught, 'Gagal memadam iklan. Sila cuba lagi.'));
