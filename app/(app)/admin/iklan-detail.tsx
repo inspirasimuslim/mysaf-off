@@ -13,7 +13,13 @@ import { LoadingScreen } from '@/components/ui/loading-screen';
 import { Notice } from '@/components/ui/notice';
 import { Screen } from '@/components/ui/screen';
 import { TextField } from '@/components/ui/text-field';
-import { businessAdError, fetchBusinessAdAdmin, reviewBusinessAd, type AdminBusinessAd } from '@/lib/business-ads';
+import {
+  businessAdError,
+  fetchBusinessAdAdmin,
+  POSTER_ASPECT_RATIO,
+  reviewBusinessAd,
+  type AdminBusinessAd,
+} from '@/lib/business-ads';
 import { EKONOMI_DEPARTMENT, useDepartmentAccess } from '@/lib/department-access';
 import { useGoBack } from '@/lib/navigation';
 
@@ -122,27 +128,36 @@ export default function AdminIklanDetailScreen() {
       <ScreenHeader eyebrow="Lajnah Ekonomi dan Aset" title={ad.nama_bisnes} subtitle={ad.nama_pemilik} onBackPress={goBack} />
 
       <View className="gap-4 px-gutter pb-8 pt-5">
+        <Image
+          source={{ uri: ad.url_poster }}
+          style={{ width: '100%', aspectRatio: POSTER_ASPECT_RATIO, borderRadius: 20 }}
+          contentFit="cover"
+          accessibilityLabel={'Poster ' + ad.nama_bisnes}
+        />
+
         <View className="flex-row items-center gap-2">
           <Badge label={status.label} tone={status.tone} />
         </View>
 
-        <Image
-          source={{ uri: ad.url_poster }}
-          style={{ width: '100%', aspectRatio: 3 / 4, borderRadius: 20 }}
-          contentFit="contain"
-          accessibilityLabel={'Poster ' + ad.nama_bisnes}
-        />
+        {ad.penerangan ? (
+          <View className="gap-2 rounded-card border border-line bg-surface p-4">
+            <Text className="text-xs font-semibold uppercase tracking-wide text-ink-faint">Tentang Bisnes Ini</Text>
+            <Text className="text-sm leading-5 text-ink">{ad.penerangan}</Text>
+          </View>
+        ) : null}
 
-        <Text className="text-sm text-ink-muted">
-          {ad.nama_pemilik}
-          {ad.no_keahlian ? ' · ' + ad.no_keahlian : ''} · WhatsApp {ad.no_whatsapp}
-        </Text>
-        {ad.penerangan ? <Text className="text-sm leading-5 text-ink">{ad.penerangan}</Text> : null}
-        {ad.teks_cta ? <Text className="text-sm text-ink-muted">Butang: {ad.teks_cta}</Text> : null}
+        <View className="gap-1">
+          <Text className="text-sm text-ink-muted">
+            {ad.nama_pemilik}
+            {ad.no_keahlian ? ' · ' + ad.no_keahlian : ''} · WhatsApp {ad.no_whatsapp}
+          </Text>
+          {ad.teks_cta ? <Text className="text-sm text-ink-muted">Butang: {ad.teks_cta}</Text> : null}
+          <Text className="text-xs text-ink-faint">Dihantar {new Date(ad.submitted_at).toLocaleString('ms-MY')}</Text>
+        </View>
+
         {ad.status_paparan === 'ditolak' && ad.sebab_tolak ? (
           <Notice tone="negative" message={'Sebab ditolak: ' + ad.sebab_tolak} />
         ) : null}
-        <Text className="text-xs text-ink-faint">Dihantar {new Date(ad.submitted_at).toLocaleString('ms-MY')}</Text>
 
         {done ? <Notice tone="positive" message={done} /> : null}
 

@@ -11,7 +11,7 @@ import { LoadingScreen } from '@/components/ui/loading-screen';
 import { Notice } from '@/components/ui/notice';
 import { Screen } from '@/components/ui/screen';
 import { SectionTitle } from '@/components/ui/section-title';
-import { businessAdError, fetchBusinessDirectory, type DirectoryBusinessAd } from '@/lib/business-ads';
+import { businessAdError, fetchBusinessDirectory, POSTER_ASPECT_RATIO, type DirectoryBusinessAd } from '@/lib/business-ads';
 import { useGoBack } from '@/lib/navigation';
 
 /**
@@ -119,7 +119,7 @@ export default function BisnesAhliScreen() {
                 <View className="overflow-hidden rounded-card border border-line bg-surface">
                   <Image
                     source={{ uri: ad.url_poster }}
-                    style={{ width: '100%', aspectRatio: 4 / 3 }}
+                    style={{ width: '100%', aspectRatio: POSTER_ASPECT_RATIO }}
                     contentFit="cover"
                     transition={150}
                     accessibilityLabel={'Poster ' + ad.nama_bisnes}

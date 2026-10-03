@@ -13,7 +13,7 @@ import { LoadingScreen } from '@/components/ui/loading-screen';
 import { Notice } from '@/components/ui/notice';
 import { Screen } from '@/components/ui/screen';
 import { Colors } from '@/constants/theme';
-import { businessAdError, deleteBusinessAd, fetchBusinessAd, type BusinessAdDetail } from '@/lib/business-ads';
+import { businessAdError, deleteBusinessAd, fetchBusinessAd, POSTER_ASPECT_RATIO, type BusinessAdDetail } from '@/lib/business-ads';
 import { useGoBack } from '@/lib/navigation';
 import { toWhatsAppNumber } from '@/lib/phone';
 
@@ -22,8 +22,17 @@ import { toWhatsAppNumber } from '@/lib/phone';
  *
  * `get_business_ad()` hanya memulangkan baris yang boleh dilihat pemanggil
  * (aktif, atau milik sendiri) — iklan yang sudah tamat/ditarik balik kelihatan
- * "tidak dijumpai" kepada orang lain. Poster `contain` supaya teks pada poster
- * tidak terpotong (sama seperti skrin Pengumuman).
+ * "tidak dijumpai" kepada orang lain.
+ *
+ * Susunan (rombak 2026-10-03, ikut poster baharu 1024×550 — banner landskap,
+ * bukan lagi anggapan poster 3:4 potret): poster banner penuh lebar dahulu
+ * (bekas `aspectRatio` SAMA dengan `POSTER_ASPECT_RATIO`, jadi `cover` tidak
+ * memotong apa-apa — nisbah bekas = nisbah fail sebenar), kemudian butang
+ * WhatsApp dinaikkan terus selepas poster (tindakan utama paling kerap
+ * diperlukan pelawat, jangan sorok di bawah perenggan penerangan panjang),
+ * penerangan dibungkus dalam kad "Tentang Bisnes" supaya kelihatan kemas
+ * berbanding teks terapung, dan tindakan pemilik (sunting/padam) diletak
+ * paling bawah sekali — ia jarang digunakan berbanding melihat/menghubungi.
  */
 export default function BisnesInfoScreen() {
   const router = useRouter();
@@ -123,6 +132,14 @@ export default function BisnesInfoScreen() {
       <ScreenHeader eyebrow="Bisnes Ahli" title={ad.nama_bisnes} subtitle={ad.nama_pemilik} onBackPress={goBack} />
 
       <View className="gap-5 px-gutter pb-8 pt-6">
+        <Image
+          source={{ uri: ad.url_poster }}
+          style={{ width: '100%', aspectRatio: POSTER_ASPECT_RATIO, borderRadius: 20 }}
+          contentFit="cover"
+          transition={150}
+          accessibilityLabel={'Poster ' + ad.nama_bisnes}
+        />
+
         {ad.is_mine && ad.status_paparan !== 'diluluskan' ? (
           <View className="flex-row items-center gap-2">
             <Badge
@@ -142,21 +159,6 @@ export default function BisnesInfoScreen() {
           <Notice tone="negative" message={'Sebab ditolak: ' + ad.sebab_tolak} />
         ) : null}
 
-        <Image
-          source={{ uri: ad.url_poster }}
-          style={{ width: '100%', aspectRatio: 3 / 4, borderRadius: 20 }}
-          contentFit="contain"
-          transition={150}
-          accessibilityLabel={'Poster ' + ad.nama_bisnes}
-        />
-
-        {ad.penerangan ? <Text className="text-base leading-6 text-ink">{ad.penerangan}</Text> : null}
-
-        <View className="flex-row items-center gap-2">
-          <Ionicons name="person-outline" size={16} color={Colors.inkMuted} />
-          <Text className="text-sm text-ink-muted">{ad.nama_pemilik}</Text>
-        </View>
-
         {linkError ? <Notice tone="negative" message={linkError} /> : null}
 
         {whatsApp ? (
@@ -167,8 +169,20 @@ export default function BisnesInfoScreen() {
           />
         ) : null}
 
+        {ad.penerangan ? (
+          <View className="gap-2 rounded-card border border-line bg-surface p-4">
+            <Text className="text-xs font-semibold uppercase tracking-wide text-ink-faint">Tentang Bisnes Ini</Text>
+            <Text className="text-base leading-6 text-ink">{ad.penerangan}</Text>
+          </View>
+        ) : null}
+
+        <View className="flex-row items-center gap-2">
+          <Ionicons name="person-outline" size={16} color={Colors.inkMuted} />
+          <Text className="text-sm text-ink-muted">{ad.nama_pemilik}</Text>
+        </View>
+
         {ad.is_mine ? (
-          <>
+          <View className="gap-3 border-t border-line pt-5">
             {deleteError ? <Notice tone="negative" message={deleteError} /> : null}
             {ad.status_paparan === 'ditolak' ? (
               <Button
@@ -184,7 +198,7 @@ export default function BisnesInfoScreen() {
               icon={<Ionicons name="trash-outline" size={18} color={Colors.negative} />}
               onPress={() => setConfirmingDelete(true)}
             />
-          </>
+          </View>
         ) : null}
       </View>
 

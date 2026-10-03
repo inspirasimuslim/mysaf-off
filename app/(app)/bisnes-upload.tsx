@@ -13,6 +13,7 @@ import { TextField } from '@/components/ui/text-field';
 import { useAuth } from '@/lib/auth-context';
 import {
   MAX_ADS_PER_MEMBER,
+  POSTER_ASPECT_RATIO,
   businessAdError,
   countMyActiveAds,
   fetchBusinessAd,
@@ -223,11 +224,13 @@ export default function BisnesUploadScreen() {
         {previewUri ? (
           <Image
             source={{ uri: previewUri }}
-            style={{ width: '100%', aspectRatio: 3 / 4, borderRadius: 20 }}
+            style={{ width: '100%', aspectRatio: POSTER_ASPECT_RATIO, borderRadius: 20 }}
             contentFit="contain"
             accessibilityLabel="Pratonton poster"
           />
         ) : null}
+
+        <Notice tone="info" message="Reka poster anda pada nisbah 1024×550px (landskap) sebelum dimuat naik supaya kelihatan penuh dan tidak terpotong." />
 
         <View className="flex-row gap-3">
           <View className="flex-1">

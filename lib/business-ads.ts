@@ -36,8 +36,24 @@ function withTimeout<T>(promise: PromiseLike<T>, ms: number, label: string): Pro
   });
 }
 
-/** Poster dipapar penuh lebar telefon; 1080px lebih daripada cukup (had bucket 5MB). */
-const POSTER_MAX_WIDTH = 1080;
+/**
+ * Poster dipapar penuh lebar telefon. Dulu 1080px sebagai had umum sebelum
+ * nisbah poster ditetapkan; kini disamakan terus dengan lebar reka bentuk
+ * rasmi (`POSTER_ASPECT_RATIO` bawah) supaya `ImageManipulator.resize()`
+ * tidak membesarkan (upscale) poster yang sudah tepat 1024px lebar.
+ */
+const POSTER_MAX_WIDTH = 1024;
+
+/**
+ * Nisbah lebar:tinggi rasmi poster iklan bisnes — ahli direka bentuk
+ * poster mereka sendiri pada 1024×550px sebelum muat naik (keputusan
+ * 2026-10-03). Dikongsi oleh setiap skrin yang memaparkan poster (pratonton
+ * muat naik, detail ahli, detail admin, kad "Semua Iklan") supaya poster
+ * dipaparkan tepat pada nisbah sebenar — tiada "letterbox"/jalur kosong dan
+ * tiada bahagian dipotong, sebab bekas paparan sepadan 1:1 dengan bentuk
+ * fail yang dimuat naik.
+ */
+export const POSTER_ASPECT_RATIO = 1024 / 550;
 
 /** Sepadan dengan `c_max_per_ahli` dalam `submit_business_ad()`. */
 export const MAX_ADS_PER_MEMBER = 3;
