@@ -4,6 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Linking, Text, View } from 'react-native';
 
+import { AutoAspectImage } from '@/components/business-ad-image-slot';
 import { ScreenHeader } from '@/components/screen-header';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -137,111 +138,104 @@ export default function BisnesInfoScreen() {
     <Screen padTop={false}>
       <ScreenHeader eyebrow="Bisnes Ahli" title={ad.nama_bisnes} subtitle={ad.nama_pemilik} onBackPress={goBack} />
 
-      <View className="gap-5 px-gutter pb-8 pt-6">
-        <Image
-          source={{ uri: ad.url_poster }}
-          style={{ width: '100%', aspectRatio: POSTER_ASPECT_RATIO, borderRadius: 20 }}
-          contentFit="cover"
-          transition={150}
-          accessibilityLabel={'Poster ' + ad.nama_bisnes}
-        />
-
-        {ad.is_mine && ad.status_paparan !== 'diluluskan' ? (
-          <View className="flex-row items-center gap-2">
-            <Badge
-              label={
-                ad.status_paparan === 'menunggu'
-                  ? 'Pending'
-                  : ad.status_paparan === 'ditolak'
-                    ? 'Ditolak'
-                    : 'Tamat Tempoh'
-              }
-              tone={ad.status_paparan === 'menunggu' ? 'warn' : ad.status_paparan === 'ditolak' ? 'negative' : 'neutral'}
-            />
-          </View>
-        ) : null}
-
-        {ad.is_mine && ad.status_paparan === 'ditolak' && ad.sebab_tolak ? (
-          <Notice tone="negative" message={'Sebab ditolak: ' + ad.sebab_tolak} />
-        ) : null}
-
-        {linkError ? <Notice tone="negative" message={linkError} /> : null}
-
-        {whatsApp ? (
-          <Button
-            label={ad.teks_cta ? ad.teks_cta + ' — Hubungi via WhatsApp' : 'Hubungi via WhatsApp'}
-            icon={<Ionicons name="logo-whatsapp" size={20} color={Colors.white} />}
-            onPress={contact}
+      <View className="gap-5 pb-8 pt-6">
+        <View className="gap-5 px-gutter">
+          <Image
+            source={{ uri: ad.url_poster }}
+            style={{ width: '100%', aspectRatio: POSTER_ASPECT_RATIO, borderRadius: 20 }}
+            contentFit="cover"
+            transition={150}
+            accessibilityLabel={'Poster ' + ad.nama_bisnes}
           />
-        ) : null}
 
-        {ad.penerangan ? (
-          <View className="gap-2 rounded-card border border-line bg-surface p-4">
-            <Text className="text-xs font-semibold uppercase tracking-wide text-ink-faint">Tentang Bisnes Ini</Text>
-            <Text className="text-base leading-6 text-ink">{ad.penerangan}</Text>
-          </View>
-        ) : null}
+          {ad.is_mine && ad.status_paparan !== 'diluluskan' ? (
+            <View className="flex-row items-center gap-2">
+              <Badge
+                label={
+                  ad.status_paparan === 'menunggu'
+                    ? 'Pending'
+                    : ad.status_paparan === 'ditolak'
+                      ? 'Ditolak'
+                      : 'Tamat Tempoh'
+                }
+                tone={ad.status_paparan === 'menunggu' ? 'warn' : ad.status_paparan === 'ditolak' ? 'negative' : 'neutral'}
+              />
+            </View>
+          ) : null}
+
+          {ad.is_mine && ad.status_paparan === 'ditolak' && ad.sebab_tolak ? (
+            <Notice tone="negative" message={'Sebab ditolak: ' + ad.sebab_tolak} />
+          ) : null}
+
+          {linkError ? <Notice tone="negative" message={linkError} /> : null}
+
+          {whatsApp ? (
+            <Button
+              label={ad.teks_cta ? ad.teks_cta + ' — Hubungi via WhatsApp' : 'Hubungi via WhatsApp'}
+              icon={<Ionicons name="logo-whatsapp" size={20} color={Colors.white} />}
+              onPress={contact}
+            />
+          ) : null}
+
+          {ad.penerangan ? (
+            <View className="gap-2 rounded-card border border-line bg-surface p-4">
+              <Text className="text-xs font-semibold uppercase tracking-wide text-ink-faint">Tentang Bisnes Ini</Text>
+              <Text className="text-base leading-6 text-ink">{ad.penerangan}</Text>
+            </View>
+          ) : null}
+        </View>
 
         {/*
-          Gambar 2/3 — pilihan, bebas orientation (tiada aspectRatio tetap
-          seperti poster). `contentFit="contain"` di dalam bekas segi empat
-          sama mengelakkan sebarang pemotongan tidak kira potret/landskap;
-          bekas `bg-background` menyamarkan jalur kosong (letterbox) jika ada.
+          Gambar 2/3 — pilihan, bebas resolusi. Rombak 2026-10-04: dulu
+          dipaksa ke bekas segi empat sama bersebelahan (letterbox untuk
+          gambar bukan segi empat sama). Kini `AutoAspectImage` mengesan
+          nisbah SEBENAR fail selepas dimuat dan menyesuaikan tingginya —
+          dipaparkan SATU demi SATU, PENUH LEBAR, LUAR bekas `px-gutter` di
+          atas supaya tepi kiri/kanan sampai hujung (bukan sekadar lebar
+          penuh dalam padding skrin).
         */}
         {ad.url_gambar_2 || ad.url_gambar_3 ? (
           <View className="gap-2">
-            <Text className="text-xs font-semibold uppercase tracking-wide text-ink-faint">Gambar Tambahan</Text>
-            <View className="flex-row gap-3">
+            <Text className="px-gutter text-xs font-semibold uppercase tracking-wide text-ink-faint">
+              Gambar Tambahan
+            </Text>
+            <View className="gap-2">
               {ad.url_gambar_2 ? (
-                <View className="flex-1 overflow-hidden rounded-field bg-background" style={{ aspectRatio: 1 }}>
-                  <Image
-                    source={{ uri: ad.url_gambar_2 }}
-                    style={{ width: '100%', height: '100%' }}
-                    contentFit="contain"
-                    transition={150}
-                    accessibilityLabel={'Gambar tambahan 1 — ' + ad.nama_bisnes}
-                  />
-                </View>
+                <AutoAspectImage uri={ad.url_gambar_2} label={'Gambar tambahan 1 — ' + ad.nama_bisnes} />
               ) : null}
               {ad.url_gambar_3 ? (
-                <View className="flex-1 overflow-hidden rounded-field bg-background" style={{ aspectRatio: 1 }}>
-                  <Image
-                    source={{ uri: ad.url_gambar_3 }}
-                    style={{ width: '100%', height: '100%' }}
-                    contentFit="contain"
-                    transition={150}
-                    accessibilityLabel={'Gambar tambahan 2 — ' + ad.nama_bisnes}
-                  />
-                </View>
+                <AutoAspectImage uri={ad.url_gambar_3} label={'Gambar tambahan 2 — ' + ad.nama_bisnes} />
               ) : null}
             </View>
           </View>
         ) : null}
 
-        <View className="flex-row items-center gap-2">
-          <Ionicons name="person-outline" size={16} color={Colors.inkMuted} />
-          <Text className="text-sm text-ink-muted">{ad.nama_pemilik}</Text>
-        </View>
-
-        {ad.is_mine ? (
-          <View className="gap-3 border-t border-line pt-5">
-            {deleteError ? <Notice tone="negative" message={deleteError} /> : null}
-            {ad.status_paparan === 'ditolak' ? (
-              <Button
-                label="Edit & Hantar Semula"
-                variant="secondary"
-                icon={<Ionicons name="create-outline" size={18} color={Colors.ink} />}
-                onPress={() => router.push({ pathname: '/(app)/bisnes-upload', params: { id: ad.id } })}
-              />
-            ) : null}
-            <Button
-              label="Padam Iklan"
-              variant="danger"
-              icon={<Ionicons name="trash-outline" size={18} color={Colors.negative} />}
-              onPress={() => setConfirmingDelete(true)}
-            />
+        <View className="gap-5 px-gutter">
+          <View className="flex-row items-center gap-2">
+            <Ionicons name="person-outline" size={16} color={Colors.inkMuted} />
+            <Text className="text-sm text-ink-muted">{ad.nama_pemilik}</Text>
           </View>
-        ) : null}
+
+          {ad.is_mine ? (
+            <View className="gap-3 border-t border-line pt-5">
+              {deleteError ? <Notice tone="negative" message={deleteError} /> : null}
+              {ad.status_paparan === 'ditolak' ? (
+                <Button
+                  label="Edit & Hantar Semula"
+                  variant="secondary"
+                  icon={<Ionicons name="create-outline" size={18} color={Colors.ink} />}
+                  onPress={() => router.push({ pathname: '/(app)/bisnes-upload', params: { id: ad.id } })}
+                />
+              ) : null}
+              <Button
+                label="Padam Iklan"
+                variant="danger"
+                icon={<Ionicons name="trash-outline" size={18} color={Colors.negative} />}
+                onPress={() => setConfirmingDelete(true)}
+              />
+            </View>
+          ) : null}
+        </View>
       </View>
 
       <ConfirmDialog

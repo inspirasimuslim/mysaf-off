@@ -1,4 +1,5 @@
-import { Image } from 'expo-image';
+import { Image, type ImageLoadEventData } from 'expo-image';
+import { useState } from 'react';
 import { Text, View } from 'react-native';
 
 import { Button } from '@/components/ui/button';
@@ -61,5 +62,37 @@ export function ImageUploadRow({
         </>
       ) : null}
     </View>
+  );
+}
+
+/**
+ * Paparan gambar tambahan (Gambar 2/3) pada skrin DETAIL — bukan borang
+ * upload. Rombak 2026-10-04: dulu dipaksa masuk bekas segi empat sama
+ * (`aspectRatio: 1`) dengan `contentFit="contain"`, jadi gambar bukan segi
+ * empat sama dapat jalur kosong (letterbox) kiri/kanan atau atas/bawah.
+ * Ahli muat naik gambar bebas resolusi — nisbah SEBENAR fail hanya diketahui
+ * selepas dimuat, jadi dikesan runtime melalui `onLoad` (`event.source`
+ * daripada expo-image) dan bekas disesuaikan kepadanya, bermula daripada
+ * anggaran 4:3 sementara menunggu. Dipaparkan PENUH LEBAR tanpa `borderRadius`
+ * (bucu bulat janggal pada gambar yang bersentuh terus dengan tepi skrin) —
+ * ibu bapa (skrin panggil) mesti letak komponen ini LUAR bekas `px-gutter`
+ * supaya tepi kiri/kanan benar-benar sampai hujung, bukan sekadar lebar penuh
+ * dalam bekas berpadding.
+ */
+export function AutoAspectImage({ uri, label }: { uri: string; label: string }) {
+  const [aspectRatio, setAspectRatio] = useState(4 / 3);
+
+  return (
+    <Image
+      source={{ uri }}
+      style={{ width: '100%', aspectRatio }}
+      contentFit="cover"
+      transition={150}
+      accessibilityLabel={label}
+      onLoad={(event: ImageLoadEventData) => {
+        const { width, height } = event.source;
+        if (width > 0 && height > 0) setAspectRatio(width / height);
+      }}
+    />
   );
 }
