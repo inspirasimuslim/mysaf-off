@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { LoadingScreen } from '@/components/ui/loading-screen';
 import { Screen } from '@/components/ui/screen';
+import { Colors } from '@/constants/theme';
 import { usePermissions } from '@/lib/permissions';
 
 /** Papar bila bukan admin cuba membuka mana-mana skrin di bawah /admin. */
@@ -49,9 +50,9 @@ export default function AdminLayout() {
   if (loading) return <LoadingScreen />;
   // Owner BUKAN admin: hanya skrin pemulihan satu-satunya skrin di bawah /admin yang dibuka untuknya ialah pemulihan log aktiviti dibuka untuknya.
   if (isOwner() && !isAdmin() && (pathname.endsWith('/owner-recovery') || pathname.endsWith('/activity-log'))) {
-    return <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: 'transparent' } }} />;
+    return <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: Colors.background } }} />;
   }
   if (!isAdmin() && !isActiveNaqib()) return <NoAccess />;
 
-  return <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: 'transparent' } }} />;
+  return <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: Colors.background } }} />;
 }

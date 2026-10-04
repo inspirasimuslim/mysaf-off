@@ -237,7 +237,7 @@ function AppGate() {
       backBehavior="history"
       screenOptions={{
         headerShown: false,
-        sceneStyle: { backgroundColor: 'transparent' },
+        sceneStyle: { backgroundColor: Colors.background },
         tabBarActiveTintColor: Colors.primary,
         tabBarInactiveTintColor: Colors.inkFaint,
         tabBarLabelStyle: { fontSize: 11, fontWeight: '600', marginTop: 2 },

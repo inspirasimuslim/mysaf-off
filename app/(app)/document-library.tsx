@@ -210,7 +210,7 @@ export default function DocumentLibraryScreen() {
   if (loading) return <LoadingScreen />;
 
   return (
-    <View className="flex-1">
+    <View className="flex-1 bg-background">
       <Screen padTop={false} wide>
         <ScreenHeader eyebrow="Tetapan" title="Arkib" subtitle="Perpustakaan dokumen untuk semua ahli" onBackPress={goBack} />
 

@@ -1,5 +1,4 @@
 import { Ionicons } from '@expo/vector-icons';
-import { BlurView } from 'expo-blur';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
@@ -8,6 +7,7 @@ import { Colors } from '@/constants/theme';
 import { fetchMyMemberLinked } from '@/lib/members';
 import { fetchUsrahYearDetail, type UsrahMonthDetail } from '@/lib/usrah';
 import { MONTH_LABELS } from '@/lib/usrah-import';
+import { useIsDesktop } from '@/lib/use-desktop';
 
 /**
  * Kehadiran usrah pengguna sendiri bagi tahun semasa — dua belas bulatan.
@@ -72,6 +72,7 @@ function MonthDot({ month }: { month: UsrahMonthDetail | undefined }) {
 
 export function UsrahStrip({ userId }: { userId: string | null }) {
   const router = useRouter();
+  const desktop = useIsDesktop();
   const year = new Date().getFullYear();
   const [state, setState] = useState<State>({ ready: false });
 
@@ -110,64 +111,50 @@ export function UsrahStrip({ userId }: { userId: string | null }) {
 
   return (
     /*
-      Kaca kabur (`BlurView`) di atas gambar latar app, bukan lagi garis nipis
-      tanpa latar — jalur ini kini kad "glass" sendiri: kabur + lapisan putih
-      lut sinar + sempadan halus, supaya teks kekal mudah dibaca di atas
-      sebarang bahagian gambar latar, mobile dan desktop sama.
-      `overflow: 'hidden'` pada BlurView wajib supaya sudut bulat memotong
-      kesan kabur itu sendiri, bukan hanya kandungan di atasnya.
+      Garis nipis sahaja, tiada bayang dan tiada latar berlainan: jalur ini
+      duduk antara dua kad gradient dan dua carousel, jadi ia perlu sempadan
+      untuk dibaca sebagai satu seksyen — tetapi bukan berat yang menjadikannya
+      kad ketiga.
     */
     // Seluruh kad boleh diketik — membuka Sejarah Kehadiran dengan kawasan, tempat dan tarikh.
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={'Kehadiran Usrah ' + year + '. Ketik untuk lihat sejarah kehadiran.'}
       onPress={() => router.push('/(app)/usrah-sejarah')}
-      className="active:opacity-70">
-      <BlurView
-        intensity={40}
-        tint="light"
-        style={{
-          borderRadius: 20,
-          overflow: 'hidden',
-          borderWidth: 1,
-          borderColor: Colors.line,
-        }}>
-        <View style={{ backgroundColor: 'rgba(255,255,255,0.35)', padding: 20 }}>
-          <View className="flex-row items-center">
-            <Text className="flex-1 text-sm font-semibold text-ink">Kehadiran Usrah {year}</Text>
-            <Ionicons name="chevron-forward" size={16} color={Colors.inkFaint} />
-          </View>
+      className={`rounded-card border border-line p-card active:opacity-70 ${desktop ? 'bg-surface' : ''}`}>
+      <View className="flex-row items-center">
+        <Text className="flex-1 text-sm font-semibold text-ink">Kehadiran Usrah {year}</Text>
+        <Ionicons name="chevron-forward" size={16} color={Colors.inkFaint} />
+      </View>
 
-          <View className="mt-3 flex-row items-start justify-between">
-            {MONTH_LABELS.map((label, index) => (
-              <View key={label} className="items-center">
-                <MonthDot month={state.months[index]} />
+      <View className="mt-3 flex-row items-start justify-between">
+        {MONTH_LABELS.map((label, index) => (
+          <View key={label} className="items-center">
+            <MonthDot month={state.months[index]} />
 
-                {/*
-                  Label diputar, jadi kotaknya perlu bersaiz tetap: `transform`
-                  tidak mengubah susun atur, jadi teks yang diputar tetap menuntut
-                  lebar asalnya melainkan ia dikurung begini.
-                */}
-                <View
-                  style={{ width: DOT_SIZE, height: LABEL_BOX, alignItems: 'center', justifyContent: 'center' }}
-                  className="mt-1">
-                  <Text
-                    style={{
-                      width: LABEL_BOX,
-                      fontSize: 9,
-                      textAlign: 'center',
-                      color: Colors.inkFaint,
-                      transform: [{ rotate: '-90deg' }],
-                    }}
-                    numberOfLines={1}>
-                    {label}
-                  </Text>
-                </View>
-              </View>
-            ))}
+            {/*
+              Label diputar, jadi kotaknya perlu bersaiz tetap: `transform`
+              tidak mengubah susun atur, jadi teks yang diputar tetap menuntut
+              lebar asalnya melainkan ia dikurung begini.
+            */}
+            <View
+              style={{ width: DOT_SIZE, height: LABEL_BOX, alignItems: 'center', justifyContent: 'center' }}
+              className="mt-1">
+              <Text
+                style={{
+                  width: LABEL_BOX,
+                  fontSize: 9,
+                  textAlign: 'center',
+                  color: Colors.inkFaint,
+                  transform: [{ rotate: '-90deg' }],
+                }}
+                numberOfLines={1}>
+                {label}
+              </Text>
+            </View>
           </View>
-        </View>
-      </BlurView>
+        ))}
+      </View>
     </Pressable>
   );
 }

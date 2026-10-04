@@ -1,9 +1,8 @@
 import '../global.css';
 
-import { Image } from 'expo-image';
 import { Stack, type ErrorBoundaryProps } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -40,25 +39,13 @@ export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
 export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      {/*
-        Gambar latar tetap — satu salinan sahaja, di belakang SELURUH app.
-        `Colors.background`/tailwind `bg-background` (setiap Screen, modal,
-        scene kosong Stack) ditukar kepada lutsinar supaya ini sentiasa
-        kelihatan di sebalik kandungan setiap skrin, bukan diulang setiap skrin.
-      */}
-      <Image
-        source={require('@/assets/images/app-background.jpg')}
-        style={StyleSheet.absoluteFill}
-        contentFit="cover"
-        pointerEvents="none"
-      />
       <SafeAreaProvider>
         <AuthProvider>
           {/* Kebenaran dibaca sekali di sini supaya semua skrin berkongsi hasil yang sama. */}
           <PermissionsProvider>
             <ToastProvider>
             <StatusBar style="dark" />
-            <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: 'transparent' } }}>
+            <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#FAFAFA' } }}>
               <Stack.Screen name="index" />
               <Stack.Screen name="(auth)" />
               <Stack.Screen name="(app)" />

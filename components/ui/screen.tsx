@@ -47,7 +47,7 @@ export function Screen({ scroll = true, padTop = true, wide = false, className =
 
   if (!scroll) {
     return (
-      <View className={`flex-1 items-center ${className}`} {...rest}>
+      <View className={`flex-1 items-center bg-background ${className}`} {...rest}>
         {body}
       </View>
     );
@@ -57,7 +57,7 @@ export function Screen({ scroll = true, padTop = true, wide = false, className =
     <KeyboardAwareProvider value={keyboard.api}>
       <ScrollView
         ref={scrollRef}
-        className={`flex-1 ${className}`}
+        className={`flex-1 bg-background ${className}`}
         contentContainerStyle={{ alignItems: embedded ? 'stretch' : 'center', paddingBottom: 32 + keyboard.inset }}
         keyboardShouldPersistTaps="handled"
         onScroll={keyboard.onScroll}
