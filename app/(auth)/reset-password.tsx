@@ -190,7 +190,7 @@ export default function ResetPasswordScreen() {
   if (phase.step === 'menyemak') return <LoadingScreen />;
 
   return (
-    <View className="flex-1 bg-background">
+    <View className="flex-1">
       <Screen>
         <View className="gap-6 px-gutter">
           <View className="items-center pb-2 pt-12">

@@ -166,7 +166,7 @@ export default function EventAttendanceLiveScreen() {
   return (
     <ScrollView
       ref={scrollRef}
-      className="flex-1 bg-background"
+      className="flex-1"
       contentContainerStyle={{ alignItems: 'center', paddingBottom: insets.bottom + 32 }}
       showsVerticalScrollIndicator={false}>
       <View className="w-full" style={{ maxWidth: MAX_WIDTH }}>

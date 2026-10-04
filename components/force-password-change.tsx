@@ -81,7 +81,7 @@ export function ForcePasswordChange({ onDone }: { onDone: () => void }) {
   }, [busy, confirm, onDone, password]);
 
   return (
-    <View className="flex-1 bg-background">
+    <View className="flex-1">
       <Screen>
         <View className="gap-6 px-gutter pt-6">
           <View className="items-center pb-2 pt-6">

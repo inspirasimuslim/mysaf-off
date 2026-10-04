@@ -124,7 +124,7 @@ export default function LoginScreen() {
   }, []);
 
   return (
-    <View className="flex-1 bg-background">
+    <View className="flex-1">
       <Screen>
         <View className="px-gutter">
           {/*

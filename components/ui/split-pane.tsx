@@ -30,7 +30,7 @@ type Props = {
  */
 export function SplitPane({ header, left, right }: Props) {
   return (
-    <View className="flex-1 bg-background">
+    <View className="flex-1">
       <View className="mx-4">{header}</View>
       <View className="mt-4 flex-1 flex-row border-t border-line">
         <View style={{ width: '40%', minWidth: 360 }} className="border-r border-line">

@@ -300,7 +300,7 @@ export default function YuranGroupPaymentScreen() {
   }
 
   return (
-    <View className="flex-1 bg-background">
+    <View className="flex-1">
       <Screen padTop={false}>
         <ScreenHeader
           eyebrow="Bendahari"
