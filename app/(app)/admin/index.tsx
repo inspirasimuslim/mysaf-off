@@ -235,7 +235,7 @@ export default function AdminHubScreen() {
           <CollapsibleSection
             variant="plain"
             title="Tarbiah"
-            count={usrahAccess.canEdit ? 3 : 2}
+            count={usrahAccess.canEdit ? 5 : 3}
             defaultOpen={openByDefault}>
             <ActionRow
               icon="qr-code-outline"
@@ -246,6 +246,13 @@ export default function AdminHubScreen() {
                   : 'Semak sesi usrah dan muat turun laporan (paparan sahaja)'
               }
               onPress={() => router.push('/(app)/admin/usrah-events')}
+            />
+
+            <ActionRow
+              icon="people-outline"
+              title="Kumpulan Usrah"
+              subtitle="Urus kumpulan usrah setiap kawasan, ahli dan naqibnya"
+              onPress={() => router.push('/(app)/admin/kumpulan-usrah')}
             />
 
             <ActionRow
@@ -261,6 +268,15 @@ export default function AdminHubScreen() {
                 title="Muat Naik Usrah"
                 subtitle="Import kehadiran usrah bulanan dari fail Excel"
                 onPress={() => router.push('/(app)/admin/usrah-upload')}
+              />
+            ) : null}
+
+            {usrahAccess.canEdit ? (
+              <ActionRow
+                icon="cloud-upload-outline"
+                title="Muat Naik Kumpulan Usrah"
+                subtitle="Import senarai kumpulan, ahli dan naqib dari fail Excel"
+                onPress={() => router.push('/(app)/admin/kumpulan-usrah-upload')}
               />
             ) : null}
           </CollapsibleSection>

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import { NoAccessScreen } from '@/components/no-access';
 import {
@@ -12,6 +12,8 @@ import {
   formatPercent,
   generationAxisLabel,
 } from '@/components/stat-charts';
+import { Badge } from '@/components/ui/badge';
+import { Card } from '@/components/ui/card';
 import { LoadingScreen } from '@/components/ui/loading-screen';
 import { PickerField } from '@/components/ui/picker-field';
 import { Segmented } from '@/components/ui/segmented';
@@ -194,6 +196,41 @@ export default function StatistikTarbiahScreen() {
                 }))}
                 format={(value) => String(value)}
               />
+            </Panel>
+
+            <Panel full title="Liputan Kumpulan Usrah" caption="Jumlah kumpulan & ahli yang sudah berkumpulan mengikut kawasan (keadaan semasa)">
+              <ValueBars
+                columns={2}
+                rows={stat.kumpulan_usrah_liputan.map((row) => ({
+                  key: row.kawasan,
+                  label: kawasanLabel(row.kawasan),
+                  value: row.jumlah_kumpulan,
+                  note: row.ahli_berkumpulan + '/' + row.jumlah_ahli + ' ahli berkumpulan',
+                }))}
+                format={(value) => value + ' kumpulan'}
+              />
+            </Panel>
+
+            <Panel full title="Senarai Kumpulan Usrah" caption="Setiap kumpulan dengan naqib yang dilantik (keadaan semasa)">
+              {stat.kumpulan_usrah.length === 0 ? (
+                <Text className="py-4 text-center text-sm text-ink-muted">Belum ada kumpulan usrah direkod.</Text>
+              ) : (
+                <View className="gap-2">
+                  {stat.kumpulan_usrah.map((row) => (
+                    <Card key={row.kawasan + '|' + row.nama}>
+                      <View className="flex-row items-center justify-between gap-3">
+                        <View className="flex-1">
+                          <Text className="text-sm font-semibold text-ink">{row.nama}</Text>
+                          <Text className="text-xs text-ink-muted">
+                            {kawasanLabel(row.kawasan)} · {row.naqib.length === 0 ? 'Tiada naqib' : row.naqib.join(', ')}
+                          </Text>
+                        </View>
+                        <Badge label={row.jumlah_ahli + ' ahli'} tone="neutral" />
+                      </View>
+                    </Card>
+                  ))}
+                </View>
+              )}
             </Panel>
           </>
         );

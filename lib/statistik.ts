@@ -27,6 +27,9 @@ export type TarbiahStat = {
   kawasan_tahunan: { kawasan: string; hadir: number; direkod: number; peratus: number | null }[];
   generasi_tahunan: { generasi: string; hadir: number; direkod: number; peratus: number | null }[];
   kawasan_ahli: { label: string; count: number }[];
+  /** Diminta 2026-10-04 — pemantauan Kumpulan Usrah (`kumpulan_usrah`), bukan kehadiran. */
+  kumpulan_usrah: { kawasan: string; nama: string; jumlah_ahli: number; naqib: string[] }[];
+  kumpulan_usrah_liputan: { kawasan: string; jumlah_ahli: number; ahli_berkumpulan: number; jumlah_kumpulan: number }[];
 };
 
 export type PerkaderanStat = {

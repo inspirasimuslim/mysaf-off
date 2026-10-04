@@ -609,6 +609,34 @@ export const KAWASAN_USRAH_OPTIONS: Option<string>[] = [
   { value: 'UA', label: 'Usrah Antarabangsa' },
 ];
 
+/** Label penuh bagi kod kawasan usrah; nilai tidak dikenali dipulangkan apa adanya. */
+export function kawasanUsrahLabel(kawasan: string): string {
+  return KAWASAN_USRAH_OPTIONS.find((option) => option.value === kawasan)?.label ?? kawasan;
+}
+
+// =============================================================================
+// Kumpulan Usrah Tarbiah (naqib kumpulan, pemantauan) — diminta 2026-10-04.
+// Selari dengan `supabase/migrations/20261004000112_kumpulan_usrah.sql`.
+// =============================================================================
+
+/** Satu ahli/naqib dalam `kumpulan_usrah_overview()` — `id` ialah id baris pautan (members/naqib), `member_id` ialah id ahli sebenar. */
+export type KumpulanUsrahPerson = {
+  id: string;
+  member_id: string;
+  full_name: string;
+  generasi: string | null;
+};
+
+/** Satu baris `kumpulan_usrah_overview()` — satu kumpulan lengkap dengan ahli & naqib. */
+export type KumpulanUsrahOverview = {
+  id: string;
+  kawasan_usrah: string;
+  nama: string;
+  created_at: string;
+  ahli: KumpulanUsrahPerson[];
+  naqib: KumpulanUsrahPerson[];
+};
+
 /**
  * Satu baris `schools` — senarai kini DINAMIK, diurus Super Admin (skrin
  * `admin/senarai-sekolah.tsx`), GANTI `SEKOLAH_OPTIONS` tetap lama. Dropdown

@@ -1,6 +1,7 @@
 import * as XLSX from 'xlsx';
 
 import { TEMPLATE_EXAMPLE_NAME } from './ahli-import';
+import { KUMPULAN_USRAH_COLUMNS } from './kumpulan-usrah-import';
 import { AHLI_COLUMNS, type SheetCell } from './member-sheet';
 import { MONTH_LABELS } from './usrah-import';
 
@@ -19,7 +20,7 @@ import { MONTH_LABELS } from './usrah-import';
  * `template-download.ts`.
  */
 
-export type TemplateKind = 'ahli' | 'usrah' | 'yuran' | 'pipis';
+export type TemplateKind = 'ahli' | 'usrah' | 'yuran' | 'pipis' | 'kumpulan-usrah';
 
 type Template = {
   fileName: string;
@@ -111,6 +112,19 @@ export const TEMPLATES: Record<TemplateKind, Template> = {
       NAMA: TEMPLATE_EXAMPLE_NAME,
       GENERASI: EXAMPLE_GENERATION,
       JUMLAH_SUMBANGAN: 1500,
+    },
+  },
+  'kumpulan-usrah': {
+    fileName: 'template-kumpulan-usrah.xlsx',
+    sheetName: 'Sheet1',
+    title: 'Template Kumpulan Usrah',
+    columns: KUMPULAN_USRAH_COLUMNS,
+    example: {
+      KAWASAN: 'ULK',
+      KUMPULAN: 'Kumpulan 1',
+      NAMA: TEMPLATE_EXAMPLE_NAME,
+      GENERASI: EXAMPLE_GENERATION,
+      NAQIB: 'YA',
     },
   },
 };
