@@ -605,8 +605,7 @@ export const KAWASAN_USRAH_OPTIONS: Option<string>[] = [
   { value: 'UPT', label: 'Usrah Pantai Timur' },
   { value: 'UT', label: 'Usrah Terengganu' },
   { value: 'UTS', label: 'Usrah Tengah Semenanjung' },
-  { value: 'UB', label: 'Usrah Borneo' },
-  { value: 'UA', label: 'Usrah Antarabangsa' },
+  { value: 'UA-UB', label: 'Usrah Antarabangsa & Borneo' },
 ];
 
 /** Label penuh bagi kod kawasan usrah; nilai tidak dikenali dipulangkan apa adanya. */
