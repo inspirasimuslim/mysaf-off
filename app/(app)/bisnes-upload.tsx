@@ -258,7 +258,7 @@ export default function BisnesUploadScreen() {
         <Notice tone="info" message="Reka Gambar 1 pada nisbah 1024×550px (landskap) sebelum dimuat naik — gambar ini sahaja dipaparkan di Dashboard & carousel, jadi kelihatan penuh dan tidak terpotong." />
 
         <ImageUploadRow
-          label="Gambar 2 — Pilihan (bebas orientation)"
+          label="Gambar 2 (Pilihan)"
           previewUri={gambar2Uri ?? existingGambar2Url}
           onChoose={() => void chooseInto(setGambar2Uri)}
           onRemove={() => {
@@ -269,7 +269,7 @@ export default function BisnesUploadScreen() {
         />
 
         <ImageUploadRow
-          label="Gambar 3 — Pilihan (bebas orientation)"
+          label="Gambar 3 (Pilihan)"
           previewUri={gambar3Uri ?? existingGambar3Url}
           onChoose={() => void chooseInto(setGambar3Uri)}
           onRemove={() => {

@@ -3,29 +3,29 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
-import { BusinessAdListRow } from '@/components/business-ad-list-row';
+import { BUSINESS_AD_STATUS_LABEL } from '@/components/business-ad-list-row';
 import { ScreenHeader } from '@/components/screen-header';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { LoadingScreen } from '@/components/ui/loading-screen';
 import { Notice } from '@/components/ui/notice';
 import { Screen } from '@/components/ui/screen';
-import { SectionTitle } from '@/components/ui/section-title';
 import { businessAdError, fetchBusinessDirectory, POSTER_ASPECT_RATIO, type DirectoryBusinessAd } from '@/lib/business-ads';
 import { useGoBack } from '@/lib/navigation';
 
 /**
- * Direktori Bisnes Ahli — DUA bahagian:
+ * Direktori Bisnes Ahli — SATU senarai kad poster (rombak 2026-10-04; dulu
+ * dua bahagian berasingan "Iklan Saya"/"Semua Iklan" dengan reka bentuk
+ * berbeza — baris padat utk sendiri, kad poster utk orang lain). Kini
+ * digabung: SEMUA kad guna reka bentuk poster yang sama, kad SENDIRI
+ * disusun PERMANENT di atas (tidak kira status — menunggu/ditolak/tamat
+ * turut muncul, bukan hanya yang aktif) dengan tag "Bisnes Anda"; kad
+ * ditolak/tamat tambah badge status di sebelah tag supaya sebab/keadaan
+ * masih kelihatan tanpa perlu tajuk seksyen berasingan.
  *
- * 1. "Iklan Saya" — SEMUA entri pemanggil (menunggu/diluluskan/ditolak/tamat),
- *    senarai RINGKAS (baris padat, bukan poster penuh) sebab ini untuk
- *    menjejaki status sendiri, bukan untuk ditonton. Tekan baris buka
- *    `bisnes-info` (detail penuh, termasuk butang sunting/padam di situ).
- * 2. "Semua Iklan" — iklan AKTIF ahli lain sahaja, kekal sebagai kad poster
- *    penuh sebab ini memang untuk ditonton/dipromosikan.
- *
- * `list_business_directory()` memulangkan kedua-dua kumpulan dalam satu RPC;
- * pembahagian "Iklan Saya"/"Semua Iklan" dibuat di sini melalui `is_mine`.
+ * `list_business_directory()` memulangkan kedua-dua kumpulan dalam satu
+ * RPC; susunan sendiri-dahulu dibuat di sini melalui `is_mine`.
  */
 export default function BisnesAhliScreen() {
   const router = useRouter();
@@ -54,8 +54,12 @@ export default function BisnesAhliScreen() {
     }, []),
   );
 
-  const mine = useMemo(() => (rows ?? []).filter((ad) => ad.is_mine), [rows]);
-  const others = useMemo(() => (rows ?? []).filter((ad) => !ad.is_mine), [rows]);
+  // Sendiri dahulu (permanent di atas), kemudian ahli lain — urutan asal
+  // setiap kumpulan daripada RPC dikekalkan.
+  const sorted = useMemo(() => {
+    const rowsOrEmpty = rows ?? [];
+    return [...rowsOrEmpty.filter((ad) => ad.is_mine), ...rowsOrEmpty.filter((ad) => !ad.is_mine)];
+  }, [rows]);
 
   if (rows === null && !error) return <LoadingScreen />;
 
@@ -64,52 +68,22 @@ export default function BisnesAhliScreen() {
       <ScreenHeader eyebrow="Direktori" title="Bisnes Ahli" subtitle="Bisnes yang dipromosikan oleh ahli" onBackPress={goBack} />
 
       <View className="gap-6 px-gutter pb-8 pt-5">
-        <Button label="Upload Bisnes" onPress={() => router.push('/(app)/bisnes-upload')} />
+        <Button label="Upload Bisnes Anda" onPress={() => router.push('/(app)/bisnes-upload')} />
 
         {error ? <Notice tone="negative" message={error} /> : null}
 
-        <View>
-          <SectionTitle title="Iklan Saya" caption="Status iklan yang anda hantar — tekan untuk butiran." />
+        {rows && sorted.length === 0 ? (
+          <EmptyState
+            icon="storefront-outline"
+            title="Belum ada bisnes"
+            description="Jadilah yang pertama mempromosikan bisnes anda kepada ahli lain."
+          />
+        ) : null}
 
-          {rows && mine.length === 0 ? (
-            <EmptyState
-              icon="storefront-outline"
-              title="Belum ada iklan"
-              description="Iklan yang anda hantar akan dipaparkan di sini bersama status semakan."
-            />
-          ) : null}
-
-          <View className="gap-2">
-            {mine.map((ad) => (
-              <BusinessAdListRow
-                key={ad.id}
-                posterUrl={ad.url_poster}
-                title={ad.nama_bisnes}
-                subtitle={
-                  ad.status_paparan === 'ditolak'
-                    ? 'Tekan untuk sunting & hantar semula'
-                    : 'Dihantar ' + new Date(ad.submitted_at).toLocaleDateString('ms-MY')
-                }
-                status={ad.status_paparan}
-                onPress={() => router.push({ pathname: '/(app)/bisnes-info', params: { id: ad.id } })}
-              />
-            ))}
-          </View>
-        </View>
-
-        <View>
-          <SectionTitle title="Semua Iklan" caption="Bisnes aktif yang dipromosikan ahli lain." />
-
-          {rows && others.length === 0 ? (
-            <EmptyState
-              icon="storefront-outline"
-              title="Belum ada bisnes"
-              description="Jadilah yang pertama mempromosikan bisnes anda kepada ahli lain."
-            />
-          ) : null}
-
-          <View className="gap-4">
-            {others.map((ad) => (
+        <View className="gap-4">
+          {sorted.map((ad) => {
+            const statusInfo = ad.is_mine && ad.status_paparan !== 'diluluskan' ? BUSINESS_AD_STATUS_LABEL[ad.status_paparan] : null;
+            return (
               <Pressable
                 key={ad.id}
                 accessibilityRole="button"
@@ -129,11 +103,17 @@ export default function BisnesAhliScreen() {
                       {ad.nama_bisnes}
                     </Text>
                     <Text className="text-sm text-ink-muted">{ad.nama_pemilik}</Text>
+                    {ad.is_mine ? (
+                      <View className="flex-row flex-wrap items-center gap-2 pt-1">
+                        <Badge label="Bisnes Anda" tone="primary" />
+                        {statusInfo ? <Badge label={statusInfo.label} tone={statusInfo.tone} /> : null}
+                      </View>
+                    ) : null}
                   </View>
                 </View>
               </Pressable>
-            ))}
-          </View>
+            );
+          })}
         </View>
       </View>
     </Screen>

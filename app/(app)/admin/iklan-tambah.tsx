@@ -216,7 +216,7 @@ export default function AdminIklanTambahScreen() {
         <Notice tone="info" message="Reka Gambar 1 pada nisbah 1024×550px (landskap) sebelum dimuat naik." />
 
         <ImageUploadRow
-          label="Gambar 2 — Pilihan (bebas orientation)"
+          label="Gambar 2 (Pilihan)"
           previewUri={gambar2Uri}
           onChoose={() => void chooseInto(setGambar2Uri)}
           onRemove={() => setGambar2Uri(null)}
@@ -224,7 +224,7 @@ export default function AdminIklanTambahScreen() {
         />
 
         <ImageUploadRow
-          label="Gambar 3 — Pilihan (bebas orientation)"
+          label="Gambar 3 (Pilihan)"
           previewUri={gambar3Uri}
           onChoose={() => void chooseInto(setGambar3Uri)}
           onRemove={() => setGambar3Uri(null)}
