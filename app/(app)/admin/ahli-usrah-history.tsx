@@ -18,6 +18,7 @@ import { useUsrahAccess } from '@/lib/department-access';
 import { toMalayError } from '@/lib/errors';
 import { useGoBack } from '@/lib/navigation';
 import {
+  adminClearUsrahAttendance,
   adminSetUsrahAttendance,
   fetchUsrahYearRecords,
   usrahYearOptions,
@@ -42,6 +43,8 @@ type Draft = {
   lokasi: string;
   /** 'YYYY-MM-DD' atau '' */
   tarikh: string;
+  /** Status asal sebelum borang dibuka — tentukan sama ada "Kosongkan" dipaparkan. */
+  originalAttended: boolean | null;
 };
 
 const YEAR_OPTIONS = usrahYearOptions();
@@ -62,6 +65,7 @@ export default function AhliUsrahHistoryScreen() {
   const [banner, setBanner] = useState<Banner>(null);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [saving, setSaving] = useState(false);
+  const [clearing, setClearing] = useState(false);
 
   const load = useCallback(async () => {
     if (!memberId) return;
@@ -89,6 +93,7 @@ export default function AhliUsrahHistoryScreen() {
       kawasan: record.kawasanAttended,
       lokasi: record.locationText ?? '',
       tarikh: record.attendedDate ?? '',
+      originalAttended: record.attended,
     });
   };
 
@@ -114,6 +119,26 @@ export default function AhliUsrahHistoryScreen() {
       setDraft(null);
     } finally {
       setSaving(false);
+    }
+  };
+
+  /**
+   * Kosongkan status bulan ini — fall back seolah-olah ahli belum tanda
+   * kehadiran langsung (bukan ditukar ke "Tidak Hadir").
+   */
+  const clearStatus = async () => {
+    if (!draft || !memberId || clearing || saving) return;
+    setClearing(true);
+    try {
+      await adminClearUsrahAttendance({ memberId, year: Number(year), month: draft.month });
+      setBanner({ tone: 'positive', message: 'Status ' + MONTH_NAMES[draft.month - 1] + ' ' + year + ' dikosongkan — seolah-olah belum ditanda.' });
+      setDraft(null);
+      await load();
+    } catch (caught) {
+      setBanner({ tone: 'negative', message: toMalayError(caught, 'Gagal mengosongkan status.') });
+      setDraft(null);
+    } finally {
+      setClearing(false);
     }
   };
 
@@ -182,9 +207,20 @@ export default function AhliUsrahHistoryScreen() {
         title={draft ? MONTH_NAMES[draft.month - 1] + ' ' + year : ''}
         description="Rekod ini ditanda sebagai dimasukkan oleh admin."
         onClose={() => setDraft(null)}
-        dismissable={!saving}
+        dismissable={!saving && !clearing}
         footer={
-          <Button label="Simpan" loading={saving} disabled={saving} onPress={() => void save()} />
+          <View className="gap-3">
+            <Button label="Simpan" loading={saving} disabled={saving || clearing} onPress={() => void save()} />
+            {draft && draft.originalAttended !== null ? (
+              <Button
+                label="Kosongkan Status"
+                variant="danger"
+                loading={clearing}
+                disabled={saving || clearing}
+                onPress={() => void clearStatus()}
+              />
+            ) : null}
+          </View>
         }>
         {draft ? (
           <>

@@ -225,6 +225,21 @@ export async function adminSetUsrahAttendance(input: AdminUsrahAttendanceInput):
   if (error) throw new Error(error.message);
 }
 
+/**
+ * Kosongkan status satu bulan — fall back ke "belum ditanda" (baris
+ * dipadam terus, bukan attended=null, supaya bentuknya sama seperti bulan
+ * yang memang tiada rekod). Kebenaran disemak di pelayan
+ * (`admin_clear_usrah_attendance` — LAJNAH TARBIAH sunting / Super Admin).
+ */
+export async function adminClearUsrahAttendance(input: { memberId: string; year: number; month: number }): Promise<void> {
+  const { error } = await supabase.rpc('admin_clear_usrah_attendance', {
+    p_member_id: input.memberId,
+    p_year: input.year,
+    p_month: input.month,
+  });
+  if (error) throw new Error(error.message);
+}
+
 /** Tahun untuk pemilih: tahun depan hingga tahun data terawal (2025). */
 export function usrahYearOptions(): { value: string; label: string }[] {
   const current = new Date().getFullYear();
