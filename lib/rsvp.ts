@@ -66,6 +66,12 @@ export async function setMyRsvp(eventId: string, answer: MyRsvp): Promise<void> 
   if (error) throw error;
 }
 
+/** Reset ke "belum respon" — memadam jawapan sendiri (RPC; tiada DELETE terus pada jadual). */
+export async function clearMyRsvp(eventId: string): Promise<void> {
+  const { error } = await supabase.rpc('clear_my_event_rsvp', { p_event_id: eventId });
+  if (error) throw error;
+}
+
 export async function fetchRsvpSummary(eventId: string): Promise<RsvpSummary | null> {
   const { data, error } = await supabase.rpc('event_rsvp_summary', { p_event_id: eventId });
   if (error) throw error;
