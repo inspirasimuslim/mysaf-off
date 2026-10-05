@@ -1,9 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { Pressable, Text, View } from 'react-native';
+import { Linking, Pressable, Text, View } from 'react-native';
 
 import { ScreenHeader } from '@/components/screen-header';
+import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { GenerationChip } from '@/components/ui/generation-chip';
 import { LoadingScreen } from '@/components/ui/loading-screen';
@@ -16,6 +17,9 @@ import { fetchMemberDirectory } from '@/lib/members';
 import { fetchMbmCouples } from '@/lib/mbm';
 import { useGoBack } from '@/lib/navigation';
 import type { DirectoryMember, MbmCouple } from '@/types/database';
+
+/** Halaman luar (Canva): maklumat dan permohonan Majlis Baitul Muslim. */
+const BAITUL_MUSLIM_URL = 'https://senadappda.my.canva.site/mbmikhwan';
 
 type State =
   | { step: 'memuat' }
@@ -124,6 +128,13 @@ export default function AhliMbmScreen() {
         subtitle={state.step === 'sedia' ? state.rows.length + ' pasangan' : undefined}
         onBackPress={goBack}
       />
+
+      <View className="px-gutter pt-4">
+        <Button
+          label="Info & Permohonan MBM"
+          onPress={() => void Linking.openURL(BAITUL_MUSLIM_URL).catch(() => undefined)}
+        />
+      </View>
 
       {body()}
     </Screen>
