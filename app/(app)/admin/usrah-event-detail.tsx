@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Switch, Text, View } from 'react-native';
 
 import { EventQrCard } from '@/components/event-qr-card';
+import { LocationPicker } from '@/components/location-picker';
 import { SaveShareButtons } from '@/components/save-share-buttons';
 import { ScreenHeader } from '@/components/screen-header';
 import { StaticMap } from '@/components/static-map';
@@ -18,6 +19,7 @@ import { PickerField } from '@/components/ui/picker-field';
 import { Screen } from '@/components/ui/screen';
 import { SectionTitle } from '@/components/ui/section-title';
 import { Segmented } from '@/components/ui/segmented';
+import { StepperField } from '@/components/ui/stepper-field';
 import { TextField } from '@/components/ui/text-field';
 import { ToggleRow } from '@/components/ui/toggle-row';
 import { ToastBanner } from '@/components/ui/toast';
@@ -76,6 +78,8 @@ export default function UsrahEventDetailScreen() {
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
   const [locationText, setLocationText] = useState('');
+  const [coords, setCoords] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [radius, setRadius] = useState(100);
   const [eventMode, setEventMode] = useState<EventMode>('bersemuka');
   const [gantiUsrah, setGantiUsrah] = useState(false);
   const [gantiYear, setGantiYear] = useState('');
@@ -89,6 +93,8 @@ export default function UsrahEventDetailScreen() {
     setStartTime(timeLabel(row.start_time));
     setEndTime(timeLabel(row.end_time));
     setLocationText(row.location_text ?? '');
+    setCoords(row.latitude !== null && row.longitude !== null ? { latitude: Number(row.latitude), longitude: Number(row.longitude) } : null);
+    setRadius(row.geofence_radius_meters);
     setEventMode(row.event_mode);
     setGantiUsrah(row.ganti_usrah);
     setGantiYear(row.ganti_usrah_year ? String(row.ganti_usrah_year) : '');
@@ -131,6 +137,9 @@ export default function UsrahEventDetailScreen() {
           start_time: startTime,
           end_time: endTime,
           location_text: locationText.trim() || null,
+          latitude: coords?.latitude ?? null,
+          longitude: coords?.longitude ?? null,
+          geofence_radius_meters: radius,
           // Pelayan membaca nilai TERKINI pada setiap imbasan — tukar berkesan serta-merta.
           event_mode: eventMode,
           // Program sahaja. Kehadiran yang SUDAH direkod tidak berubah bila ini ditukar.
@@ -151,6 +160,8 @@ export default function UsrahEventDetailScreen() {
     }
   }, [
     busy,
+    coords,
+    radius,
     endDate,
     endTime,
     event,
@@ -595,6 +606,24 @@ export default function UsrahEventDetailScreen() {
                   editable={!busy}
                   autoCapitalize="sentences"
                   autoCorrect={false}
+                />
+                <LocationPicker
+                  latitude={coords?.latitude ?? null}
+                  longitude={coords?.longitude ?? null}
+                  radiusMeters={radius}
+                  onChange={setCoords}
+                  onPlaceSelected={setLocationText}
+                  disabled={busy}
+                />
+                <StepperField
+                  label="Radius geofence (10–5000 m)"
+                  value={radius}
+                  onChange={setRadius}
+                  step={10}
+                  min={10}
+                  max={5000}
+                  suffix="m"
+                  disabled={busy}
                 />
                 <Button
                   label="Simpan Perubahan"

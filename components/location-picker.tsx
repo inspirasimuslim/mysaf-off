@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Platform, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import { LocationMap } from '@/components/location-map';
 import { PlaceSearch } from '@/components/place-search';
@@ -15,13 +15,10 @@ import { LocationError, readCurrentCoords } from '@/lib/geolocation';
  * react-native-maps + Google Maps SDK) atau `location-map.web.tsx`
  * (@react-google-maps/api) ikut platform, dengan props yang SAMA, jadi
  * pemanggil tidak perlu tahu platform. Carian tempat ialah Places API (New)
- * REST (`place-search.tsx`). Medan koordinat manual kekal di web sebagai
- * sandaran. Butang "Guna Lokasi Semasa" berfungsi pada kedua-dua platform —
+ * REST (`place-search.tsx`). Medan latitud/longitud (bawah peta) boleh ditaip atau
+ * ditampal "3.1390, 101.6869" dari Google Maps. Butang "Guna Lokasi Semasa" berfungsi pada kedua-dua platform —
  * lihat `geolocation.ts`.
  */
-
-/** Medan koordinat manual disorok dari UI; logik dikekalkan sebagai sandaran teknikal. */
-const SHOW_MANUAL_COORDS = false;
 
 type Props = {
   latitude: number | null;
@@ -135,8 +132,7 @@ export function LocationPicker({ latitude, longitude, radiusMeters, onChange, on
         />
       </View>
 
-      {SHOW_MANUAL_COORDS && Platform.OS === 'web' ? (
-        <>
+      <>
           <View className="flex-row gap-3">
             <View className="flex-1">
               <TextField
@@ -159,8 +155,7 @@ export function LocationPicker({ latitude, longitude, radiusMeters, onChange, on
               />
             </View>
           </View>
-        </>
-      ) : null}
+      </>
 
       <Button
         label="Guna Lokasi Semasa"
