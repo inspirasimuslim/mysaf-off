@@ -235,7 +235,7 @@ export default function AdminHubScreen() {
           <CollapsibleSection
             variant="plain"
             title="Tarbiah"
-            count={usrahAccess.canEdit ? 5 : 3}
+            count={usrahAccess.canEdit ? 6 : 3}
             defaultOpen={openByDefault}>
             <ActionRow
               icon="qr-code-outline"
@@ -279,6 +279,15 @@ export default function AdminHubScreen() {
                 onPress={() => router.push('/(app)/admin/kumpulan-usrah-upload')}
               />
             ) : null}
+
+            {usrahAccess.canEdit ? (
+              <ActionRow
+                icon="ribbon-outline"
+                title="Rais / Raisah Usrah Kawasan"
+                subtitle="Lantik atau tukar Rais dan Raisah bagi setiap kawasan usrah"
+                onPress={() => router.push({ pathname: '/(app)/admin/rais-lantikan', params: { jenis: 'kawasan' } })}
+              />
+            ) : null}
           </CollapsibleSection>
         ) : null}
 
@@ -319,9 +328,9 @@ export default function AdminHubScreen() {
             {programAccess.canEdit ? (
               <ActionRow
                 icon="ribbon-outline"
-                title="Rais / Raisah"
-                subtitle="Lantik atau tukar Rais dan Raisah Generasi serta Usrah Kawasan"
-                onPress={() => router.push('/(app)/admin/rais-lantikan')}
+                title="Rais / Raisah Generasi"
+                subtitle="Lantik atau tukar Rais dan Raisah bagi setiap generasi"
+                onPress={() => router.push({ pathname: '/(app)/admin/rais-lantikan', params: { jenis: 'generasi' } })}
               />
             ) : null}
           </CollapsibleSection>

@@ -1,12 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useLocalSearchParams } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
 
 import { NoAccessScreen } from '@/components/no-access';
 import { ScreenHeader } from '@/components/screen-header';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { CollapsibleSection } from '@/components/ui/collapsible-section';
 import { FormModal } from '@/components/ui/form-modal';
 import { IconButton } from '@/components/ui/icon-button';
 import { LoadingScreen } from '@/components/ui/loading-screen';
@@ -16,7 +16,7 @@ import { Screen } from '@/components/ui/screen';
 import { TextField } from '@/components/ui/text-field';
 import { ToastBanner } from '@/components/ui/toast';
 import { Colors } from '@/constants/theme';
-import { useProgramAccess } from '@/lib/department-access';
+import { useProgramAccess, useUsrahAccess } from '@/lib/department-access';
 import { toMalayError } from '@/lib/errors';
 import { useGoBack } from '@/lib/navigation';
 import {
@@ -35,15 +35,19 @@ type Banner = { tone: 'positive' | 'info' | 'negative'; message: string } | null
 const SEARCH_LIMIT = 20;
 
 /**
- * Lantik / tukar Rais dan Raisah Generasi serta Rais dan Raisah Usrah Kawasan.
- *
- * Satu tempat untuk kedua-dua senarai. Department JABATAN SETIAUSAHA (can_edit)
- * dan Super Admin; RPC `set_rais_lantikan()` ialah penentu muktamad (termasuk
- * semakan jantina: Rais = Muslimin, Raisah = Muslimat).
+ * Lantik / tukar Rais dan Raisah -- satu skrin, dua pintu masuk (`?jenis=`):
+ *   generasi -> Admin > Setiausaha (department JABATAN SETIAUSAHA)
+ *   kawasan  -> Admin > Tarbiah    (department LAJNAH TARBIAH)
+ * Super Admin dirangkumi. RPC `set_rais_lantikan()` ialah penentu muktamad
+ * (termasuk semakan jantina: Rais = Muslimin, Raisah = Muslimat).
  */
 export default function RaisLantikanScreen() {
   const goBack = useGoBack();
-  const access = useProgramAccess();
+  const params = useLocalSearchParams<{ jenis?: string }>();
+  const jenis: 'generasi' | 'kawasan' = params.jenis === 'kawasan' ? 'kawasan' : 'generasi';
+  const setiausahaAccess = useProgramAccess();
+  const tarbiahAccess = useUsrahAccess();
+  const access = jenis === 'kawasan' ? tarbiahAccess : setiausahaAccess;
 
   const [rows, setRows] = useState<RaisLantikan[]>([]);
   const [options, setOptions] = useState<RaisMemberOption[]>([]);
@@ -78,8 +82,7 @@ export default function RaisLantikanScreen() {
       .catch((caught) => reportError(caught, 'Gagal memuatkan senarai ahli.'));
   }, [access.loading, access.canEdit, reportError]);
 
-  const generasiGroups = useMemo(() => groupRais(rows, 'generasi'), [rows]);
-  const kawasanGroups = useMemo(() => groupRais(rows, 'kawasan'), [rows]);
+  const groups = useMemo(() => groupRais(rows, jenis), [rows, jenis]);
 
   const openEdit = useCallback((row: RaisLantikan) => {
     setBanner(null);
@@ -124,7 +127,11 @@ export default function RaisLantikanScreen() {
     return (
       <NoAccessScreen
         title="Rais / Raisah"
-        description="Skrin ini khusus untuk admin Jabatan Setiausaha."
+        description={
+          jenis === 'kawasan'
+            ? 'Skrin ini khusus untuk admin Lajnah Tarbiah.'
+            : 'Skrin ini khusus untuk admin Jabatan Setiausaha.'
+        }
       />
     );
   }
@@ -173,9 +180,13 @@ export default function RaisLantikanScreen() {
   return (
     <Screen padTop={false}>
       <ScreenHeader
-        eyebrow="Setiausaha"
-        title="Rais / Raisah"
-        subtitle="Lantik atau tukar Rais dan Raisah Generasi serta Usrah Kawasan"
+        eyebrow={jenis === 'kawasan' ? 'Tarbiah' : 'Setiausaha'}
+        title={jenis === 'kawasan' ? 'Rais / Raisah Usrah Kawasan' : 'Rais / Raisah Generasi'}
+        subtitle={
+          jenis === 'kawasan'
+            ? 'Lantik atau tukar Rais dan Raisah bagi setiap kawasan usrah'
+            : 'Lantik atau tukar Rais dan Raisah bagi setiap generasi'
+        }
         onBackPress={goBack}
       />
 
@@ -183,16 +194,12 @@ export default function RaisLantikanScreen() {
         {banner ? <ToastBanner tone={banner.tone} message={banner.message} /> : null}
         <Notice
           tone="info"
-          message="Generasi i01–i06 hanya mempunyai Rais. Rais mesti Muslimin dan Raisah mesti Muslimat. Senarai ini dipapar kepada semua ahli di Carta Organisasi."
+          message={
+            (jenis === 'generasi' ? 'Generasi i01–i06 hanya mempunyai Rais, i19 hanya Raisah. ' : '') +
+            'Rais mesti Muslimin dan Raisah mesti Muslimat. Senarai ini dipapar kepada semua ahli di Carta Organisasi.'
+          }
         />
-
-        <CollapsibleSection title="Rais / Raisah Generasi" count={generasiGroups.length} defaultOpen>
-          <View className="gap-3">{renderGroup('generasi', generasiGroups)}</View>
-        </CollapsibleSection>
-
-        <CollapsibleSection title="Rais / Raisah Usrah Kawasan" count={kawasanGroups.length} defaultOpen>
-          <View className="gap-3">{renderGroup('kawasan', kawasanGroups)}</View>
-        </CollapsibleSection>
+        {renderGroup(jenis, groups)}
       </View>
 
       <FormModal
