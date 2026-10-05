@@ -30,9 +30,12 @@ const METRIC_OPTIONS = [
   { value: 'peratus' as const, label: 'Peratus' },
 ];
 
+/** Tidak menambah '(kod)' jika label itu sendiri sudah mengandungnya (cth 'UP'). */
 function kawasanLabel(code: string): string {
   const option = KAWASAN_USRAH_OPTIONS.find((row) => row.value === code);
-  return option ? option.label + ' (' + code + ')' : code;
+  if (!option) return code;
+  if (option.label.endsWith('(' + code + ')')) return option.label;
+  return option.label + ' (' + code + ')';
 }
 
 /** 12 nilai (Jan–Dis) untuk carta, daripada baris yang sudah dikira oleh SQL. */

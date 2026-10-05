@@ -606,7 +606,7 @@ export const KAWASAN_USRAH_OPTIONS: Option<string>[] = [
   { value: 'UT', label: 'Usrah Terengganu' },
   { value: 'UTS', label: 'Usrah Tengah Semenanjung' },
   { value: 'UA-UB', label: 'Usrah Antarabangsa & Borneo' },
-  { value: 'UP', label: 'Usrah Perak' },
+  { value: 'UP', label: 'Usrah Perak (UP)' },
 ];
 
 /** Label penuh bagi kod kawasan usrah; nilai tidak dikenali dipulangkan apa adanya. */

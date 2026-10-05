@@ -17,10 +17,16 @@ type State =
   | { step: 'sedia'; data: MemberStatistics }
   | { step: 'gagal'; message: string };
 
-/** 'UPT' → 'Usrah Pantai Timur (UPT)'; label lain dipulangkan apa adanya. */
+/**
+ * 'UPT' → 'Usrah Pantai Timur (UPT)'; label lain dipulangkan apa adanya.
+ * Tidak menambah '(kod)' jika label itu sendiri sudah mengandungnya (cth
+ * 'UP' → 'Usrah Perak (UP)') — elak pendua '(UP) (UP)'.
+ */
 function kawasanLabel(code: string): string {
   const option = KAWASAN_USRAH_OPTIONS.find((row) => row.value === code);
-  return option ? option.label + ' (' + code + ')' : code;
+  if (!option) return code;
+  if (option.label.endsWith('(' + code + ')')) return option.label;
+  return option.label + ' (' + code + ')';
 }
 
 /** Nama sekolah dari DB dalam huruf besar penuh — dilembutkan untuk dibaca. */
