@@ -112,15 +112,21 @@ export default function OrganisasiScreen() {
     avatar_url: row.avatar_url,
   });
 
+  /* Setiap generasi / kawasan ialah satu seksyen yang tertutup secara lalai. */
   const renderRaisGroups = (jenis: 'generasi' | 'kawasan', groups: RaisGroup[]) => (
-    <View className="gap-4">
+    <View className="gap-3">
       {groups.map((group) => (
-        <View key={jenis + group.kod} className="gap-3">
-          <Text className="text-sm font-semibold text-ink">{raisGroupHeading(jenis, group.kod)}</Text>
-          {group.rows.map((row) => (
-            <OrgPositionRow key={row.id} position={raisAsPosition(row)} onPress={() => openProfile(raisAsPosition(row))} />
-          ))}
-        </View>
+        <CollapsibleSection
+          key={jenis + group.kod}
+          title={raisGroupHeading(jenis, group.kod)}
+          count={group.rows.length}
+          defaultOpen={false}>
+          <View className="gap-3">
+            {group.rows.map((row) => (
+              <OrgPositionRow key={row.id} position={raisAsPosition(row)} onPress={() => openProfile(raisAsPosition(row))} />
+            ))}
+          </View>
+        </CollapsibleSection>
       ))}
     </View>
   );
