@@ -292,7 +292,7 @@ export default function AdminHubScreen() {
           <CollapsibleSection
             variant="plain"
             title="Setiausaha"
-            count={2}
+            count={programAccess.canEdit ? 3 : 2}
             defaultOpen={openByDefault}>
             <ActionRow
               icon="calendar-outline"
@@ -315,6 +315,15 @@ export default function AdminHubScreen() {
               }
               onPress={() => router.push('/(app)/admin/announcements')}
             />
+
+            {programAccess.canEdit ? (
+              <ActionRow
+                icon="ribbon-outline"
+                title="Rais / Raisah"
+                subtitle="Lantik atau tukar Rais dan Raisah Generasi serta Usrah Kawasan"
+                onPress={() => router.push('/(app)/admin/rais-lantikan')}
+              />
+            ) : null}
           </CollapsibleSection>
         ) : null}
 
