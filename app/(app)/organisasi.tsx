@@ -185,7 +185,7 @@ export default function OrganisasiScreen() {
           <>
             <View className="my-3 h-px bg-line" />
             <View className="gap-3">
-              <Text className="text-lg font-bold text-ink">Usrah Kawasan</Text>
+              <Text className="text-lg font-bold text-ink">Rais / Raisah Usrah Kawasan</Text>
               {renderRaisGroups('kawasan', raisKawasan)}
             </View>
           </>
@@ -195,7 +195,7 @@ export default function OrganisasiScreen() {
           <>
             <View className="my-3 h-px bg-line" />
             <View className="gap-3">
-              <Text className="text-lg font-bold text-ink">Generasi</Text>
+              <Text className="text-lg font-bold text-ink">Rais / Raisah Generasi</Text>
               {renderRaisGroups('generasi', raisGenerasi)}
             </View>
           </>
