@@ -37,7 +37,7 @@ import { generationLabel, generationOrder, type Generation, type Option } from '
 type Banner = { tone: 'positive' | 'info' | 'negative'; message: string } | null;
 
 /**
- * Senarai Ahli Diputihkan — rekod SEJARAH ahli yang dibuang secara rasmi.
+ * Senarai Ahli Diputihkan — rekod SEJARAH ahli yang diputihkan secara rasmi.
  *
  * Dimiliki oleh department SETIAUSAHA (`ORG_CHART_DEPARTMENT`) — SAMA
  * department yang memiliki Carta Organisasi, bukan JABATAN SETIAUSAHA yang
@@ -204,7 +204,7 @@ export default function AhliDiputihkanScreen() {
         <ScreenHeader
           eyebrow="Panel Admin"
           title="Ahli Diputihkan"
-          subtitle="Rekod sejarah ahli yang dibuang secara rasmi"
+          subtitle="Rekod sejarah ahli yang diputihkan secara rasmi"
           onBackPress={goBack}
         />
 
@@ -263,7 +263,7 @@ export default function AhliDiputihkanScreen() {
                   columns={[
                     { key: 'nama', header: 'Nama', flex: 2, render: (r) => <CellText strong>{r.nama}</CellText> },
                     { key: 'gen', header: 'Generasi', flex: 1, render: (r) => <CellText muted>{generationLabel(r.generasi)}</CellText> },
-                    { key: 'tahun', header: 'Tahun Dibuang', width: 130, render: (r) => <CellText>{String(r.tahun_dibuang)}</CellText> },
+                    { key: 'tahun', header: 'Tahun Diputihkan', width: 130, render: (r) => <CellText>{String(r.tahun_dibuang)}</CellText> },
                     { key: 'catatan', header: 'Catatan', flex: 2, render: (r) => <CellText muted>{r.catatan ?? '—'}</CellText> },
                   ]}
                   actions={(r) =>
@@ -291,7 +291,7 @@ export default function AhliDiputihkanScreen() {
                         {row.nama}
                       </Text>
                       <Text className="mt-0.5 text-xs text-ink-muted" numberOfLines={1}>
-                        {generationLabel(row.generasi) + ' · Dibuang ' + row.tahun_dibuang}
+                        {generationLabel(row.generasi) + ' · Diputihkan ' + row.tahun_dibuang}
                         {row.catatan ? ' · ' + row.catatan : ''}
                       </Text>
                     </View>
@@ -328,7 +328,7 @@ export default function AhliDiputihkanScreen() {
       <FormModal
         visible={formOpen}
         title={editingId ? 'Sunting Rekod' : 'Tambah Rekod'}
-        description="Ringkas sahaja — nama, generasi dan tahun dibuang. Tiada perlu sebab terperinci."
+        description="Ringkas sahaja — nama, generasi dan tahun diputihkan. Tiada perlu sebab terperinci."
         dismissable={!saving}
         onClose={() => setFormOpen(false)}>
         <TextField
@@ -350,7 +350,7 @@ export default function AhliDiputihkanScreen() {
         />
 
         <TextField
-          label="Tahun dibuang"
+          label="Tahun diputihkan"
           value={tahun}
           onChangeText={(value) => setTahun(value.replace(/[^\d]/g, '').slice(0, 4))}
           editable={!saving}

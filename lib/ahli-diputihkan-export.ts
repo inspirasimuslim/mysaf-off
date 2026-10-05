@@ -8,14 +8,14 @@ import { generationLabel } from '@/types/database';
 
 /**
  * Eksport Senarai Ahli Diputihkan — satu sheet ringkas (Nama, Generasi,
- * Tahun Dibuang, Catatan), susunan sama seperti skrin (tahun menaik).
+ * Tahun Diputihkan, Catatan), susunan sama seperti skrin (tahun menaik).
  *
  * Tidak memerlukan RPC/pelayan berasingan seperti eksport Ahli/Kesihatan —
  * `rows` diambil terus daripada apa yang skrin sudah muatkan (RLS
  * `can_view_ahli_diputihkan()` pada table itu sendiri sudah memadai).
  */
 
-type ExportRow = { Nama: string; Generasi: string; 'Tahun Dibuang': number; Catatan: string };
+type ExportRow = { Nama: string; Generasi: string; 'Tahun Diputihkan': number; Catatan: string };
 
 export type AhliDiputihkanExportResult = { rows: number; fileName: string; result: DeliveryResult };
 
@@ -28,7 +28,7 @@ export async function downloadAhliDiputihkanExport(
   const sheetRows: ExportRow[] = rows.map((row) => ({
     Nama: row.nama,
     Generasi: generationLabel(row.generasi),
-    'Tahun Dibuang': row.tahun_dibuang,
+    'Tahun Diputihkan': row.tahun_dibuang,
     Catatan: row.catatan ?? '',
   }));
 

@@ -365,8 +365,8 @@ export default function AdminHubScreen() {
               title="Ahli Diputihkan"
               subtitle={
                 orgChartAccess.canEdit
-                  ? 'Rekod sejarah ahli yang dibuang secara rasmi'
-                  : 'Rekod sejarah ahli yang dibuang secara rasmi (paparan sahaja)'
+                  ? 'Rekod sejarah ahli yang diputihkan secara rasmi'
+                  : 'Rekod sejarah ahli yang diputihkan secara rasmi (paparan sahaja)'
               }
               onPress={() => router.push('/(app)/admin/ahli-diputihkan')}
             />
