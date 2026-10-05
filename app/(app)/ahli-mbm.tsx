@@ -1,18 +1,21 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useEffect, useState } from 'react';
-import { Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
+import { Pressable, Text, View } from 'react-native';
 
 import { ScreenHeader } from '@/components/screen-header';
 import { EmptyState } from '@/components/ui/empty-state';
 import { GenerationChip } from '@/components/ui/generation-chip';
 import { LoadingScreen } from '@/components/ui/loading-screen';
+import { MemberAvatar } from '@/components/ui/member-avatar';
 import { Notice } from '@/components/ui/notice';
 import { Screen } from '@/components/ui/screen';
 import { Colors } from '@/constants/theme';
 import { toMalayError } from '@/lib/errors';
+import { fetchMemberDirectory } from '@/lib/members';
 import { fetchMbmCouples } from '@/lib/mbm';
 import { useGoBack } from '@/lib/navigation';
-import type { MbmCouple } from '@/types/database';
+import type { DirectoryMember, MbmCouple } from '@/types/database';
 
 type State =
   | { step: 'memuat' }
@@ -20,7 +23,7 @@ type State =
   | { step: 'gagal'; message: string };
 
 /**
- * Senarai pasangan Ahli MBM — dibuka oleh SEMUA ahli daripada tab Ahli.
+ * Senarai Pasangan MBM — dibuka oleh SEMUA ahli daripada tab Ahli.
  *
  * `list_mbm_couples()` hanya memulangkan pasangan yang pautannya SAH dua hala
  * (kedua-dua belah `spouse_member_id` menunjuk kepada satu sama lain), dan
@@ -29,7 +32,35 @@ type State =
  */
 export default function AhliMbmScreen() {
   const goBack = useGoBack();
+  const router = useRouter();
   const [state, setState] = useState<State>({ step: 'memuat' });
+  const [directory, setDirectory] = useState<DirectoryMember[]>([]);
+
+  /* Direktori melengkapkan avatar + profil; kegagalan senyap (kad tetap dipapar tanpa gambar). */
+  useEffect(() => {
+    void fetchMemberDirectory()
+      .then(setDirectory)
+      .catch(() => setDirectory([]));
+  }, []);
+
+  const openProfile = useCallback(
+    (nama: string, generasi: string | null) => {
+      const match = directory.find((row) => row.full_name === nama);
+      router.push({
+        pathname: '/(app)/ahli-view',
+        params: {
+          nama,
+          generasi: match?.generasi ?? generasi ?? '',
+          emel: match?.email ?? '',
+          tel: match?.no_tel ?? '',
+          avatar: match?.avatar_url ?? '',
+          pekerjaan: match?.status_pekerjaan ?? '',
+          perkahwinan: match?.status_perkahwinan ?? '',
+        },
+      });
+    },
+    [directory, router],
+  );
 
   useEffect(() => {
     let active = true;
@@ -40,7 +71,7 @@ export default function AhliMbmScreen() {
         if (active) setState({ step: 'sedia', rows });
       } catch (caught) {
         if (active) {
-          setState({ step: 'gagal', message: toMalayError(caught, 'Gagal memuatkan senarai Ahli MBM.') });
+          setState({ step: 'gagal', message: toMalayError(caught, 'Gagal memuatkan senarai Pasangan MBM.') });
         }
       }
     })();
@@ -65,7 +96,7 @@ export default function AhliMbmScreen() {
       return (
         <EmptyState
           icon="heart-outline"
-          title="Tiada pasangan Ahli MBM direkodkan"
+          title="Tiada Pasangan MBM direkodkan"
           description="Pasangan dipaparkan di sini selepas kedua-dua belah dipautkan dalam borang profil masing-masing."
         />
       );
@@ -74,17 +105,22 @@ export default function AhliMbmScreen() {
     return (
       <View className="gap-3 px-gutter pb-8 pt-4">
         {state.rows.map((row, index) => (
-          <CoupleCard key={row.nama_suami + ':' + row.nama_isteri + ':' + index} row={row} />
+          <CoupleCard
+            key={row.nama_suami + ':' + row.nama_isteri + ':' + index}
+            row={row}
+            directory={directory}
+            onOpen={openProfile}
+          />
         ))}
       </View>
     );
-  }, [state]);
+  }, [state, directory, openProfile]);
 
   return (
     <Screen padTop={false}>
       <ScreenHeader
         eyebrow="Direktori"
-        title="Ahli MBM"
+        title="Pasangan MBM"
         subtitle={state.step === 'sedia' ? state.rows.length + ' pasangan' : undefined}
         onBackPress={goBack}
       />
@@ -94,14 +130,23 @@ export default function AhliMbmScreen() {
   );
 }
 
-/** Satu kad setiap pasangan — suami di atas, isteri di bawah, butiran ringkas di penjuru. */
-function CoupleCard({ row }: { row: MbmCouple }) {
+/** Satu kad setiap pasangan — suami di atas, isteri di bawah (avatar, tekan untuk profil), butiran ringkas di penjuru. */
+function CoupleCard({
+  row,
+  directory,
+  onOpen,
+}: {
+  row: MbmCouple;
+  directory: DirectoryMember[];
+  onOpen: (nama: string, generasi: string | null) => void;
+}) {
+  const avatarOf = (nama: string) => directory.find((member) => member.full_name === nama)?.avatar_url ?? null;
   return (
     <View className="gap-3 rounded-card border border-line bg-surface p-4">
       <View className="gap-2">
-        <Spouse label="Suami" nama={row.nama_suami} generasi={row.generasi_suami} />
+        <Spouse nama={row.nama_suami} generasi={row.generasi_suami} avatarUrl={avatarOf(row.nama_suami)} onOpen={onOpen} />
         <View className="h-px bg-line" />
-        <Spouse label="Isteri" nama={row.nama_isteri} generasi={row.generasi_isteri} />
+        <Spouse nama={row.nama_isteri} generasi={row.generasi_isteri} avatarUrl={avatarOf(row.nama_isteri)} onOpen={onOpen} />
       </View>
 
       {row.tahun_berkahwin || row.bil_anak !== null ? (
@@ -118,15 +163,29 @@ function CoupleCard({ row }: { row: MbmCouple }) {
   );
 }
 
-function Spouse({ label, nama, generasi }: { label: string; nama: string; generasi: string | null }) {
+function Spouse({
+  nama,
+  generasi,
+  avatarUrl,
+  onOpen,
+}: {
+  nama: string;
+  generasi: string | null;
+  avatarUrl: string | null;
+  onOpen: (nama: string, generasi: string | null) => void;
+}) {
   return (
-    <View className="flex-row items-center gap-2">
-      <Text className="w-12 text-xs font-semibold uppercase tracking-wide text-ink-faint">{label}</Text>
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={'Buka profil ' + nama}
+      onPress={() => onOpen(nama, generasi)}
+      className="flex-row items-center gap-3 active:opacity-70">
+      <MemberAvatar fullName={nama} avatarUrl={avatarUrl} size={38} />
       <Text className="flex-1 text-base font-semibold text-ink" numberOfLines={1}>
         {nama}
       </Text>
       <GenerationChip code={generasi} />
-    </View>
+    </Pressable>
   );
 }
 

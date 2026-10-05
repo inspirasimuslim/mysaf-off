@@ -186,7 +186,7 @@ export default function AhliScreen() {
           onPress={() => router.push('/(app)/hari-jadi-bulan')}
         />
         <MenuTile
-          words={['Ahli', 'MBM']}
+          words={['Pasangan', 'MBM']}
           icon="heart"
           color={Colors.primary}
           onPress={() => router.push('/(app)/ahli-mbm')}
