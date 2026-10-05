@@ -34,6 +34,7 @@ export type CreateUsrahEventInput = {
   /** 'bersemuka' = geofence menghalang; 'hibrid' = geofence melabel sahaja. */
   event_mode: EventMode;
   /** Program sahaja — kehadiran turut dikira sebagai Usrah bulan tarikh mula. */
+  bermalam: boolean;
   ganti_usrah: boolean;
   /** Wajib bila `ganti_usrah` (kekangan pangkalan data); NULL selainnya. */
   ganti_usrah_year: number | null;

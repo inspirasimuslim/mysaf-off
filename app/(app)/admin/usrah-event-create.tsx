@@ -93,6 +93,7 @@ export default function UsrahEventCreateScreen() {
   const [eventMode, setEventMode] = useState<EventMode>('bersemuka');
   /** Program sahaja. Lalai OFF — admin sengaja menandanya. */
   const [gantiUsrah, setGantiUsrah] = useState(false);
+  const [bermalam, setBermalam] = useState(false);
   /** Bulan usrah yang diganti — dipilih eksplisit, kosong sehingga admin memilih. */
   const [gantiYear, setGantiYear] = useState('');
   const [gantiMonth, setGantiMonth] = useState<string | null>(null);
@@ -157,6 +158,7 @@ export default function UsrahEventCreateScreen() {
         geofence_radius_meters: radius,
         event_mode: eventMode,
         // Usrah sendiri memang usrah — penanda ini bermakna untuk program sahaja.
+        bermalam,
         ganti_usrah: eventType === 'program' && gantiUsrah,
         // Bulan yang diganti dipilih admin — tiada kaitan dengan tarikh mula program.
         ganti_usrah_year: eventType === 'program' && gantiUsrah ? parsedGantiYear : null,
@@ -200,6 +202,7 @@ export default function UsrahEventCreateScreen() {
     eventType,
     gantiMonth,
     gantiUsrah,
+    bermalam,
     kawasan,
     parsedGantiYear,
     locationText,
@@ -308,6 +311,18 @@ export default function UsrahEventCreateScreen() {
                   editable={!saving}
                   autoCapitalize="sentences"
                   autoCorrect={false}
+                />
+                <ToggleRow
+                  icon="bed-outline"
+                  title="Bermalam"
+                  subtitle={
+                    bermalam
+                      ? 'Bermalam: ahli yang mengesahkan hadir diwajibkan bermalam.'
+                      : 'Tidak bermalam. Tukar ke bermalam jika ahli perlu menginap.'
+                  }
+                  value={bermalam}
+                  onValueChange={setBermalam}
+                  disabled={saving}
                 />
                 {/*
                   Program sahaja. Bulan yang diganti DIPILIH admin — tiada kaitan

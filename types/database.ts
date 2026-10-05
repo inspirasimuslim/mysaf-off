@@ -783,6 +783,8 @@ export type UsrahEvent = {
    * Program sahaja: kehadiran turut direkod sebagai kehadiran Usrah bagi bulan
    * tarikh mula program. Lihat `20260915000036_ganti_usrah.sql`.
    */
+  /** Program/usrah bermalam — ahli yang hadir diwajibkan bermalam (trigger RSVP). */
+  bermalam: boolean;
   ganti_usrah: boolean;
   /** Bulan usrah yang diganti — dipilih admin, wajib bila `ganti_usrah`. Bukan dari start_date. */
   ganti_usrah_year: number | null;
@@ -969,6 +971,7 @@ export type EventDirectoryRow = UpcomingEvent & {
   longitude: number | null;
   is_upcoming: boolean;
   photo_count: number;
+  bermalam: boolean;
 };
 
 /** Satu baris `announcements`. */

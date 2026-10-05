@@ -82,6 +82,7 @@ export default function UsrahEventDetailScreen() {
   const [radius, setRadius] = useState(100);
   const [eventMode, setEventMode] = useState<EventMode>('bersemuka');
   const [gantiUsrah, setGantiUsrah] = useState(false);
+  const [bermalam, setBermalam] = useState(false);
   const [gantiYear, setGantiYear] = useState('');
   const [gantiMonth, setGantiMonth] = useState<string | null>(null);
 
@@ -97,6 +98,7 @@ export default function UsrahEventDetailScreen() {
     setRadius(row.geofence_radius_meters);
     setEventMode(row.event_mode);
     setGantiUsrah(row.ganti_usrah);
+    setBermalam(row.bermalam);
     setGantiYear(row.ganti_usrah_year ? String(row.ganti_usrah_year) : '');
     setGantiMonth(row.ganti_usrah_month ? String(row.ganti_usrah_month) : null);
   }, []);
@@ -142,6 +144,7 @@ export default function UsrahEventDetailScreen() {
           geofence_radius_meters: radius,
           // Pelayan membaca nilai TERKINI pada setiap imbasan — tukar berkesan serta-merta.
           event_mode: eventMode,
+          bermalam,
           // Program sahaja. Kehadiran yang SUDAH direkod tidak berubah bila ini ditukar.
           ...(event.event_type === 'program'
             ? {
@@ -169,6 +172,7 @@ export default function UsrahEventDetailScreen() {
     gantiMonth,
     gantiUsrah,
     gantiYear,
+    bermalam,
     hydrate,
     locationText,
     name,
@@ -348,6 +352,7 @@ export default function UsrahEventDetailScreen() {
                 label={EVENT_MODE_LABEL[event.event_mode]}
                 tone={event.event_mode === 'hibrid' ? 'info' : 'primary'}
               />
+              {event.bermalam ? <Badge label="Bermalam" tone="warn" /> : null}
               {event.event_type === 'program' ? (
                 <Badge
                   label={
@@ -419,6 +424,11 @@ export default function UsrahEventDetailScreen() {
                 <RsvpStat value={rsvp?.tidak_hadir} label="Tidak Hadir" />
                 <RsvpStat value={rsvp?.belum} label="Belum Respon" />
               </View>
+              {rsvp ? (
+                <Text className="text-center text-xs text-ink-muted">
+                  {'Anak dibawa: ' + rsvp.anak + ' · Jumlah makan: ' + (rsvp.hadir + rsvp.anak) + ' · Bermalam: ' + (rsvp.ahli_bermalam + rsvp.anak_bermalam) + ' (' + rsvp.ahli_bermalam + ' ahli, ' + rsvp.anak_bermalam + ' anak)'}
+                </Text>
+              ) : null}
               <Text className="text-center text-xs text-ink-muted">
                 {rsvp
                   ? rsvp.hadir + ' Akan Hadir · ' + rsvp.tidak_hadir + ' Tidak Hadir · ' + rsvp.belum + ' Belum Respon'
@@ -587,6 +597,18 @@ export default function UsrahEventDetailScreen() {
                     ) : null}
                   </>
                 ) : null}
+                <ToggleRow
+                  icon="bed-outline"
+                  title="Bermalam"
+                  subtitle={
+                    bermalam
+                      ? 'Ahli yang mengesahkan hadir diwajibkan bermalam.'
+                      : 'Tidak bermalam.'
+                  }
+                  value={bermalam}
+                  onValueChange={setBermalam}
+                  disabled={busy}
+                />
                 <Segmented
                   label="Jenis kehadiran"
                   value={eventMode}

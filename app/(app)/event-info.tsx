@@ -1,31 +1,43 @@
-import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
-import { Linking, Platform, Pressable, Text, View } from 'react-native';
+import { Ionicons } from "@expo/vector-icons";
+import { Image } from "expo-image";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { useCallback, useEffect, useState } from "react";
+import { Linking, Platform, Pressable, Text, View } from "react-native";
 
-import { EventQrCard } from '@/components/event-qr-card';
-import { StaticMap } from '@/components/static-map';
-import { ScreenHeader } from '@/components/screen-header';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { EmptyState } from '@/components/ui/empty-state';
-import { LoadingScreen } from '@/components/ui/loading-screen';
-import { Notice } from '@/components/ui/notice';
-import { Screen } from '@/components/ui/screen';
-import { SectionTitle } from '@/components/ui/section-title';
-import { Colors } from '@/constants/theme';
-import { toMalayError } from '@/lib/errors';
-import { navigationUrl } from '@/lib/google-maps';
-import { useGoBack } from '@/lib/navigation';
-import { RSVP_LABEL, fetchMyRsvp, rsvpOpen, setMyRsvp, type RsvpResponse } from '@/lib/rsvp';
-import { fetchAllEventsDirectory } from '@/lib/usrah-events';
+import { EventQrCard } from "@/components/event-qr-card";
+import { StaticMap } from "@/components/static-map";
+import { ScreenHeader } from "@/components/screen-header";
+import { Button } from "@/components/ui/button";
+import { FormModal } from "@/components/ui/form-modal";
+import { PickerField } from "@/components/ui/picker-field";
+import { Segmented } from "@/components/ui/segmented";
+import { ToggleRow } from "@/components/ui/toggle-row";
+import { Card } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
+import { LoadingScreen } from "@/components/ui/loading-screen";
+import { Notice } from "@/components/ui/notice";
+import { Screen } from "@/components/ui/screen";
+import { SectionTitle } from "@/components/ui/section-title";
+import { Colors } from "@/constants/theme";
+import { toMalayError } from "@/lib/errors";
+import { navigationUrl } from "@/lib/google-maps";
+import { useGoBack } from "@/lib/navigation";
+import {
+  MAX_ANAK,
+  RSVP_LABEL,
+  fetchMyRsvp,
+  rsvpOpen,
+  setMyRsvp,
+  type MyRsvp,
+  type RsvpResponse,
+} from "@/lib/rsvp";
+import { fetchAllEventsDirectory } from "@/lib/usrah-events";
 import {
   EVENT_TYPE_LABEL,
   dateRangeLabel,
   timeRangeLabel,
   type EventDirectoryRow,
-} from '@/types/database';
+} from "@/types/database";
 
 /**
  * Butiran acara seperti dilihat oleh AHLI.
@@ -50,28 +62,62 @@ export default function EventInfoScreen() {
   const [loading, setLoading] = useState(true);
 
   // --- RSVP -------------------------------------------------------------------
-  const [myRsvp, setMyRsvpState] = useState<RsvpResponse | null>(null);
-  /** Jawapan yang sedang disimpan — spinner pada butang itu sahaja. */
-  const [rsvpSaving, setRsvpSaving] = useState<RsvpResponse | null>(null);
+  const [myRsvp, setMyRsvpState] = useState<MyRsvp | null>(null);
+  const [rsvpSaving, setRsvpSaving] = useState(false);
   const [rsvpError, setRsvpError] = useState<string | null>(null);
 
-  const answerRsvp = useCallback(
-    async (response: RsvpResponse) => {
-      if (!event || rsvpSaving) return;
+  // Borang pengesahan (modal): draf tempatan, dihantar bila "Simpan".
+  const [rsvpOpenForm, setRsvpOpenForm] = useState(false);
+  const [draftResponse, setDraftResponse] = useState<RsvpResponse>("hadir");
+  const [draftBawaAnak, setDraftBawaAnak] = useState(false);
+  const [draftAnak, setDraftAnak] = useState<string | null>("1");
+  const [draftBermalam, setDraftBermalam] = useState(false);
 
-      setRsvpError(null);
-      setRsvpSaving(response);
-      try {
-        await setMyRsvp(event.id, response);
-        setMyRsvpState(response);
-      } catch (caught) {
-        setRsvpError(toMalayError(caught, 'Gagal menyimpan respon. Acara mungkin sudah tamat.'));
-      } finally {
-        setRsvpSaving(null);
-      }
-    },
-    [event, rsvpSaving],
-  );
+  const openRsvpForm = useCallback(() => {
+    setRsvpError(null);
+    setDraftResponse(myRsvp?.response ?? "hadir");
+    setDraftBawaAnak((myRsvp?.bil_anak ?? 0) > 0);
+    setDraftAnak(myRsvp && myRsvp.bil_anak > 0 ? String(myRsvp.bil_anak) : "1");
+    setDraftBermalam(myRsvp?.bermalam ?? false);
+    setRsvpOpenForm(true);
+  }, [myRsvp]);
+
+  const submitRsvp = useCallback(async () => {
+    if (!event || rsvpSaving) return;
+
+    const hadir = draftResponse === "hadir";
+    const answer: MyRsvp = {
+      response: draftResponse,
+      bil_anak:
+        hadir && draftBawaAnak ? Number.parseInt(draftAnak ?? "1", 10) : 0,
+      // Program bermalam: ahli yang hadir wajib bermalam (pelayan menguatkuasakannya juga).
+      bermalam: hadir && (event.bermalam || draftBermalam),
+    };
+
+    setRsvpError(null);
+    setRsvpSaving(true);
+    try {
+      await setMyRsvp(event.id, answer);
+      setMyRsvpState(answer);
+      setRsvpOpenForm(false);
+    } catch (caught) {
+      setRsvpError(
+        toMalayError(
+          caught,
+          "Gagal menyimpan respon. Acara mungkin sudah tamat.",
+        ),
+      );
+    } finally {
+      setRsvpSaving(false);
+    }
+  }, [
+    draftAnak,
+    draftBawaAnak,
+    draftBermalam,
+    draftResponse,
+    event,
+    rsvpSaving,
+  ]);
 
   useEffect(() => {
     if (!id) return;
@@ -138,10 +184,10 @@ export default function EventInfoScreen() {
         {event.poster_url ? (
           <Image
             source={{ uri: event.poster_url }}
-            style={{ width: '100%', aspectRatio: 3 / 4, borderRadius: 20 }}
+            style={{ width: "100%", aspectRatio: 3 / 4, borderRadius: 20 }}
             contentFit="cover"
             transition={150}
-            accessibilityLabel={'Poster ' + event.name}
+            accessibilityLabel={"Poster " + event.name}
           />
         ) : null}
 
@@ -162,11 +208,25 @@ export default function EventInfoScreen() {
           <Button
             label="Lihat Album Gambar"
             variant="secondary"
-            icon={<Ionicons name="images-outline" size={18} color={Colors.primary} />}
-            onPress={() => router.push({ pathname: '/(app)/event-album', params: { event_id: event.id } })}
+            icon={
+              <Ionicons
+                name="images-outline"
+                size={18}
+                color={Colors.primary}
+              />
+            }
+            onPress={() =>
+              router.push({
+                pathname: "/(app)/event-album",
+                params: { event_id: event.id },
+              })
+            }
           />
         ) : (
-          <Pressable onPress={() => router.push('/(app)/album')} className="items-center py-1">
+          <Pressable
+            onPress={() => router.push("/(app)/album")}
+            className="items-center py-1"
+          >
             <Text className="text-sm text-ink-muted underline">
               Album acara ini boleh diakses melalui tab Arkib &gt; Album
             </Text>
@@ -180,45 +240,112 @@ export default function EventInfoScreen() {
           yang dimatikan.
         */}
         {rsvpOpen(event.valid_until) ? (
-          <View>
-            <SectionTitle title="Adakah anda akan hadir?" />
-            <View className="flex-row gap-3">
-              {(['hadir', 'tidak_hadir'] as const).map((response) => {
-                const selected = myRsvp === response;
-                return (
-                  <View key={response} className="flex-1">
-                    <Button
-                      label={RSVP_LABEL[response]}
-                      variant={selected ? 'primary' : 'secondary'}
-                      className="px-3"
-                      accessibilityState={{ selected, disabled: rsvpSaving !== null, busy: rsvpSaving === response }}
-                      loading={rsvpSaving === response}
-                      disabled={rsvpSaving !== null}
-                      icon={selected ? <Ionicons name="checkmark" size={18} color={Colors.white} /> : undefined}
-                      onPress={() => void answerRsvp(response)}
-                    />
-                  </View>
-                );
-              })}
+          <>
+            <View>
+              <SectionTitle title="Adakah anda akan hadir?" />
+              <Button
+                label={myRsvp ? "Kemaskini RSVP" : "Sahkan Kehadiran (RSVP)"}
+                icon={
+                  <Ionicons
+                    name="checkmark-circle-outline"
+                    size={20}
+                    color={Colors.white}
+                  />
+                }
+                onPress={openRsvpForm}
+              />
+              <Text className="mt-2 text-center text-xs text-ink-muted">
+                {myRsvp
+                  ? rsvpSummaryText(myRsvp) +
+                    " Boleh ditukar sehingga acara tamat."
+                  : "Belum memberi respon. Jawapan anda membantu penganjur membuat persediaan makanan dan penginapan."}
+              </Text>
             </View>
-            <Text className="mt-2 text-center text-xs text-ink-muted">
-              {myRsvp
-                ? 'Respon anda: ' + RSVP_LABEL[myRsvp] + '. Boleh ditukar sehingga acara tamat.'
-                : 'Belum memberi respon. Jawapan anda membantu penganjur membuat persediaan.'}
-            </Text>
-            {rsvpError ? (
-              <View className="pt-2">
-                <Notice tone="negative" message={rsvpError} />
+
+            <FormModal
+              visible={rsvpOpenForm}
+              title="RSVP"
+              description={event.name}
+              dismissable={!rsvpSaving}
+              onClose={() => setRsvpOpenForm(false)}
+              footer={
+                <Button
+                  label="Simpan RSVP"
+                  loading={rsvpSaving}
+                  disabled={rsvpSaving}
+                  onPress={() => void submitRsvp()}
+                />
+              }
+            >
+              <View className="gap-4">
+                <Segmented
+                  label="Kehadiran"
+                  value={draftResponse}
+                  options={[
+                    { value: "hadir", label: RSVP_LABEL.hadir },
+                    { value: "tidak_hadir", label: RSVP_LABEL.tidak_hadir },
+                  ]}
+                  onChange={setDraftResponse}
+                  disabled={rsvpSaving}
+                />
+
+                {draftResponse === "hadir" ? (
+                  <>
+                    <ToggleRow
+                      icon="people-outline"
+                      title="Bawa anak?"
+                      value={draftBawaAnak}
+                      onValueChange={setDraftBawaAnak}
+                      disabled={rsvpSaving}
+                    />
+                    {draftBawaAnak ? (
+                      <PickerField
+                        label="Bilangan anak"
+                        value={draftAnak}
+                        options={Array.from({ length: MAX_ANAK }, (_, i) => ({
+                          value: String(i + 1),
+                          label: String(i + 1) + " orang",
+                        }))}
+                        onChange={setDraftAnak}
+                        clearable={false}
+                        disabled={rsvpSaving}
+                      />
+                    ) : null}
+
+                    <ToggleRow
+                      icon="bed-outline"
+                      title="Bermalam"
+                      subtitle={
+                        event.bermalam
+                          ? "Program ini bermalam — kehadiran anda diwajibkan bermalam."
+                          : draftBawaAnak
+                            ? "Meliputi anda dan anak yang dibawa."
+                            : undefined
+                      }
+                      value={event.bermalam || draftBermalam}
+                      onValueChange={setDraftBermalam}
+                      disabled={rsvpSaving || event.bermalam}
+                    />
+                  </>
+                ) : null}
+
+                {rsvpError ? (
+                  <Notice tone="negative" message={rsvpError} />
+                ) : null}
               </View>
-            ) : null}
-          </View>
+            </FormModal>
+          </>
         ) : null}
 
         <View className="pb-8">
           <SectionTitle title="Maklumat" />
           <Card>
             <View className="gap-4">
-              <Row icon="pricetag-outline" label="Jenis" value={EVENT_TYPE_LABEL[event.event_type]} />
+              <Row
+                icon="pricetag-outline"
+                label="Jenis"
+                value={EVENT_TYPE_LABEL[event.event_type]}
+              />
               <Row
                 icon="calendar-outline"
                 label="Tarikh"
@@ -229,9 +356,16 @@ export default function EventInfoScreen() {
                 label="Masa"
                 value={timeRangeLabel(event.start_time, event.end_time)}
               />
-              <Row icon="location-outline" label="Lokasi" value={event.location_text ?? 'Belum ditetapkan'} />
+              <Row
+                icon="location-outline"
+                label="Lokasi"
+                value={event.location_text ?? "Belum ditetapkan"}
+              />
               {event.latitude !== null && event.longitude !== null ? (
-                <StaticMap latitude={event.latitude} longitude={event.longitude} />
+                <StaticMap
+                  latitude={event.latitude}
+                  longitude={event.longitude}
+                />
               ) : null}
             </View>
           </Card>
@@ -240,20 +374,37 @@ export default function EventInfoScreen() {
               className="mt-3 rounded-field bg-surface"
               // Bayang halus yang sama seperti kotak Tab Ahli — butang kelihatan sedikit terangkat.
               style={{
-                shadowColor: '#0F5132',
+                shadowColor: "#0F5132",
                 shadowOpacity: 0.08,
                 shadowRadius: 8,
                 shadowOffset: { width: 0, height: 3 },
                 elevation: 2,
-              }}>
+              }}
+            >
               <Button
                 label="Navigasi"
                 variant="secondary"
-                icon={<Ionicons name="navigate-outline" size={18} color={Colors.primary} />}
+                icon={
+                  <Ionicons
+                    name="navigate-outline"
+                    size={18}
+                    color={Colors.primary}
+                  />
+                }
                 onPress={() => {
-                  const url = navigationUrl(event.latitude as number, event.longitude as number, event.location_text ?? event.name);
-                  if (Platform.OS === 'web') window.open(url, '_blank', 'noopener');
-                  else void Linking.openURL(url).catch(() => setRsvpError('Tiada aplikasi navigasi ditemui pada peranti ini.'));
+                  const url = navigationUrl(
+                    event.latitude as number,
+                    event.longitude as number,
+                    event.location_text ?? event.name,
+                  );
+                  if (Platform.OS === "web")
+                    window.open(url, "_blank", "noopener");
+                  else
+                    void Linking.openURL(url).catch(() =>
+                      setRsvpError(
+                        "Tiada aplikasi navigasi ditemui pada peranti ini.",
+                      ),
+                    );
                 }}
               />
             </View>
@@ -282,4 +433,13 @@ function Row({
       </View>
     </View>
   );
+}
+
+function rsvpSummaryText(rsvp: MyRsvp): string {
+  if (rsvp.response === "tidak_hadir")
+    return "Respon anda: " + RSVP_LABEL.tidak_hadir + ".";
+  const parts = [RSVP_LABEL.hadir];
+  if (rsvp.bil_anak > 0) parts.push("bawa " + rsvp.bil_anak + " anak");
+  parts.push(rsvp.bermalam ? "bermalam" : "tidak bermalam");
+  return "Respon anda: " + parts.join(", ") + ".";
 }

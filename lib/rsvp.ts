@@ -25,24 +25,44 @@ export const RSVP_LABEL: Record<RsvpResponse, string> = {
   tidak_hadir: 'Tidak Akan Hadir',
 };
 
-export type RsvpSummary = { hadir: number; tidak_hadir: number; belum: number };
+export type RsvpSummary = {
+  hadir: number;
+  tidak_hadir: number;
+  belum: number;
+  /** Jumlah anak yang dibawa ahli yang akan hadir. */
+  anak: number;
+  ahli_bermalam: number;
+  anak_bermalam: number;
+};
+
+/** Jawapan RSVP lengkap seorang ahli. `bermalam` meliputi ahli dan anak yang dibawa. */
+export type MyRsvp = { response: RsvpResponse; bil_anak: number; bermalam: boolean };
+
+export const MAX_ANAK = 6;
 
 /** RSVP dibuka selagi acara belum melepasi tetingkap sahnya (RLS menyemak perkara yang sama). */
 export function rsvpOpen(validUntil: string): boolean {
   return Date.parse(validUntil) > Date.now();
 }
 
-export async function fetchMyRsvp(eventId: string): Promise<RsvpResponse | null> {
-  const { data, error } = await supabase.rpc('my_event_rsvp', { p_event_id: eventId });
+export async function fetchMyRsvp(eventId: string): Promise<MyRsvp | null> {
+  const { data, error } = await supabase.rpc('my_event_rsvp_detail', { p_event_id: eventId });
   if (error) throw error;
-  return (data as RsvpResponse | null) ?? null;
+  return ((data as MyRsvp[] | null) ?? [])[0] ?? null;
 }
 
 /** Upsert pada (event_id, member_id): menukar jawapan, bukan menambah baris. */
-export async function setMyRsvp(eventId: string, response: RsvpResponse): Promise<void> {
-  const { error } = await supabase
-    .from('event_rsvp')
-    .upsert({ event_id: eventId, response }, { onConflict: 'event_id,member_id' });
+export async function setMyRsvp(eventId: string, answer: MyRsvp): Promise<void> {
+  const hadir = answer.response === 'hadir';
+  const { error } = await supabase.from('event_rsvp').upsert(
+    {
+      event_id: eventId,
+      response: answer.response,
+      bil_anak: hadir ? Math.min(Math.max(answer.bil_anak, 0), MAX_ANAK) : 0,
+      bermalam: hadir && answer.bermalam,
+    },
+    { onConflict: 'event_id,member_id' },
+  );
   if (error) throw error;
 }
 
@@ -58,6 +78,8 @@ type RsvpExportRow = {
   generasi: string | null;
   response: RsvpResponse;
   responded_at: string;
+  bil_anak: number;
+  bermalam: boolean;
 };
 
 export async function downloadRsvpList(
@@ -74,15 +96,45 @@ export async function downloadRsvpList(
   }
 
   const sheet = XLSX.utils.json_to_sheet(
-    rows.map((row) => ({
-      'Nombor Ahli': row.nombor_ahli ?? '',
-      Nama: row.full_name,
-      Generasi: generationLabel(row.generasi),
-      Response: RSVP_LABEL[row.response] ?? row.response,
-      'Masa Response': new Date(row.responded_at).toLocaleString('ms-MY'),
-    })),
+    rows.map((row) => {
+      const hadir = row.response === 'hadir';
+      const anak = hadir ? row.bil_anak : 0;
+      return {
+        'Nombor Ahli': row.nombor_ahli ?? '',
+        Nama: row.full_name,
+        Generasi: generationLabel(row.generasi),
+        Response: RSVP_LABEL[row.response] ?? row.response,
+        'Bawa Anak': hadir ? (anak > 0 ? 'Ya' : 'Tidak') : '',
+        'Bil. Anak': anak,
+        Bermalam: hadir ? (row.bermalam ? 'Ya' : 'Tidak') : '',
+        'Jumlah Makan': hadir ? 1 + anak : 0,
+        'Jumlah Bermalam': hadir && row.bermalam ? 1 + anak : 0,
+        'Masa Response': new Date(row.responded_at).toLocaleString('ms-MY'),
+      };
+    }),
   );
+  sheet['!cols'] = [{ wch: 12 }, { wch: 38 }, { wch: 12 }, { wch: 18 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 13 }, { wch: 16 }, { wch: 22 }];
+
+  const attending = rows.filter((row) => row.response === 'hadir');
+  const anakTotal = attending.reduce((sum, row) => sum + row.bil_anak, 0);
+  const bermalamRows = attending.filter((row) => row.bermalam);
+  const anakBermalam = bermalamRows.reduce((sum, row) => sum + row.bil_anak, 0);
+  const ringkasan = XLSX.utils.aoa_to_sheet([
+    ['RINGKASAN (untuk bajet makanan & penginapan)', 'Bilangan'],
+    ['Ahli akan hadir', attending.length],
+    ['Anak dibawa', anakTotal],
+    ['Jumlah makan (ahli + anak)', attending.length + anakTotal],
+    [],
+    ['Ahli bermalam', bermalamRows.length],
+    ['Anak bermalam', anakBermalam],
+    ['Jumlah bermalam (ahli + anak)', bermalamRows.length + anakBermalam],
+    [],
+    ['Ahli tidak hadir', rows.length - attending.length],
+  ]);
+  ringkasan['!cols'] = [{ wch: 46 }, { wch: 10 }];
+
   const book = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(book, ringkasan, 'Ringkasan');
   XLSX.utils.book_append_sheet(book, sheet, 'RSVP');
 
   const fileName = eventFileName('rsvp', eventName);
