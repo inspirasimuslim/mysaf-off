@@ -1,10 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { Pressable, Text, View } from 'react-native';
+import { Linking, Pressable, Text, View } from 'react-native';
 
 import { ScreenHeader } from '@/components/screen-header';
 import { Card } from '@/components/ui/card';
 import { Screen } from '@/components/ui/screen';
+
+/** Halaman luar (Canva) untuk Majlis Baitul Muslim. */
+const BAITUL_MUSLIM_URL = 'https://senadappda.my.canva.site/mbmikhwan';
 
 type IconName = keyof typeof Ionicons.glyphMap;
 
@@ -35,6 +38,11 @@ export default function ArkibHubScreen() {
           icon="storefront-outline"
           title="Bisnes Ahli"
           onPress={() => router.push('/(app)/bisnes-ahli')}
+        />
+        <HubButton
+          icon="heart-outline"
+          title="Majlis Baitul Muslim"
+          onPress={() => void Linking.openURL(BAITUL_MUSLIM_URL).catch(() => undefined)}
         />
         <HubButton
           icon="chatbubble-ellipses-outline"
