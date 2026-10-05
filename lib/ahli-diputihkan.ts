@@ -48,6 +48,19 @@ export async function createAhliDiputihkan(input: CreateAhliDiputihkanInput): Pr
   return data as AhliDiputihkan;
 }
 
+export type UpdateAhliDiputihkanInput = {
+  nama: string;
+  generasi: string;
+  tahun_dibuang: number;
+  catatan: string | null;
+};
+
+export async function updateAhliDiputihkan(id: string, input: UpdateAhliDiputihkanInput): Promise<AhliDiputihkan> {
+  const { data, error } = await supabase.from('ahli_diputihkan').update(input).eq('id', id).select('*').single();
+  if (error) throw error;
+  return data as AhliDiputihkan;
+}
+
 export async function deleteAhliDiputihkan(id: string): Promise<void> {
   const { error } = await supabase.from('ahli_diputihkan').delete().eq('id', id);
   if (error) throw error;

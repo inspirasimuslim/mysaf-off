@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import { ScreenHeader } from '@/components/screen-header';
+import { SaveShareButtons } from '@/components/save-share-buttons';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { CellText, DataTable, RowIconAction } from '@/components/ui/data-table';
@@ -19,10 +20,13 @@ import {
   createAhliDiputihkan,
   deleteAhliDiputihkan,
   fetchAhliDiputihkan,
+  updateAhliDiputihkan,
   type AhliDiputihkan,
 } from '@/lib/ahli-diputihkan';
+import { downloadAhliDiputihkanExport } from '@/lib/ahli-diputihkan-export';
 import { useDepartmentAccess } from '@/lib/department-access';
 import { toMalayError } from '@/lib/errors';
+import { deliveryMessage, type DeliveryMode } from '@/lib/file-delivery';
 import { fetchGenerations } from '@/lib/members';
 import { useGoBack } from '@/lib/navigation';
 import { useIsDesktop } from '@/lib/use-desktop';
@@ -30,7 +34,7 @@ import { ORG_CHART_DEPARTMENT } from '@/lib/org-chart';
 import { Colors } from '@/constants/theme';
 import { generationLabel, generationOrder, type Generation, type Option } from '@/types/database';
 
-type Banner = { tone: 'positive' | 'negative'; message: string } | null;
+type Banner = { tone: 'positive' | 'info' | 'negative'; message: string } | null;
 
 /**
  * Senarai Ahli Diputihkan — rekod SEJARAH ahli yang dibuang secara rasmi.
@@ -80,8 +84,9 @@ export default function AhliDiputihkanScreen() {
     ? rows.filter((row) => row.nama.toLowerCase().includes(needle) || String(row.tahun_dibuang).includes(needle))
     : rows;
 
-  // --- Tambah rekod -----------------------------------------------------------
-  const [addOpen, setAddOpen] = useState(false);
+  // --- Tambah / sunting rekod (satu modal, dua mod) --------------------------
+  const [formOpen, setFormOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [nama, setNama] = useState('');
   const [generasi, setGenerasi] = useState<string | null>(null);
   const [tahun, setTahun] = useState(String(new Date().getFullYear()));
@@ -89,37 +94,70 @@ export default function AhliDiputihkanScreen() {
   const [saving, setSaving] = useState(false);
 
   const openAdd = useCallback(() => {
+    setEditingId(null);
     setNama('');
     setGenerasi(null);
     setTahun(String(new Date().getFullYear()));
     setCatatan('');
-    setAddOpen(true);
+    setFormOpen(true);
+  }, []);
+
+  const openEdit = useCallback((row: AhliDiputihkan) => {
+    setEditingId(row.id);
+    setNama(row.nama);
+    setGenerasi(row.generasi);
+    setTahun(String(row.tahun_dibuang));
+    setCatatan(row.catatan ?? '');
+    setFormOpen(true);
   }, []);
 
   const parsedTahun = Number.parseInt(tahun, 10);
   const tahunValid = Number.isFinite(parsedTahun) && parsedTahun >= 2000 && parsedTahun <= 2100;
-  const addReady = nama.trim().length > 0 && Boolean(generasi) && tahunValid;
+  const formReady = nama.trim().length > 0 && Boolean(generasi) && tahunValid;
 
-  const submitAdd = useCallback(async () => {
-    if (!addReady || saving) return;
+  const submitForm = useCallback(async () => {
+    if (!formReady || saving) return;
 
     setSaving(true);
     try {
-      await createAhliDiputihkan({
-        nama: nama.trim(),
-        generasi: generasi!,
-        tahun_dibuang: parsedTahun,
-        catatan: catatan.trim() || null,
-      });
-      setAddOpen(false);
-      setBanner({ tone: 'positive', message: 'Rekod berjaya ditambah.' });
+      const input = { nama: nama.trim(), generasi: generasi!, tahun_dibuang: parsedTahun, catatan: catatan.trim() || null };
+      if (editingId) {
+        await updateAhliDiputihkan(editingId, input);
+        setBanner({ tone: 'positive', message: 'Rekod berjaya dikemas kini.' });
+      } else {
+        await createAhliDiputihkan(input);
+        setBanner({ tone: 'positive', message: 'Rekod berjaya ditambah.' });
+      }
+      setFormOpen(false);
       await load();
     } catch (caught) {
-      setBanner({ tone: 'negative', message: toMalayError(caught, 'Gagal menambah rekod.') });
+      setBanner({ tone: 'negative', message: toMalayError(caught, editingId ? 'Gagal mengemas kini rekod.' : 'Gagal menambah rekod.') });
     } finally {
       setSaving(false);
     }
-  }, [addReady, catatan, generasi, load, nama, parsedTahun, saving]);
+  }, [catatan, editingId, formReady, generasi, load, nama, parsedTahun, saving]);
+
+  // --- Muat turun senarai ------------------------------------------------------
+  const [exporting, setExporting] = useState<DeliveryMode | null>(null);
+
+  const exportAll = useCallback(
+    async (mode: DeliveryMode) => {
+      if (exporting) return;
+      setExporting(mode);
+      try {
+        const report = await downloadAhliDiputihkanExport(rows, mode);
+        setBanner({
+          tone: report.result === 'cancelled' ? 'info' : 'positive',
+          message: deliveryMessage(report.result, report.fileName, report.rows + ' rekod'),
+        });
+      } catch (caught) {
+        setBanner({ tone: 'negative', message: toMalayError(caught, 'Gagal memuat turun senarai.') });
+      } finally {
+        setExporting(null);
+      }
+    },
+    [exporting, rows],
+  );
 
   // --- Padam rekod --------------------------------------------------------------
   const [pendingDelete, setPendingDelete] = useState<AhliDiputihkan | null>(null);
@@ -179,6 +217,17 @@ export default function AhliDiputihkanScreen() {
             <Button label="+ Tambah Rekod" onPress={openAdd} />
           )}
 
+          {rows.length > 0 ? (
+            <SaveShareButtons
+              kind="file"
+              variant="secondary"
+              webLabel="Muat Turun Senarai"
+              nativeCaption="Senarai Ahli Diputihkan (.xlsx)"
+              busy={exporting}
+              onPress={(mode) => void exportAll(mode)}
+            />
+          ) : null}
+
           {rows.length > 5 ? (
             <TextField
               label="Cari"
@@ -210,7 +259,7 @@ export default function AhliDiputihkanScreen() {
                 <DataTable
                   rows={filtered}
                   keyOf={(r) => r.id}
-                  actionsWidth={56}
+                  actionsWidth={92}
                   columns={[
                     { key: 'nama', header: 'Nama', flex: 2, render: (r) => <CellText strong>{r.nama}</CellText> },
                     { key: 'gen', header: 'Generasi', flex: 1, render: (r) => <CellText muted>{generationLabel(r.generasi)}</CellText> },
@@ -219,12 +268,15 @@ export default function AhliDiputihkanScreen() {
                   ]}
                   actions={(r) =>
                     canEdit ? (
-                      <RowIconAction
-                        icon="trash-outline"
-                        destructive
-                        label={'Padam rekod ' + r.nama}
-                        onPress={() => setPendingDelete(r)}
-                      />
+                      <>
+                        <RowIconAction icon="pencil-outline" label={'Sunting rekod ' + r.nama} onPress={() => openEdit(r)} />
+                        <RowIconAction
+                          icon="trash-outline"
+                          destructive
+                          label={'Padam rekod ' + r.nama}
+                          onPress={() => setPendingDelete(r)}
+                        />
+                      </>
                     ) : null
                   }
                 />
@@ -245,14 +297,24 @@ export default function AhliDiputihkanScreen() {
                     </View>
 
                     {canEdit ? (
-                      <Pressable
-                        accessibilityRole="button"
-                        accessibilityLabel={'Padam rekod ' + row.nama}
-                        hitSlop={8}
-                        onPress={() => setPendingDelete(row)}
-                        className="h-8 w-8 items-center justify-center rounded-pill active:opacity-70">
-                        <Ionicons name="trash-outline" size={16} color={Colors.negative} />
-                      </Pressable>
+                      <>
+                        <Pressable
+                          accessibilityRole="button"
+                          accessibilityLabel={'Sunting rekod ' + row.nama}
+                          hitSlop={8}
+                          onPress={() => openEdit(row)}
+                          className="h-8 w-8 items-center justify-center rounded-pill active:opacity-70">
+                          <Ionicons name="pencil-outline" size={16} color={Colors.ink} />
+                        </Pressable>
+                        <Pressable
+                          accessibilityRole="button"
+                          accessibilityLabel={'Padam rekod ' + row.nama}
+                          hitSlop={8}
+                          onPress={() => setPendingDelete(row)}
+                          className="h-8 w-8 items-center justify-center rounded-pill active:opacity-70">
+                          <Ionicons name="trash-outline" size={16} color={Colors.negative} />
+                        </Pressable>
+                      </>
                     ) : null}
                   </View>
                 ))}
@@ -264,11 +326,11 @@ export default function AhliDiputihkanScreen() {
       </Screen>
 
       <FormModal
-        visible={addOpen}
-        title="Tambah Rekod"
+        visible={formOpen}
+        title={editingId ? 'Sunting Rekod' : 'Tambah Rekod'}
         description="Ringkas sahaja — nama, generasi dan tahun dibuang. Tiada perlu sebab terperinci."
         dismissable={!saving}
-        onClose={() => setAddOpen(false)}>
+        onClose={() => setFormOpen(false)}>
         <TextField
           label="Nama"
           value={nama}
@@ -305,7 +367,12 @@ export default function AhliDiputihkanScreen() {
           autoCorrect={false}
         />
 
-        <Button label="Tambah Rekod" loading={saving} disabled={saving || !addReady} onPress={() => void submitAdd()} />
+        <Button
+          label={editingId ? 'Simpan Perubahan' : 'Tambah Rekod'}
+          loading={saving}
+          disabled={saving || !formReady}
+          onPress={() => void submitForm()}
+        />
       </FormModal>
 
       <ConfirmDialog
