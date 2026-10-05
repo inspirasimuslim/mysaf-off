@@ -35,3 +35,26 @@ export async function fetchMemberCompletenessSummary(): Promise<MemberCompletene
   if (!data) throw new Error('Statistik kelengkapan data tidak dapat dibaca.');
   return data as MemberCompletenessSummary;
 }
+
+export type GenerasiStat = {
+  generasi: string | null;
+  jumlah: number;
+  pernah_login: number;
+  siap_penuh: number;
+  /** Purata peratus kelengkapan (0-100) bagi generasi itu. */
+  purata_peratus: number;
+};
+
+export type MemberLoginStats = {
+  jumlah_ahli: number;
+  /** Ahli yang akaunnya pernah berjaya log masuk (`auth.users.last_sign_in_at`). */
+  pernah_login: number;
+  mengikut_generasi: GenerasiStat[];
+};
+
+export async function fetchMemberLoginStats(): Promise<MemberLoginStats> {
+  const { data, error } = await supabase.rpc('member_login_generasi_stats');
+  if (error) throw error;
+  if (!data) throw new Error('Statistik login tidak dapat dibaca.');
+  return data as MemberLoginStats;
+}

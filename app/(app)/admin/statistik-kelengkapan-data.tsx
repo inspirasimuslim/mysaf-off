@@ -14,14 +14,20 @@ import { ToastBanner } from '@/components/ui/toast';
 import { useMemberAccess } from '@/lib/department-access';
 import { toMalayErrorVerbose } from '@/lib/errors';
 import { deliveryMessage, type DeliveryMode } from '@/lib/file-delivery';
-import { fetchMemberCompletenessSummary, type MemberCompletenessSummary } from '@/lib/member-completeness';
+import {
+  fetchMemberCompletenessSummary,
+  fetchMemberLoginStats,
+  type MemberCompletenessSummary,
+  type MemberLoginStats,
+} from '@/lib/member-completeness';
 import { downloadMemberCompletenessReport } from '@/lib/member-completeness-report';
 import { useGoBack } from '@/lib/navigation';
 import { useIsDesktop } from '@/lib/use-desktop';
+import { generationLabel } from '@/types/database';
 
 type State =
   | { step: 'memuat' }
-  | { step: 'sedia'; data: MemberCompletenessSummary }
+  | { step: 'sedia'; data: MemberCompletenessSummary; login: MemberLoginStats | null }
   | { step: 'gagal'; message: string };
 
 type Banner = { tone: 'positive' | 'info' | 'negative'; message: string } | null;
@@ -56,7 +62,10 @@ export default function StatistikKelengkapanDataScreen() {
   const load = useCallback(async () => {
     setState({ step: 'memuat' });
     try {
-      setState({ step: 'sedia', data: await fetchMemberCompletenessSummary() });
+      const data = await fetchMemberCompletenessSummary();
+      /* Statistik login dibaca berasingan: kegagalannya tidak menyembunyikan kelengkapan. */
+      const login = await fetchMemberLoginStats().catch(() => null);
+      setState({ step: 'sedia', data, login });
     } catch (caught) {
       setState({ step: 'gagal', message: toMalayErrorVerbose(caught, 'Gagal memuatkan statistik kelengkapan data.') });
     }
@@ -119,7 +128,7 @@ export default function StatistikKelengkapanDataScreen() {
         ) : null}
 
         {state.step === 'sedia' ? (
-          <Summary data={state.data} exporting={exporting} onExport={(mode) => void exportReport(mode)} />
+          <Summary data={state.data} login={state.login} exporting={exporting} onExport={(mode) => void exportReport(mode)} />
         ) : null}
       </View>
     </Screen>
@@ -128,10 +137,12 @@ export default function StatistikKelengkapanDataScreen() {
 
 function Summary({
   data,
+  login,
   exporting,
   onExport,
 }: {
   data: MemberCompletenessSummary;
+  login: MemberLoginStats | null;
   exporting: DeliveryMode | null;
   onExport: (mode: DeliveryMode) => void;
 }) {
@@ -157,12 +168,28 @@ function Summary({
     { key: 'komitmen', label: 'Komitmen', value: kategori.komitmen },
   ].map((row) => ({ ...row, note: pct(row.value, total) }));
 
+  const loginRows = (login?.mengikut_generasi ?? []).map((g) => ({
+    key: 'login' + (g.generasi ?? 'tiada'),
+    label: g.generasi ? generationLabel(g.generasi) : 'Tiada generasi',
+    value: g.pernah_login,
+    note: g.pernah_login + '/' + g.jumlah + ' · ' + pct(g.pernah_login, g.jumlah),
+  }));
+  const purataRows = (login?.mengikut_generasi ?? []).map((g) => ({
+    key: 'purata' + (g.generasi ?? 'tiada'),
+    label: g.generasi ? generationLabel(g.generasi) : 'Tiada generasi',
+    value: g.purata_peratus,
+    note: g.siap_penuh + ' ahli 100% siap',
+  }));
+
   return (
     <>
       <View className="flex-row flex-wrap items-center justify-between gap-3">
         <SummaryStrip
           items={[
             { value: String(total), label: 'ahli aktif' },
+            ...(login
+              ? [{ value: login.pernah_login + ' (' + pct(login.pernah_login, login.jumlah_ahli) + ')', label: 'pernah berjaya login' }]
+              : []),
             { value: kemaskini, label: 'kemaskini data terkini' },
           ]}
         />
@@ -183,6 +210,20 @@ function Summary({
       <StatCard title="Kelengkapan Mengikut Kategori" caption="Bilangan ahli yang Siap bagi setiap kategori">
         <ValueBars rows={kategoriRows} format={(value) => value + ' ahli'} />
       </StatCard>
+
+      {login ? (
+        <>
+          <StatCard
+            title="Ahli Berjaya Login"
+            caption={login.pernah_login + ' daripada ' + login.jumlah_ahli + ' ahli aktif · mengikut generasi'}>
+            <ValueBars rows={loginRows} format={(value) => value + ' ahli'} />
+          </StatCard>
+
+          <StatCard title="Kelengkapan Mengikut Generasi" caption="Purata peratus kelengkapan data, setiap generasi">
+            <ValueBars rows={purataRows} format={(value) => value + '%'} />
+          </StatCard>
+        </>
+      ) : null}
 
       <Text className="text-center text-xs text-ink-faint">
         {'Peratus di sebelah setiap bar daripada ' + total + ' ahli aktif · ahli disekat tidak dikira'}
