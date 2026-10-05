@@ -128,10 +128,25 @@ export type PendingBusinessAd = {
   queue_used: number;
 };
 
+/** Fisher-Yates — salinan baharu, tertib rawak setiap panggilan. */
+function shuffled<T>(items: T[]): T[] {
+  const copy = [...items];
+  for (let i = copy.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j] as T, copy[i] as T];
+  }
+  return copy;
+}
+
+/**
+ * Iklan aktif untuk carousel Utama. RPC memulangkan tertib giliran (paling
+ * lama dilulus dahulu); di sini ditukar rawak supaya setiap kali ahli masuk
+ * poster pertama berbeza dan bukan sentiasa iklan yang dimuat naik paling awal.
+ */
 export async function fetchActiveBusinessAds(): Promise<ActiveBusinessAd[]> {
   const { data, error } = await supabase.rpc('list_active_business_ads');
   if (error) throw error;
-  return (data as ActiveBusinessAd[] | null) ?? [];
+  return shuffled((data as ActiveBusinessAd[] | null) ?? []);
 }
 
 export async function fetchBusinessDirectory(): Promise<DirectoryBusinessAd[]> {
