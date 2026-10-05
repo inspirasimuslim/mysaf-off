@@ -29,8 +29,8 @@ export async function fetchAhliDiputihkan(): Promise<AhliDiputihkan[]> {
   const { data, error } = await supabase
     .from('ahli_diputihkan')
     .select('*')
-    .order('tahun_dibuang', { ascending: false })
-    .order('created_at', { ascending: false });
+    .order('tahun_dibuang', { ascending: true })
+    .order('created_at', { ascending: true });
   if (error) throw error;
   return (data as AhliDiputihkan[] | null) ?? [];
 }
