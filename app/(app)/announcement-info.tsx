@@ -1,7 +1,8 @@
 import { Image } from 'expo-image';
+import { LinkifiedText } from '@/components/linkified-text';
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 
 import { ScreenHeader } from '@/components/screen-header';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -83,7 +84,7 @@ export default function AnnouncementInfoScreen() {
         />
 
         {announcement.description ? (
-          <Text className="text-base leading-6 text-ink">{announcement.description}</Text>
+          <LinkifiedText className="text-base leading-6 text-ink">{announcement.description}</LinkifiedText>
         ) : null}
       </View>
     </Screen>

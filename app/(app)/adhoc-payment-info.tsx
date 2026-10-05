@@ -1,4 +1,5 @@
 import { Image } from 'expo-image';
+import { LinkifiedText } from '@/components/linkified-text';
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
@@ -114,7 +115,7 @@ export default function AdhocPaymentInfoScreen() {
 
         {row.description ? (
           <Card>
-            <Text className="text-sm leading-6 text-ink">{row.description}</Text>
+            <LinkifiedText className="text-sm leading-6 text-ink">{row.description}</LinkifiedText>
           </Card>
         ) : null}
 

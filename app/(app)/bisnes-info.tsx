@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { LinkifiedText } from '@/components/linkified-text';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -180,7 +181,7 @@ export default function BisnesInfoScreen() {
           {ad.penerangan ? (
             <View className="gap-2 rounded-card border border-line bg-surface p-4">
               <Text className="text-xs font-semibold uppercase tracking-wide text-ink-faint">Tentang Bisnes Ini</Text>
-              <Text className="text-base leading-6 text-ink">{ad.penerangan}</Text>
+              <LinkifiedText className="text-base leading-6 text-ink">{ad.penerangan}</LinkifiedText>
             </View>
           ) : null}
         </View>
