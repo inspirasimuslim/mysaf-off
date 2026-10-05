@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { Text, View } from 'react-native';
+import { Switch, Text, View } from 'react-native';
 
 import { OrgPositionRow } from '@/components/org-position-row';
 import { ScreenHeader } from '@/components/screen-header';
@@ -9,6 +9,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { LoadingScreen } from '@/components/ui/loading-screen';
 import { Notice } from '@/components/ui/notice';
 import { Screen } from '@/components/ui/screen';
+import { Colors } from '@/constants/theme';
 import type { DirectoryMember } from '@/types/database';
 import { toMalayError } from '@/lib/errors';
 import { useGoBack } from '@/lib/navigation';
@@ -40,6 +41,7 @@ export default function OrganisasiScreen() {
   const [error, setError] = useState<string | null>(null);
   const [directory, setDirectory] = useState<DirectoryMember[]>([]);
   const [rais, setRais] = useState<RaisLantikan[]>([]);
+  const [showAll, setShowAll] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -142,20 +144,35 @@ export default function OrganisasiScreen() {
         {error ? <Notice tone="negative" message={error} /> : null}
 
         {sections.length ? (
-          sections.map((section) => (
-            <CollapsibleSection
-              key={section.bahagian}
-              title={section.bahagian}
-              count={section.positions.length}
-              defaultOpen>
-              {/* Jarak antara jawatan lebih rapat daripada jarak lalai seksyen. */}
-              <View className="gap-3">
-                {section.positions.map((position) => (
-                  <OrgPositionRow key={position.id} position={position} onPress={() => openProfile(position)} />
-                ))}
+          <View className="gap-3">
+            <View className="flex-row items-center justify-between">
+              <Text className="text-lg font-bold text-ink">Pengurusan</Text>
+              <View className="flex-row items-center gap-2">
+                <Text className="text-sm text-ink-muted">Tunjuk semua</Text>
+                <Switch
+                  value={showAll}
+                  onValueChange={setShowAll}
+                  trackColor={{ false: Colors.line, true: Colors.primaryMid }}
+                  thumbColor={Colors.white}
+                  ios_backgroundColor={Colors.line}
+                />
               </View>
-            </CollapsibleSection>
-          ))
+            </View>
+            {/* key bertukar bersama showAll: seksyen dimount semula mengikut defaultOpen. */}
+            {sections.map((section) => (
+              <CollapsibleSection
+                key={section.bahagian + (showAll ? '-open' : '-closed')}
+                title={section.bahagian}
+                count={section.positions.length}
+                defaultOpen={showAll}>
+                <View className="gap-3">
+                  {section.positions.map((position) => (
+                    <OrgPositionRow key={position.id} position={position} onPress={() => openProfile(position)} />
+                  ))}
+                </View>
+              </CollapsibleSection>
+            ))}
+          </View>
         ) : error ? null : (
           <EmptyState
             icon="git-network-outline"
@@ -164,16 +181,24 @@ export default function OrganisasiScreen() {
           />
         )}
 
-        {raisGenerasi.length ? (
-          <CollapsibleSection title="Rais / Raisah Generasi" count={raisGenerasi.length} defaultOpen>
-            {renderRaisGroups('generasi', raisGenerasi)}
-          </CollapsibleSection>
+        {raisKawasan.length ? (
+          <>
+            <View className="my-3 h-px bg-line" />
+            <View className="gap-3">
+              <Text className="text-lg font-bold text-ink">Usrah Kawasan</Text>
+              {renderRaisGroups('kawasan', raisKawasan)}
+            </View>
+          </>
         ) : null}
 
-        {raisKawasan.length ? (
-          <CollapsibleSection title="Rais / Raisah Usrah Kawasan" count={raisKawasan.length} defaultOpen>
-            {renderRaisGroups('kawasan', raisKawasan)}
-          </CollapsibleSection>
+        {raisGenerasi.length ? (
+          <>
+            <View className="my-3 h-px bg-line" />
+            <View className="gap-3">
+              <Text className="text-lg font-bold text-ink">Generasi</Text>
+              {renderRaisGroups('generasi', raisGenerasi)}
+            </View>
+          </>
         ) : null}
       </View>
     </Screen>
