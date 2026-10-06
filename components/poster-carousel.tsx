@@ -46,7 +46,13 @@ type Props = {
    * bekas, jadi `cardWidth` tidak dipakai.
    */
   grid?: boolean;
+  /** Tatal sendiri ke poster seterusnya (berpatah ke awal di hujung). Berhenti sebentar bila disentuh. */
+  autoScroll?: boolean;
 };
+
+/** Selang antara dua langkah auto-tatal, dan jeda selepas pengguna menyentuh barisan. */
+const AUTO_SCROLL_MS = 4000;
+const AUTO_PAUSE_MS = 8000;
 
 /**
  * Tatalan mendatar dengan tetikus di web.
@@ -174,7 +180,8 @@ function PosterCell({ item, width, onPress }: { item: PosterItem; width: number;
       accessibilityLabel={item.title}
       onPress={() => onPress(item.id)}
       style={{ width }}
-      className="active:opacity-70">
+      className="active:opacity-70"
+    >
       {item.posterUrl ? (
         <Image
           source={{ uri: item.posterUrl }}
@@ -186,7 +193,8 @@ function PosterCell({ item, width, onPress }: { item: PosterItem; width: number;
       ) : (
         <View
           style={{ width, height: posterHeight, borderRadius: 16 }}
-          className="items-center justify-center border border-line bg-primary-tint">
+          className="items-center justify-center border border-line bg-primary-tint"
+        >
           <Ionicons name="image-outline" size={28} color={Colors.inkFaint} />
         </View>
       )}
@@ -222,7 +230,8 @@ function PosterGrid({ title, caption, items, onPress }: Omit<Props, 'grid' | 'ca
         <ScrollView
           nestedScrollEnabled
           showsVerticalScrollIndicator={items.length > 4}
-          style={{ maxHeight: visibleHeight }}>
+          style={{ maxHeight: visibleHeight }}
+        >
           <View className="flex-row flex-wrap" style={{ gap: GRID_GAP }}>
             {items.map((item) => (
               <PosterCell key={item.id} item={item} width={cellWidth} onPress={onPress} />
@@ -234,9 +243,38 @@ function PosterGrid({ title, caption, items, onPress }: Omit<Props, 'grid' | 'ca
   );
 }
 
-export function PosterCarousel({ title, caption, items, onPress, cardWidth = CARD_WIDTH, grid = false }: Props) {
+export function PosterCarousel({
+  title,
+  caption,
+  items,
+  onPress,
+  cardWidth = CARD_WIDTH,
+  grid = false,
+  autoScroll = false,
+}: Props) {
   const posterHeight = Math.round((cardWidth * 4) / 3);
   const scrollRef = useRef<ScrollView>(null);
+  const offsetX = useRef(0);
+  const contentWidth = useRef(0);
+  const viewWidth = useRef(0);
+  const pausedUntil = useRef(0);
+  const count = items.length;
+
+  useEffect(() => {
+    if (!autoScroll || grid || count < 2) return;
+    const timer = setInterval(() => {
+      if (Date.now() < pausedUntil.current) return;
+      const max = contentWidth.current - viewWidth.current;
+      if (max <= 0) return;
+      const next = offsetX.current >= max - 1 ? 0 : Math.min(max, offsetX.current + cardWidth + 12);
+      scrollRef.current?.scrollTo({ x: next, animated: true });
+    }, AUTO_SCROLL_MS);
+    return () => clearInterval(timer);
+  }, [autoScroll, grid, count, cardWidth]);
+
+  const pauseAuto = () => {
+    pausedUntil.current = Date.now() + AUTO_PAUSE_MS;
+  };
   // Bergantung pada ada/tiada item: ScrollView belum wujud semasa senarai kosong.
   useWebMouseScroll(scrollRef, items.length > 0);
 
@@ -252,20 +290,34 @@ export function PosterCarousel({ title, caption, items, onPress, cardWidth = CAR
         ref={scrollRef}
         horizontal
         showsHorizontalScrollIndicator={false}
+        scrollEventThrottle={32}
+        onScroll={(event) => {
+          offsetX.current = event.nativeEvent.contentOffset.x;
+        }}
+        onLayout={(event) => {
+          viewWidth.current = event.nativeEvent.layout.width;
+        }}
+        onContentSizeChange={(width) => {
+          contentWidth.current = width;
+        }}
+        onScrollBeginDrag={pauseAuto}
         /*
           Padding dibawa oleh kandungan dan bukan oleh bekas: dengan padding
           pada bekas, kad pertama terpotong ketika ditatal dan bukan meluncur
           keluar di bawah tepi skrin.
         */
-        contentContainerStyle={{ gap: 12, paddingRight: 4 }}>
+        contentContainerStyle={{ gap: 12, paddingRight: 4 }}
+      >
         {items.map((item) => (
           <Pressable
             key={item.id}
             accessibilityRole="button"
             accessibilityLabel={item.title}
             onPress={() => onPress(item.id)}
+            onPressIn={pauseAuto}
             style={{ width: cardWidth }}
-            className="active:opacity-70">
+            className="active:opacity-70"
+          >
             {item.posterUrl ? (
               <Image
                 source={{ uri: item.posterUrl }}
@@ -278,7 +330,8 @@ export function PosterCarousel({ title, caption, items, onPress, cardWidth = CAR
               // Acara tanpa poster masih perlu muncul — ia tetap berlaku.
               <View
                 style={{ width: cardWidth, height: posterHeight, borderRadius: 16 }}
-                className="items-center justify-center border border-line bg-primary-tint">
+                className="items-center justify-center border border-line bg-primary-tint"
+              >
                 <Ionicons name="image-outline" size={28} color={Colors.inkFaint} />
               </View>
             )}

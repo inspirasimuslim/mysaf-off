@@ -266,6 +266,7 @@ export default function DashboardScreen() {
                   title="Pengumuman"
                   items={announcementItems}
                   cardWidth={DESK_POSTER_WIDTH}
+                  autoScroll
                   onPress={(id) => router.push({ pathname: '/(app)/announcement-info', params: { id } })}
                 />
               </DeskCard>
@@ -292,6 +293,7 @@ export default function DashboardScreen() {
               <PosterCarousel
                 title="Pengumuman"
                 items={announcementItems}
+                autoScroll
                 onPress={(id) => router.push({ pathname: '/(app)/announcement-info', params: { id } })}
               />
             )}
