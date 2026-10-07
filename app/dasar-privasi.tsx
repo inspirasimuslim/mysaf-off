@@ -5,15 +5,16 @@ const SECTIONS: LegalSection[] = [
   {
     heading: 'Tentang MySAFF',
     body: [
-      'MySAFF ialah aplikasi untuk ahli berdaftar persatuan bagi mengurus keahlian dan aktiviti. Aplikasi ini dikendalikan oleh Sakura Digital Resources bagi pihak persatuan, dan hanya boleh digunakan oleh ahli yang akaunnya didaftarkan oleh pentadbir.',
+      'MySAFF ialah aplikasi untuk ahli berdaftar persatuan bagi mengurus keahlian dan aktiviti: usrah, program, yuran, sumbangan, direktori ahli, pengumuman dan bisnes ahli. Aplikasi ini dikendalikan oleh Sakura Digital Resources bagi pihak persatuan, dan hanya boleh digunakan oleh ahli yang akaunnya didaftarkan oleh pentadbir.',
     ],
   },
   {
     heading: 'Data yang kami kumpul',
     body: [
-      'Maklumat akaun dan keahlian: nama, emel dan nombor telefon yang anda isi dalam profil.',
-      'Kami tidak menyimpan nombor kad atau akaun bank anda; pembayaran dalam talian diproses oleh penyedia pembayaran pihak ketiga.',
-      'Lokasi tepat: hanya ketika anda mengesahkan kehadiran program, bagi menyemak anda berada di lokasi program. Lokasi tidak dijejak di latar belakang.',
+      'Maklumat akaun dan keahlian: nama, emel, nombor telefon, nombor kad pengenalan, generasi, alamat, maklumat pendidikan, pekerjaan, perniagaan dan keluarga yang anda isi dalam profil.',
+      'Maklumat kesihatan (pilihan): jika anda mengisinya di tab Kesihatan, ia hanya boleh dilihat oleh anda dan pentadbir yang berkenaan untuk tujuan kebajikan.',
+      'Rekod kewangan persatuan: status yuran, sumbangan dan bayaran. Kami tidak menyimpan nombor kad atau akaun bank anda; pembayaran dalam talian diproses oleh penyedia pembayaran pihak ketiga.',
+      'Lokasi tepat: hanya ketika anda mengesahkan kehadiran program atau usrah, bagi menyemak anda berada di lokasi program. Lokasi tidak dijejak di latar belakang.',
       'Kamera dan galeri: kamera untuk mengimbas kod QR kehadiran; galeri untuk memilih gambar (kod QR, gambar profil, poster bisnes dan gambar program) dan menyimpan gambar ke peranti anda.',
       'Maklumat teknikal asas seperti tarikh log masuk dan log aktiviti pentadbir untuk keselamatan.',
     ],
@@ -28,7 +29,7 @@ const SECTIONS: LegalSection[] = [
   {
     heading: 'Siapa boleh melihat data anda',
     body: [
-      'Ahli lain hanya melihat maklumat direktori yang terhad. Pentadbir melihat data mengikut kebenaran jabatan masing-masing. Maklumat sensitif mempunyai kawalan akses yang lebih ketat.',
+      'Ahli lain hanya melihat maklumat direktori yang terhad (contohnya nama, generasi, gambar dan kenalan asas). Pentadbir melihat data mengikut kebenaran jabatan masing-masing. Data kesihatan dan maklumat sensitif mempunyai kawalan akses yang lebih ketat.',
     ],
   },
   {
