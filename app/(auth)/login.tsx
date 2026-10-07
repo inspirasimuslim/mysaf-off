@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
+import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 
@@ -23,6 +24,7 @@ import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 const LOGO_ASPECT_RATIO = 1090 / 367;
 
 export default function LoginScreen() {
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -230,6 +232,16 @@ export default function LoginScreen() {
           */}
           <View className="mt-2">
             <ContactAdminLink />
+          </View>
+
+          {/* Pautan awam (syarat Google Play): boleh dibuka tanpa log masuk. */}
+          <View className="mt-4 flex-row items-center justify-center gap-4">
+            <Pressable accessibilityRole="link" hitSlop={8} onPress={() => router.push('/dasar-privasi')}>
+              <Text className="text-sm text-ink-muted underline">Dasar Privasi</Text>
+            </Pressable>
+            <Pressable accessibilityRole="link" hitSlop={8} onPress={() => router.push('/padam-akaun')}>
+              <Text className="text-sm text-ink-muted underline">Padam Akaun</Text>
+            </Pressable>
           </View>
 
           {!isSupabaseConfigured ? (
