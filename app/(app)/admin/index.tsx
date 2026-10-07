@@ -151,6 +151,13 @@ export default function AdminHubScreen() {
               onPress={() => router.push('/(app)/admin/super-admins')}
             />
 
+            <ActionRow
+              icon="trash-outline"
+              title="Permintaan Padam Akaun"
+              subtitle="Permintaan ahli untuk memadam akaun dan data"
+              onPress={() => router.push('/(app)/admin/permintaan-padam-akaun')}
+            />
+
             {/*
               Bukan di bawah "Data & Sumber Manusia" walaupun ia menyentuh
               rekod ahli: operasi ini mencipta AKAUN secara pukal dengan kata

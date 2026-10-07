@@ -24,6 +24,7 @@ import {
 } from '@/lib/biometrics';
 import { errorCode, toMalayError } from '@/lib/errors';
 import { useGoBack } from '@/lib/navigation';
+import { hasPendingAccountDeletion, requestAccountDeletion } from '@/lib/account-deletion';
 import { signOutFromDevice } from '@/lib/session';
 import { supabase } from '@/lib/supabase';
 
@@ -78,6 +79,33 @@ export default function TetapanScreen() {
   const { isOwner } = usePermissions();
 
   const [banner, setBanner] = useState<Banner>(null);
+  const [deleteModal, setDeleteModal] = useState(false);
+  const [deleteReason, setDeleteReason] = useState('');
+  const [deleteBusy, setDeleteBusy] = useState(false);
+  const [deletePending, setDeletePending] = useState(false);
+
+  useEffect(() => {
+    void hasPendingAccountDeletion()
+      .then(setDeletePending)
+      .catch(() => setDeletePending(false));
+  }, []);
+
+  const submitDelete = async () => {
+    if (deleteBusy) return;
+    setDeleteBusy(true);
+    try {
+      await requestAccountDeletion(deleteReason);
+      setDeletePending(true);
+      setDeleteModal(false);
+      setDeleteReason('');
+      setBanner({ tone: 'positive', message: 'Permintaan padam akaun dihantar. Pentadbir akan memprosesnya.' });
+    } catch (caught) {
+      setDeleteModal(false);
+      setBanner({ tone: 'negative', message: toMalayError(caught, 'Gagal menghantar permintaan.') });
+    } finally {
+      setDeleteBusy(false);
+    }
+  };
 
   // --- Biometrik -----------------------------------------------------------
   const [support, setSupport] = useState<BiometricSupport | null>(null);
@@ -387,9 +415,52 @@ export default function TetapanScreen() {
             </View>
           ) : null}
 
+          <View>
+            <SectionTitle title="Privasi" />
+            <View className="gap-4">
+              <ActionRow
+                icon="document-text-outline"
+                title="Dasar Privasi"
+                onPress={() => router.push('/dasar-privasi')}
+              />
+              <ActionRow
+                icon="trash-outline"
+                title="Padam Akaun"
+                subtitle={deletePending ? 'Permintaan anda sedang diproses' : 'Mohon akaun dan data anda dipadam'}
+                tone="danger"
+                onPress={() => (deletePending ? undefined : setDeleteModal(true))}
+              />
+            </View>
+          </View>
+
           <Button label="Log Keluar" variant="danger" loading={signOutBusy} onPress={() => void signOut()} />
         </View>
       </Screen>
+
+      <FormModal
+        visible={deleteModal}
+        centerOnDesktop
+        title="Padam Akaun"
+        description="Permintaan akan dihantar kepada pentadbir. Selepas diproses, akaun log masuk dan data peribadi anda dipadam atau dianonimkan. Rekod kewangan persatuan (yuran, sumbangan) mungkin disimpan tanpa identiti peribadi untuk tujuan audit."
+        dismissable={!deleteBusy}
+        onClose={() => setDeleteModal(false)}>
+        <TextField
+          label="Sebab (pilihan)"
+          placeholder="Contoh: sudah tidak aktif"
+          value={deleteReason}
+          onChangeText={setDeleteReason}
+          multiline
+          maxLength={500}
+          editable={!deleteBusy}
+        />
+        <Button
+          label="Hantar Permintaan Padam"
+          variant="danger"
+          loading={deleteBusy}
+          disabled={deleteBusy}
+          onPress={() => void submitDelete()}
+        />
+      </FormModal>
 
       <FormModal
         visible={emailModal}

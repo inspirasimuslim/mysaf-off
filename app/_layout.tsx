@@ -49,6 +49,8 @@ export default function RootLayout() {
               <Stack.Screen name="index" />
               <Stack.Screen name="(auth)" />
               <Stack.Screen name="(app)" />
+              <Stack.Screen name="dasar-privasi" />
+              <Stack.Screen name="padam-akaun" />
             </Stack>
             </ToastProvider>
           </PermissionsProvider>

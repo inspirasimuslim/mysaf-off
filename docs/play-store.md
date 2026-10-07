@@ -6,9 +6,9 @@ Pakej: `com.sakuradigital.mysafoff` · versi semasa 1.3.20 (kod 26). Play menola
 - **AAB** (bukan APK): `eas build -p android --profile play` (cloud EAS, kunci muat naik diurus EAS), atau di PC: `cd android; .\gradlew bundleRelease` -> `app\build\outputs\bundle\release\app-release.aab`. Gradle lokal mesti ditandatangani dengan keystore muat naik sendiri, BUKAN debug keystore.
 - Ikon 512x512 PNG, feature graphic 1024x500, sekurang-kurangnya 2 tangkap layar telefon.
 
-## Halangan sebelum hantar (belum ada dalam app)
-1. **Dasar Privasi (URL awam)** — wajib kerana app guna lokasi, kamera, galeri dan data peribadi ahli.
-2. **Padam akaun** — Play mewajibkan pilihan padam akaun DALAM app + URL web untuk permintaan padam. Belum ada.
+## Halangan sebelum hantar
+1. **Dasar Privasi (URL awam)** — SIAP dalam app: `/dasar-privasi` (web). Perlu deploy web dahulu; URL itu dimasukkan dalam Play Console. Isi `SUPPORT_EMAIL` dalam `constants/legal.ts`.
+2. **Padam akaun** — SIAP: Tetapan > Padam Akaun (migration 143, berasaskan permintaan), skrin Super Admin `Permintaan Padam Akaun`, URL web `/padam-akaun` untuk Play Console.
 3. **Borang Data Safety** — nyatakan: nama, emel, no. telefon, NRIC, lokasi tepat (semasa guna), foto, maklumat kewangan (yuran/PIPIS, bukan kad), disimpan di Supabase, tidak dijual, disulitkan semasa penghantaran.
 4. **Akses ujian** — beri akaun ujian (emel + kata laluan) kerana app hanya untuk ahli; tanpa itu reviewer tolak.
 5. **Akaun pembangun peribadi baharu**: ujian tertutup 12 penguji selama 14 hari sebelum boleh ke Production.
