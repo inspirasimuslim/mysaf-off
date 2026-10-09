@@ -7,11 +7,11 @@ import { Card } from '@/components/ui/card';
 import { Notice } from '@/components/ui/notice';
 import { Screen } from '@/components/ui/screen';
 import { TextField } from '@/components/ui/text-field';
-import { Colors } from '@/constants/theme';
 import { toMalayError } from '@/lib/errors';
 import { signOutEverywhere } from '@/lib/session';
 import { supabase } from '@/lib/supabase';
 import { completePasswordChange } from '@/lib/temp-password';
+import { useColors } from '@/lib/theme';
 
 /**
  * Tukar kata laluan sementara — satu-satunya skrin yang boleh dicapai sehingga
@@ -34,6 +34,7 @@ import { completePasswordChange } from '@/lib/temp-password';
 const MIN_PASSWORD_LENGTH = 8;
 
 export function ForcePasswordChange({ onDone }: { onDone: () => void }) {
+  const colors = useColors();
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -86,7 +87,7 @@ export function ForcePasswordChange({ onDone }: { onDone: () => void }) {
         <View className="gap-6 px-gutter pt-6">
           <View className="items-center pb-2 pt-6">
             <View className="h-20 w-20 items-center justify-center rounded-[24px] bg-primary">
-              <Ionicons name="key" size={34} color={Colors.white} />
+              <Ionicons name="key" size={34} color={colors.white} />
             </View>
             <Text className="mt-5 text-2xl font-bold text-ink">Tetapkan Kata Laluan</Text>
             <Text className="mt-1.5 px-4 text-center text-sm leading-5 text-ink-muted">

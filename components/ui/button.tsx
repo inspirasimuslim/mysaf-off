@@ -1,6 +1,7 @@
 import { ActivityIndicator, Pressable, Text, View, type PressableProps } from 'react-native';
 
-import { Colors } from '@/constants/theme';
+import type { ColorName } from '@/constants/theme';
+import { useColors } from '@/lib/theme';
 
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
 type Size = 'md' | 'sm';
@@ -35,11 +36,12 @@ const SIZE: Record<Size, { container: string; label: string }> = {
   sm: { container: 'h-11 px-3', label: 'text-sm' },
 };
 
-export const SPINNER_COLOR: Record<Variant, string> = {
-  primary: Colors.white,
-  secondary: Colors.ink,
-  ghost: Colors.primary,
-  danger: Colors.negative,
+/** Nama token warna pemutar, dipadankan kepada warna tema semasa melalui `useColors()`. */
+export const SPINNER_COLOR: Record<Variant, ColorName> = {
+  primary: 'white',
+  secondary: 'ink',
+  ghost: 'primary',
+  danger: 'negative',
 };
 
 export function Button({
@@ -52,6 +54,7 @@ export function Button({
   disabled,
   ...rest
 }: Props) {
+  const colors = useColors();
   const inactive = disabled || loading;
 
   return (
@@ -64,7 +67,7 @@ export function Button({
       } ${className}`}
       {...rest}>
       {loading ? (
-        <ActivityIndicator color={SPINNER_COLOR[variant]} />
+        <ActivityIndicator color={colors[SPINNER_COLOR[variant]]} />
       ) : (
         <View className="flex-row items-center gap-2">
           {icon}

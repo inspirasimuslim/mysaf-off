@@ -15,7 +15,6 @@ import { Screen } from '@/components/ui/screen';
 import { SectionTitle } from '@/components/ui/section-title';
 import { TextField } from '@/components/ui/text-field';
 import { ToastBanner } from '@/components/ui/toast';
-import { Colors } from '@/constants/theme';
 import {
   ACTIVITY_CATEGORY_OPTIONS,
   ACTIVITY_PAGE_SIZE,
@@ -33,6 +32,7 @@ import { useGoBack } from '@/lib/navigation';
 import { useIsDesktop } from '@/lib/use-desktop';
 import { usePermissions } from '@/lib/permissions';
 import { MONTH_NAMES, ROLE_LABEL } from '@/types/database';
+import { useColors } from '@/lib/theme';
 
 /** Pemisah "·" sebagai escape — lihat supabase/functions/admin-create-member. */
 const SEP = ' · ';
@@ -63,6 +63,7 @@ function formatTime(iso: string): string {
  * pada masa lampau — dan dipapar sekali pada kepala blok dengan nota semasa.
  */
 export default function ActivityLogScreen() {
+  const colors = useColors();
   const goBack = useGoBack();
   const desktop = useIsDesktop();
   const { isOwner, loading: permissionsLoading } = usePermissions();
@@ -259,7 +260,7 @@ export default function ActivityLogScreen() {
 
         {loading ? (
           <View className="items-center py-10">
-            <ActivityIndicator color={Colors.primary} />
+            <ActivityIndicator color={colors.primary} />
           </View>
         ) : rows.length === 0 ? (
           <EmptyState
@@ -368,6 +369,7 @@ function GroupBlock({
   currentRole: string | undefined;
   defaultOpen: boolean;
 }) {
+  const colors = useColors();
   const [open, setOpen] = useState(defaultOpen);
   const subtitle = formatDay(group.latestAt) + (currentRole ? SEP + currentRole : '');
 
@@ -392,7 +394,7 @@ function GroupBlock({
           <Text className="text-xs font-semibold text-primary">{group.rows.length} tindakan</Text>
         </View>
 
-        <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={16} color={Colors.inkMuted} />
+        <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={16} color={colors.inkMuted} />
       </Pressable>
 
       {open ? (

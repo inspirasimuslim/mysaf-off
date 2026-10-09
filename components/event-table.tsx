@@ -5,7 +5,6 @@ import { View } from 'react-native';
 import type { EventRowAction } from '@/components/event-list-row';
 import { Badge } from '@/components/ui/badge';
 import { CellText, DataTable, RowIconAction } from '@/components/ui/data-table';
-import { Colors } from '@/constants/theme';
 import {
   USRAH_EVENT_STATUS_LABEL,
   dateRangeLabel,
@@ -13,6 +12,7 @@ import {
   usrahEventStatus,
   type UsrahEvent,
 } from '@/types/database';
+import { useColors } from '@/lib/theme';
 
 const STATUS_TONE = { aktif: 'positive', tamat: 'neutral', nonaktif: 'warn' } as const;
 
@@ -32,6 +32,7 @@ export function EventTable({
   actionsFor: (event: UsrahEvent) => EventRowAction[];
   busyId: string | null;
 }) {
+  const colors = useColors();
   return (
     <DataTable
       rows={events}
@@ -48,7 +49,7 @@ export function EventTable({
               {event.poster_url ? (
                 <Image source={{ uri: event.poster_url }} style={{ width: 32, height: 32 }} contentFit="cover" />
               ) : (
-                <Ionicons name="image-outline" size={16} color={Colors.inkFaint} />
+                <Ionicons name="image-outline" size={16} color={colors.inkFaint} />
               )}
             </View>
           ),

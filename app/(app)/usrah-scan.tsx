@@ -9,7 +9,6 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Notice } from '@/components/ui/notice';
 import { Screen } from '@/components/ui/screen';
-import { Colors } from '@/constants/theme';
 import { pickImage } from '@/lib/image-upload';
 import {
   ALREADY_RECORDED,
@@ -25,6 +24,7 @@ import {
   type ScannedEvent,
 } from '@/lib/usrah-scan';
 import { EVENT_TYPE_LABEL, dateRangeLabel, timeRangeLabel } from '@/types/database';
+import { useColors } from '@/lib/theme';
 
 /**
  * Rekod kehadiran usrah dengan mengimbas kod QR program.
@@ -58,6 +58,7 @@ type Phase =
   | { step: 'gagal'; message: string; tone: 'negative' | 'warn' };
 
 export default function UsrahScanScreen() {
+  const colors = useColors();
   const router = useRouter();
   const [permission, requestPermission] = useCameraPermissions();
 
@@ -310,7 +311,7 @@ export default function UsrahScanScreen() {
             {nearby ? (
               <View className="rounded-card border border-line bg-surface px-4 py-3">
                 <View className="flex-row items-center gap-2">
-                  <Ionicons name="location" size={16} color={Colors.primary} />
+                  <Ionicons name="location" size={16} color={colors.primary} />
                   <Text className="flex-1 text-sm font-semibold text-ink-muted">Anda berada berdekatan:</Text>
                   <Pressable
                     accessibilityRole="button"
@@ -318,7 +319,7 @@ export default function UsrahScanScreen() {
                     hitSlop={10}
                     onPress={() => setNearby(null)}
                     className="active:opacity-60">
-                    <Ionicons name="close" size={18} color={Colors.inkFaint} />
+                    <Ionicons name="close" size={18} color={colors.inkFaint} />
                   </Pressable>
                 </View>
 
@@ -364,7 +365,7 @@ export default function UsrahScanScreen() {
                       width: FRAME,
                       height: FRAME,
                       borderWidth: 3,
-                      borderColor: Colors.white,
+                      borderColor: colors.white,
                       borderRadius: 20,
                       opacity: 0.85,
                     }}
@@ -375,7 +376,7 @@ export default function UsrahScanScreen() {
               <Card>
                 <View className="items-center gap-4">
                   <View className="h-16 w-16 items-center justify-center rounded-pill bg-primary-soft">
-                    <Ionicons name="camera-outline" size={28} color={Colors.primary} />
+                    <Ionicons name="camera-outline" size={28} color={colors.primary} />
                   </View>
                   <Text className="text-center text-sm leading-5 text-ink-muted">
                     {cameraError ??
@@ -400,7 +401,7 @@ export default function UsrahScanScreen() {
               variant="secondary"
               loading={picking}
               disabled={picking}
-              icon={<Ionicons name="images-outline" size={18} color={Colors.ink} />}
+              icon={<Ionicons name="images-outline" size={18} color={colors.ink} />}
               onPress={() => void uploadFromGallery()}
             />
 
@@ -414,7 +415,7 @@ export default function UsrahScanScreen() {
         {phase.step === 'proses' ? (
           <Card>
             <View className="items-center gap-3 py-6">
-              <Ionicons name="sync-outline" size={28} color={Colors.primary} />
+              <Ionicons name="sync-outline" size={28} color={colors.primary} />
               <Text className="text-base font-semibold text-ink">{phase.note}</Text>
               {phase.hint ? (
                 <Text className="text-center text-sm leading-5 text-ink-muted">{phase.hint}</Text>
@@ -427,7 +428,7 @@ export default function UsrahScanScreen() {
           <>
             <Card tone="primary">
               <View className="items-center gap-3">
-                <Ionicons name="checkmark-circle" size={44} color={Colors.white} />
+                <Ionicons name="checkmark-circle" size={44} color={colors.white} />
                 {/* Mod ialah label pelayan mengikut jarak dari pin — bukan pilihan ahli. */}
                 <Text className="text-lg font-bold text-white">
                   {phase.result.attendance_mode === 'online'

@@ -15,7 +15,6 @@ import { Screen } from '@/components/ui/screen';
 import { Segmented } from '@/components/ui/segmented';
 import { TextField } from '@/components/ui/text-field';
 import { ToastBanner } from '@/components/ui/toast';
-import { Colors } from '@/constants/theme';
 import {
   downloadGenerationRanking,
   downloadInactiveMembers,
@@ -34,6 +33,7 @@ import { deliveryMessage, type DeliveryMode } from '@/lib/file-delivery';
 import { useGoBack } from '@/lib/navigation';
 import { useIsDesktop } from '@/lib/use-desktop';
 import { dateRangeLabel, generationLabel, generationOrder, type Option } from '@/types/database';
+import { useColors } from '@/lib/theme';
 
 type Tab = 'aktif' | 'generasi' | 'tidak-aktif';
 
@@ -87,6 +87,7 @@ function generasiName(code: string | null): string {
  * sendiri, dan tidak dijana sehingga diminta.
  */
 export default function PenarafanScreen() {
+  const colors = useColors();
   const goBack = useGoBack();
   const access = useGenerasiAccess();
   const desktop = useIsDesktop();
@@ -155,7 +156,7 @@ export default function PenarafanScreen() {
           label="Jana Penarafan"
           loading={busy}
           disabled={busy || !rangeValid}
-          icon={<Ionicons name="trophy-outline" size={18} color={Colors.white} />}
+          icon={<Ionicons name="trophy-outline" size={18} color={colors.white} />}
           onPress={() => void generate()}
         />
 
@@ -426,6 +427,7 @@ function MemberRow({ row, rank, last, tone = 'primary' }: { row: MemberActivity;
 
 /** Pecahan markah: cip hijau bila dicapai, kelabu bila tidak — ikon ✓/✕ supaya tidak bergantung pada warna. */
 function ScoreChips({ row, compact = false }: { row: MemberActivity; compact?: boolean }) {
+  const colors = useColors();
   const chips = [
     { label: 'Yuran', earned: row.yuran_lunas > 0 },
     { label: 'PIPIS', earned: row.pipis_sumbang > 0 },
@@ -445,7 +447,7 @@ function ScoreChips({ row, compact = false }: { row: MemberActivity; compact?: b
           <Ionicons
             name={chip.earned ? 'checkmark' : 'close'}
             size={compact ? 10 : 12}
-            color={chip.earned ? Colors.primary : Colors.inkFaint}
+            color={chip.earned ? colors.primary : colors.inkFaint}
           />
           <Text className={`${compact ? 'text-[10px]' : 'text-xs'} font-semibold ${chip.earned ? 'text-primary' : 'text-ink-faint'}`}>
             {chip.label}
@@ -532,6 +534,7 @@ function GenerationRanking({ result }: { result: ActivityRanking }) {
 }
 
 function GenerationRow({ row, rank, maxTotal }: { row: GenerationActivity; rank: number; maxTotal: number }) {
+  const colors = useColors();
   const medal = rank <= 3 ? MEDALS[rank - 1] : null;
   const share = (row.jumlah_markah_generasi / maxTotal) * 100;
 
@@ -545,7 +548,7 @@ function GenerationRow({ row, rank, maxTotal }: { row: GenerationActivity; rank:
       <View className="flex-row items-center gap-3">
         <View
           className="items-center justify-center rounded-pill"
-          style={{ width: 28, height: 28, backgroundColor: medal ? medal.color : Colors.primaryTint }}>
+          style={{ width: 28, height: 28, backgroundColor: medal ? medal.color : colors.primaryTint }}>
           <Text className={`text-xs font-bold ${medal ? 'text-white' : 'text-ink-muted'}`}>{rank}</Text>
         </View>
 
@@ -574,7 +577,7 @@ function GenerationRow({ row, rank, maxTotal }: { row: GenerationActivity; rank:
             width: `${share}%`,
             height: '100%',
             borderRadius: 999,
-            backgroundColor: medal ? medal.color : Colors.primaryMid,
+            backgroundColor: medal ? medal.color : colors.primaryMid,
           }}
         />
       </View>
@@ -587,6 +590,7 @@ function GenerationRow({ row, rank, maxTotal }: { row: GenerationActivity; rank:
 // =============================================================================
 
 function InactiveSection({ startDate, endDate, rangeValid }: { startDate: string; endDate: string; rangeValid: boolean }) {
+  const colors = useColors();
   const [maxInput, setMaxInput] = useState('0');
   const [list, setList] = useState<InactiveList | null>(null);
   const [busy, setBusy] = useState(false);
@@ -653,7 +657,7 @@ function InactiveSection({ startDate, endDate, rangeValid }: { startDate: string
             variant="secondary"
             loading={busy}
             disabled={busy || !rangeValid || !maxValid}
-            icon={<Ionicons name="list-outline" size={18} color={Colors.ink} />}
+            icon={<Ionicons name="list-outline" size={18} color={colors.ink} />}
             onPress={() => void generate()}
           />
           {stale && !busy ? (

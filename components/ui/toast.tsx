@@ -3,6 +3,7 @@ import { Animated, Platform, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Notice } from '@/components/ui/notice';
+import { useColors } from '@/lib/theme';
 
 /**
  * Popup keputusan tindakan ("berjaya" / "gagal") yang dikongsi semua skrin.
@@ -31,6 +32,7 @@ const ToastContext = createContext<ToastApi | null>(null);
 const DURATION: Record<ToastTone, number> = { positive: 4000, info: 4000, warn: 6000, negative: 6000 };
 
 export function ToastProvider({ children }: { children: ReactNode }) {
+  const colors = useColors();
   const insets = useSafeAreaInsets();
   const [toast, setToast] = useState<ToastState | null>(null);
   const opacity = useRef(new Animated.Value(0)).current;
@@ -79,7 +81,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               width: '100%',
               maxWidth: 480,
               borderRadius: 16,
-              backgroundColor: '#FFFFFF',
+              backgroundColor: colors.surface,
               shadowColor: '#000',
               shadowOpacity: 0.18,
               shadowRadius: 12,

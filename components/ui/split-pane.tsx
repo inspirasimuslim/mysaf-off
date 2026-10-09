@@ -1,8 +1,7 @@
 import { createContext, useContext, type ReactNode } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { ScrollView, Text, View } from 'react-native';
-
-import { Colors } from '@/constants/theme';
+import { useColors } from '@/lib/theme';
 
 /**
  * Benar bila skrin butiran dipasang di panel kanan (mod desktop) dan bukan sebagai
@@ -48,9 +47,10 @@ export function SplitPane({ header, left, right }: Props) {
 
 /** Keadaan kosong panel kanan — belum ada rekod dipilih. */
 export function DetailPlaceholder({ icon, text }: { icon: keyof typeof Ionicons.glyphMap; text: string }) {
+  const colors = useColors();
   return (
     <View className="flex-1 items-center justify-center gap-3 px-8">
-      <Ionicons name={icon} size={40} color={Colors.inkFaint} />
+      <Ionicons name={icon} size={40} color={colors.inkFaint} />
       <Text className="text-center text-base text-ink-muted">{text}</Text>
     </View>
   );

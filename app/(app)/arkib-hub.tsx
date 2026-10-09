@@ -5,6 +5,7 @@ import { Linking, Pressable, Text, View } from 'react-native';
 import { ScreenHeader } from '@/components/screen-header';
 import { Card } from '@/components/ui/card';
 import { Screen } from '@/components/ui/screen';
+import { useColors } from '@/lib/theme';
 
 /** Halaman luar (Canva) untuk Majlis Baitul Muslim. */
 const BAITUL_MUSLIM_URL = 'https://senadappda.my.canva.site/mbmikhwan';
@@ -65,18 +66,19 @@ function HubButton({
   subtitle?: string;
   onPress: () => void;
 }) {
+  const colors = useColors();
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={title} onPress={onPress} className="active:opacity-70">
       <Card>
         <View className="flex-row items-center gap-4 py-2">
           <View className="h-14 w-14 items-center justify-center rounded-2xl bg-primary-soft">
-            <Ionicons name={icon} size={28} color="#0F5132" />
+            <Ionicons name={icon} size={28} color={colors.primary} />
           </View>
           <View className="flex-1">
             <Text className="text-lg font-bold text-ink">{title}</Text>
             {subtitle ? <Text className="mt-0.5 text-sm text-ink-muted">{subtitle}</Text> : null}
           </View>
-          <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+          <Ionicons name="chevron-forward" size={20} color={colors.inkFaint} />
         </View>
       </Card>
     </Pressable>

@@ -31,8 +31,8 @@ import { fetchGenerations } from '@/lib/members';
 import { useGoBack } from '@/lib/navigation';
 import { useIsDesktop } from '@/lib/use-desktop';
 import { ORG_CHART_DEPARTMENT } from '@/lib/org-chart';
-import { Colors } from '@/constants/theme';
 import { generationLabel, generationOrder, type Generation, type Option } from '@/types/database';
+import { useColors } from '@/lib/theme';
 
 type Banner = { tone: 'positive' | 'info' | 'negative'; message: string } | null;
 
@@ -46,6 +46,7 @@ type Banner = { tone: 'positive' | 'info' | 'negative'; message: string } | null
  * `20260923000058_ahli_diputihkan.sql`.
  */
 export default function AhliDiputihkanScreen() {
+  const colors = useColors();
   const goBack = useGoBack();
   const desktop = useIsDesktop();
   const { loading: accessLoading, canView, canEdit } = useDepartmentAccess(ORG_CHART_DEPARTMENT);
@@ -304,7 +305,7 @@ export default function AhliDiputihkanScreen() {
                           hitSlop={8}
                           onPress={() => openEdit(row)}
                           className="h-8 w-8 items-center justify-center rounded-pill active:opacity-70">
-                          <Ionicons name="pencil-outline" size={16} color={Colors.ink} />
+                          <Ionicons name="pencil-outline" size={16} color={colors.ink} />
                         </Pressable>
                         <Pressable
                           accessibilityRole="button"
@@ -312,7 +313,7 @@ export default function AhliDiputihkanScreen() {
                           hitSlop={8}
                           onPress={() => setPendingDelete(row)}
                           className="h-8 w-8 items-center justify-center rounded-pill active:opacity-70">
-                          <Ionicons name="trash-outline" size={16} color={Colors.negative} />
+                          <Ionicons name="trash-outline" size={16} color={colors.negative} />
                         </Pressable>
                       </>
                     ) : null}

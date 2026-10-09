@@ -16,7 +16,6 @@ import { Segmented } from '@/components/ui/segmented';
 import { TabBar } from '@/components/ui/tab-bar';
 import { TextField } from '@/components/ui/text-field';
 import { ToggleRow } from '@/components/ui/toggle-row';
-import { Colors } from '@/constants/theme';
 import { ageFromNric } from '@/lib/nric';
 import {
   BIDANG_KERAJAAN_OPTIONS,
@@ -49,6 +48,7 @@ import {
   type Option,
   type School,
 } from '@/types/database';
+import { useColors } from '@/lib/theme';
 
 /**
  * Borang penuh satu rekod ahli — dikongsi oleh panel Admin dan skrin Profil.
@@ -266,6 +266,7 @@ export function MemberForm({
   actions,
   onSave,
 }: Props) {
+  const colors = useColors();
   const [draft, setDraft] = useState<Member>(member);
   const [businessesDraft, setBusinessesDraft] = useState<MemberBusinessDraft[]>(() => businesses.map(toDraft));
   const [educationDraft, setEducationDraft] = useState<MemberEducationDraft[]>(() => education.map(toEducationDraft));
@@ -443,9 +444,9 @@ export function MemberForm({
         {canPickAvatar ? (
           <View className="absolute bottom-0 right-0 h-9 w-9 items-center justify-center rounded-pill border-2 border-surface bg-primary">
             {avatarBusy ? (
-              <ActivityIndicator size="small" color={Colors.white} />
+              <ActivityIndicator size="small" color={colors.white} />
             ) : (
-              <Ionicons name="camera" size={16} color={Colors.white} />
+              <Ionicons name="camera" size={16} color={colors.white} />
             )}
           </View>
         ) : null}
@@ -1102,7 +1103,7 @@ export function MemberForm({
       className={`h-11 flex-row items-center gap-2 rounded-field border pl-3 pr-2 ${
         draft.disekat ? 'border-negative bg-negative-soft' : 'border-line bg-surface'
       } ${locked ? 'opacity-60' : ''}`}>
-      <Ionicons name="ban-outline" size={16} color={draft.disekat ? Colors.negative : Colors.inkMuted} />
+      <Ionicons name="ban-outline" size={16} color={draft.disekat ? colors.negative : colors.inkMuted} />
       <Text
         className={`flex-1 text-sm font-semibold ${draft.disekat ? 'text-negative' : 'text-ink'}`}
         numberOfLines={1}>
@@ -1113,9 +1114,9 @@ export function MemberForm({
         value={draft.disekat}
         onValueChange={(next) => set('disekat', next)}
         disabled={locked}
-        trackColor={{ false: Colors.line, true: Colors.negative }}
-        thumbColor={Colors.white}
-        ios_backgroundColor={Colors.line}
+        trackColor={{ false: colors.line, true: colors.negative }}
+        thumbColor={colors.white}
+        ios_backgroundColor={colors.line}
       />
     </View>
   ) : null;
@@ -1253,10 +1254,11 @@ function InfoRow({
   label: string;
   value: string | null;
 }) {
+  const colors = useColors();
   return (
     <View className="flex-row items-center gap-3">
       <View className="h-9 w-9 items-center justify-center rounded-pill bg-primary-soft">
-        <Ionicons name={icon} size={16} color={Colors.primary} />
+        <Ionicons name={icon} size={16} color={colors.primary} />
       </View>
       <View className="flex-1">
         <Text className="text-xs text-ink-muted">{label}</Text>

@@ -11,8 +11,8 @@ import {
   type NativeSyntheticEvent,
 } from 'react-native';
 
-import { Colors } from '@/constants/theme';
 import type { ActiveBusinessAd } from '@/lib/business-ads';
+import { useColors } from '@/lib/theme';
 
 /** Masa setiap poster dipaparkan sebelum bergerak ke yang seterusnya. */
 const SLIDE_MS = 3000;
@@ -88,6 +88,7 @@ function PanningPoster({ uri, width, height, label }: { uri: string; width: numb
  * `list_active_business_ads()` (paling lama dilulus dahulu).
  */
 export function BusinessAdCarousel({ ads, onPress, onSeeAll }: Props) {
+  const colors = useColors();
   const scrollRef = useRef<ScrollView>(null);
   const [width, setWidth] = useState(0);
   const [index, setIndex] = useState(0);
@@ -194,7 +195,7 @@ export function BusinessAdCarousel({ ads, onPress, onSeeAll }: Props) {
                   width: i === index ? 18 : 8,
                   height: 8,
                   borderRadius: 4,
-                  backgroundColor: i === index ? Colors.primary : Colors.line,
+                  backgroundColor: i === index ? colors.primary : colors.line,
                 }}
               />
             </Pressable>

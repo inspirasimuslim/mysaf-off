@@ -1,8 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useState, type ReactNode } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View, useWindowDimensions } from 'react-native';
-
-import { Colors } from '@/constants/theme';
+import { useColors } from '@/lib/theme';
 
 export type Column<T> = {
   key: string;
@@ -39,6 +38,7 @@ type Props<T> = {
  * jadi ia sentiasa kelihatan (sticky) sementara baris ditatal dalam jadual.
  */
 export function DataTable<T>({ columns, rows, keyOf, onRowPress, actions, actionsWidth = 72, renderExpanded, reserve = 260, selectedKey = null, fill = false }: Props<T>) {
+  const colors = useColors();
   const [openKey, setOpenKey] = useState<string | null>(null);
   const { height } = useWindowDimensions();
   const maxHeight = Math.max(320, height - reserve);
@@ -72,7 +72,7 @@ export function DataTable<T>({ columns, rows, keyOf, onRowPress, actions, action
                 accessibilityState={renderExpanded ? { expanded: open } : undefined}
                 disabled={!interactive}
                 // Garis penanda di kiri baris terpilih — lebih jelas daripada warna hover sahaja.
-                style={selectedKey === key ? { boxShadow: `inset 3px 0 0 ${Colors.primary}` } : undefined}
+                style={selectedKey === key ? { boxShadow: `inset 3px 0 0 ${colors.primary}` } : undefined}
                 onPress={() => {
                   if (renderExpanded) setOpenKey(open ? null : key);
                   onRowPress?.(row);
@@ -146,6 +146,7 @@ export function RowIconAction({
   busy?: boolean;
   disabled?: boolean;
 }) {
+  const colors = useColors();
   const inactive = busy || disabled;
   return (
     <Pressable
@@ -161,9 +162,9 @@ export function RowIconAction({
         inactive ? 'opacity-40' : 'active:opacity-70'
       }`}>
       {busy ? (
-        <ActivityIndicator size="small" color={Colors.primary} />
+        <ActivityIndicator size="small" color={colors.primary} />
       ) : (
-        <Ionicons name={icon} size={16} color={destructive ? Colors.negative : Colors.inkMuted} />
+        <Ionicons name={icon} size={16} color={destructive ? colors.negative : colors.inkMuted} />
       )}
     </Pressable>
   );

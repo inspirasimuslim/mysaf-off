@@ -17,7 +17,6 @@ import { SectionTitle } from '@/components/ui/section-title';
 import { DetailPlaceholder, SplitPane } from '@/components/ui/split-pane';
 import { TextField } from '@/components/ui/text-field';
 import { ToastBanner } from '@/components/ui/toast';
-import { Colors } from '@/constants/theme';
 import { useYuranAccess } from '@/lib/department-access';
 import { toMalayError } from '@/lib/errors';
 import { deliveryMessage, type DeliveryMode } from '@/lib/file-delivery';
@@ -35,6 +34,7 @@ import {
 import { generationLabel } from '@/types/database';
 
 import { YuranDetailView } from './yuran-detail';
+import { useColors } from '@/lib/theme';
 
 type Banner = { tone: 'positive' | 'info' | 'negative'; message: string } | null;
 
@@ -55,6 +55,7 @@ const STATUS_TONE = { Tertunggak: 'negative', Kredit: 'info', Lunas: 'positive' 
  * berhenti di sempadan tahun.
  */
 export default function YuranListScreen() {
+  const colors = useColors();
   const router = useRouter();
   const desktop = useIsDesktop();
   const goBack = useGoBack();
@@ -313,7 +314,7 @@ export default function YuranListScreen() {
             {canEdit ? (
               <Button
                 label={'Jana Yuran ' + (yearValid ? parsedYear : '')}
-                icon={<Ionicons name="add-circle-outline" size={18} color={Colors.white} />}
+                icon={<Ionicons name="add-circle-outline" size={18} color={colors.white} />}
                 loading={busy}
                 disabled={busy || !yearValid}
                 onPress={requestGenerate}
@@ -333,7 +334,7 @@ export default function YuranListScreen() {
                       label="Batal Penjanaan"
                       variant="danger"
                       size="sm"
-                      icon={<Ionicons name="arrow-undo-outline" size={16} color={Colors.negative} />}
+                      icon={<Ionicons name="arrow-undo-outline" size={16} color={colors.negative} />}
                       loading={undoBusy}
                       disabled={busy || undoBusy}
                       onPress={requestUndo}
@@ -345,7 +346,7 @@ export default function YuranListScreen() {
                     label="Import Baki 2025"
                     variant="secondary"
                     size="sm"
-                    icon={<Ionicons name="cloud-upload-outline" size={16} color={Colors.ink} />}
+                    icon={<Ionicons name="cloud-upload-outline" size={16} color={colors.ink} />}
                     onPress={() => router.push('/(app)/admin/yuran-upload')}
                   />
                 </View>

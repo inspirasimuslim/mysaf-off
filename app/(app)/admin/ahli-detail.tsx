@@ -13,7 +13,6 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Notice } from '@/components/ui/notice';
 import { Screen } from '@/components/ui/screen';
 import { ToastBanner } from '@/components/ui/toast';
-import { Colors } from '@/constants/theme';
 import { pickAvatar, uploadAvatar } from '@/lib/avatar';
 import { useMemberAccess, useUsrahAccess } from '@/lib/department-access';
 import { toMalayError } from '@/lib/errors';
@@ -43,6 +42,7 @@ import {
   type MemberPickerRow,
   type School,
 } from '@/types/database';
+import { useColors } from '@/lib/theme';
 
 type Banner = { tone: 'positive' | 'negative'; message: string } | null;
 
@@ -69,6 +69,7 @@ export function AhliDetailView({
   onChanged?: () => void;
   onDeleted?: () => void;
 }) {
+  const colors = useColors();
   const goBack = useGoBack();
   const { loading: accessLoading, canView, canEdit } = useMemberAccess();
   const router = useRouter();
@@ -402,7 +403,7 @@ export function AhliDetailView({
                       label="Rekod / Betulkan Kehadiran Usrah"
                       variant="secondary"
                       size="sm"
-                      icon={<Ionicons name="people-outline" size={16} color={Colors.primary} />}
+                      icon={<Ionicons name="people-outline" size={16} color={colors.primary} />}
                       onPress={() =>
                         router.push({
                           pathname: '/(app)/admin/ahli-usrah-history',
@@ -418,7 +419,7 @@ export function AhliDetailView({
                       label="Padam Ahli"
                       variant="danger"
                       size="sm"
-                      icon={<Ionicons name="trash-outline" size={16} color={Colors.negative} />}
+                      icon={<Ionicons name="trash-outline" size={16} color={colors.negative} />}
                       onPress={openDelete}
                     />
                   ) : null

@@ -3,9 +3,9 @@ import { useRef, type ReactNode } from 'react';
 import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Colors } from '@/constants/theme';
 import { KeyboardAwareProvider, useKeyboardAware } from '@/lib/keyboard-aware';
 import { useIsDesktop } from '@/lib/use-desktop';
+import { useColors } from '@/lib/theme';
 
 const MAX_SHEET_WIDTH = 560;
 
@@ -29,6 +29,7 @@ type Props = {
 
 /** Helaian ringkas untuk borang pendek (tukar emel / kata laluan). */
 export function FormModal({ visible, title, description, onClose, dismissable = true, footer, centerOnDesktop = false, children }: Props) {
+  const colors = useColors();
   const insets = useSafeAreaInsets();
   const desktop = useIsDesktop();
   const centered = centerOnDesktop && desktop;
@@ -86,7 +87,7 @@ export function FormModal({ visible, title, description, onClose, dismissable = 
                 className={`h-9 w-9 items-center justify-center rounded-pill border border-line bg-surface ${
                   dismissable ? 'active:opacity-70' : 'opacity-40'
                 }`}>
-                <Ionicons name="close" size={18} color={Colors.ink} />
+                <Ionicons name="close" size={18} color={colors.ink} />
               </Pressable>
             </View>
 

@@ -11,7 +11,6 @@ import { Screen } from '@/components/ui/screen';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { LoadingScreen } from '@/components/ui/loading-screen';
-import { Colors } from '@/constants/theme';
 import { useAndroidBackNavigation } from '@/lib/android-back';
 import { useAuth } from '@/lib/auth-context';
 import { activityCaptureProps, useIdleTimeout } from '@/lib/idle-timer';
@@ -19,14 +18,16 @@ import { signOutEverywhere } from '@/lib/session';
 import { useIsDesktop } from '@/lib/use-desktop';
 import { SUSPENDED_MESSAGE, setAuthNotice, useAccountStatus } from '@/lib/suspension';
 import { EXPIRED_MESSAGE, fetchPasswordStatus, type PasswordStatus } from '@/lib/temp-password';
+import { useColors } from '@/lib/theme';
 
 type IconName = keyof typeof Ionicons.glyphMap;
 
 /** Ikon aktif: hijau di dalam pill hijau muda. */
 function TabIcon({ name, focused }: { name: IconName; focused: boolean }) {
+  const colors = useColors();
   return (
     <View className={`h-8 w-14 items-center justify-center rounded-pill ${focused ? 'bg-primary-soft' : ''}`}>
-      <Ionicons name={name} size={20} color={focused ? Colors.primary : Colors.inkFaint} />
+      <Ionicons name={name} size={20} color={focused ? colors.primary : colors.inkFaint} />
     </View>
   );
 }
@@ -47,13 +48,14 @@ function tabIcon(active: IconName, inactive: IconName) {
  * lebih besar hanya menolak label tab ke bawah dan merosakkan penjajaran.
  */
 function ScanTabIcon({ focused }: { focused: boolean }) {
+  const colors = useColors();
   return (
     <View
       style={{ marginTop: -10 }}
       className={`h-14 w-14 items-center justify-center rounded-pill ${
         focused ? 'bg-primary-dark' : 'bg-primary'
       }`}>
-      <Ionicons name="qr-code" size={26} color={Colors.white} />
+      <Ionicons name="qr-code" size={26} color={colors.white} />
     </View>
   );
 }
@@ -154,6 +156,7 @@ export default function AppLayout() {
 }
 
 function AppGate() {
+  const colors = useColors();
   const { session, user, initialising } = useAuth();
   const insets = useSafeAreaInsets();
   const desktop = useIsDesktop();
@@ -237,17 +240,17 @@ function AppGate() {
       backBehavior="history"
       screenOptions={{
         headerShown: false,
-        sceneStyle: { backgroundColor: Colors.background },
-        tabBarActiveTintColor: Colors.primary,
-        tabBarInactiveTintColor: Colors.inkFaint,
+        sceneStyle: { backgroundColor: colors.background },
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.inkFaint,
         tabBarLabelStyle: { fontSize: 11, fontWeight: '600', marginTop: 2 },
         tabBarItemStyle: { paddingTop: 8 },
         /* Mod desktop: bar bawah disembunyikan (bukan dibuang) — sidebar mengambil alih. */
         tabBarStyle: desktop
           ? { display: 'none' }
           : {
-              backgroundColor: Colors.surface,
-              borderTopColor: Colors.line,
+              backgroundColor: colors.surface,
+              borderTopColor: colors.line,
               borderTopWidth: 1,
               height: 66 + insets.bottom,
               paddingBottom: insets.bottom + 8,

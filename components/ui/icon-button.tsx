@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { ActivityIndicator, Pressable } from 'react-native';
 
-import { Colors } from '@/constants/theme';
+import type { ColorName } from '@/constants/theme';
+import { useColors } from '@/lib/theme';
 
 type Tone = 'default' | 'danger';
 
@@ -10,9 +11,9 @@ const BOX: Record<Tone, string> = {
   danger: 'border-negative-soft bg-negative-soft',
 };
 
-const COLOR: Record<Tone, string> = {
-  default: Colors.inkMuted,
-  danger: Colors.negative,
+const COLOR: Record<Tone, ColorName> = {
+  default: 'inkMuted',
+  danger: 'negative',
 };
 
 type Props = {
@@ -33,6 +34,7 @@ export function IconButton({
   busy = false,
   disabled = false,
 }: Props) {
+  const colors = useColors();
   const inactive = disabled || busy;
 
   return (
@@ -46,7 +48,7 @@ export function IconButton({
       className={`h-10 w-10 items-center justify-center rounded-pill border ${BOX[tone]} ${
         inactive ? 'opacity-50' : 'active:opacity-70'
       }`}>
-      {busy ? <ActivityIndicator size="small" color={COLOR[tone]} /> : <Ionicons name={icon} size={18} color={COLOR[tone]} />}
+      {busy ? <ActivityIndicator size="small" color={colors[COLOR[tone]]} /> : <Ionicons name={icon} size={18} color={colors[COLOR[tone]]} />}
     </Pressable>
   );
 }

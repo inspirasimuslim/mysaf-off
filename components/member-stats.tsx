@@ -2,9 +2,9 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { AccessibilityInfo, Animated, Easing, Pressable, Text, View, useWindowDimensions } from 'react-native';
 import { BarChart, PieChart } from 'react-native-gifted-charts';
 
-import { Colors } from '@/constants/theme';
 import { axisLabelProps } from '@/components/stat-charts';
 import { isNoRecord, type StatSlice } from '@/lib/member-statistics';
+import { useColors } from '@/lib/theme';
 
 /**
  * Blok carta untuk skrin Rumusan Ahli.
@@ -28,8 +28,6 @@ import { isNoRecord, type StatSlice } from '@/lib/member-statistics';
 /** Palet kategori — urutan tetap, tidak dikitar. Lulus validator (mod cerah). */
 const CATEGORICAL = ['#157347', '#D97706', '#2563EB'] as const;
 const NO_RECORD_COLOR = '#D1D5DB';
-const BAR_COLOR = Colors.primaryMid;
-const TRACK_COLOR = Colors.primaryTint;
 
 function percent(count: number, total: number): string {
   if (total <= 0) return '0%';
@@ -125,6 +123,7 @@ export function DonutStat({
   total: number;
   centerCaption?: string;
 }) {
+  const colors = useColors();
   const coloured = useMemo(() => {
     let categoryIndex = 0;
     return slices.map((slice) => {
@@ -151,10 +150,10 @@ export function DonutStat({
             donut
             radius={DONUT_RADIUS}
             innerRadius={DONUT_INNER}
-            innerCircleColor={Colors.surface}
+            innerCircleColor={colors.surface}
             // Jurang 2px berwarna permukaan antara kepingan.
             strokeWidth={2}
-            strokeColor={Colors.surface}
+            strokeColor={colors.surface}
             centerLabelComponent={() => (
               <View className="items-center">
                 <Text className="text-xl font-bold text-ink">{recorded}</Text>
@@ -230,6 +229,7 @@ export function RankedBars({
   );
 
   const max = Math.max(1, ...ordered.map((slice) => slice.count));
+  const colors = useColors();
 
   return (
     <View className="gap-3.5">
@@ -247,12 +247,12 @@ export function RankedBars({
               <Text className="text-sm font-semibold text-ink">{slice.count}</Text>
               <Text className="w-10 text-right text-xs text-ink-muted">{percent(slice.count, total)}</Text>
             </View>
-            <View className="mt-1.5 h-2.5 overflow-hidden rounded-pill" style={{ backgroundColor: TRACK_COLOR }}>
+            <View className="mt-1.5 h-2.5 overflow-hidden rounded-pill" style={{ backgroundColor: colors.primaryTint }}>
               <Animated.View
                 style={{
                   height: '100%',
                   borderRadius: 999,
-                  backgroundColor: empty ? NO_RECORD_COLOR : BAR_COLOR,
+                  backgroundColor: empty ? NO_RECORD_COLOR : colors.primaryMid,
                   width: grow.interpolate({ inputRange: [0, 1], outputRange: ['0%', share + '%'] }),
                 }}
               />
@@ -307,6 +307,7 @@ export function GenerationColumns({
   /** Unit nilai lajur pada baris ringkasan — lalai 'ahli'. */
   unit?: string;
 }) {
+  const colors = useColors();
   const { width: windowWidth } = useWindowDimensions();
   /*
     Anggaran lebar sebelum `onLayout` pertama: lebar kandungan `Screen` (maks
@@ -334,11 +335,12 @@ export function GenerationColumns({
     slices.map((slice) => slice.label.toLowerCase()),
     barWidth + COLUMN_SPACING * 2,
     active,
+    colors,
   );
   const data = slices.map((slice, index) => ({
     value: slice.count,
     labelComponent: axis.labelComponent(index),
-    frontColor: index === active ? Colors.primaryDark : BAR_COLOR,
+    frontColor: index === active ? colors.primaryDark : colors.primaryMid,
     onPress: () => setSelected(index),
   }));
 
@@ -371,11 +373,11 @@ export function GenerationColumns({
           barBorderTopRightRadius={3}
           yAxisThickness={0}
           yAxisLabelWidth={Y_LABEL_WIDTH}
-          yAxisTextStyle={{ color: Colors.inkFaint, fontSize: 10 }}
+          yAxisTextStyle={{ color: colors.inkFaint, fontSize: 10 }}
           xAxisThickness={1}
-          xAxisColor={Colors.line}
+          xAxisColor={colors.line}
           labelsExtraHeight={axis.extraHeight}
-          rulesColor={Colors.line}
+          rulesColor={colors.line}
           rulesType="solid"
           disableScroll
           isAnimated

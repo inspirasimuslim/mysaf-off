@@ -15,7 +15,6 @@ import { Notice } from '@/components/ui/notice';
 import { Screen } from '@/components/ui/screen';
 import { TextField } from '@/components/ui/text-field';
 import { ToastBanner } from '@/components/ui/toast';
-import { Colors } from '@/constants/theme';
 import { useProgramAccess, useUsrahAccess } from '@/lib/department-access';
 import { toMalayError } from '@/lib/errors';
 import { useGoBack } from '@/lib/navigation';
@@ -29,6 +28,7 @@ import {
   type RaisLantikan,
   type RaisMemberOption,
 } from '@/lib/rais-lantikan';
+import { useColors } from '@/lib/theme';
 
 type Banner = { tone: 'positive' | 'info' | 'negative'; message: string } | null;
 
@@ -42,6 +42,7 @@ const SEARCH_LIMIT = 20;
  * (termasuk semakan jantina: Rais = Muslimin, Raisah = Muslimat).
  */
 export default function RaisLantikanScreen() {
+  const colors = useColors();
   const goBack = useGoBack();
   const params = useLocalSearchParams<{ jenis?: string }>();
   const jenis: 'generasi' | 'kawasan' = params.jenis === 'kawasan' ? 'kawasan' : 'generasi';
@@ -155,7 +156,7 @@ export default function RaisLantikanScreen() {
                 <View
                   style={{ width: 34, height: 34, borderRadius: 17 }}
                   className="items-center justify-center bg-background">
-                  <Ionicons name="person-outline" size={16} color={Colors.inkFaint} />
+                  <Ionicons name="person-outline" size={16} color={colors.inkFaint} />
                 </View>
               )}
               <View className="flex-1">
@@ -170,7 +171,7 @@ export default function RaisLantikanScreen() {
                   <Text className="text-base italic text-ink-faint">Kosong</Text>
                 )}
               </View>
-              <Ionicons name="pencil-outline" size={18} color={Colors.inkMuted} />
+              <Ionicons name="pencil-outline" size={18} color={colors.inkMuted} />
             </Pressable>
           ))}
         </View>

@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Text, View } from 'react-native';
 
-import { Colors } from '@/constants/theme';
+import type { ColorName } from '@/constants/theme';
+import { useColors } from '@/lib/theme';
 
 type Tone = 'positive' | 'negative' | 'warn' | 'info';
 
@@ -26,17 +27,18 @@ const ICON: Record<Tone, keyof typeof Ionicons.glyphMap> = {
   info: 'information-circle',
 };
 
-const COLOR: Record<Tone, string> = {
-  positive: Colors.positive,
-  negative: Colors.negative,
-  warn: Colors.warn,
-  info: Colors.info,
+const COLOR: Record<Tone, ColorName> = {
+  positive: 'positive',
+  negative: 'negative',
+  warn: 'warn',
+  info: 'info',
 };
 
 export function Notice({ tone = 'info', message }: { tone?: Tone; message: string }) {
+  const colors = useColors();
   return (
     <View className={`flex-row items-start gap-3 rounded-field p-4 ${BOX[tone]}`}>
-      <Ionicons name={ICON[tone]} size={18} color={COLOR[tone]} />
+      <Ionicons name={ICON[tone]} size={18} color={colors[COLOR[tone]]} />
       <Text className={`flex-1 text-sm leading-5 ${TEXT[tone]}`}>{message}</Text>
     </View>
   );

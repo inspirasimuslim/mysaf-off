@@ -4,9 +4,9 @@ import { ActivityIndicator, Linking, Modal, Pressable, ScrollView, Text, View } 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/ui/button';
-import { Colors } from '@/constants/theme';
 import { toWhatsAppNumber } from '@/lib/phone';
 import { fetchSuperAdminContacts, type SuperAdminContact } from '@/lib/temp-password';
+import { useColors } from '@/lib/theme';
 
 /**
  * Senarai Super Admin yang boleh dihubungi, sebagai helaian bawah.
@@ -24,6 +24,7 @@ import { fetchSuperAdminContacts, type SuperAdminContact } from '@/lib/temp-pass
 const MAX_SHEET_WIDTH = 560;
 
 export function ContactAdminLink({ label = 'Hubungi Admin' }: { label?: string }) {
+  const colors = useColors();
   const [open, setOpen] = useState(false);
 
   return (
@@ -34,7 +35,7 @@ export function ContactAdminLink({ label = 'Hubungi Admin' }: { label?: string }
         hitSlop={10}
         onPress={() => setOpen(true)}
         className="flex-row items-center justify-center gap-2 py-3 active:opacity-70">
-        <Ionicons name="help-buoy-outline" size={16} color={Colors.primary} />
+        <Ionicons name="help-buoy-outline" size={16} color={colors.primary} />
         <Text className="text-sm font-semibold text-primary">{label}</Text>
       </Pressable>
 
@@ -44,6 +45,7 @@ export function ContactAdminLink({ label = 'Hubungi Admin' }: { label?: string }
 }
 
 export function ContactAdminSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+  const colors = useColors();
   const insets = useSafeAreaInsets();
 
   const [contacts, setContacts] = useState<SuperAdminContact[] | null>(null);
@@ -95,7 +97,7 @@ export function ContactAdminSheet({ visible, onClose }: { visible: boolean; onCl
               </Text>
             ) : contacts === null ? (
               <View className="py-8">
-                <ActivityIndicator color={Colors.primary} />
+                <ActivityIndicator color={colors.primary} />
               </View>
             ) : contacts.length === 0 ? (
               <Text className="py-6 text-center text-sm text-ink-muted">
@@ -116,7 +118,7 @@ export function ContactAdminSheet({ visible, onClose }: { visible: boolean; onCl
                         number ? 'active:opacity-70' : 'opacity-60'
                       }`}>
                       <View className="h-10 w-10 items-center justify-center rounded-pill bg-primary-soft">
-                        <Ionicons name="logo-whatsapp" size={20} color={Colors.primary} />
+                        <Ionicons name="logo-whatsapp" size={20} color={colors.primary} />
                       </View>
                       <View className="flex-1">
                         <Text className="text-sm font-semibold text-ink">{contact.full_name}</Text>

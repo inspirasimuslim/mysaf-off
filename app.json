@@ -6,7 +6,7 @@
     "orientation": "portrait",
     "icon": "./assets/images/mysaff-icon-white.png",
     "scheme": "mysafoff",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "backgroundColor": "#FAFAFA",
     "ios": {
       "bundleIdentifier": "com.sakuradigital.mysafoff",

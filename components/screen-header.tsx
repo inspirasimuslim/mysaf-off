@@ -4,10 +4,10 @@ import type { ReactNode } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Colors } from '@/constants/theme';
 import { usePermissions } from '@/lib/permissions';
 import { useEmbedded } from '@/components/ui/split-pane';
 import { useIsDesktop } from '@/lib/use-desktop';
+import { useColors } from '@/lib/theme';
 
 type Props = {
   title: string;
@@ -101,6 +101,7 @@ function HeaderIcon({
   label: string;
   onPress: () => void;
 }) {
+  const colors = useColors();
   return (
     <Pressable
       accessibilityRole="button"
@@ -108,7 +109,7 @@ function HeaderIcon({
       hitSlop={10}
       onPress={onPress}
       className="h-11 w-11 items-center justify-center rounded-pill bg-white/10 active:opacity-70">
-      <Ionicons name={icon} size={20} color={Colors.white} />
+      <Ionicons name={icon} size={20} color={colors.white} />
     </Pressable>
   );
 }

@@ -10,7 +10,6 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { LoadingScreen } from '@/components/ui/loading-screen';
 import { MemberAvatar } from '@/components/ui/member-avatar';
 import { Notice } from '@/components/ui/notice';
-import { Colors } from '@/constants/theme';
 import {
   fetchLiveAttendance,
   subscribeLiveAttendance,
@@ -23,6 +22,7 @@ import { useGoBack } from '@/lib/navigation';
 import { useResetScrollOnFocus } from '@/lib/scroll-reset';
 import { fetchUsrahEvent } from '@/lib/usrah-events';
 import { EVENT_TYPE_LABEL, dateRangeLabel, generationLabel, type UsrahEvent } from '@/types/database';
+import { useColors } from '@/lib/theme';
 
 /**
  * Kehadiran Live — dibuka admin semasa program berlangsung.
@@ -259,6 +259,7 @@ export default function EventAttendanceLiveScreen() {
 }
 
 function LiveIndicator({ live }: { live: boolean }) {
+  const colors = useColors();
   return (
     <View className="flex-row items-center gap-2 rounded-pill bg-white/15 px-3 py-1">
       <View
@@ -266,7 +267,7 @@ function LiveIndicator({ live }: { live: boolean }) {
           width: 8,
           height: 8,
           borderRadius: 4,
-          backgroundColor: live ? '#4ADE80' : Colors.inkFaint,
+          backgroundColor: live ? '#4ADE80' : colors.inkFaint,
         }}
       />
       <Text className="text-xs font-semibold text-white">{live ? 'LIVE' : 'Menyambung...'}</Text>

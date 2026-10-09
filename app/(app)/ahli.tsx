@@ -11,7 +11,7 @@ import { Notice } from '@/components/ui/notice';
 import { Screen } from '@/components/ui/screen';
 import { DetailPlaceholder, SplitPane } from '@/components/ui/split-pane';
 import { TextField } from '@/components/ui/text-field';
-import { BIRTHDAY_GOLD, Colors } from '@/constants/theme';
+import { BIRTHDAY_GOLD } from '@/constants/theme';
 import { useMemberAccess } from '@/lib/department-access';
 import { toMalayError } from '@/lib/errors';
 import { fetchMemberDirectory, fetchMembers } from '@/lib/members';
@@ -19,6 +19,7 @@ import { useIsDesktop } from '@/lib/use-desktop';
 import { AhliViewBody } from './ahli-view';
 import { AhliDetailView } from './admin/ahli-detail';
 import { generationLabel, generationOrder, type DirectoryMember } from '@/types/database';
+import { useColors } from '@/lib/theme';
 
 const CARD_WIDTH = 96;
 const AVATAR_SIZE = 64;
@@ -36,6 +37,7 @@ type Group = { code: string | null; members: DirectoryMember[] };
  * skrin butiran penuh yang sedia ada, ahli biasa ke paparan terhad.
  */
 export default function AhliScreen() {
+  const colors = useColors();
   const router = useRouter();
   const { loading: accessLoading, canView } = useMemberAccess();
   const desktop = useIsDesktop();
@@ -170,13 +172,13 @@ export default function AhliScreen() {
         <MenuTile
           words={['Rumusan', 'Ahli']}
           icon="stats-chart"
-          color={Colors.primary}
+          color={colors.primary}
           onPress={() => router.push('/(app)/ahli-rumusan')}
         />
         <MenuTile
           words={['Organisasi', '2025/2027']}
           icon="git-network"
-          color={Colors.primary}
+          color={colors.primary}
           onPress={() => router.push('/(app)/organisasi')}
         />
         <MenuTile
@@ -188,7 +190,7 @@ export default function AhliScreen() {
         <MenuTile
           words={['Pasangan', 'MBM']}
           icon="heart"
-          color={Colors.primary}
+          color={colors.primary}
           onPress={() => router.push('/(app)/ahli-mbm')}
         />
       </View>

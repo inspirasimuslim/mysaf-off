@@ -3,7 +3,6 @@ import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 
 import { TextField } from '@/components/ui/text-field';
-import { Colors } from '@/constants/theme';
 import {
   fetchPlaceCoords,
   placesConfigured,
@@ -12,6 +11,7 @@ import {
   type Coords,
   type PlaceSuggestion,
 } from '@/lib/google-maps';
+import { useColors } from '@/lib/theme';
 
 type Props = {
   onSelect: (coords: Coords, name: string) => void;
@@ -20,6 +20,7 @@ type Props = {
 
 /** Kotak "Cari nama tempat" — Places API (New) REST, sama untuk web dan native. */
 export function PlaceSearch({ onSelect, disabled = false }: Props) {
+  const colors = useColors();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<PlaceSuggestion[]>([]);
   const [busy, setBusy] = useState(false);
@@ -90,7 +91,7 @@ export function PlaceSearch({ onSelect, disabled = false }: Props) {
       {!placesConfigured ? (
         <Text className="text-xs text-ink-muted">Carian tempat belum aktif (kunci Google Maps belum dimasukkan).</Text>
       ) : null}
-      {busy ? <ActivityIndicator color={Colors.primary} /> : null}
+      {busy ? <ActivityIndicator color={colors.primary} /> : null}
       {error ? <Text className="text-xs text-negative">{error}</Text> : null}
       {results.length > 0 ? (
         <View className="overflow-hidden rounded-field border border-line bg-surface">
@@ -100,7 +101,7 @@ export function PlaceSearch({ onSelect, disabled = false }: Props) {
               onPress={() => void choose(item)}
               className={`flex-row items-center gap-3 px-4 py-3 ${index > 0 ? 'border-t border-line' : ''}`}
             >
-              <Ionicons name="location-outline" size={18} color={Colors.primary} />
+              <Ionicons name="location-outline" size={18} color={colors.primary} />
               <View className="flex-1">
                 <Text className="text-sm font-semibold text-ink" numberOfLines={1}>
                   {item.name}

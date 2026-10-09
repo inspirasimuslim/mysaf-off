@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type RefObject } from 'react';
 import { Platform, Pressable, ScrollView, Text, View } from 'react-native';
 
 import { SectionTitle } from '@/components/ui/section-title';
-import { Colors } from '@/constants/theme';
+import { useColors } from '@/lib/theme';
 
 /**
  * Barisan poster yang boleh ditatal ke tepi.
@@ -173,6 +173,7 @@ const GRID_GAP = 12;
 const GRID_TEXT_HEIGHT = 56;
 
 function PosterCell({ item, width, onPress }: { item: PosterItem; width: number; onPress: (id: string) => void }) {
+  const colors = useColors();
   const posterHeight = Math.round((width * 4) / 3);
 
   return (
@@ -194,7 +195,7 @@ function PosterCell({ item, width, onPress }: { item: PosterItem; width: number;
         <View
           style={{ width, height: posterHeight, borderRadius: 16 }}
           className="items-center justify-center border border-line bg-primary-tint">
-          <Ionicons name="image-outline" size={28} color={Colors.inkFaint} />
+          <Ionicons name="image-outline" size={28} color={colors.inkFaint} />
         </View>
       )}
 
@@ -250,6 +251,7 @@ export function PosterCarousel({
   grid = false,
   autoScroll = false,
 }: Props) {
+  const colors = useColors();
   const posterHeight = Math.round((cardWidth * 4) / 3);
   const scrollRef = useRef<ScrollView>(null);
   const offsetX = useRef(0);
@@ -339,7 +341,7 @@ export function PosterCarousel({
                 <View
                   style={{ width: cardWidth, height: posterHeight, borderRadius: 16 }}
                   className="items-center justify-center border border-line bg-primary-tint">
-                  <Ionicons name="image-outline" size={28} color={Colors.inkFaint} />
+                  <Ionicons name="image-outline" size={28} color={colors.inkFaint} />
                 </View>
               )}
 

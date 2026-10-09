@@ -16,7 +16,6 @@ import { Notice } from '@/components/ui/notice';
 import { Screen } from '@/components/ui/screen';
 import { TextField } from '@/components/ui/text-field';
 import { ToastBanner } from '@/components/ui/toast';
-import { Colors } from '@/constants/theme';
 import { useDepartmentAccess } from '@/lib/department-access';
 import { toMalayError } from '@/lib/errors';
 import { useGoBack } from '@/lib/navigation';
@@ -36,6 +35,7 @@ import {
   type OrgPosition,
   type OrgSection,
 } from '@/lib/org-chart';
+import { useColors } from '@/lib/theme';
 
 type Banner = { tone: 'positive' | 'info' | 'negative'; message: string } | null;
 
@@ -151,6 +151,7 @@ function MemberSearch({
  * Kawalan UI sahaja; RLS `org_positions` tetap penentu muktamad.
  */
 export default function OrgChartManageScreen() {
+  const colors = useColors();
   const goBack = useGoBack();
   const access = useDepartmentAccess(ORG_CHART_DEPARTMENT);
 
@@ -375,7 +376,7 @@ export default function OrgChartManageScreen() {
 
           <Button
             label="Tambah Bahagian Baharu"
-            icon={<Ionicons name="add" size={18} color={Colors.white} />}
+            icon={<Ionicons name="add" size={18} color={colors.white} />}
             onPress={() => openForm({ mode: 'add', bahagian: null })}
           />
 
@@ -428,7 +429,7 @@ export default function OrgChartManageScreen() {
                       accessibilityLabel={'Tukar pemegang ' + position.jawatan}
                       onPress={() => openForm({ mode: 'change', position })}
                       className="h-10 flex-row items-center gap-1.5 rounded-pill border border-line bg-surface px-4 active:opacity-70">
-                      <Ionicons name="swap-horizontal" size={16} color={Colors.primary} />
+                      <Ionicons name="swap-horizontal" size={16} color={colors.primary} />
                       <Text className="text-sm font-semibold text-ink">Tukar</Text>
                     </Pressable>
 
@@ -461,7 +462,7 @@ export default function OrgChartManageScreen() {
                 accessibilityLabel={'Tambah jawatan dalam ' + section.bahagian}
                 onPress={() => openForm({ mode: 'add', bahagian: section.bahagian })}
                 className="flex-row items-center justify-center gap-2 p-4 active:opacity-70">
-                <Ionicons name="add-circle-outline" size={18} color={Colors.primary} />
+                <Ionicons name="add-circle-outline" size={18} color={colors.primary} />
                 <Text className="text-sm font-semibold text-primary">Tambah Jawatan</Text>
               </Pressable>
             </View>

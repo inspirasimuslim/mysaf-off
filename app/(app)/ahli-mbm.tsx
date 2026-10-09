@@ -11,12 +11,12 @@ import { LoadingScreen } from '@/components/ui/loading-screen';
 import { MemberAvatar } from '@/components/ui/member-avatar';
 import { Notice } from '@/components/ui/notice';
 import { Screen } from '@/components/ui/screen';
-import { Colors } from '@/constants/theme';
 import { toMalayError } from '@/lib/errors';
 import { fetchMemberDirectory } from '@/lib/members';
 import { fetchMbmCouples } from '@/lib/mbm';
 import { useGoBack } from '@/lib/navigation';
 import type { DirectoryMember, MbmCouple } from '@/types/database';
+import { useColors } from '@/lib/theme';
 
 /** Halaman luar (Canva): maklumat dan permohonan Majlis Baitul Muslim. */
 const BAITUL_MUSLIM_URL = 'https://senadappda.my.canva.site/mbmikhwan';
@@ -201,9 +201,10 @@ function Spouse({
 }
 
 function DetailRow({ icon, text }: { icon: keyof typeof Ionicons.glyphMap; text: string }) {
+  const colors = useColors();
   return (
     <View className="flex-row items-start gap-2">
-      <Ionicons name={icon} size={14} color={Colors.inkFaint} style={{ marginTop: 2 }} />
+      <Ionicons name={icon} size={14} color={colors.inkFaint} style={{ marginTop: 2 }} />
       <Text className="flex-1 text-sm leading-5 text-ink-muted">{text}</Text>
     </View>
   );

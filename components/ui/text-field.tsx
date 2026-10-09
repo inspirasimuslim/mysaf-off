@@ -2,8 +2,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRef, useState, type Ref } from 'react';
 import { Pressable, Text, TextInput, View, type TextInputProps } from 'react-native';
 
-import { Colors } from '@/constants/theme';
 import { useKeyboardAwareField } from '@/lib/keyboard-aware';
+import { useColors } from '@/lib/theme';
 
 type Props = Omit<TextInputProps, 'style' | 'className'> & {
   label: string;
@@ -34,6 +34,7 @@ export function TextField({
   onContentSizeChange,
   ...rest
 }: Props) {
+  const colors = useColors();
   const [hidden, setHidden] = useState(true);
   const [focused, setFocused] = useState(false);
   /*
@@ -68,7 +69,7 @@ export function TextField({
         <TextInput
           ref={inputRef}
           className={`flex-1 text-base ${readOnly ? 'text-ink-muted' : 'text-ink'}`}
-          placeholderTextColor={Colors.inkFaint}
+          placeholderTextColor={colors.inkFaint}
           secureTextEntry={secure && hidden}
           textAlignVertical={rest.multiline ? 'top' : undefined}
           {...rest}
@@ -95,7 +96,7 @@ export function TextField({
             accessibilityLabel={hidden ? 'Tunjuk kata laluan' : 'Sembunyi kata laluan'}
             hitSlop={10}
             onPress={() => setHidden((value) => !value)}>
-            <Ionicons name={hidden ? 'eye-outline' : 'eye-off-outline'} size={20} color={Colors.inkMuted} />
+            <Ionicons name={hidden ? 'eye-outline' : 'eye-off-outline'} size={20} color={colors.inkMuted} />
           </Pressable>
         ) : null}
       </View>

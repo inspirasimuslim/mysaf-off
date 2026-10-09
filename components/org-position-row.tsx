@@ -3,8 +3,8 @@ import { Pressable, Text, View } from 'react-native';
 
 import { GenerationChip } from '@/components/ui/generation-chip';
 import { MemberAvatar } from '@/components/ui/member-avatar';
-import { Colors } from '@/constants/theme';
 import type { OrgPosition } from '@/lib/org-chart';
+import { useColors } from '@/lib/theme';
 
 const AVATAR_SIZE = 38;
 
@@ -19,6 +19,7 @@ const AVATAR_SIZE = 38;
  * ahli (paparan sahaja) dan skrin urus admin.
  */
 export function OrgPositionRow({ position, onPress }: { position: OrgPosition; onPress?: () => void }) {
+  const colors = useColors();
   const vacant = !position.member_id || !position.full_name;
 
   /* Slot kosong tiada ahli untuk dipaut, jadi tidak pernah boleh diketuk. */
@@ -34,7 +35,7 @@ export function OrgPositionRow({ position, onPress }: { position: OrgPosition; o
         <View
           style={{ width: AVATAR_SIZE, height: AVATAR_SIZE, borderRadius: AVATAR_SIZE / 2 }}
           className="items-center justify-center bg-background">
-          <Ionicons name="person-outline" size={18} color={Colors.inkFaint} />
+          <Ionicons name="person-outline" size={18} color={colors.inkFaint} />
         </View>
       ) : (
         <MemberAvatar fullName={position.full_name as string} avatarUrl={position.avatar_url} size={AVATAR_SIZE} />

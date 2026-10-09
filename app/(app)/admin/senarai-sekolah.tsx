@@ -14,12 +14,12 @@ import { Screen } from '@/components/ui/screen';
 import { SectionTitle } from '@/components/ui/section-title';
 import { TextField } from '@/components/ui/text-field';
 import { ToastBanner } from '@/components/ui/toast';
-import { Colors } from '@/constants/theme';
 import { toMalayError } from '@/lib/errors';
 import { useGoBack } from '@/lib/navigation';
 import { usePermissions } from '@/lib/permissions';
 import { createSchool, deleteSchool, fetchAllSchools, setSchoolActive, updateSchoolName } from '@/lib/schools';
 import { type School } from '@/types/database';
+import { useColors } from '@/lib/theme';
 
 type Banner = { tone: 'positive' | 'info' | 'negative'; message: string } | null;
 
@@ -33,6 +33,7 @@ type Banner = { tone: 'positive' | 'info' | 'negative'; message: string } | null
  * (generasi tidak, kod ialah kunci rujukan yang stabil).
  */
 export default function SenaraiSekolahScreen() {
+  const colors = useColors();
   const goBack = useGoBack();
   const { isSuperAdmin } = usePermissions();
 
@@ -248,9 +249,9 @@ export default function SenaraiSekolahScreen() {
                       value={school.aktif}
                       onValueChange={(next) => void toggleActive(school, next)}
                       disabled={togglingId === school.id}
-                      trackColor={{ false: Colors.line, true: Colors.primaryMid }}
-                      thumbColor={Colors.white}
-                      ios_backgroundColor={Colors.line}
+                      trackColor={{ false: colors.line, true: colors.primaryMid }}
+                      thumbColor={colors.white}
+                      ios_backgroundColor={colors.line}
                       accessibilityLabel={'Status aktif ' + school.nama}
                     />
 

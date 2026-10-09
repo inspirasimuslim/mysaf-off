@@ -13,7 +13,6 @@ import { LoadingScreen } from '@/components/ui/loading-screen';
 import { Notice } from '@/components/ui/notice';
 import { Screen } from '@/components/ui/screen';
 import { ToastBanner } from '@/components/ui/toast';
-import { Colors } from '@/constants/theme';
 import { useAuth } from '@/lib/auth-context';
 import { useProgramAccess, useUsrahAccess } from '@/lib/department-access';
 import { toMalayErrorVerbose } from '@/lib/errors';
@@ -31,6 +30,7 @@ import { useGoBack } from '@/lib/navigation';
 import { usePermissions } from '@/lib/permissions';
 import { fetchUsrahEvent } from '@/lib/usrah-events';
 import type { UsrahEvent } from '@/types/database';
+import { useColors } from '@/lib/theme';
 
 type Banner = { tone: 'positive' | 'negative'; message: string } | null;
 
@@ -71,6 +71,7 @@ async function withTimeout<T>(promise: Promise<T>, label: string): Promise<T> {
  * kegagalan yang boleh menyekat skrin ini daripada dibuka langsung.
  */
 export default function EventAlbumScreen() {
+  const colors = useColors();
   const goBack = useGoBack();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
@@ -387,7 +388,7 @@ export default function EventAlbumScreen() {
                       />
                     ) : (
                       <View className="h-full w-full items-center justify-center">
-                        <Ionicons name="image-outline" size={20} color={Colors.inkFaint} />
+                        <Ionicons name="image-outline" size={20} color={colors.inkFaint} />
                       </View>
                     )}
                     {canDelete ? (
@@ -400,7 +401,7 @@ export default function EventAlbumScreen() {
                           setPendingDelete(photo);
                         }}
                         className="absolute right-1.5 top-1.5 h-7 w-7 items-center justify-center rounded-pill bg-black/60 active:opacity-70">
-                        <Ionicons name="trash-outline" size={14} color={Colors.white} />
+                        <Ionicons name="trash-outline" size={14} color={colors.white} />
                       </Pressable>
                     ) : null}
                   </Pressable>
@@ -428,7 +429,7 @@ export default function EventAlbumScreen() {
             onPress={() => setViewingIndex(null)}
             className="absolute right-4 top-4 z-10 h-11 w-11 items-center justify-center rounded-pill bg-white/10 active:opacity-70"
             style={{ marginTop: insets.top }}>
-            <Ionicons name="close" size={22} color={Colors.white} />
+            <Ionicons name="close" size={22} color={colors.white} />
           </Pressable>
 
           {viewingIndex !== null ? (
@@ -465,7 +466,7 @@ export default function EventAlbumScreen() {
                   onPress={() => goToIndex(viewingIndex - 1)}
                   className="absolute left-4 top-1/2 h-11 w-11 items-center justify-center rounded-pill bg-white/10 active:opacity-70"
                   style={{ marginTop: -22, opacity: viewingIndex === 0 ? 0.3 : 1 }}>
-                  <Ionicons name="chevron-back" size={24} color={Colors.white} />
+                  <Ionicons name="chevron-back" size={24} color={colors.white} />
                 </Pressable>
                 <Pressable
                   accessibilityRole="button"
@@ -474,7 +475,7 @@ export default function EventAlbumScreen() {
                   onPress={() => goToIndex(viewingIndex + 1)}
                   className="absolute right-4 top-1/2 h-11 w-11 items-center justify-center rounded-pill bg-white/10 active:opacity-70"
                   style={{ marginTop: -22, opacity: viewingIndex === photos.length - 1 ? 0.3 : 1 }}>
-                  <Ionicons name="chevron-forward" size={24} color={Colors.white} />
+                  <Ionicons name="chevron-forward" size={24} color={colors.white} />
                 </Pressable>
               </>
             ) : null}

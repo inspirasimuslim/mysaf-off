@@ -7,7 +7,6 @@ import { Card } from '@/components/ui/card';
 import { MemberAvatar } from '@/components/ui/member-avatar';
 import { Screen } from '@/components/ui/screen';
 import { SectionTitle } from '@/components/ui/section-title';
-import { Colors } from '@/constants/theme';
 import { useGoBack } from '@/lib/navigation';
 import { toWhatsAppNumber } from '@/lib/phone';
 import {
@@ -17,6 +16,7 @@ import {
   type StatusPekerjaan,
   type StatusPerkahwinan,
 } from '@/types/database';
+import { useColors } from '@/lib/theme';
 
 const AVATAR_SIZE = 88;
 
@@ -81,6 +81,7 @@ export type AhliViewMember = {
  * Direktori (desktop, master-detail).
  */
 export function AhliViewBody({ member }: { member: AhliViewMember }) {
+  const colors = useColors();
   const fullName = member.nama?.trim() || 'Ahli';
   const generasi = member.generasi?.trim() || null;
   const email = member.emel?.trim() || null;
@@ -122,7 +123,7 @@ export function AhliViewBody({ member }: { member: AhliViewMember }) {
                 hitSlop={8}
                 onPress={() => void Linking.openURL('https://wa.me/' + whatsApp)}
                 className="h-10 w-10 items-center justify-center rounded-pill bg-positive-soft active:opacity-70">
-                <Ionicons name="logo-whatsapp" size={20} color={Colors.positive} />
+                <Ionicons name="logo-whatsapp" size={20} color={colors.positive} />
               </Pressable>
             ) : null}
           </InfoRow>
@@ -151,10 +152,11 @@ function InfoRow({
   value: string | null;
   children?: React.ReactNode;
 }) {
+  const colors = useColors();
   return (
     <View className="flex-row items-center gap-4 rounded-card border border-line bg-surface p-card">
       <View className="h-11 w-11 items-center justify-center rounded-pill bg-primary-soft">
-        <Ionicons name={icon} size={20} color={Colors.primary} />
+        <Ionicons name={icon} size={20} color={colors.primary} />
       </View>
 
       <View className="flex-1">

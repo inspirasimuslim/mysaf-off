@@ -12,7 +12,6 @@ import { LoadingScreen } from '@/components/ui/loading-screen';
 import { Notice } from '@/components/ui/notice';
 import { Screen } from '@/components/ui/screen';
 import { ToastBanner } from '@/components/ui/toast';
-import { Colors } from '@/constants/theme';
 import { fetchMyActivityRank, type MyActivityRank } from '@/lib/activity-rank';
 import { pickAvatar, uploadAvatar } from '@/lib/avatar';
 import { displayName, useAuth } from '@/lib/auth-context';
@@ -33,6 +32,7 @@ import {
   type MemberPickerRow,
   type School,
 } from '@/types/database';
+import { useColors } from '@/lib/theme';
 
 type Banner = { tone: 'positive' | 'negative'; message: string } | null;
 
@@ -45,6 +45,7 @@ type Banner = { tone: 'positive' | 'negative'; message: string } | null;
  * trigger `members_guard_admin_columns` di Supabase.
  */
 export default function ProfilScreen() {
+  const colors = useColors();
   const { user } = useAuth();
   const userId = user?.id ?? null;
 
@@ -229,7 +230,7 @@ export default function ProfilScreen() {
           <Card>
             <View className="flex-row items-center gap-4">
               <View className="h-14 w-14 items-center justify-center rounded-pill bg-primary-soft">
-                <Ionicons name="person" size={24} color={Colors.primary} />
+                <Ionicons name="person" size={24} color={colors.primary} />
               </View>
               <View className="flex-1">
                 <Text className="text-lg font-bold text-ink">{displayName(user)}</Text>

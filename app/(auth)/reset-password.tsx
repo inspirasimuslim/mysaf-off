@@ -10,11 +10,11 @@ import { LoadingScreen } from '@/components/ui/loading-screen';
 import { Notice } from '@/components/ui/notice';
 import { Screen } from '@/components/ui/screen';
 import { TextField } from '@/components/ui/text-field';
-import { Colors } from '@/constants/theme';
 import { toMalayError } from '@/lib/errors';
 import { signOutFromDevice } from '@/lib/session';
 import { setAuthNotice } from '@/lib/suspension';
 import { supabase } from '@/lib/supabase';
+import { useColors } from '@/lib/theme';
 
 /**
  * Tetapkan kata laluan baharu daripada pautan emel.
@@ -64,6 +64,7 @@ function firstString(value: string | string[] | undefined | null): string | null
 }
 
 export default function ResetPasswordScreen() {
+  const colors = useColors();
   const router = useRouter();
   const url = Linking.useURL();
 
@@ -195,7 +196,7 @@ export default function ResetPasswordScreen() {
         <View className="gap-6 px-gutter">
           <View className="items-center pb-2 pt-12">
             <View className="h-20 w-20 items-center justify-center rounded-[24px] bg-primary">
-              <Ionicons name="lock-open" size={34} color={Colors.white} />
+              <Ionicons name="lock-open" size={34} color={colors.white} />
             </View>
             <Text className="mt-5 text-2xl font-bold text-ink">Kata Laluan Baharu</Text>
             <Text className="mt-1.5 px-4 text-center text-sm leading-5 text-ink-muted">

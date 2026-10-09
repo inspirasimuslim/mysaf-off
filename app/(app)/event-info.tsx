@@ -18,7 +18,6 @@ import { LoadingScreen } from '@/components/ui/loading-screen';
 import { Notice } from '@/components/ui/notice';
 import { Screen } from '@/components/ui/screen';
 import { SectionTitle } from '@/components/ui/section-title';
-import { Colors } from '@/constants/theme';
 import { toMalayError } from '@/lib/errors';
 import { navigationUrl } from '@/lib/google-maps';
 import { useGoBack } from '@/lib/navigation';
@@ -34,6 +33,7 @@ import {
 } from '@/lib/rsvp';
 import { fetchAllEventsDirectory } from '@/lib/usrah-events';
 import { EVENT_TYPE_LABEL, dateRangeLabel, timeRangeLabel, type EventDirectoryRow } from '@/types/database';
+import { useColors } from '@/lib/theme';
 
 /**
  * Butiran acara seperti dilihat oleh AHLI.
@@ -50,6 +50,7 @@ import { EVENT_TYPE_LABEL, dateRangeLabel, timeRangeLabel, type EventDirectoryRo
  * tetapan geofence didedahkan.
  */
 export default function EventInfoScreen() {
+  const colors = useColors();
   const goBack = useGoBack();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id?: string }>();
@@ -207,7 +208,7 @@ export default function EventInfoScreen() {
           <Button
             label="Lihat Album Gambar"
             variant="secondary"
-            icon={<Ionicons name="images-outline" size={18} color={Colors.primary} />}
+            icon={<Ionicons name="images-outline" size={18} color={colors.primary} />}
             onPress={() =>
               router.push({
                 pathname: '/(app)/event-album',
@@ -235,7 +236,7 @@ export default function EventInfoScreen() {
               <SectionTitle title="Adakah anda akan hadir?" />
               <Button
                 label={myRsvp ? 'Kemaskini RSVP' : 'Sahkan Kehadiran (RSVP)'}
-                icon={<Ionicons name="checkmark-circle-outline" size={20} color={Colors.white} />}
+                icon={<Ionicons name="checkmark-circle-outline" size={20} color={colors.white} />}
                 onPress={openRsvpForm}
               />
               <Text className="mt-2 text-center text-xs text-ink-muted">
@@ -352,7 +353,7 @@ export default function EventInfoScreen() {
               <Button
                 label="Navigasi"
                 variant="secondary"
-                icon={<Ionicons name="navigate-outline" size={18} color={Colors.primary} />}
+                icon={<Ionicons name="navigate-outline" size={18} color={colors.primary} />}
                 onPress={() => {
                   const url = navigationUrl(
                     event.latitude as number,
@@ -375,9 +376,10 @@ export default function EventInfoScreen() {
 }
 
 function Row({ icon, label, value }: { icon: keyof typeof Ionicons.glyphMap; label: string; value: string }) {
+  const colors = useColors();
   return (
     <View className="flex-row items-start gap-3">
-      <Ionicons name={icon} size={18} color={Colors.primary} />
+      <Ionicons name={icon} size={18} color={colors.primary} />
       <View className="flex-1">
         <Text className="text-xs text-ink-muted">{label}</Text>
         <Text className="mt-0.5 text-base font-semibold text-ink">{value}</Text>

@@ -4,8 +4,8 @@ import { Pressable, Text, View } from 'react-native';
 
 import { Badge } from '@/components/ui/badge';
 import { IconButton } from '@/components/ui/icon-button';
-import { Colors } from '@/constants/theme';
 import type { BusinessAdStatus } from '@/lib/business-ads';
+import { useColors } from '@/lib/theme';
 
 const THUMB = 56;
 
@@ -43,6 +43,7 @@ type Props = {
  * ialah pengecualian sengaja untuk padam terus daripada senarai (lihat atas).
  */
 export function BusinessAdListRow({ posterUrl, title, subtitle, status, onPress, onDelete, deleting = false }: Props) {
+  const colors = useColors();
   const statusInfo = BUSINESS_AD_STATUS_LABEL[status];
   return (
     <Pressable
@@ -62,7 +63,7 @@ export function BusinessAdListRow({ posterUrl, title, subtitle, status, onPress,
             accessibilityIgnoresInvertColors
           />
         ) : (
-          <Ionicons name="storefront-outline" size={22} color={Colors.inkFaint} />
+          <Ionicons name="storefront-outline" size={22} color={colors.inkFaint} />
         )}
       </View>
 
@@ -81,7 +82,7 @@ export function BusinessAdListRow({ posterUrl, title, subtitle, status, onPress,
       {onDelete ? (
         <IconButton icon="trash-outline" accessibilityLabel={'Padam ' + title} tone="danger" busy={deleting} onPress={onDelete} />
       ) : (
-        <Ionicons name="chevron-forward" size={18} color={Colors.inkFaint} />
+        <Ionicons name="chevron-forward" size={18} color={colors.inkFaint} />
       )}
     </Pressable>
   );

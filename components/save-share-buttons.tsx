@@ -2,8 +2,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { Platform, Text, View } from 'react-native';
 
 import { Button } from '@/components/ui/button';
-import { Colors } from '@/constants/theme';
 import type { DeliveryMode } from '@/lib/file-delivery';
+import { useColors } from '@/lib/theme';
 
 type Props = {
   /** 'image' → "Simpan ke Galeri"; 'file' → "Simpan ke Peranti". */
@@ -41,6 +41,7 @@ export function SaveShareButtons({
   variant = 'primary',
   nativeCaption,
 }: Props) {
+  const colors = useColors();
   const locked = disabled || busy !== null;
 
   if (Platform.OS === 'web') {
@@ -55,7 +56,7 @@ export function SaveShareButtons({
     );
   }
 
-  const iconColor = variant === 'primary' ? Colors.white : variant === 'ghost' ? Colors.primary : Colors.ink;
+  const iconColor = variant === 'primary' ? colors.white : variant === 'ghost' ? colors.primary : colors.ink;
 
   return (
     <View className="gap-2">
@@ -79,7 +80,7 @@ export function SaveShareButtons({
           className="px-3"
           loading={busy === 'share'}
           disabled={locked}
-          icon={<Ionicons name="share-social-outline" size={18} color={Colors.ink} />}
+          icon={<Ionicons name="share-social-outline" size={18} color={colors.ink} />}
           onPress={() => onPress('share')}
         />
       </View>

@@ -17,7 +17,6 @@ import { PickerField } from '@/components/ui/picker-field';
 import { Screen } from '@/components/ui/screen';
 import { TextField } from '@/components/ui/text-field';
 import { ToastBanner } from '@/components/ui/toast';
-import { Colors } from '@/constants/theme';
 import { useAuth } from '@/lib/auth-context';
 import {
   MAX_DOCUMENT_BYTES,
@@ -37,6 +36,7 @@ import { toMalayErrorVerbose } from '@/lib/errors';
 import { useGoBack } from '@/lib/navigation';
 import { useIsDesktop } from '@/lib/use-desktop';
 import { usePermissions } from '@/lib/permissions';
+import { useColors } from '@/lib/theme';
 
 /**
  * Library Dokumen ("Arkib") — terbuka kepada semua ahli (lihat, muat naik).
@@ -62,6 +62,7 @@ function progressLabel(progress: UploadProgress | null): string {
 }
 
 export default function DocumentLibraryScreen() {
+  const colors = useColors();
   const goBack = useGoBack();
   const desktop = useIsDesktop();
   const { user } = useAuth();
@@ -270,7 +271,7 @@ export default function DocumentLibraryScreen() {
                     <Ionicons
                       name={openingId === d.id ? 'sync-outline' : KIND_ICON[documentKind(d.file_name)]}
                       size={20}
-                      color={Colors.primary}
+                      color={colors.primary}
                     />
                   ),
                 },
@@ -311,7 +312,7 @@ export default function DocumentLibraryScreen() {
                           <Ionicons
                             name={openingId === doc.id ? 'sync-outline' : KIND_ICON[documentKind(doc.file_name)]}
                             size={22}
-                            color={Colors.primary}
+                            color={colors.primary}
                           />
                         </View>
 
@@ -338,7 +339,7 @@ export default function DocumentLibraryScreen() {
                           hitSlop={8}
                           onPress={() => setPendingDelete(doc)}
                           className="h-9 w-9 items-center justify-center rounded-pill active:opacity-70">
-                          <Ionicons name="trash-outline" size={18} color={Colors.negative} />
+                          <Ionicons name="trash-outline" size={18} color={colors.negative} />
                         </Pressable>
                       ) : null}
                     </View>
@@ -366,7 +367,7 @@ export default function DocumentLibraryScreen() {
         {picked ? (
           <View className="gap-4">
             <View className="flex-row items-center gap-3 rounded-field border border-line bg-background p-3">
-              <Ionicons name={KIND_ICON[documentKind(picked.name)]} size={22} color={Colors.primary} />
+              <Ionicons name={KIND_ICON[documentKind(picked.name)]} size={22} color={colors.primary} />
               <View className="flex-1">
                 <Text className="text-base font-semibold text-ink" numberOfLines={2}>
                   {picked.name}

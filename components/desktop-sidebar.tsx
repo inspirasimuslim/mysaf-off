@@ -3,8 +3,8 @@ import { Image } from 'expo-image';
 import { usePathname, useRouter, type Href } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
 
-import { Colors } from '@/constants/theme';
 import { usePermissions } from '@/lib/permissions';
+import { useColors } from '@/lib/theme';
 
 type IconName = keyof typeof Ionicons.glyphMap;
 
@@ -63,7 +63,7 @@ export function DesktopSidebar() {
           source={require('@/assets/images/mysaff-logo-wide.png')}
           accessibilityLabel="MySAFF — Melangkah Bersama"
           contentFit="contain"
-          style={{ width: 168, aspectRatio: 1090 / 367 }}
+          style={{ width: 168, aspectRatio: 1090 / 367, borderRadius: 10 }}
         />
       </View>
 
@@ -110,6 +110,7 @@ function SidebarLink({
   focused: boolean;
   onPress: () => void;
 }) {
+  const colors = useColors();
   return (
     <Pressable
       accessibilityRole="link"
@@ -121,7 +122,7 @@ function SidebarLink({
           ? 'border-primary bg-primary-tint'
           : 'border-transparent active:bg-primary-tint hover:bg-background'
       }`}>
-      <Ionicons name={icon} size={18} color={focused ? Colors.primary : Colors.inkMuted} />
+      <Ionicons name={icon} size={18} color={focused ? colors.primary : colors.inkMuted} />
       <Text className={`text-sm ${focused ? 'font-semibold text-primary' : 'font-medium text-ink-muted'}`}>
         {label}
       </Text>

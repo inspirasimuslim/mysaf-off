@@ -5,7 +5,6 @@ import { ActivityIndicator, Modal, Platform, Pressable, Text, View } from 'react
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Badge } from '@/components/ui/badge';
-import { Colors } from '@/constants/theme';
 import type { DeliveryMode } from '@/lib/file-delivery';
 import {
   USRAH_EVENT_STATUS_LABEL,
@@ -14,6 +13,7 @@ import {
   usrahEventStatus,
   type UsrahEvent,
 } from '@/types/database';
+import { useColors } from '@/lib/theme';
 
 const THUMB = 56;
 const MAX_SHEET_WIDTH = 560;
@@ -90,6 +90,7 @@ type Props = {
  * bersarang: tap pada menu tidak pernah terlepas menjadi navigasi.
  */
 export function EventListRow({ event, onPress, actions, busy = false, locked = false }: Props) {
+  const colors = useColors();
   const [open, setOpen] = useState(false);
   const insets = useSafeAreaInsets();
   const status = usrahEventStatus(event);
@@ -118,7 +119,7 @@ export function EventListRow({ event, onPress, actions, busy = false, locked = f
               accessibilityIgnoresInvertColors
             />
           ) : (
-            <Ionicons name="image-outline" size={22} color={Colors.inkFaint} />
+            <Ionicons name="image-outline" size={22} color={colors.inkFaint} />
           )}
         </View>
 
@@ -145,9 +146,9 @@ export function EventListRow({ event, onPress, actions, busy = false, locked = f
           hitSlop={6}
           className={`h-14 w-11 items-center justify-center ${locked && !busy ? 'opacity-40' : 'active:opacity-60'}`}>
           {busy ? (
-            <ActivityIndicator color={Colors.primary} />
+            <ActivityIndicator color={colors.primary} />
           ) : (
-            <Ionicons name="ellipsis-vertical" size={20} color={Colors.inkMuted} />
+            <Ionicons name="ellipsis-vertical" size={20} color={colors.inkMuted} />
           )}
         </Pressable>
       ) : null}
@@ -174,7 +175,7 @@ export function EventListRow({ event, onPress, actions, busy = false, locked = f
                 hitSlop={10}
                 onPress={() => setOpen(false)}
                 className="h-9 w-9 items-center justify-center rounded-pill border border-line bg-surface active:opacity-70">
-                <Ionicons name="close" size={18} color={Colors.ink} />
+                <Ionicons name="close" size={18} color={colors.ink} />
               </Pressable>
             </View>
 
@@ -185,7 +186,7 @@ export function EventListRow({ event, onPress, actions, busy = false, locked = f
                   accessibilityRole="button"
                   onPress={() => choose(action)}
                   className="flex-row items-center gap-3 rounded-field border border-line bg-surface p-4 active:opacity-70">
-                  <Ionicons name={action.icon} size={20} color={action.destructive ? Colors.negative : Colors.primary} />
+                  <Ionicons name={action.icon} size={20} color={action.destructive ? colors.negative : colors.primary} />
                   <Text className={`flex-1 text-base ${action.destructive ? 'font-semibold text-negative' : 'text-ink'}`}>
                     {action.label}
                   </Text>

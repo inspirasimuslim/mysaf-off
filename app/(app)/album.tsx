@@ -11,7 +11,6 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { LoadingScreen } from '@/components/ui/loading-screen';
 import { Notice } from '@/components/ui/notice';
 import { Screen } from '@/components/ui/screen';
-import { Colors } from '@/constants/theme';
 import { useProgramAccess, useUsrahAccess } from '@/lib/department-access';
 import { deleteEventAlbum } from '@/lib/event-photos';
 import { toMalayError, toMalayErrorVerbose } from '@/lib/errors';
@@ -20,6 +19,7 @@ import { useIsDesktop } from '@/lib/use-desktop';
 import { usePermissions } from '@/lib/permissions';
 import { fetchAllEventsDirectory } from '@/lib/usrah-events';
 import { EVENT_TYPE_LABEL, dateRangeLabel, type EventDirectoryRow } from '@/types/database';
+import { useColors } from '@/lib/theme';
 
 /**
  * Senarai SEMUA acara (lampau + semasa + akan datang) — laluan akses KEKAL
@@ -28,6 +28,7 @@ import { EVENT_TYPE_LABEL, dateRangeLabel, type EventDirectoryRow } from '@/type
  * pada acara tamat dan mengarah ke sini sebagai gantinya).
  */
 export default function AlbumScreen() {
+  const colors = useColors();
   const router = useRouter();
   const desktop = useIsDesktop();
   const goBack = useGoBack();
@@ -124,7 +125,7 @@ export default function AlbumScreen() {
                       <Image source={{ uri: e.poster_url }} style={{ width: 32, height: 32, borderRadius: 8 }} contentFit="cover" />
                     ) : (
                       <View className="h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
-                        <Ionicons name="images-outline" size={16} color={Colors.primary} />
+                        <Ionicons name="images-outline" size={16} color={colors.primary} />
                       </View>
                     ),
                 },
@@ -165,7 +166,7 @@ export default function AlbumScreen() {
                     />
                   ) : (
                     <View className="h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
-                      <Ionicons name="images-outline" size={20} color={Colors.primary} />
+                      <Ionicons name="images-outline" size={20} color={colors.primary} />
                     </View>
                   )}
 
@@ -179,7 +180,7 @@ export default function AlbumScreen() {
                   </View>
 
                   <Text className="text-xs text-ink-muted">{event.photo_count + ' gambar'}</Text>
-                  <Ionicons name="chevron-forward" size={18} color={Colors.inkFaint} />
+                  <Ionicons name="chevron-forward" size={18} color={colors.inkFaint} />
                 </Pressable>
 
                 {canEditEvent(event) && event.photo_count > 0 ? (
@@ -192,7 +193,7 @@ export default function AlbumScreen() {
                       setPendingDelete(event);
                     }}
                     className="h-8 w-8 items-center justify-center rounded-pill active:opacity-70">
-                    <Ionicons name="trash-outline" size={16} color={Colors.negative} />
+                    <Ionicons name="trash-outline" size={16} color={colors.negative} />
                   </Pressable>
                 ) : null}
               </View>

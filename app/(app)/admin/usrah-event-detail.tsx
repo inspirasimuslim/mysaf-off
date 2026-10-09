@@ -23,7 +23,6 @@ import { StepperField } from '@/components/ui/stepper-field';
 import { TextField } from '@/components/ui/text-field';
 import { ToggleRow } from '@/components/ui/toggle-row';
 import { ToastBanner } from '@/components/ui/toast';
-import { Colors } from '@/constants/theme';
 import { useProgramAccess, useUsrahAccess } from '@/lib/department-access';
 import { toMalayError } from '@/lib/errors';
 import { deliveryMessage, type DeliveryMode } from '@/lib/file-delivery';
@@ -45,12 +44,14 @@ import {
   type EventMode,
   type UsrahEvent,
 } from '@/types/database';
+import { useColors } from '@/lib/theme';
 
 type Banner = { tone: 'positive' | 'info' | 'negative'; message: string } | null;
 
 const STATUS_TONE = { aktif: 'positive', tamat: 'neutral', nonaktif: 'warn' } as const;
 
 export default function UsrahEventDetailScreen() {
+  const colors = useColors();
   const goBack = useGoBack();
   const router = useRouter();
   /** `posterError`: dihantar oleh skrin cipta bila acara tercipta tetapi posternya gagal dimuat naik. */
@@ -380,9 +381,9 @@ export default function UsrahEventDetailScreen() {
                   value={event.qr_enabled}
                   onValueChange={(next) => void toggleFlag({ qr_enabled: next }, 'Gagal menukar status kod QR.')}
                   disabled={busy}
-                  trackColor={{ false: Colors.line, true: Colors.primaryMid }}
-                  thumbColor={Colors.white}
-                  ios_backgroundColor={Colors.line}
+                  trackColor={{ false: colors.line, true: colors.primaryMid }}
+                  thumbColor={colors.white}
+                  ios_backgroundColor={colors.line}
                   accessibilityLabel="Kod QR Aktif"
                 />
               </View>

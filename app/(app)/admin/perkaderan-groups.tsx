@@ -14,7 +14,6 @@ import { Screen } from '@/components/ui/screen';
 import { SectionTitle } from '@/components/ui/section-title';
 import { TextField } from '@/components/ui/text-field';
 import { ToastBanner } from '@/components/ui/toast';
-import { Colors } from '@/constants/theme';
 import { usePerkaderanAccess } from '@/lib/department-access';
 import { toMalayErrorVerbose } from '@/lib/errors';
 import { deliveryMessage, type DeliveryMode } from '@/lib/file-delivery';
@@ -23,6 +22,7 @@ import { useIsDesktop } from '@/lib/use-desktop';
 import { fetchNaqibOverview } from '@/lib/perkaderan';
 import { downloadPerkaderanReport } from '@/lib/perkaderan-report';
 import { generationLabel, MONTH_OPTIONS, type NaqibOverview } from '@/types/database';
+import { useColors } from '@/lib/theme';
 
 type Banner = { tone: 'positive' | 'info' | 'negative'; message: string } | null;
 
@@ -37,6 +37,7 @@ const MONTH_FILTER_OPTIONS = [{ value: ALL_MONTHS, label: 'Semua Bulan' }, ...MO
  * reuse `usrah-session-form.tsx` sedia ada, kebenaran edit tidak berubah).
  */
 export default function PerkaderanGroupsScreen() {
+  const colors = useColors();
   const router = useRouter();
   const desktop = useIsDesktop();
   const goBack = useGoBack();
@@ -172,7 +173,7 @@ export default function PerkaderanGroupsScreen() {
                       {naqib.group_count + ' kumpulan · ' + naqib.session_count + ' sesi jumlah'}
                     </Text>
                   </View>
-                  <Ionicons name="chevron-forward" size={18} color={Colors.inkMuted} />
+                  <Ionicons name="chevron-forward" size={18} color={colors.inkMuted} />
                 </Pressable>
               ))}
             </View>

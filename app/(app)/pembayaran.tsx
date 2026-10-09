@@ -15,6 +15,7 @@ import { fetchMyMemberLinked } from '@/lib/members';
 import { fetchPipisSummary, peratusLabel, ringgitPipis, type PipisSummary } from '@/lib/pipis';
 import { fetchYuranSummary, ringgit, type YuranSummary } from '@/lib/yuran';
 import type { AdhocPaymentType } from '@/types/database';
+import { useColors } from '@/lib/theme';
 
 /**
  * Segala hal wang seorang ahli, di satu tempat.
@@ -30,6 +31,7 @@ import type { AdhocPaymentType } from '@/types/database';
  * hanya arahan cara membayar).
  */
 export default function PembayaranScreen() {
+  const colors = useColors();
   const { user } = useAuth();
   const router = useRouter();
 
@@ -108,7 +110,7 @@ export default function PembayaranScreen() {
               nombornya diberi ruang untuk dibaca.
             */}
             <SummaryCard
-              icon={<Ionicons name="calendar-outline" size={16} color="#0F5132" />}
+              icon={<Ionicons name="calendar-outline" size={16} color={colors.primary} />}
               title="Yuran Tahunan"
               highlight={yuranSettled}
               value={
@@ -127,7 +129,7 @@ export default function PembayaranScreen() {
             />
 
             <SummaryCard
-              icon={<MaterialCommunityIcons name="sprout" size={16} color="#0F5132" />}
+              icon={<MaterialCommunityIcons name="sprout" size={16} color={colors.primary} />}
               title="Sumbangan PIPIS ASET"
               highlight={pipisReached}
               value={
@@ -170,7 +172,7 @@ export default function PembayaranScreen() {
                   }
                   className="flex-row items-center gap-3 rounded-field border border-line bg-surface p-4 active:opacity-70">
                   <View className="h-11 w-11 items-center justify-center rounded-pill bg-primary-soft">
-                    <Ionicons name="qr-code-outline" size={20} color="#0F5132" />
+                    <Ionicons name="qr-code-outline" size={20} color={colors.primary} />
                   </View>
 
                   <View className="flex-1">
@@ -190,7 +192,7 @@ export default function PembayaranScreen() {
                     bahawa dia sedang melihat sesuatu yang orang lain tidak nampak.
                   */}
                   {row.is_active ? null : <Badge label="Tidak aktif" tone="neutral" />}
-                  <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
+                  <Ionicons name="chevron-forward" size={18} color={colors.inkFaint} />
                 </Pressable>
               ))}
             </View>
@@ -224,6 +226,7 @@ function SummaryCard({
   highlight: boolean;
   onPress: () => void;
 }) {
+  const colors = useColors();
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={title} onPress={onPress} className="active:opacity-70">
       <Card tone="surface">
@@ -232,7 +235,7 @@ function SummaryCard({
           <Text className="flex-1 text-lg font-bold text-ink" numberOfLines={2}>
             {title}
           </Text>
-          <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
+          <Ionicons name="chevron-forward" size={18} color={colors.inkFaint} />
         </View>
 
         <View className="mt-3 flex-row items-center gap-2">

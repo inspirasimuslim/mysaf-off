@@ -2,9 +2,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { Pressable, Text, View } from 'react-native';
 
 import { Badge } from '@/components/ui/badge';
-import { Colors } from '@/constants/theme';
 import type { UsrahMonthRecord } from '@/lib/usrah';
 import { KAWASAN_USRAH_OPTIONS, MONTH_NAMES, dateLabel } from '@/types/database';
+import { useColors } from '@/lib/theme';
 
 /**
  * Satu bulan dalam Sejarah Kehadiran Usrah — dikongsi oleh skrin ahli dan
@@ -40,6 +40,7 @@ export function UsrahMonthRecordRow({
   /** Admin sahaja: papar sama ada rekod dari imbasan QR atau manual. */
   showRecordedBy?: boolean;
 }) {
+  const colors = useColors();
   const { label, tone } = status(record);
   const attended = record.attended === true;
 
@@ -58,7 +59,7 @@ export function UsrahMonthRecordRow({
             onPress={onEdit}
             hitSlop={8}
             className="flex-row items-center gap-1 active:opacity-70">
-            <Ionicons name="create-outline" size={16} color={Colors.primary} />
+            <Ionicons name="create-outline" size={16} color={colors.primary} />
             <Text className="text-sm font-semibold text-primary">Edit</Text>
           </Pressable>
         ) : null}
@@ -86,9 +87,10 @@ export function UsrahMonthRecordRow({
 }
 
 function Detail({ icon, text, muted = false }: { icon: keyof typeof Ionicons.glyphMap; text: string; muted?: boolean }) {
+  const colors = useColors();
   return (
     <View className="flex-row items-center gap-2">
-      <Ionicons name={icon} size={15} color={muted ? Colors.inkFaint : Colors.inkMuted} />
+      <Ionicons name={icon} size={15} color={muted ? colors.inkFaint : colors.inkMuted} />
       <Text className={`flex-1 text-sm ${muted ? 'text-ink-faint' : 'text-ink'}`}>{text}</Text>
     </View>
   );

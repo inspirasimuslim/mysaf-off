@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, Text, View } from 'react-native';
 
-import { BIRTHDAY_GOLD, Colors } from '@/constants/theme';
+import { BIRTHDAY_GOLD } from '@/constants/theme';
+import { useColors } from '@/lib/theme';
 
 const SHORT_MONTHS = ['Jan', 'Feb', 'Mac', 'Apr', 'Mei', 'Jun', 'Jul', 'Ogo', 'Sep', 'Okt', 'Nov', 'Dis'];
 
@@ -25,10 +26,11 @@ export function formatSelfUpdated(iso: string): string {
  * paparan panel Admin (read-only, tanpa galakan).
  */
 export function SelfUpdateStatus({ value, onPress }: { value: string | null; onPress: () => void }) {
+  const colors = useColors();
   if (value) {
     return (
       <View className="flex-row items-center justify-center gap-1.5">
-        <Ionicons name="time-outline" size={14} color={Colors.inkFaint} />
+        <Ionicons name="time-outline" size={14} color={colors.inkFaint} />
         <Text className="text-xs text-ink-muted">Kemaskini terakhir: {formatSelfUpdated(value)}</Text>
       </View>
     );
@@ -39,7 +41,7 @@ export function SelfUpdateStatus({ value, onPress }: { value: string | null; onP
       onPress={onPress}
       accessibilityRole="button"
       className="flex-row items-center gap-3 rounded-pill px-4 py-2.5 active:opacity-70"
-      style={{ backgroundColor: Colors.warnSoft }}>
+      style={{ backgroundColor: colors.warnSoft }}>
       <Ionicons name="create-outline" size={16} color={BIRTHDAY_GOLD} />
       <Text className="flex-1 text-sm font-semibold text-ink">Sila kemaskini maklumat diri anda</Text>
       <Ionicons name="chevron-forward" size={16} color={BIRTHDAY_GOLD} />
@@ -54,9 +56,10 @@ export function SelfUpdateStatus({ value, onPress }: { value: string | null; onP
  * pihak" ahli) — sekadar maklumat jejak automatik untuk admin.
  */
 export function SelfUpdateAdminNote({ value }: { value: string | null }) {
+  const colors = useColors();
   return (
     <View className="flex-row items-center justify-center gap-1.5">
-      <Ionicons name="time-outline" size={14} color={Colors.inkFaint} />
+      <Ionicons name="time-outline" size={14} color={colors.inkFaint} />
       <Text className="text-xs text-ink-muted">
         {value ? 'Kemaskini terakhir oleh ahli: ' + formatSelfUpdated(value) : 'Belum pernah dikemaskini oleh ahli'}
       </Text>

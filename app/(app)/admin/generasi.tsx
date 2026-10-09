@@ -14,12 +14,12 @@ import { Screen } from '@/components/ui/screen';
 import { SectionTitle } from '@/components/ui/section-title';
 import { TextField } from '@/components/ui/text-field';
 import { ToastBanner } from '@/components/ui/toast';
-import { Colors } from '@/constants/theme';
 import { toMalayError } from '@/lib/errors';
 import { createGeneration, deleteGeneration, fetchGenerations, setGenerationActive } from '@/lib/members';
 import { useGoBack } from '@/lib/navigation';
 import { usePermissions } from '@/lib/permissions';
 import { generationOrder, type Generation } from '@/types/database';
+import { useColors } from '@/lib/theme';
 
 type Banner = { tone: 'positive' | 'info' | 'negative'; message: string } | null;
 
@@ -27,6 +27,7 @@ type Banner = { tone: 'positive' | 'info' | 'negative'; message: string } | null
 const CODE_PATTERN = /^i\d{2}$/i;
 
 export default function GenerasiScreen() {
+  const colors = useColors();
   const goBack = useGoBack();
   const { isSuperAdmin } = usePermissions();
 
@@ -222,9 +223,9 @@ export default function GenerasiScreen() {
                       value={generation.is_active}
                       onValueChange={(next) => void toggleActive(generation, next)}
                       disabled={togglingId === generation.id}
-                      trackColor={{ false: Colors.line, true: Colors.primaryMid }}
-                      thumbColor={Colors.white}
-                      ios_backgroundColor={Colors.line}
+                      trackColor={{ false: colors.line, true: colors.primaryMid }}
+                      thumbColor={colors.white}
+                      ios_backgroundColor={colors.line}
                       accessibilityLabel={'Status aktif ' + generation.label}
                     />
 

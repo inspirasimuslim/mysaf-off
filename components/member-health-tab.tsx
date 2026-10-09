@@ -8,7 +8,6 @@ import { Notice } from '@/components/ui/notice';
 import { PickerField } from '@/components/ui/picker-field';
 import { Segmented } from '@/components/ui/segmented';
 import { TextField } from '@/components/ui/text-field';
-import { Colors } from '@/constants/theme';
 import { toMalayError } from '@/lib/errors';
 import {
   fetchHealthAccess,
@@ -25,6 +24,7 @@ import {
   type Option,
   type RaisLajnahKebajikan,
 } from '@/types/database';
+import { useColors } from '@/lib/theme';
 
 /**
  * Tab Kesihatan — DATA SENSITIF.
@@ -71,6 +71,7 @@ function toRow(issue: MemberHealthIssue): Row {
 type Props = { memberId: string };
 
 export function MemberHealthTab({ memberId }: Props) {
+  const colors = useColors();
   const [loading, setLoading] = useState(true);
   const [access, setAccess] = useState<HealthAccess>({ view: false, edit: false });
   const [original, setOriginal] = useState<MemberHealthIssue[]>([]);
@@ -173,7 +174,7 @@ export function MemberHealthTab({ memberId }: Props) {
     return (
       <View className="gap-4">
         {notice}
-        <ActivityIndicator color={Colors.primary} />
+        <ActivityIndicator color={colors.primary} />
       </View>
     );
   }

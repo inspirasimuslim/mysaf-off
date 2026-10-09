@@ -1,8 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import type { ReactNode } from 'react';
 import { Pressable, Text, View } from 'react-native';
-
-import { Colors } from '@/constants/theme';
+import { useColors } from '@/lib/theme';
 
 type Props = {
   title: string;
@@ -16,6 +15,7 @@ type Props = {
 
 /** Baris boleh pilih dengan kotak semak di kiri — untuk senarai ahli & department. */
 export function SelectRow({ title, subtitle, selected, onPress, disabled = false, children }: Props) {
+  const colors = useColors();
   return (
     <View
       className={`rounded-field border bg-surface ${selected ? 'border-primary' : 'border-line'} ${
@@ -31,7 +31,7 @@ export function SelectRow({ title, subtitle, selected, onPress, disabled = false
           className={`h-6 w-6 items-center justify-center rounded-md border ${
             selected ? 'border-primary bg-primary' : 'border-line bg-surface'
           }`}>
-          {selected ? <Ionicons name="checkmark" size={15} color={Colors.white} /> : null}
+          {selected ? <Ionicons name="checkmark" size={15} color={colors.white} /> : null}
         </View>
 
         <View className="flex-1">

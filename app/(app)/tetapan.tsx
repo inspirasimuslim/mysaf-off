@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { FormModal } from '@/components/ui/form-modal';
 import { Notice } from '@/components/ui/notice';
 import { Screen } from '@/components/ui/screen';
+import { Segmented } from '@/components/ui/segmented';
 import { SectionTitle } from '@/components/ui/section-title';
 import { TextField } from '@/components/ui/text-field';
 import { ToggleRow } from '@/components/ui/toggle-row';
@@ -27,6 +28,8 @@ import { useGoBack } from '@/lib/navigation';
 import { hasPendingAccountDeletion, requestAccountDeletion } from '@/lib/account-deletion';
 import { signOutFromDevice } from '@/lib/session';
 import { supabase } from '@/lib/supabase';
+import { useTheme, type ThemePreference } from '@/lib/theme';
+import type { Option } from '@/types/database';
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MIN_PASSWORD_LENGTH = 8;
@@ -48,6 +51,12 @@ const PASSWORD_FIELD_CODES = ['weak_password', 'same_password', 'validation_fail
  * Ralat rangkaian / sesi tamat bukan salah nilai yang ditaip, jadi ia naik ke notis
  * borang supaya pengguna tidak tersalah sangka nilai merekalah yang bermasalah.
  */
+const TEMA_OPTIONS: Option<ThemePreference>[] = [
+  { value: 'cerah', label: 'Cerah' },
+  { value: 'gelap', label: 'Gelap' },
+  { value: 'sistem', label: 'Ikut Telefon' },
+];
+
 function belongsToField(error: unknown, codes: string[], messagePattern: RegExp): boolean {
   const code = errorCode(error);
   if (code) return codes.includes(code);
@@ -73,6 +82,7 @@ type Banner = { tone: 'positive' | 'info' | 'negative'; message: string } | null
  * kepada ringkasan sahaja dan tetapan akaun berada rapat dengan Profil.
  */
 export default function TetapanScreen() {
+  const { preference: tema, setPreference: setTema } = useTheme();
   const { user } = useAuth();
   const router = useRouter();
   const goBack = useGoBack();
@@ -414,6 +424,11 @@ export default function TetapanScreen() {
               </View>
             </View>
           ) : null}
+
+          <View>
+            <SectionTitle title="Paparan" />
+            <Segmented label="Tema" value={tema} options={TEMA_OPTIONS} onChange={setTema} />
+          </View>
 
           <View>
             <SectionTitle title="Privasi" />

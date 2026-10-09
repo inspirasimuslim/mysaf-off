@@ -9,12 +9,12 @@ import { LoadingScreen } from '@/components/ui/loading-screen';
 import { Notice } from '@/components/ui/notice';
 import { Screen } from '@/components/ui/screen';
 import { SectionTitle } from '@/components/ui/section-title';
-import { Colors } from '@/constants/theme';
 import { usePerkaderanAccess } from '@/lib/department-access';
 import { toMalayErrorVerbose } from '@/lib/errors';
 import { useGoBack } from '@/lib/navigation';
 import { fetchNaqibSessions } from '@/lib/perkaderan';
 import type { NaqibSessionRow } from '@/types/database';
+import { useColors } from '@/lib/theme';
 
 /** 'YYYY-MM-DD' → '12 Sep 2026'. */
 function dateLabel(value: string): string {
@@ -30,6 +30,7 @@ function dateLabel(value: string): string {
  * kekal boleh sunting di situ — tiada perubahan kebenaran, cuma navigasi).
  */
 export default function NaqibSessionHistoryScreen() {
+  const colors = useColors();
   const router = useRouter();
   const goBack = useGoBack();
   const { memberId, naqibName } = useLocalSearchParams<{ memberId: string; naqibName?: string }>();
@@ -112,7 +113,7 @@ export default function NaqibSessionHistoryScreen() {
                       {session.location_text ? ' · ' + session.location_text : ''}
                     </Text>
                   </View>
-                  <Ionicons name="chevron-forward" size={18} color={Colors.inkMuted} />
+                  <Ionicons name="chevron-forward" size={18} color={colors.inkMuted} />
                 </Pressable>
               ))}
             </View>

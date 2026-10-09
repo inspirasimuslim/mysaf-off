@@ -6,8 +6,8 @@ import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { LoadingScreen } from '@/components/ui/loading-screen';
 import { Screen } from '@/components/ui/screen';
-import { Colors } from '@/constants/theme';
 import { usePermissions } from '@/lib/permissions';
+import { useColors } from '@/lib/theme';
 
 /** Papar bila bukan admin cuba membuka mana-mana skrin di bawah /admin. */
 function NoAccess() {
@@ -44,15 +44,16 @@ function NoAccess() {
  * Ini kawalan UI sahaja — RLS di Supabase tetap penentu muktamad.
  */
 export default function AdminLayout() {
+  const colors = useColors();
   const { loading, isAdmin, isActiveNaqib, isOwner } = usePermissions();
   const pathname = usePathname();
 
   if (loading) return <LoadingScreen />;
   // Owner BUKAN admin: hanya skrin pemulihan satu-satunya skrin di bawah /admin yang dibuka untuknya ialah pemulihan log aktiviti dibuka untuknya.
   if (isOwner() && !isAdmin() && (pathname.endsWith('/owner-recovery') || pathname.endsWith('/activity-log'))) {
-    return <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: Colors.background } }} />;
+    return <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }} />;
   }
   if (!isAdmin() && !isActiveNaqib()) return <NoAccess />;
 
-  return <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: Colors.background } }} />;
+  return <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }} />;
 }

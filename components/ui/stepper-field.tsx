@@ -1,7 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, Text, View } from 'react-native';
-
-import { Colors } from '@/constants/theme';
+import { useColors } from '@/lib/theme';
 
 /**
  * Nombor yang dilaraskan dengan [-] dan [+], bukan ditaip.
@@ -82,6 +81,7 @@ function StepButton({
   disabled: boolean;
   onPress: () => void;
 }) {
+  const colors = useColors();
   return (
     <Pressable
       accessibilityRole="button"
@@ -92,7 +92,7 @@ function StepButton({
       className={`h-10 w-12 items-center justify-center rounded-field bg-primary-soft ${
         disabled ? 'opacity-40' : 'active:opacity-70'
       }`}>
-      <Ionicons name={icon} size={20} color={Colors.primary} />
+      <Ionicons name={icon} size={20} color={colors.primary} />
     </Pressable>
   );
 }

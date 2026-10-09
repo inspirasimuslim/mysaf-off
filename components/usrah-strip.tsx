@@ -3,11 +3,12 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
-import { Colors } from '@/constants/theme';
+import type { ThemeColors } from '@/constants/theme';
 import { fetchMyMemberLinked } from '@/lib/members';
 import { fetchUsrahYearDetail, type UsrahMonthDetail } from '@/lib/usrah';
 import { MONTH_LABELS } from '@/lib/usrah-import';
 import { useIsDesktop } from '@/lib/use-desktop';
+import { useColors } from '@/lib/theme';
 
 /**
  * Kehadiran usrah pengguna sendiri bagi tahun semasa — dua belas bulatan.
@@ -32,10 +33,10 @@ const GANTI_COLOR = '#EAB308';
 
 type State = { months: UsrahMonthDetail[]; ready: true } | { ready: false };
 
-function dotColor(attended: boolean | null): string {
-  if (attended === true) return Colors.primary;
-  if (attended === false) return Colors.ink;
-  return Colors.line;
+function dotColor(attended: boolean | null, colors: ThemeColors): string {
+  if (attended === true) return colors.primary;
+  if (attended === false) return colors.ink;
+  return colors.line;
 }
 
 /**
@@ -44,6 +45,7 @@ function dotColor(attended: boolean | null): string {
  * bulatan biasa di sebelahnya.
  */
 function MonthDot({ month }: { month: UsrahMonthDetail | undefined }) {
+  const colors = useColors();
   const attended = month?.attended ?? null;
   const ganti = attended === true && month?.source === 'program_ganti';
 
@@ -53,7 +55,7 @@ function MonthDot({ month }: { month: UsrahMonthDetail | undefined }) {
         style={{ width: DOT_SIZE, height: DOT_SIZE, borderRadius: DOT_SIZE / 2, overflow: 'hidden' }}
         accessibilityLabel="Hadir melalui program ganti usrah">
         <View style={{ flex: 1, backgroundColor: GANTI_COLOR }} />
-        <View style={{ flex: 1, backgroundColor: Colors.primary }} />
+        <View style={{ flex: 1, backgroundColor: colors.primary }} />
       </View>
     );
   }
@@ -64,13 +66,14 @@ function MonthDot({ month }: { month: UsrahMonthDetail | undefined }) {
         width: DOT_SIZE,
         height: DOT_SIZE,
         borderRadius: DOT_SIZE / 2,
-        backgroundColor: dotColor(attended),
+        backgroundColor: dotColor(attended, colors),
       }}
     />
   );
 }
 
 export function UsrahStrip({ userId }: { userId: string | null }) {
+  const colors = useColors();
   const router = useRouter();
   const desktop = useIsDesktop();
   const year = new Date().getFullYear();
@@ -124,7 +127,7 @@ export function UsrahStrip({ userId }: { userId: string | null }) {
       className={`rounded-card border border-line p-card active:opacity-70 ${desktop ? 'bg-surface' : ''}`}>
       <View className="flex-row items-center">
         <Text className="flex-1 text-sm font-semibold text-ink">Kehadiran Usrah {year}</Text>
-        <Ionicons name="chevron-forward" size={16} color={Colors.inkFaint} />
+        <Ionicons name="chevron-forward" size={16} color={colors.inkFaint} />
       </View>
 
       <View className="mt-3 flex-row items-start justify-between">
@@ -145,7 +148,7 @@ export function UsrahStrip({ userId }: { userId: string | null }) {
                   width: LABEL_BOX,
                   fontSize: 9,
                   textAlign: 'center',
-                  color: Colors.inkFaint,
+                  color: colors.inkFaint,
                   transform: [{ rotate: '-90deg' }],
                 }}
                 numberOfLines={1}>

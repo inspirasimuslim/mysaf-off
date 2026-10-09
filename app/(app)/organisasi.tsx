@@ -9,7 +9,6 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { LoadingScreen } from '@/components/ui/loading-screen';
 import { Notice } from '@/components/ui/notice';
 import { Screen } from '@/components/ui/screen';
-import { Colors } from '@/constants/theme';
 import type { DirectoryMember } from '@/types/database';
 import { toMalayError } from '@/lib/errors';
 import { useGoBack } from '@/lib/navigation';
@@ -23,6 +22,7 @@ import {
   type RaisGroup,
   type RaisLantikan,
 } from '@/lib/rais-lantikan';
+import { useColors } from '@/lib/theme';
 
 /**
  * Carta Organisasi 2025/2027 — dibuka kepada semua ahli, paparan sahaja.
@@ -33,6 +33,7 @@ import {
  * Suntingan dibuat di Hub Admin (SETIAUSAHA) — tiada kawalan edit di sini.
  */
 export default function OrganisasiScreen() {
+  const colors = useColors();
   const goBack = useGoBack();
   const router = useRouter();
 
@@ -158,9 +159,9 @@ export default function OrganisasiScreen() {
                 <Switch
                   value={showAll}
                   onValueChange={setShowAll}
-                  trackColor={{ false: Colors.line, true: Colors.primaryMid }}
-                  thumbColor={Colors.white}
-                  ios_backgroundColor={Colors.line}
+                  trackColor={{ false: colors.line, true: colors.primaryMid }}
+                  thumbColor={colors.white}
+                  ios_backgroundColor={colors.line}
                 />
               </View>
             </View>

@@ -1,3 +1,32 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/*
+  Nilai asal (tema cerah) bagi pembolehubah warna. Nilai sebenar diset oleh
+  ThemeProvider (lib/theme.tsx) daripada constants/theme.ts — blok ini hanya
+  sandaran untuk render awal sebelum provider siap, jadi kekalkan selari
+  dengan LightColors.
+*/
+:root {
+  --c-primary: 15 81 50;
+  --c-primary-dark: 10 58 35;
+  --c-primary-mid: 21 115 71;
+  --c-primary-soft: 231 241 236;
+  --c-primary-tint: 242 248 245;
+  --c-background: 250 250 250;
+  --c-surface: 255 255 255;
+  --c-ink: 26 26 26;
+  --c-ink-muted: 107 114 128;
+  --c-ink-faint: 156 163 175;
+  --c-line: 236 236 236;
+  --c-positive: 22 163 74;
+  --c-positive-soft: 232 246 237;
+  --c-negative: 220 38 38;
+  --c-negative-soft: 253 236 236;
+  --c-warn: 234 88 12;
+  --c-warn-soft: 253 240 231;
+  --c-info: 37 99 235;
+  --c-info-soft: 234 240 253;
+  --c-white: 255 255 255;
+}

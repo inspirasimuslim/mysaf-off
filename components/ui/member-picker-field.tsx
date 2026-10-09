@@ -3,11 +3,11 @@ import { useMemo, useRef, useState } from 'react';
 import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Colors } from '@/constants/theme';
 import { KeyboardAwareProvider, useKeyboardAware } from '@/lib/keyboard-aware';
 import { generationLabel, type MemberPickerRow } from '@/types/database';
 
 import { TextField } from './text-field';
+import { useColors } from '@/lib/theme';
 
 const MAX_SHEET_WIDTH = 560;
 
@@ -36,6 +36,7 @@ export function MemberPickerField({
   disabled = false,
   error = null,
 }: Props) {
+  const colors = useColors();
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const insets = useSafeAreaInsets();
@@ -81,7 +82,7 @@ export function MemberPickerField({
         <Text className={`flex-1 text-base ${selected ? 'text-ink' : 'text-ink-faint'}`} numberOfLines={1}>
           {selected ? selected.full_name + (selected.generasi ? ' (' + generationLabel(selected.generasi) + ')' : '') : placeholder}
         </Text>
-        <Ionicons name="chevron-down" size={18} color={Colors.inkMuted} />
+        <Ionicons name="chevron-down" size={18} color={colors.inkMuted} />
       </Pressable>
 
       {error ? <Text className="text-sm text-negative">{error}</Text> : null}
@@ -108,7 +109,7 @@ export function MemberPickerField({
                   hitSlop={10}
                   onPress={() => setOpen(false)}
                   className="h-9 w-9 items-center justify-center rounded-pill border border-line bg-surface active:opacity-70">
-                  <Ionicons name="close" size={18} color={Colors.ink} />
+                  <Ionicons name="close" size={18} color={colors.ink} />
                 </Pressable>
               </View>
 
@@ -171,6 +172,7 @@ function Row({
   onPress: () => void;
   muted?: boolean;
 }) {
+  const colors = useColors();
   return (
     <Pressable
       accessibilityRole="radio"
@@ -182,7 +184,7 @@ function Row({
       <Text className={`flex-1 text-base ${muted ? 'text-ink-muted' : 'text-ink'} ${selected ? 'font-semibold' : ''}`}>
         {label}
       </Text>
-      {selected ? <Ionicons name="checkmark" size={18} color={Colors.primary} /> : null}
+      {selected ? <Ionicons name="checkmark" size={18} color={colors.primary} /> : null}
     </Pressable>
   );
 }

@@ -6,10 +6,11 @@ import { ScreenHeader } from '@/components/screen-header';
 import { Button } from '@/components/ui/button';
 import { Notice } from '@/components/ui/notice';
 import { Screen } from '@/components/ui/screen';
-import { Colors } from '@/constants/theme';
+import type { ThemeColors } from '@/constants/theme';
 import { useGoBack } from '@/lib/navigation';
 import { useIsDesktop } from '@/lib/use-desktop';
 import { MONTH_NAMES } from '@/types/database';
+import { useColors } from '@/lib/theme';
 
 /**
  * Bahagian carta untuk Dashboard Statistik.
@@ -23,7 +24,6 @@ import { MONTH_NAMES } from '@/types/database';
  * oleh `useIsDesktop()` di sini, bukan di setiap skrin.
  */
 
-const BAR_COLOR = Colors.primaryMid;
 const SECTIONS = 4;
 const SHORT_MONTH = MONTH_NAMES.map((name) => name.slice(0, 3));
 
@@ -110,6 +110,7 @@ export function StatShell<T extends { years: number[] }>({
   summary?: (data: T) => ReactNode;
   children: (data: T) => ReactNode;
 }) {
+  const colors = useColors();
   const goBack = useGoBack();
   const desktop = useIsDesktop();
 
@@ -133,7 +134,7 @@ export function StatShell<T extends { years: number[] }>({
 
           {!data && loading ? (
             <View className="items-center py-16">
-              <ActivityIndicator color={Colors.primary} />
+              <ActivityIndicator color={colors.primary} />
             </View>
           ) : null}
 
@@ -219,13 +220,13 @@ const CHAR_WIDTH = 5.6;
  * sebahagian mendatar dan sebahagian menegak. Corak ini dikongsi oleh semua
  * carta berpaksi bulan atau generasi (dashboard statistik dan Rumusan Ahli).
  */
-export function axisLabelProps(labels: string[], slot: number, activeIndex: number) {
+export function axisLabelProps(labels: string[], slot: number, activeIndex: number, colors: ThemeColors) {
   const longest = Math.max(1, ...labels.map((label) => label.length));
   const vertical = slot < longest * CHAR_WIDTH + 3;
 
   const labelComponent = (index: number) => () => {
     const active = index === activeIndex;
-    const style = { fontSize: 9, lineHeight: LABEL_LINE_HEIGHT, color: active ? Colors.ink : Colors.inkMuted, fontWeight: active ? ('700' as const) : ('400' as const) };
+    const style = { fontSize: 9, lineHeight: LABEL_LINE_HEIGHT, color: active ? colors.ink : colors.inkMuted, fontWeight: active ? ('700' as const) : ('400' as const) };
 
     if (!vertical) {
       return (
@@ -283,6 +284,7 @@ export function Columns({
   axisFormat?: (value: number) => string;
   detail?: (index: number) => string | null;
 }) {
+  const colors = useColors();
   const desktop = useContext(DesktopContext);
   const { width: windowWidth } = useWindowDimensions();
   const [measured, setMeasured] = useState(0);
@@ -304,11 +306,11 @@ export function Columns({
   const barWidth = Math.max(4, Math.floor((plotWidth - spacing * (values.length + 1)) / values.length));
   const max = niceMax(Math.max(0, ...values.map((v) => v ?? 0)));
 
-  const axis = axisLabelProps(labels, barWidth + spacing, active);
+  const axis = axisLabelProps(labels, barWidth + spacing, active, colors);
   const data = values.map((value, index) => ({
     value: value ?? 0,
     labelComponent: axis.labelComponent(index),
-    frontColor: index === active ? Colors.primaryDark : BAR_COLOR,
+    frontColor: index === active ? colors.primaryDark : colors.primaryMid,
     onPress: () => setSelected(index),
   }));
 
@@ -339,11 +341,11 @@ export function Columns({
           barBorderTopRightRadius={3}
           yAxisThickness={0}
           yAxisLabelWidth={yLabelWidth}
-          yAxisTextStyle={{ color: Colors.inkFaint, fontSize: 10 }}
+          yAxisTextStyle={{ color: colors.inkFaint, fontSize: 10 }}
           xAxisThickness={1}
-          xAxisColor={Colors.line}
+          xAxisColor={colors.line}
           labelsExtraHeight={axis.extraHeight}
-          rulesColor={Colors.line}
+          rulesColor={colors.line}
           rulesType="solid"
           disableScroll
           isAnimated
@@ -398,6 +400,7 @@ export function ValueBars({
   sorted?: boolean;
   columns?: 1 | 2;
 }) {
+  const colors = useColors();
   const desktop = useContext(DesktopContext);
   const ordered = useMemo(() => (sorted ? [...rows].sort((a, b) => b.value - a.value) : rows), [rows, sorted]);
   const max = Math.max(1, ...ordered.map((row) => row.value));
@@ -420,9 +423,9 @@ export function ValueBars({
           </View>
           <View
             className={`overflow-hidden rounded-pill ${desktop ? 'mt-1 h-2' : 'mt-1.5 h-2.5'}`}
-            style={{ backgroundColor: Colors.primaryTint }}>
+            style={{ backgroundColor: colors.primaryTint }}>
             <View
-              style={{ height: '100%', borderRadius: 999, backgroundColor: BAR_COLOR, width: `${(row.value / max) * 100}%` }}
+              style={{ height: '100%', borderRadius: 999, backgroundColor: colors.primaryMid, width: `${(row.value / max) * 100}%` }}
             />
           </View>
         </View>
@@ -439,11 +442,12 @@ export function SplitBar({
   parts: { label: string; value: number; color: string }[];
   format: (value: number) => string;
 }) {
+  const colors = useColors();
   const total = parts.reduce((sum, part) => sum + part.value, 0);
 
   return (
     <View className="gap-2.5">
-      <View className="h-4 flex-row overflow-hidden rounded-pill" style={{ backgroundColor: Colors.line }}>
+      <View className="h-4 flex-row overflow-hidden rounded-pill" style={{ backgroundColor: colors.line }}>
         {parts.map((part) => (
           <View
             key={part.label}

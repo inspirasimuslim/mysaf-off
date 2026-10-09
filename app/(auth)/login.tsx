@@ -11,19 +11,20 @@ import { Card } from '@/components/ui/card';
 import { Notice } from '@/components/ui/notice';
 import { Screen } from '@/components/ui/screen';
 import { TextField } from '@/components/ui/text-field';
-import { Colors } from '@/constants/theme';
 import { getBiometricSupport, getStoredRefreshToken, hasBiometricLogin, promptBiometric } from '@/lib/biometrics';
 import { toMalayError } from '@/lib/errors';
 import { resetIdleTracking } from '@/lib/idle-timer';
 import { getRecentLogins, saveRecentLogin } from '@/lib/recent-logins';
 import { takeAuthNotice } from '@/lib/suspension';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
+import { useColors } from '@/lib/theme';
 
 /* Nisbah asal fail logo (1090x367) — tinggi dikira daripada lebar supaya imej
    tidak pernah diregangkan pada mana-mana saiz skrin. */
 const LOGO_ASPECT_RATIO = 1090 / 367;
 
 export default function LoginScreen() {
+  const colors = useColors();
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -136,7 +137,8 @@ export default function LoginScreen() {
           <View className="items-center pb-10 pt-12">
             <Image
               source={require('@/assets/images/mysaff-logo-wide.png')}
-              style={{ width: '55%', maxWidth: 220, aspectRatio: LOGO_ASPECT_RATIO }}
+              // Logo berlatar putih — bucu dibulatkan supaya tidak kelihatan seperti kotak tajam pada tema gelap.
+              style={{ width: '55%', maxWidth: 220, aspectRatio: LOGO_ASPECT_RATIO, borderRadius: 14 }}
               contentFit="contain"
               accessibilityLabel="MySAFF — Melangkah Bersama"
             />
@@ -169,7 +171,7 @@ export default function LoginScreen() {
                       accessibilityLabel={`Guna emel ${item}`}
                       onPress={() => pickRecentEmail(item)}
                       className="max-w-full flex-row items-center gap-1.5 rounded-full border border-line bg-background px-3 py-1.5 active:opacity-70">
-                      <Ionicons name="time-outline" size={14} color={Colors.inkMuted} />
+                      <Ionicons name="time-outline" size={14} color={colors.inkMuted} />
                       <Text numberOfLines={1} className="shrink text-sm text-ink">
                         {item}
                       </Text>
@@ -220,7 +222,7 @@ export default function LoginScreen() {
                 loading={biometricBusy}
                 disabled={busy}
                 onPress={() => void signInWithBiometric()}
-                icon={<Ionicons name="finger-print" size={18} color={Colors.primary} />}
+                icon={<Ionicons name="finger-print" size={18} color={colors.primary} />}
               />
             </View>
           ) : null}

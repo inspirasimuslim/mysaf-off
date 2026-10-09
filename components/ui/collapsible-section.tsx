@@ -1,8 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useState, type ReactNode } from 'react';
 import { Pressable, Text, View } from 'react-native';
-
-import { Colors } from '@/constants/theme';
+import { useColors } from '@/lib/theme';
 
 type Props = {
   title: string;
@@ -40,6 +39,7 @@ export function CollapsibleSection({
   variant = 'card',
   children,
 }: Props) {
+  const colors = useColors();
   const [open, setOpen] = useState(defaultOpen);
   const plain = variant === 'plain';
 
@@ -62,7 +62,7 @@ export function CollapsibleSection({
           </View>
         ) : null}
 
-        <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={18} color={Colors.inkMuted} />
+        <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={18} color={colors.inkMuted} />
       </Pressable>
 
       {open ? (

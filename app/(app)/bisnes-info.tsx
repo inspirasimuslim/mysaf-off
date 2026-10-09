@@ -14,7 +14,6 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { LoadingScreen } from '@/components/ui/loading-screen';
 import { Notice } from '@/components/ui/notice';
 import { Screen } from '@/components/ui/screen';
-import { Colors } from '@/constants/theme';
 import {
   businessAdError,
   deleteBusinessAd,
@@ -24,6 +23,7 @@ import {
 } from '@/lib/business-ads';
 import { useGoBack } from '@/lib/navigation';
 import { toWhatsAppNumber } from '@/lib/phone';
+import { useColors } from '@/lib/theme';
 
 /**
  * Satu bisnes, penuh — dibuka dari carousel Utama atau Senarai Bisnes.
@@ -43,6 +43,7 @@ import { toWhatsAppNumber } from '@/lib/phone';
  * paling bawah sekali — ia jarang digunakan berbanding melihat/menghubungi.
  */
 export default function BisnesInfoScreen() {
+  const colors = useColors();
   const router = useRouter();
   const goBack = useGoBack();
   const { id } = useLocalSearchParams<{ id?: string }>();
@@ -173,7 +174,7 @@ export default function BisnesInfoScreen() {
           {whatsApp ? (
             <Button
               label={ad.teks_cta ? ad.teks_cta + ' — Hubungi via WhatsApp' : 'Hubungi via WhatsApp'}
-              icon={<Ionicons name="logo-whatsapp" size={20} color={Colors.white} />}
+              icon={<Ionicons name="logo-whatsapp" size={20} color={colors.white} />}
               onPress={contact}
             />
           ) : null}
@@ -213,7 +214,7 @@ export default function BisnesInfoScreen() {
 
         <View className="gap-5 px-gutter">
           <View className="flex-row items-center gap-2">
-            <Ionicons name="person-outline" size={16} color={Colors.inkMuted} />
+            <Ionicons name="person-outline" size={16} color={colors.inkMuted} />
             <Text className="text-sm text-ink-muted">{ad.nama_pemilik}</Text>
           </View>
 
@@ -224,14 +225,14 @@ export default function BisnesInfoScreen() {
                 <Button
                   label="Edit & Hantar Semula"
                   variant="secondary"
-                  icon={<Ionicons name="create-outline" size={18} color={Colors.ink} />}
+                  icon={<Ionicons name="create-outline" size={18} color={colors.ink} />}
                   onPress={() => router.push({ pathname: '/(app)/bisnes-upload', params: { id: ad.id } })}
                 />
               ) : null}
               <Button
                 label="Padam Iklan"
                 variant="danger"
-                icon={<Ionicons name="trash-outline" size={18} color={Colors.negative} />}
+                icon={<Ionicons name="trash-outline" size={18} color={colors.negative} />}
                 onPress={() => setConfirmingDelete(true)}
               />
             </View>

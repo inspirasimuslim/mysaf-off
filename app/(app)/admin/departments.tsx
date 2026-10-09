@@ -14,7 +14,6 @@ import { Screen } from '@/components/ui/screen';
 import { SectionTitle } from '@/components/ui/section-title';
 import { TextField } from '@/components/ui/text-field';
 import { ToastBanner } from '@/components/ui/toast';
-import { Colors } from '@/constants/theme';
 import {
   createDepartment,
   deleteDepartment,
@@ -25,10 +24,12 @@ import { toMalayError } from '@/lib/errors';
 import { useGoBack } from '@/lib/navigation';
 import { usePermissions } from '@/lib/permissions';
 import type { Department } from '@/types/database';
+import { useColors } from '@/lib/theme';
 
 type Banner = { tone: 'positive' | 'info' | 'negative'; message: string } | null;
 
 export default function DepartmentsScreen() {
+  const colors = useColors();
   const goBack = useGoBack();
   const { isSuperAdmin } = usePermissions();
 
@@ -207,9 +208,9 @@ export default function DepartmentsScreen() {
                       value={department.is_active}
                       onValueChange={(next) => void toggleActive(department, next)}
                       disabled={togglingId === department.id}
-                      trackColor={{ false: Colors.line, true: Colors.primaryMid }}
-                      thumbColor={Colors.white}
-                      ios_backgroundColor={Colors.line}
+                      trackColor={{ false: colors.line, true: colors.primaryMid }}
+                      thumbColor={colors.white}
+                      ios_backgroundColor={colors.line}
                       accessibilityLabel={'Status aktif ' + department.name}
                     />
 

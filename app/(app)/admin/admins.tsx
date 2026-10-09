@@ -16,12 +16,12 @@ import { SectionTitle } from '@/components/ui/section-title';
 import { SelectRow } from '@/components/ui/select-row';
 import { TextField } from '@/components/ui/text-field';
 import { ToastBanner } from '@/components/ui/toast';
-import { Colors } from '@/constants/theme';
 import { fetchAssignments, fetchDepartments, fetchProfiles, removeAdmin, saveAssignments } from '@/lib/admin';
 import { toMalayError } from '@/lib/errors';
 import { useGoBack } from '@/lib/navigation';
 import { usePermissions } from '@/lib/permissions';
 import { profileName, type AdminAssignment, type Department, type Permission, type Profile } from '@/types/database';
+import { useColors } from '@/lib/theme';
 
 type Banner = { tone: 'positive' | 'info' | 'negative'; message: string } | null;
 
@@ -42,6 +42,7 @@ function PermissionToggles({
   onChange: (next: Permission) => void;
   disabled: boolean;
 }) {
+  const colors = useColors();
   return (
     <View className="gap-3">
       <View className="flex-row items-center gap-3">
@@ -51,9 +52,9 @@ function PermissionToggles({
           // Mematikan "Lihat" turut mematikan "Edit" — edit tanpa lihat tiada makna.
           onValueChange={(next) => onChange({ can_view: next, can_edit: next ? permission.can_edit : false })}
           disabled={disabled}
-          trackColor={{ false: Colors.line, true: Colors.primaryMid }}
-          thumbColor={Colors.white}
-          ios_backgroundColor={Colors.line}
+          trackColor={{ false: colors.line, true: colors.primaryMid }}
+          thumbColor={colors.white}
+          ios_backgroundColor={colors.line}
           accessibilityLabel="Kebenaran lihat"
         />
       </View>
@@ -65,9 +66,9 @@ function PermissionToggles({
           // "Edit" merangkumi "Lihat" secara automatik.
           onValueChange={(next) => onChange({ can_view: next ? true : permission.can_view, can_edit: next })}
           disabled={disabled}
-          trackColor={{ false: Colors.line, true: Colors.primaryMid }}
-          thumbColor={Colors.white}
-          ios_backgroundColor={Colors.line}
+          trackColor={{ false: colors.line, true: colors.primaryMid }}
+          thumbColor={colors.white}
+          ios_backgroundColor={colors.line}
           accessibilityLabel="Kebenaran edit"
         />
       </View>

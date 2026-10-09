@@ -14,10 +14,10 @@ import {
   generationAxisLabel,
 } from '@/components/stat-charts';
 import { LoadingScreen } from '@/components/ui/loading-screen';
-import { Colors } from '@/constants/theme';
 import { usePipisAccess } from '@/lib/department-access';
 import { useStat, type PipisStat } from '@/lib/statistik';
 import { generationLabel } from '@/types/database';
+import { useColors } from '@/lib/theme';
 
 /**
  * Statistik PIPIS — sumbangan berjaya (`status = 'success'`) mengikut bulan dan
@@ -26,6 +26,7 @@ import { generationLabel } from '@/types/database';
  * Data daripada `stat_pipis()`.
  */
 export default function StatistikPipisScreen() {
+  const colors = useColors();
   const access = usePipisAccess();
   const { year, setYear, data, loading, error, reload } = useStat<PipisStat>('stat_pipis', access.canView);
 
@@ -68,7 +69,7 @@ export default function StatistikPipisScreen() {
               <SplitBar
                 format={formatRm}
                 parts={[
-                  { label: 'Terkumpul', value: r.terkumpul, color: Colors.primaryMid },
+                  { label: 'Terkumpul', value: r.terkumpul, color: colors.primaryMid },
                   { label: 'Baki belum dikutip', value: r.baki, color: '#D97706' },
                 ]}
               />
