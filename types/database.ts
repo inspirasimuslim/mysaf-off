@@ -329,10 +329,11 @@ export function directoryPekerjaanLabel(value: StatusPekerjaan | null): string {
 const DIRECTORY_PERKAHWINAN_LABEL: Record<StatusPerkahwinan, string> = {
   bujang: 'Bujang',
   berkahwin: 'Berkahwin',
-  pernah_berkahwin: 'Pernah Berkahwin',
+  // Dipapar sebagai "Berkahwin" kepada ahli biasa; "Pernah Berkahwin" untuk rujukan admin sahaja.
+  pernah_berkahwin: 'Berkahwin',
 };
 
-/** Direktori tidak membezakan MBM / bukan MBM — itu butiran dalaman rekod. */
+/** Direktori tidak membezakan MBM / bukan MBM, atau berkahwin / pernah berkahwin — itu butiran dalaman rekod. */
 export function directoryPerkahwinanLabel(value: StatusPerkahwinan | null): string {
   return value ? DIRECTORY_PERKAHWINAN_LABEL[value] : '—';
 }

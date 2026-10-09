@@ -43,5 +43,21 @@ export async function fetchMemberStatistics(): Promise<MemberStatistics> {
   const { data, error } = await supabase.rpc('member_statistics');
   if (error) throw error;
   if (!data) throw new Error('Rumusan ahli tidak dapat dibaca.');
-  return data as MemberStatistics;
+  const stats = data as MemberStatistics;
+  return { ...stats, ikut_status_perkahwinan: foldPernahBerkahwin(stats.ikut_status_perkahwinan) };
+}
+
+/**
+ * Rumusan dibuka oleh SEMUA ahli, jadi "Pernah Berkahwin" tidak dipaparkan —
+ * kiraannya digabung ke "Berkahwin". Pembezaan itu untuk rujukan admin sahaja
+ * (borang ahli / skrin admin), bukan untuk ahli biasa. Dilakukan di sini, bukan
+ * dalam SQL, supaya ia berkesan serta-merta tanpa bergantung pada versi fungsi
+ * pangkalan data.
+ */
+function foldPernahBerkahwin(slices: StatSlice[]): StatSlice[] {
+  const pernah = slices.find((slice) => slice.label === 'Pernah Berkahwin');
+  if (!pernah) return slices;
+  return slices
+    .filter((slice) => slice !== pernah)
+    .map((slice) => (slice.label === 'Berkahwin' ? { ...slice, count: slice.count + pernah.count } : slice));
 }
