@@ -1,5 +1,6 @@
 import type { EventDirectoryRow, EventMode, EventType, UpcomingEvent, UsrahEvent } from '@/types/database';
 
+import { fetchEventExtraInfo, removeExtraPosterObjects } from './event-extra-info';
 import { uploadImage } from './image-upload';
 import { supabase } from './supabase';
 
@@ -128,6 +129,11 @@ export type DeleteEventResult = {
  * meninggalkan fail yatim — bukan sebab untuk melaporkan padam sebagai gagal.
  */
 export async function deleteOrArchiveEvent(id: string): Promise<DeleteEventResult> {
+  // Dibaca SEBELUM padam: baris maklumat tambahan turut terpadam (cascade), tetapi fail posternya tidak.
+  const extraUrls = await fetchEventExtraInfo(id)
+    .then((info) => info?.poster_urls ?? [])
+    .catch(() => [] as string[]);
+
   const { data, error } = await supabase.rpc('delete_or_archive_event', { p_event_id: id });
   if (error) throw error;
 
@@ -139,6 +145,7 @@ export async function deleteOrArchiveEvent(id: string): Promise<DeleteEventResul
       .from(POSTER_BUCKET)
       .remove([id + '.jpg', id + '-qr.jpg'])
       .catch(() => undefined);
+    await removeExtraPosterObjects(extraUrls);
   }
 
   return {

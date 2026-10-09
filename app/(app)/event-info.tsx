@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Linking, Platform, Pressable, Text, View } from 'react-native';
 
 import { EventQrCard } from '@/components/event-qr-card';
+import { LinkifiedText } from '@/components/linkified-text';
 import { StaticMap } from '@/components/static-map';
 import { ScreenHeader } from '@/components/screen-header';
 import { Button } from '@/components/ui/button';
@@ -19,6 +20,7 @@ import { Notice } from '@/components/ui/notice';
 import { Screen } from '@/components/ui/screen';
 import { SectionTitle } from '@/components/ui/section-title';
 import { toMalayError } from '@/lib/errors';
+import { fetchEventExtraInfo, type EventExtraInfo } from '@/lib/event-extra-info';
 import { navigationUrl } from '@/lib/google-maps';
 import { useGoBack } from '@/lib/navigation';
 import {
@@ -57,6 +59,8 @@ export default function EventInfoScreen() {
 
   const [event, setEvent] = useState<EventDirectoryRow | null>(null);
   const [loading, setLoading] = useState(true);
+  /** Maklumat tambahan (penerangan / poster lain); `null` bila tiada atau gagal dibaca — bahagian tidak dipapar. */
+  const [extraInfo, setExtraInfo] = useState<EventExtraInfo | null>(null);
 
   // --- RSVP -------------------------------------------------------------------
   const [myRsvp, setMyRsvpState] = useState<MyRsvp | null>(null);
@@ -137,9 +141,12 @@ export default function EventInfoScreen() {
           // Jawapan sedia ada tidak kritikal: gagal dibaca bermakna butang tidak disorot, bukan skrin rosak.
           fetchMyRsvp(id).catch(() => null),
         ]);
+        // Maklumat tambahan pilihan juga — gagal dibaca bermakna bahagiannya tidak dipapar, bukan skrin rosak.
+        const extra = await fetchEventExtraInfo(id).catch(() => null);
         if (active) {
           setEvent(rows.find((row) => row.id === id) ?? null);
           setMyRsvpState(mine);
+          setExtraInfo(extra);
         }
       } catch {
         if (active) setEvent(null);
@@ -325,7 +332,7 @@ export default function EventInfoScreen() {
           </>
         ) : null}
 
-        <View className="pb-8">
+        <View>
           <SectionTitle title="Maklumat" />
           <Card>
             <View className="gap-4">
@@ -370,8 +377,45 @@ export default function EventInfoScreen() {
             </View>
           ) : null}
         </View>
+
+        {/* --- Maklumat Tambahan: paling akhir, selepas Navigasi. Tiada maklumat, tiada bahagian. --- */}
+        {extraInfo ? (
+          <View className="pb-8">
+            <SectionTitle title="Maklumat Tambahan" />
+            <View className="gap-4">
+              {extraInfo.description ? (
+                <Card>
+                  <LinkifiedText className="text-base leading-6 text-ink">{extraInfo.description}</LinkifiedText>
+                </Card>
+              ) : null}
+              {extraInfo.poster_urls.map((uri, index) => (
+                <ExtraPoster key={uri} uri={uri} label={'Poster tambahan ' + (index + 1) + ' — ' + event.name} />
+              ))}
+            </View>
+          </View>
+        ) : (
+          <View className="pb-8" />
+        )}
       </View>
     </Screen>
+  );
+}
+
+/** Poster tambahan dipapar PENUH (tidak dipotong) — nisbah diambil daripada gambar sebaik ia dimuatkan. */
+function ExtraPoster({ uri, label }: { uri: string; label: string }) {
+  const [ratio, setRatio] = useState(3 / 4);
+  return (
+    <Image
+      source={{ uri }}
+      style={{ width: '100%', aspectRatio: ratio, borderRadius: 20 }}
+      contentFit="cover"
+      transition={150}
+      accessibilityLabel={label}
+      onLoad={(loaded) => {
+        const { width, height } = loaded.source;
+        if (width > 0 && height > 0) setRatio(width / height);
+      }}
+    />
   );
 }
 

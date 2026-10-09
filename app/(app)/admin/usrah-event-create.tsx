@@ -22,6 +22,8 @@ import { useProgramAccess, useUsrahAccess } from '@/lib/department-access';
 import { toMalayError } from '@/lib/errors';
 import { pickImage } from '@/lib/image-upload';
 import { useGoBack } from '@/lib/navigation';
+import { EventExtraInfoEditor } from '@/components/event-extra-info-editor';
+import { EMPTY_EXTRA_DRAFT, saveEventExtraInfo, type ExtraInfoDraft } from '@/lib/event-extra-info';
 import { createUsrahEvent, uploadEventPoster } from '@/lib/usrah-events';
 import {
   EVENT_MODE_OPTIONS,
@@ -100,6 +102,8 @@ export default function UsrahEventCreateScreen() {
 
   /** URI tempatan; poster hanya dimuat naik SELEPAS acara wujud. */
   const [posterUri, setPosterUri] = useState<string | null>(null);
+  /** Maklumat tambahan (penerangan + poster lain) — togel, lalai tutup; disimpan selepas acara wujud. */
+  const [extra, setExtra] = useState<ExtraInfoDraft>(EMPTY_EXTRA_DRAFT);
 
   const [banner, setBanner] = useState<{ tone: 'negative' | 'info' } & { message: string } | null>(null);
   const [saving, setSaving] = useState(false);
@@ -185,9 +189,23 @@ export default function UsrahEventCreateScreen() {
         }
       }
 
+      // Maklumat tambahan: langkah berasingan juga — kegagalannya tidak membatalkan acara.
+      let extraError: string | null = null;
+      if (extra.enabled && (extra.description.trim() || extra.posters.length > 0)) {
+        try {
+          await saveEventExtraInfo(event.id, extra);
+        } catch (caught) {
+          extraError = toMalayError(caught, 'Ralat tidak diketahui.');
+        }
+      }
+
       router.replace({
         pathname: '/(app)/admin/usrah-event-detail',
-        params: posterError ? { id: event.id, posterError } : { id: event.id },
+        params: {
+          id: event.id,
+          ...(posterError ? { posterError } : {}),
+          ...(extraError ? { extraError } : {}),
+        },
       });
     } catch (caught) {
       setBanner({ tone: 'negative', message: toMalayError(caught, 'Gagal mencipta acara.') });
@@ -199,6 +217,7 @@ export default function UsrahEventCreateScreen() {
     endDate,
     endTime,
     eventMode,
+    extra,
     eventType,
     gantiMonth,
     gantiUsrah,
@@ -405,6 +424,11 @@ export default function UsrahEventCreateScreen() {
               onPress={() => void choosePoster()}
             />
           </View>
+        </View>
+
+        <View>
+          <SectionTitle title="Maklumat Tambahan" />
+          <EventExtraInfoEditor value={extra} onChange={setExtra} disabled={saving} />
         </View>
 
         {/*

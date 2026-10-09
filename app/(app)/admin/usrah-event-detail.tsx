@@ -3,6 +3,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { Switch, Text, View } from 'react-native';
 
+import { EventExtraInfoEditor } from '@/components/event-extra-info-editor';
 import { EventQrCard } from '@/components/event-qr-card';
 import { LocationPicker } from '@/components/location-picker';
 import { SaveShareButtons } from '@/components/save-share-buttons';
@@ -25,6 +26,13 @@ import { ToggleRow } from '@/components/ui/toggle-row';
 import { ToastBanner } from '@/components/ui/toast';
 import { useProgramAccess, useUsrahAccess } from '@/lib/department-access';
 import { toMalayError } from '@/lib/errors';
+import {
+  EMPTY_EXTRA_DRAFT,
+  draftFromInfo,
+  fetchEventExtraInfo,
+  saveEventExtraInfo,
+  type ExtraInfoDraft,
+} from '@/lib/event-extra-info';
 import { deliveryMessage, type DeliveryMode } from '@/lib/file-delivery';
 import { pickImage } from '@/lib/image-upload';
 import { useGoBack } from '@/lib/navigation';
@@ -54,8 +62,11 @@ export default function UsrahEventDetailScreen() {
   const colors = useColors();
   const goBack = useGoBack();
   const router = useRouter();
-  /** `posterError`: dihantar oleh skrin cipta bila acara tercipta tetapi posternya gagal dimuat naik. */
-  const { id, posterError } = useLocalSearchParams<{ id?: string; posterError?: string }>();
+  /**
+   * `posterError` / `extraError`: dihantar oleh skrin cipta bila acara tercipta tetapi poster
+   * (atau maklumat tambahan) gagal disimpan.
+   */
+  const { id, posterError, extraError } = useLocalSearchParams<{ id?: string; posterError?: string; extraError?: string }>();
   /*
     Kebenaran diambil daripada KEDUA-DUA department kerana skrin ini melayan
     kedua-dua jenis acara, dan baris yang dimuatkan sendiri yang menentukan yang
@@ -71,6 +82,12 @@ export default function UsrahEventDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [banner, setBanner] = useState<Banner>(null);
   const [busy, setBusy] = useState(false);
+
+  // --- Maklumat tambahan (penerangan + poster lain) ---------------------------
+  const [extra, setExtra] = useState<ExtraInfoDraft>(EMPTY_EXTRA_DRAFT);
+  /** Poster tambahan yang sedang tersimpan — untuk membuang fail yang digantikan/dibuang. */
+  const [extraSavedUrls, setExtraSavedUrls] = useState<string[]>([]);
+  const [extraBusy, setExtraBusy] = useState(false);
 
   // --- Suntingan asas ---------------------------------------------------------
   const [name, setName] = useState('');
@@ -247,6 +264,41 @@ export default function UsrahEventDetailScreen() {
     [event, rsvpBusy],
   );
 
+  // Dimuat selepas acara ada; gagal membaca (cth. belum ada) = togel tutup, bukan skrin rosak.
+  const extraEventId = event?.id;
+  useEffect(() => {
+    if (!extraEventId) return;
+    let active = true;
+    fetchEventExtraInfo(extraEventId)
+      .then((info) => {
+        if (!active) return;
+        setExtra(draftFromInfo(info));
+        setExtraSavedUrls(info?.poster_urls ?? []);
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [extraEventId]);
+
+  const saveExtra = useCallback(async () => {
+    if (!event || extraBusy) return;
+
+    setBanner(null);
+    setExtraBusy(true);
+    try {
+      await saveEventExtraInfo(event.id, extra, extraSavedUrls);
+      const fresh = await fetchEventExtraInfo(event.id);
+      setExtra(draftFromInfo(fresh));
+      setExtraSavedUrls(fresh?.poster_urls ?? []);
+      setBanner({ tone: 'positive', message: 'Maklumat tambahan telah disimpan.' });
+    } catch (caught) {
+      setBanner({ tone: 'negative', message: toMalayError(caught, 'Gagal menyimpan maklumat tambahan.') });
+    } finally {
+      setExtraBusy(false);
+    }
+  }, [event, extra, extraBusy, extraSavedUrls]);
+
   const changePoster = useCallback(async () => {
     if (!event || busy) return;
 
@@ -331,6 +383,17 @@ export default function UsrahEventDetailScreen() {
               EVENT_TYPE_LABEL[event.event_type].toLowerCase() +
               ' berjaya dicipta dan kod QR di bawah sudah sah. Cuba muat naik poster semula di bahagian Poster. Punca: ' +
               posterError
+            }
+          />
+        ) : null}
+
+        {extraError ? (
+          <Notice
+            tone="warn"
+            message={
+              EVENT_TYPE_LABEL[event.event_type] +
+              ' berjaya dicipta, tetapi maklumat tambahan gagal disimpan. Cuba lagi di bahagian Maklumat Tambahan. Punca: ' +
+              extraError
             }
           />
         ) : null}
@@ -476,6 +539,25 @@ export default function UsrahEventDetailScreen() {
             </View>
           ) : null}
         </View>
+
+        {/* --- Maklumat Tambahan --------------------------------------------- */}
+        {canEdit || extra.enabled ? (
+          <View>
+            <SectionTitle title="Maklumat Tambahan" />
+            <EventExtraInfoEditor value={extra} onChange={setExtra} disabled={!canEdit || extraBusy} />
+            {canEdit ? (
+              <View className="pt-3">
+                <Button
+                  label="Simpan Maklumat Tambahan"
+                  variant="secondary"
+                  loading={extraBusy}
+                  disabled={extraBusy}
+                  onPress={() => void saveExtra()}
+                />
+              </View>
+            ) : null}
+          </View>
+        ) : null}
 
         {/* --- Lokasi -------------------------------------------------------- */}
         <View>
