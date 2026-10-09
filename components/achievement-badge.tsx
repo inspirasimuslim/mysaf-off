@@ -33,7 +33,7 @@ function items(rank: MyActivityRank): Item[] {
   return [
     { label: 'Yuran', done: rank.yuran_lunas },
     { label: 'PIPIS', done: rank.pipis_sumbang },
-    { label: 'Usrah ' + rank.usrah_bulan + 'b', done: rank.usrah_bulan > 0 },
+    { label: 'Usrah ' + rank.usrah_bulan + ' bulan', done: rank.usrah_bulan > 0 },
     { label: 'Komitmen Ikhwan', done: rank.ada_jawatan_org },
     { label: 'Komitmen PAS', done: rank.ada_jawatan_pas },
   ];
