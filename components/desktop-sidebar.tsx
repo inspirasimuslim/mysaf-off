@@ -48,7 +48,7 @@ const PARENT: Record<string, string> = {
 export function DesktopSidebar() {
   const router = useRouter();
   const pathname = usePathname();
-  const { isAdmin, isActiveNaqib } = usePermissions();
+  const { isAdmin, isActiveNaqib, isKawasanAdmin } = usePermissions();
 
   const first = pathname.split('/').filter(Boolean)[0] ?? 'dashboard';
   const current = PARENT[first] ?? first;
@@ -81,7 +81,7 @@ export function DesktopSidebar() {
       </View>
 
       <View className="mx-3 gap-0.5 border-t border-line pb-4 pt-3">
-        {isAdmin() || isActiveNaqib() ? (
+        {isAdmin() || isActiveNaqib() || isKawasanAdmin() ? (
           <SidebarLink
             label="Hub Admin"
             icon="shield-half-outline"

@@ -16,7 +16,7 @@ import {
   type LiveAttendee,
   type LiveStatus,
 } from '@/lib/attendance-live';
-import { useProgramAccess, useUsrahAccess } from '@/lib/department-access';
+import { useProgramAccess, useUsrahKawasanAccess } from '@/lib/department-access';
 import { toMalayError } from '@/lib/errors';
 import { useGoBack } from '@/lib/navigation';
 import { useResetScrollOnFocus } from '@/lib/scroll-reset';
@@ -52,7 +52,7 @@ export default function EventAttendanceLiveScreen() {
   const { width } = useWindowDimensions();
   const { id } = useLocalSearchParams<{ id?: string }>();
 
-  const usrahAccess = useUsrahAccess();
+  const usrahAccess = useUsrahKawasanAccess();
   const programAccess = useProgramAccess();
   const accessLoading = usrahAccess.loading || programAccess.loading;
 

@@ -13,11 +13,11 @@ import { Screen } from '@/components/ui/screen';
 import { SectionTitle } from '@/components/ui/section-title';
 import { TextField } from '@/components/ui/text-field';
 import { ToastBanner } from '@/components/ui/toast';
-import { useUsrahAccess } from '@/lib/department-access';
+import { useUsrahKawasanAccess } from '@/lib/department-access';
 import { toMalayErrorVerbose } from '@/lib/errors';
 import { createKumpulanUsrah, fetchKumpulanUsrahOverview } from '@/lib/kumpulan-usrah';
 import { useGoBack } from '@/lib/navigation';
-import { KAWASAN_USRAH_OPTIONS, kawasanUsrahLabel, type KumpulanUsrahOverview } from '@/types/database';
+import { kawasanUsrahLabel, type KumpulanUsrahOverview } from '@/types/database';
 import { useColors } from '@/lib/theme';
 
 type Banner = { tone: 'positive' | 'info' | 'negative'; message: string } | null;
@@ -32,7 +32,7 @@ export default function KumpulanUsrahScreen() {
   const colors = useColors();
   const router = useRouter();
   const goBack = useGoBack();
-  const { loading: accessLoading, canView, canEdit } = useUsrahAccess();
+  const { loading: accessLoading, canView, canEdit, kawasanOptions } = useUsrahKawasanAccess();
 
   const [rows, setRows] = useState<KumpulanUsrahOverview[]>([]);
   const [loading, setLoading] = useState(true);
@@ -163,7 +163,7 @@ export default function KumpulanUsrahScreen() {
         dismissable={!createBusy}
         onClose={() => setCreating(false)}>
         <View className="gap-4">
-          <PickerField label="Kawasan" value={newKawasan} options={KAWASAN_USRAH_OPTIONS} onChange={setNewKawasan} clearable={false} />
+          <PickerField label="Kawasan" value={newKawasan} options={kawasanOptions} onChange={setNewKawasan} clearable={false} />
           <TextField label="Nama Kumpulan" placeholder="cth: Kumpulan 1" value={newNama} onChangeText={setNewNama} editable={!createBusy} />
           <Button
             label="Cipta Kumpulan"

@@ -17,7 +17,7 @@ import { SectionTitle } from '@/components/ui/section-title';
 import { TextField } from '@/components/ui/text-field';
 import { ToggleRow } from '@/components/ui/toggle-row';
 import { ToastBanner } from '@/components/ui/toast';
-import { useUsrahAccess } from '@/lib/department-access';
+import { useUsrahKawasanAccess } from '@/lib/department-access';
 import { toMalayError } from '@/lib/errors';
 import { downloadEventAttendance } from '@/lib/event-attendance-report';
 import { deliveryMessage, type DeliveryMode } from '@/lib/file-delivery';
@@ -41,7 +41,7 @@ export default function UsrahEventsScreen() {
   const router = useRouter();
   const desktop = useIsDesktop();
   const goBack = useGoBack();
-  const { loading: accessLoading, canView, canEdit } = useUsrahAccess();
+  const { loading: accessLoading, canView, canEdit, viewAll } = useUsrahKawasanAccess();
 
   const [events, setEvents] = useState<UsrahEvent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -227,6 +227,8 @@ export default function UsrahEventsScreen() {
           Eksport ialah bacaan, jadi `can_view` sudah memadai — admin yang hanya
           menyemak tidak perlu kebenaran menulis untuk mengeluarkan laporan.
         */}
+        {/* Laporan tahunan merentas SEMUA kawasan — admin kawasan tidak dipaparkan (RPC-nya Lajnah Tarbiah sahaja). */}
+        {viewAll ? (
         <View className="pb-8">
           <SectionTitle
             title="Muat Turun Laporan"
@@ -251,6 +253,7 @@ export default function UsrahEventsScreen() {
             </View>
           </Card>
         </View>
+        ) : null}
       </View>
 
       <EventDeleteModal

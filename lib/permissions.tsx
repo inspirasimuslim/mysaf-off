@@ -40,6 +40,9 @@ export type PermissionsState = {
    * sendiri; lihat `_layout.tsx` dan `screen-header.tsx`.
    */
   isActiveNaqib: () => boolean;
+  /** Kawasan usrah yang ditadbir akaun ini (`usrah_kawasan_admins`, migration 147) — kosong bagi bukan admin kawasan. */
+  kawasanAreas: string[];
+  isKawasanAdmin: () => boolean;
 };
 
 const EMPTY: PermissionsState = {
@@ -55,6 +58,8 @@ const EMPTY: PermissionsState = {
   canView: () => false,
   canEdit: () => false,
   isActiveNaqib: () => false,
+  kawasanAreas: [],
+  isKawasanAdmin: () => false,
 };
 
 const PermissionsContext = createContext<PermissionsState>(EMPTY);
@@ -66,6 +71,7 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [assignments, setAssignments] = useState<AdminAssignment[]>([]);
   const [activeNaqib, setActiveNaqib] = useState(false);
+  const [kawasanAreas, setKawasanAreas] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -79,6 +85,7 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
       setProfile(null);
       setAssignments([]);
       setActiveNaqib(false);
+      setKawasanAreas([]);
       setError(null);
       setLoading(false);
       return;
@@ -86,7 +93,7 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
 
     setLoading(true);
     try {
-      const [profileResult, assignmentResult, naqibResult] = await Promise.all([
+      const [profileResult, assignmentResult, naqibResult, kawasanResult] = await Promise.all([
         supabase.from('profiles').select('id, email, full_name, role').eq('id', uid).maybeSingle(),
         supabase.from('admin_assignments').select('id, user_id, department_id, can_view, can_edit').eq('user_id', uid),
         // Kegagalan RPC ini tidak boleh menggagalkan keseluruhan bacaan kebenaran —
@@ -94,6 +101,11 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
         supabase.rpc('is_active_naqib').then(
           (result) => result,
           () => ({ data: false, error: null }),
+        ),
+        // Sama: kegagalan hanya bermakna "bukan admin kawasan", bukan kegagalan kebenaran.
+        supabase.rpc('my_usrah_kawasan').then(
+          (result) => result,
+          () => ({ data: [], error: null }),
         ),
       ]);
 
@@ -106,12 +118,14 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
       setProfile((profileResult.data as Profile | null) ?? null);
       setAssignments((assignmentResult.data as AdminAssignment[] | null) ?? []);
       setActiveNaqib(Boolean(naqibResult.data));
+      setKawasanAreas(Array.isArray(kawasanResult.data) ? (kawasanResult.data as string[]) : []);
       setError(null);
     } catch (caught) {
       if (activeUser.current !== uid) return;
       setProfile(null);
       setAssignments([]);
       setActiveNaqib(false);
+      setKawasanAreas([]);
       setError(toMalayError(caught, 'Gagal membaca kebenaran akaun.'));
     } finally {
       if (activeUser.current === uid) setLoading(false);
@@ -148,8 +162,10 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
       canView: (departmentId: string) => superAdmin || Boolean(find(departmentId)?.can_view),
       canEdit: (departmentId: string) => superAdmin || Boolean(find(departmentId)?.can_edit),
       isActiveNaqib: () => activeNaqib,
+      kawasanAreas,
+      isKawasanAdmin: () => kawasanAreas.length > 0,
     };
-  }, [activeNaqib, assignments, error, loading, profile, refresh]);
+  }, [activeNaqib, kawasanAreas, assignments, error, loading, profile, refresh]);
 
   return <PermissionsContext.Provider value={value}>{children}</PermissionsContext.Provider>;
 }

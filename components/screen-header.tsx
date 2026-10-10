@@ -43,7 +43,7 @@ type Props = {
 export function ScreenHeader({ title, eyebrow, subtitle, leading, onBackPress }: Props) {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { isAdmin, isActiveNaqib } = usePermissions();
+  const { isAdmin, isActiveNaqib, isKawasanAdmin } = usePermissions();
   const desktop = useIsDesktop();
   // Panel kanan: kepala padat, tiada anak panah kembali (panel kiri ialah senarainya).
   const embedded = useEmbedded();
@@ -81,7 +81,7 @@ export function ScreenHeader({ title, eyebrow, subtitle, leading, onBackPress }:
             baginya — lihat `admin/index.tsx`). Ikon perisai sengaja berbeza
             daripada gear supaya dua pintu itu tidak dikelirukan.
           */}
-          {isAdmin() || isActiveNaqib() ? (
+          {isAdmin() || isActiveNaqib() || isKawasanAdmin() ? (
             <HeaderIcon icon="shield-half-outline" label="Hub Admin" onPress={() => router.navigate('/(app)/admin')} badge />
           ) : null}
           <HeaderIcon icon="settings-outline" label="Tetapan" onPress={() => router.navigate('/(app)/tetapan')} />

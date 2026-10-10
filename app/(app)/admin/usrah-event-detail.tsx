@@ -24,7 +24,7 @@ import { StepperField } from '@/components/ui/stepper-field';
 import { TextField } from '@/components/ui/text-field';
 import { ToggleRow } from '@/components/ui/toggle-row';
 import { ToastBanner } from '@/components/ui/toast';
-import { useProgramAccess, useUsrahAccess } from '@/lib/department-access';
+import { useProgramAccess, useUsrahKawasanAccess } from '@/lib/department-access';
 import { toMalayError } from '@/lib/errors';
 import {
   EMPTY_EXTRA_DRAFT,
@@ -73,7 +73,7 @@ export default function UsrahEventDetailScreen() {
     mana terpakai. RLS sudah menghalang bacaan silang jenis, jadi semakan di sini
     hanya menentukan sama ada butang sunting dipapar.
   */
-  const usrahAccess = useUsrahAccess();
+  const usrahAccess = useUsrahKawasanAccess();
   const programAccess = useProgramAccess();
   const accessLoading = usrahAccess.loading || programAccess.loading;
   const canView = usrahAccess.canView || programAccess.canView;

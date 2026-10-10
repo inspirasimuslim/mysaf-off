@@ -37,6 +37,9 @@ function NoAccess() {
  * kebenaran department melalui `useMemberAccess()`. Menguatkuasakan
  * Super Admin di sini akan menutup pintu kepada admin department yang sah.
  *
+ * `isKawasanAdmin()` (admin usrah kawasan, migration 147) turut dibenarkan: Hub
+ * memaparkan seksyen "Usrah Kawasan Saya" sahaja baginya.
+ *
  * `isActiveNaqib()` turut dibenarkan masuk: naqib boleh jadi bukan admin
  * department mana-mana pun, tetapi masih memerlukan Hub Admin untuk sampai ke
  * "Kumpulan Usrah Saya" (`admin/index.tsx`) dan skrin kumpulannya sendiri.
@@ -45,7 +48,7 @@ function NoAccess() {
  */
 export default function AdminLayout() {
   const colors = useColors();
-  const { loading, isAdmin, isActiveNaqib, isOwner } = usePermissions();
+  const { loading, isAdmin, isActiveNaqib, isKawasanAdmin, isOwner } = usePermissions();
   const pathname = usePathname();
 
   if (loading) return <LoadingScreen />;
@@ -53,7 +56,7 @@ export default function AdminLayout() {
   if (isOwner() && !isAdmin() && (pathname.endsWith('/owner-recovery') || pathname.endsWith('/activity-log'))) {
     return <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }} />;
   }
-  if (!isAdmin() && !isActiveNaqib()) return <NoAccess />;
+  if (!isAdmin() && !isActiveNaqib() && !isKawasanAdmin()) return <NoAccess />;
 
   return <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }} />;
 }

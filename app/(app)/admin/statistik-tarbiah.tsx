@@ -17,7 +17,7 @@ import { Card } from '@/components/ui/card';
 import { LoadingScreen } from '@/components/ui/loading-screen';
 import { PickerField } from '@/components/ui/picker-field';
 import { Segmented } from '@/components/ui/segmented';
-import { useUsrahAccess } from '@/lib/department-access';
+import { useUsrahKawasanAccess } from '@/lib/department-access';
 import { useStat, type AttendanceCell, type TarbiahStat } from '@/lib/statistik';
 import { KAWASAN_USRAH_OPTIONS, generationLabel } from '@/types/database';
 
@@ -61,7 +61,7 @@ function detailFor(cells: AttendanceCell[]) {
  * ahli yang ADA rekod bulan itu (bulan tanpa rekod tidak dikira sebagai 0%).
  */
 export default function StatistikTarbiahScreen() {
-  const access = useUsrahAccess();
+  const access = useUsrahKawasanAccess();
   const { year, setYear, data, loading, error, reload } = useStat<TarbiahStat>('stat_tarbiah', access.canView);
 
   const [kawasan, setKawasan] = useState(ALL);

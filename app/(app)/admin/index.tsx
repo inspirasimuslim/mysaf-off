@@ -22,6 +22,7 @@ import {
 import { useGoBack } from '@/lib/navigation';
 import { ORG_CHART_DEPARTMENT } from '@/lib/org-chart';
 import { usePermissions } from '@/lib/permissions';
+import { kawasanUsrahLabel } from '@/types/database';
 
 /**
  * Hub Admin — satu-satunya pintu masuk ke panel pentadbiran.
@@ -43,7 +44,7 @@ import { usePermissions } from '@/lib/permissions';
 export default function AdminHubScreen() {
   const router = useRouter();
   const goBack = useGoBack();
-  const { isSuperAdmin, isActiveNaqib, loading: permissionsLoading } = usePermissions();
+  const { isSuperAdmin, isActiveNaqib, kawasanAreas, loading: permissionsLoading } = usePermissions();
   const memberAccess = useMemberAccess();
   const usrahAccess = useUsrahAccess();
   const programAccess = useProgramAccess();
@@ -57,6 +58,8 @@ export default function AdminHubScreen() {
 
   const superAdmin = isSuperAdmin();
   const naqib = isActiveNaqib();
+  // Admin kawasan yang BUKAN admin LAJNAH TARBIAH: seksyen Tarbiah penuh tidak dipaparkan, ganti dengan seksyen kawasannya.
+  const kawasanOnly = kawasanAreas.length > 0 && !usrahAccess.canView;
 
   /*
     Setiap department dimuat berasingan. Seksyen dipasang hanya selepas
@@ -90,6 +93,7 @@ export default function AdminHubScreen() {
     perkaderanAccess.canView,
     kebajikanAccess.canView,
     naqib,
+    kawasanOnly,
   ].filter(Boolean).length;
   const nothingAvailable = visibleSections === 0;
   const openByDefault = visibleSections === 1;
@@ -240,11 +244,38 @@ export default function AdminHubScreen() {
           daripada modul ahli di atas, jadi seorang admin boleh melihat satu
           bahagian tanpa yang satu lagi.
         */}
+        {kawasanOnly ? (
+          <CollapsibleSection
+            variant="plain"
+            title={'Usrah Kawasan Saya (' + kawasanAreas.map((kod) => kawasanUsrahLabel(kod)).join(', ') + ')'}
+            count={3}
+            defaultOpen={openByDefault}>
+            <ActionRow
+              icon="qr-code-outline"
+              title="Program Usrah"
+              subtitle="Cipta dan urus sesi usrah kawasan anda, jana kod QR"
+              onPress={() => router.push('/(app)/admin/usrah-events')}
+            />
+            <ActionRow
+              icon="people-outline"
+              title="Kumpulan Usrah"
+              subtitle="Urus kumpulan usrah, ahli dan naqib kawasan anda"
+              onPress={() => router.push('/(app)/admin/kumpulan-usrah')}
+            />
+            <ActionRow
+              icon="stats-chart-outline"
+              title="Statistik Tarbiah"
+              subtitle="Kehadiran dan taburan ahli kawasan anda"
+              onPress={() => router.push('/(app)/admin/statistik-tarbiah')}
+            />
+          </CollapsibleSection>
+        ) : null}
+
         {usrahAccess.canView ? (
           <CollapsibleSection
             variant="plain"
             title="Tarbiah"
-            count={usrahAccess.canEdit ? 6 : 3}
+            count={usrahAccess.canEdit ? 7 : 3}
             defaultOpen={openByDefault}>
             <ActionRow
               icon="qr-code-outline"
@@ -286,6 +317,15 @@ export default function AdminHubScreen() {
                 title="Muat Naik Kumpulan Usrah"
                 subtitle="Import senarai kumpulan, ahli dan naqib dari fail Excel"
                 onPress={() => router.push('/(app)/admin/kumpulan-usrah-upload')}
+              />
+            ) : null}
+
+            {usrahAccess.canEdit ? (
+              <ActionRow
+                icon="key-outline"
+                title="Admin Usrah Kawasan"
+                subtitle="Lantik beberapa admin bagi setiap kawasan — mereka hanya boleh urus kawasan sendiri"
+                onPress={() => router.push('/(app)/admin/admin-kawasan')}
               />
             ) : null}
 

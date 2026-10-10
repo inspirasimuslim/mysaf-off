@@ -18,7 +18,7 @@ import { StepperField } from '@/components/ui/stepper-field';
 import { TextField } from '@/components/ui/text-field';
 import { ToggleRow } from '@/components/ui/toggle-row';
 import { ToastBanner } from '@/components/ui/toast';
-import { useProgramAccess, useUsrahAccess } from '@/lib/department-access';
+import { useProgramAccess, useUsrahKawasanAccess } from '@/lib/department-access';
 import { toMalayError } from '@/lib/errors';
 import { pickImage } from '@/lib/image-upload';
 import { useGoBack } from '@/lib/navigation';
@@ -27,7 +27,6 @@ import { EMPTY_EXTRA_DRAFT, saveEventExtraInfo, type ExtraInfoDraft } from '@/li
 import { createUsrahEvent, uploadEventPoster } from '@/lib/usrah-events';
 import {
   EVENT_MODE_OPTIONS,
-  KAWASAN_USRAH_OPTIONS,
   MONTH_NAMES,
   MONTH_OPTIONS,
   usrahEventName,
@@ -73,7 +72,7 @@ export default function UsrahEventCreateScreen() {
   const params = useLocalSearchParams<{ type?: string }>();
   const eventType = params.type === 'program' ? 'program' : 'usrah';
 
-  const usrahAccess = useUsrahAccess();
+  const usrahAccess = useUsrahKawasanAccess();
   const programAccess = useProgramAccess();
   const accessLoading = eventType === 'usrah' ? usrahAccess.loading : programAccess.loading;
 
@@ -279,7 +278,7 @@ export default function UsrahEventCreateScreen() {
                 <PickerField
                   label="Kawasan usrah"
                   value={kawasan}
-                  options={KAWASAN_USRAH_OPTIONS}
+                  options={usrahAccess.kawasanOptions}
                   onChange={setKawasan}
                   disabled={saving}
                   clearable={false}

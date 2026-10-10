@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 
 import { fetchDepartments } from './admin';
+import { KAWASAN_USRAH_OPTIONS } from '@/types/database';
+
 import { usePermissions } from './permissions';
 
 /**
@@ -169,4 +171,38 @@ export function useKebajikanAccess(): DepartmentAccess {
 /** Pintasan untuk modul Usrah Sekolah (Naqib/Naqibah). */
 export function usePerkaderanAccess(): DepartmentAccess {
   return useDepartmentAccess(PERKADERAN_DEPARTMENT);
+}
+
+/**
+ * Akses modul Usrah yang sedar-kawasan (migration 147).
+ *
+ * `canView`/`canEdit` benar bagi admin LAJNAH TARBIAH/Super Admin (SEMUA kawasan)
+ * ATAU admin kawasan (kawasan dilantik sahaja). Skrin yang memakainya
+ * mendapat baris yang sudah ditapis oleh RLS/RPC; `kawasanOptions` ialah
+ * senarai kawasan yang boleh dipilih apabila MENCIPTA sesuatu (admin kawasan
+ * tidak boleh mencipta untuk kawasan lain — pangkalan data menolaknya juga).
+ *
+ * Bukan pengganti `useUsrahAccess()`: skrin yang tetap eksklusif Lajnah Tarbiah
+ * (kehadiran bulanan, import pukal, pelantikan rais) terus memakai yang asal.
+ */
+export function useUsrahKawasanAccess() {
+  const dept = useUsrahAccess();
+  const { loading: permissionsLoading, kawasanAreas } = usePermissions();
+
+  const loading = dept.loading || permissionsLoading;
+  const editAll = dept.canEdit;
+
+  return {
+    loading,
+    canView: dept.canView || kawasanAreas.length > 0,
+    canEdit: dept.canEdit || kawasanAreas.length > 0,
+    /** Boleh melihat SEMUA kawasan (Lajnah Tarbiah/Super Admin) — laporan tahunan merentas kawasan hanya untuk mereka. */
+    viewAll: dept.canView,
+    /** `true` jika boleh melihat/menyunting SEMUA kawasan (Lajnah Tarbiah/Super Admin). */
+    editAll,
+    areas: kawasanAreas,
+    kawasanOptions: editAll
+      ? KAWASAN_USRAH_OPTIONS
+      : KAWASAN_USRAH_OPTIONS.filter((option) => kawasanAreas.includes(option.value)),
+  };
 }

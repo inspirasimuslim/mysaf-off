@@ -15,7 +15,7 @@ import { SectionTitle } from '@/components/ui/section-title';
 import { SelectRow } from '@/components/ui/select-row';
 import { TextField } from '@/components/ui/text-field';
 import { ToastBanner } from '@/components/ui/toast';
-import { useUsrahAccess } from '@/lib/department-access';
+import { useUsrahKawasanAccess } from '@/lib/department-access';
 import { toMalayErrorVerbose } from '@/lib/errors';
 import {
   addKumpulanUsrahNaqib,
@@ -38,7 +38,7 @@ export default function KumpulanUsrahDetailScreen() {
   const router = useRouter();
   const goBack = useGoBack();
   const { id } = useLocalSearchParams<{ id?: string }>();
-  const { loading: accessLoading, canView, canEdit } = useUsrahAccess();
+  const { loading: accessLoading, canView, canEdit } = useUsrahKawasanAccess();
 
   const [all, setAll] = useState<KumpulanUsrahOverview[]>([]);
   const [candidates, setCandidates] = useState<MemberPickerRow[]>([]);
