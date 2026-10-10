@@ -3,7 +3,7 @@ import { Image } from 'expo-image';
 import { usePathname, useRouter, type Href } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
 
-import { SidebarNotificationLink } from '@/components/notification-bell';
+import { NotificationBadge } from '@/components/admin-notifications-ui';
 import { usePermissions } from '@/lib/permissions';
 import { useColors } from '@/lib/theme';
 
@@ -81,12 +81,12 @@ export function DesktopSidebar() {
       </View>
 
       <View className="mx-3 gap-0.5 border-t border-line pb-4 pt-3">
-        {isAdmin() ? <SidebarNotificationLink /> : null}
         {isAdmin() || isActiveNaqib() ? (
           <SidebarLink
             label="Hub Admin"
             icon="shield-half-outline"
             focused={current === 'admin'}
+            badge
             onPress={() => router.navigate('/(app)/admin')}
           />
         ) : null}
@@ -106,11 +106,13 @@ function SidebarLink({
   icon,
   focused,
   onPress,
+  badge = false,
 }: {
   label: string;
   icon: IconName;
   focused: boolean;
   onPress: () => void;
+  badge?: boolean;
 }) {
   const colors = useColors();
   return (
@@ -125,9 +127,10 @@ function SidebarLink({
           : 'border-transparent active:bg-primary-tint hover:bg-background'
       }`}>
       <Ionicons name={icon} size={18} color={focused ? colors.primary : colors.inkMuted} />
-      <Text className={`text-sm ${focused ? 'font-semibold text-primary' : 'font-medium text-ink-muted'}`}>
+      <Text className={`flex-1 text-sm ${focused ? 'font-semibold text-primary' : 'font-medium text-ink-muted'}`}>
         {label}
       </Text>
+      {badge ? <NotificationBadge inline /> : null}
     </Pressable>
   );
 }

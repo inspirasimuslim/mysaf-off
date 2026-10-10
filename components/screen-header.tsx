@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { NotificationBell } from '@/components/notification-bell';
+import { NotificationBadge } from '@/components/admin-notifications-ui';
 import { usePermissions } from '@/lib/permissions';
 import { useEmbedded } from '@/components/ui/split-pane';
 import { useIsDesktop } from '@/lib/use-desktop';
@@ -81,10 +81,8 @@ export function ScreenHeader({ title, eyebrow, subtitle, leading, onBackPress }:
             baginya — lihat `admin/index.tsx`). Ikon perisai sengaja berbeza
             daripada gear supaya dua pintu itu tidak dikelirukan.
           */}
-          {/* Loceng: admin sahaja (naqib biasa tiada tugasan semakan), bersebelahan perisai. */}
-          {isAdmin() ? <NotificationBell /> : null}
           {isAdmin() || isActiveNaqib() ? (
-            <HeaderIcon icon="shield-half-outline" label="Hub Admin" onPress={() => router.navigate('/(app)/admin')} />
+            <HeaderIcon icon="shield-half-outline" label="Hub Admin" onPress={() => router.navigate('/(app)/admin')} badge />
           ) : null}
           <HeaderIcon icon="settings-outline" label="Tetapan" onPress={() => router.navigate('/(app)/tetapan')} />
         </View>
@@ -98,11 +96,14 @@ function HeaderIcon({
   icon,
   label,
   onPress,
+  badge = false,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
   /** Label pembaca skrin — ikon sahaja tidak mencukupi. */
   label: string;
   onPress: () => void;
+  /** Penanda tugasan tertunggak (notifikasi admin) di penjuru ikon. */
+  badge?: boolean;
 }) {
   const colors = useColors();
   return (
@@ -113,6 +114,7 @@ function HeaderIcon({
       onPress={onPress}
       className="h-11 w-11 items-center justify-center rounded-pill bg-white/10 active:opacity-70">
       <Ionicons name={icon} size={20} color={colors.white} />
+      {badge ? <NotificationBadge /> : null}
     </Pressable>
   );
 }

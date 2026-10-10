@@ -13,65 +13,68 @@ function badgeText(total: number): string {
 }
 
 /**
- * Loceng di kepala skrin (mobile), bersebelahan perisai Hub Admin. Penanda merah
- * hanya muncul bila ada tugasan tertunggak.
+ * Penanda merah pada ikon perisai Hub Admin (kepala mobile & sidebar desktop).
+ * Tiada apa-apa dipaparkan bila tiada tugasan. Diletakkan secara `absolute`,
+ * jadi induknya mesti `relative` (Pressable ikon/baris sedia ada sudah begitu).
+ * `inline` = bulatan di dalam baris (sidebar), bukan di penjuru ikon.
  */
-export function NotificationBell() {
-  const colors = useColors();
-  const { total, setOpen } = useAdminNotifications();
-
+export function NotificationBadge({ inline = false }: { inline?: boolean }) {
+  const { total } = useAdminNotifications();
+  if (total <= 0) return null;
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={total > 0 ? 'Notifikasi, ' + total + ' belum selesai' : 'Notifikasi'}
-      hitSlop={10}
-      onPress={() => setOpen(true)}
-      className="h-11 w-11 items-center justify-center rounded-pill bg-white/10 active:opacity-70">
-      <Ionicons name={total > 0 ? 'notifications' : 'notifications-outline'} size={20} color={colors.white} />
-      {total > 0 ? (
-        <View className="absolute -right-0.5 -top-0.5 min-w-[18px] items-center justify-center rounded-pill border-2 border-primary bg-negative px-1">
-          <Text className="text-[10px] font-bold leading-[13px] text-white">{badgeText(total)}</Text>
-        </View>
-      ) : null}
-    </Pressable>
+    <View
+      accessibilityLabel={total + ' tugasan menunggu'}
+      className={
+        inline
+          ? 'min-w-[20px] items-center rounded-pill bg-negative px-1.5 py-0.5'
+          : 'absolute -right-0.5 -top-0.5 min-w-[18px] items-center justify-center rounded-pill border-2 border-primary bg-negative px-1'
+      }>
+      <Text className={inline ? 'text-[11px] font-bold text-white' : 'text-[10px] font-bold leading-[13px] text-white'}>
+        {badgeText(total)}
+      </Text>
+    </View>
   );
 }
 
-/** Baris "Notifikasi" untuk sidebar desktop (gaya sama seperti pautan sidebar lain). */
-export function SidebarNotificationLink() {
+/** Notis tugasan tertunggak di bahagian atas Hub Admin — setiap baris membuka skrin semakannya. */
+export function PendingTasksNotice() {
   const colors = useColors();
-  const { total, open, setOpen } = useAdminNotifications();
+  const router = useRouter();
+  const { items, total } = useAdminNotifications();
+  if (items.length === 0) return null;
 
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={total > 0 ? 'Notifikasi, ' + total + ' belum selesai' : 'Notifikasi'}
-      onPress={() => setOpen(true)}
-      className={`flex-row items-center gap-3 rounded-lg border-l-[3px] py-2.5 pl-2.5 pr-3 ${
-        open ? 'border-primary bg-primary-tint' : 'border-transparent active:bg-primary-tint hover:bg-background'
-      }`}>
-      <Ionicons
-        name={total > 0 ? 'notifications' : 'notifications-outline'}
-        size={18}
-        color={open ? colors.primary : colors.inkMuted}
-      />
-      <Text className={`flex-1 text-sm ${open ? 'font-semibold text-primary' : 'font-medium text-ink-muted'}`}>
-        Notifikasi
-      </Text>
-      {total > 0 ? (
-        <View className="min-w-[20px] items-center rounded-pill bg-negative px-1.5 py-0.5">
-          <Text className="text-[11px] font-bold text-white">{badgeText(total)}</Text>
-        </View>
-      ) : null}
-    </Pressable>
+    <View className="gap-2 rounded-card border border-negative/30 bg-negative-soft p-3">
+      <View className="flex-row items-center gap-2">
+        <Ionicons name="alert-circle" size={18} color={colors.negative} />
+        <Text className="flex-1 text-sm font-bold text-ink">{total + ' tugasan menunggu tindakan'}</Text>
+      </View>
+      {items.map((item) => (
+        <Pressable
+          key={item.kind}
+          accessibilityRole="button"
+          accessibilityLabel={item.title}
+          onPress={() => router.push(item.route as Href)}
+          className="flex-row items-center gap-3 rounded-xl bg-surface p-3 active:opacity-70">
+          <View className="flex-1">
+            <Text className="text-sm font-semibold text-ink">{item.title}</Text>
+            <Text className="mt-0.5 text-sm leading-5 text-ink-muted" numberOfLines={2}>
+              {item.preview}
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color={colors.inkFaint} />
+        </Pressable>
+      ))}
+    </View>
   );
 }
 
 /**
  * Dialog pratonton notifikasi. Dipasang SEKALI (dalam `AppGate`); terbuka sendiri
- * sekali apabila admin masuk dan ada tugasan, dan melalui loceng selepas itu.
+ * sekali apabila admin masuk dan ada tugasan. Tiada loceng — selepas ditutup,
+ * tugasan dilihat melalui penanda pada perisai dan notis di Hub Admin.
  *
- * Kedudukan: di bawah loceng (kanan atas) pada mobile, di sebelah sidebar pada
+ * Kedudukan: kanan atas, berhampiran perisai, pada mobile; di sebelah sidebar pada
  * desktop. Mengetuk satu baris membuka skrin semakannya.
  */
 export function NotificationPopover({ sidebarWidth }: { sidebarWidth: number }) {

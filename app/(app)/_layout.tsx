@@ -5,7 +5,7 @@ import { Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { DesktopSidebar, SIDEBAR_WIDTH } from '@/components/desktop-sidebar';
-import { NotificationPopover } from '@/components/notification-bell';
+import { NotificationPopover } from '@/components/admin-notifications-ui';
 import { ContactAdminLink } from '@/components/contact-admin';
 import { ForcePasswordChange } from '@/components/force-password-change';
 import { Screen } from '@/components/ui/screen';

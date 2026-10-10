@@ -1,6 +1,7 @@
 import { useRouter } from 'expo-router';
 import { View } from 'react-native';
 
+import { PendingTasksNotice } from '@/components/admin-notifications-ui';
 import { NaqibHubSection } from '@/components/naqib-hub-section';
 import { ScreenHeader } from '@/components/screen-header';
 import { ActionRow } from '@/components/ui/action-row';
@@ -102,6 +103,7 @@ export default function AdminHubScreen() {
       />
 
       <View className="gap-4 px-gutter pt-6">
+        <PendingTasksNotice />
         {accessLoading ? null : (
         <>
         {/*
