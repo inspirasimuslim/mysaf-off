@@ -312,6 +312,45 @@ export async function submitBusinessAdAdmin(input: SubmitBusinessAdAdminInput): 
 }
 
 /**
+ * Admin Lajnah Ekonomi menyunting iklan MANA-MANA status (migration 146) —
+ * contohnya menukar poster iklan yang sedang dipaparkan. Status dan tempoh
+ * paparan tidak berubah. Gambar yang digantikan/dibuang dipadam daripada
+ * storage SELEPAS RPC berjaya (cuba-terbaik, sama corak `deleteBusinessAd`).
+ *
+ * `previous` ialah URL gambar sebelum sunting; yang tidak lagi digunakan dibuang.
+ */
+export async function updateBusinessAdAdmin(
+  id: string,
+  input: SubmitBusinessAdInput,
+  previous: { url_poster: string; url_gambar_2?: string | null; url_gambar_3?: string | null },
+): Promise<void> {
+  const { error } = await supabase.rpc('update_business_ad_admin', {
+    p_ad_id: id,
+    p_nama_bisnes: input.nama_bisnes,
+    p_url_poster: input.url_poster,
+    p_penerangan: input.penerangan,
+    p_teks_cta: input.teks_cta,
+    p_no_whatsapp: input.no_whatsapp,
+    p_url_gambar_2: input.url_gambar_2 ?? null,
+    p_url_gambar_3: input.url_gambar_3 ?? null,
+  });
+  if (error) throw error;
+
+  const kept = new Set([input.url_poster, input.url_gambar_2, input.url_gambar_3].filter(Boolean));
+  const orphaned = [previous.url_poster, previous.url_gambar_2, previous.url_gambar_3]
+    .filter((url): url is string => !!url && !kept.has(url))
+    .map((url) => url.split('/' + BUCKET + '/')[1]?.split('?')[0])
+    .filter((name): name is string => !!name);
+  if (orphaned.length > 0) {
+    try {
+      await withTimeout(supabase.storage.from(BUCKET).remove(orphaned), 8000, 'Padam fail gambar lama');
+    } catch {
+      // Sunting sudah berjaya; fail lama yang tertinggal tidak berbahaya.
+    }
+  }
+}
+
+/**
  * Pemilik (mana-mana status) atau admin Lajnah Ekonomi (can_review_business_ads())
  * sahaja. RPC memadam baris DB dan memulangkan SEMUA url gambar bukan-null
  * (poster + galeri 2/3, migration 107 — dulu hanya poster); fail storage

@@ -1,6 +1,6 @@
 import { Image } from 'expo-image';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { Text, View } from 'react-native';
 
 import { AutoAspectImage } from '@/components/business-ad-image-slot';
@@ -32,7 +32,7 @@ type Mode = 'lulus' | 'tolak';
  *
  * Dibuka daripada senarai ringkas `semakan-iklan.tsx`. Lulus/Tolak kekal di
  * sini (bukan di senarai) supaya senarai tidak perlu bentangkan borang inline
- * untuk setiap baris. Tiada butang Padam — Tolak dengan sebab (dibaca
+ * untuk setiap baris. Sunting (poster/maklumat) di `iklan-edit.tsx`. Tiada butang Padam — Tolak dengan sebab (dibaca
  * pemilik) sudah memadai; pemilik sendiri yang boleh memadam iklannya.
  */
 export default function AdminIklanDetailScreen() {
@@ -65,9 +65,12 @@ export default function AdminIklanDetailScreen() {
     }
   }, [id]);
 
-  useEffect(() => {
-    if (canView) void load();
-  }, [canView, load]);
+  // Dimuat semula setiap kali skrin difokus — selepas menyunting (iklan-edit) data mesti segar.
+  useFocusEffect(
+    useCallback(() => {
+      if (canView) void load();
+    }, [canView, load]),
+  );
 
   const confirm = async () => {
     if (!ad || acting) return;
@@ -186,6 +189,14 @@ export default function AdminIklanDetailScreen() {
           ) : null}
 
           {done ? <Notice tone="positive" message={done} /> : null}
+
+          {canEdit ? (
+            <Button
+              label="Sunting Iklan"
+              variant="secondary"
+              onPress={() => router.push({ pathname: '/(app)/admin/iklan-edit', params: { id: ad.id } })}
+            />
+          ) : null}
 
           {!canEdit && ad.status_paparan === 'menunggu' ? (
             <Notice tone="info" message="Anda hanya boleh melihat iklan ini. Kelulusan dan penolakan memerlukan kebenaran sunting." />
