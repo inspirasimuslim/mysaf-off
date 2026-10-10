@@ -4,13 +4,15 @@ import { useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { DesktopSidebar } from '@/components/desktop-sidebar';
+import { DesktopSidebar, SIDEBAR_WIDTH } from '@/components/desktop-sidebar';
+import { NotificationPopover } from '@/components/notification-bell';
 import { ContactAdminLink } from '@/components/contact-admin';
 import { ForcePasswordChange } from '@/components/force-password-change';
 import { Screen } from '@/components/ui/screen';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { LoadingScreen } from '@/components/ui/loading-screen';
+import { AdminNotificationsProvider } from '@/lib/admin-notifications';
 import { useAndroidBackNavigation } from '@/lib/android-back';
 import { useAuth } from '@/lib/auth-context';
 import { activityCaptureProps, useIdleTimeout } from '@/lib/idle-timer';
@@ -322,12 +324,18 @@ function AppGate() {
     </Tabs>
   );
 
-  if (!desktop) return tabs;
-
+  // Provider di sini (selepas semua pintu lulus): akaun disekat tidak membuat panggilan notifikasi.
   return (
-    <View style={{ flex: 1, flexDirection: 'row' }}>
-      <DesktopSidebar />
-      <View style={{ flex: 1 }}>{tabs}</View>
-    </View>
+    <AdminNotificationsProvider>
+      {desktop ? (
+        <View style={{ flex: 1, flexDirection: 'row' }}>
+          <DesktopSidebar />
+          <View style={{ flex: 1 }}>{tabs}</View>
+        </View>
+      ) : (
+        tabs
+      )}
+      <NotificationPopover sidebarWidth={SIDEBAR_WIDTH} />
+    </AdminNotificationsProvider>
   );
 }

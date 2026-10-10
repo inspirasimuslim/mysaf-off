@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { NotificationBell } from '@/components/notification-bell';
 import { usePermissions } from '@/lib/permissions';
 import { useEmbedded } from '@/components/ui/split-pane';
 import { useIsDesktop } from '@/lib/use-desktop';
@@ -80,6 +81,8 @@ export function ScreenHeader({ title, eyebrow, subtitle, leading, onBackPress }:
             baginya — lihat `admin/index.tsx`). Ikon perisai sengaja berbeza
             daripada gear supaya dua pintu itu tidak dikelirukan.
           */}
+          {/* Loceng: admin sahaja (naqib biasa tiada tugasan semakan), bersebelahan perisai. */}
+          {isAdmin() ? <NotificationBell /> : null}
           {isAdmin() || isActiveNaqib() ? (
             <HeaderIcon icon="shield-half-outline" label="Hub Admin" onPress={() => router.navigate('/(app)/admin')} />
           ) : null}

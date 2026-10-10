@@ -3,6 +3,7 @@ import { Image } from 'expo-image';
 import { usePathname, useRouter, type Href } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
 
+import { SidebarNotificationLink } from '@/components/notification-bell';
 import { usePermissions } from '@/lib/permissions';
 import { useColors } from '@/lib/theme';
 
@@ -80,6 +81,7 @@ export function DesktopSidebar() {
       </View>
 
       <View className="mx-3 gap-0.5 border-t border-line pb-4 pt-3">
+        {isAdmin() ? <SidebarNotificationLink /> : null}
         {isAdmin() || isActiveNaqib() ? (
           <SidebarLink
             label="Hub Admin"
