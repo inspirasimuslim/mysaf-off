@@ -460,7 +460,7 @@ function BirthdayGreeting({ rows, onPress }: { rows: BirthdayToday[]; onPress: (
   */
   return (
     <View>
-      <View className="mb-2 flex-row items-center gap-2">
+      <View className="mb-2 flex-row items-center justify-center gap-2">
         <Ionicons name="gift" size={18} color={BIRTHDAY_GOLD} />
         <Text className="text-base font-bold" style={{ color: BIRTHDAY_GOLD }}>
           Selamat Hari Lahir!
@@ -472,13 +472,24 @@ function BirthdayGreeting({ rows, onPress }: { rows: BirthdayToday[]; onPress: (
         ref={clipRef}
         style={{ overflow: 'hidden' }}
         onLayout={(event) => keepWidth(event.nativeEvent.layout.width, setViewWidth)}>
-        <Animated.View style={{ flexDirection: 'row', transform: [{ translateX: offset }] }}>
+        {/*
+          Senarai yang muat duduk di TENGAH (selari dengan tajuk di atas); yang
+          panjang bermula dari kiri dan bergerak. `minWidth: '100%'` memberi ruang
+          kepada `justifyContent: 'center'` untuk berfungsi.
+        */}
+        <Animated.View
+          style={{
+            flexDirection: 'row',
+            minWidth: '100%',
+            justifyContent: moving ? 'flex-start' : 'center',
+            transform: [{ translateX: offset }],
+          }}>
           <View
             ref={trackRef}
             style={{ flexDirection: 'row' }}
             onLayout={(event) => keepWidth(event.nativeEvent.layout.width, setTrackWidth)}>
             {rows.map((row, index) => (
-              <BirthdayName key={row.full_name + ':' + index} row={row} />
+              <BirthdayName key={row.full_name + ':' + index} row={row} trailing={moving || index < rows.length - 1} />
             ))}
           </View>
 
@@ -489,7 +500,7 @@ function BirthdayGreeting({ rows, onPress }: { rows: BirthdayToday[]; onPress: (
           {moving ? (
             <View style={{ flexDirection: 'row' }} aria-hidden>
               {rows.map((row, index) => (
-                <BirthdayName key={'ulang:' + row.full_name + ':' + index} row={row} />
+                <BirthdayName key={'ulang:' + row.full_name + ':' + index} row={row} trailing />
               ))}
             </View>
           ) : null}
@@ -508,14 +519,15 @@ function BirthdayGreeting({ rows, onPress }: { rows: BirthdayToday[]; onPress: (
 }
 
 /** Satu nama penuh dan generasinya, diasingkan daripada yang berikutnya oleh titik emas. */
-function BirthdayName({ row }: { row: BirthdayToday }) {
+function BirthdayName({ row, trailing }: { row: BirthdayToday; trailing: boolean }) {
+  // `trailing` palsu = item terakhir bagi senarai yang duduk diam: tiada titik/ruang di hujung supaya benar-benar di tengah.
   return (
-    <View className="flex-row items-center gap-2 pr-3">
+    <View className={`flex-row items-center gap-2 ${trailing ? 'pr-3' : ''}`}>
       <Text className="text-sm font-semibold text-ink" numberOfLines={1}>
         {row.full_name}
         {row.generasi ? <Text className="font-normal text-ink-muted">{' · ' + row.generasi}</Text> : null}
       </Text>
-      <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: BIRTHDAY_GOLD }} />
+      {trailing ? <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: BIRTHDAY_GOLD }} /> : null}
     </View>
   );
 }
