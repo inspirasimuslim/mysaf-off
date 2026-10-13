@@ -96,14 +96,12 @@ export default function DocumentLibraryScreen() {
   );
 
   // Kategori terakhir dipadam sementara ia masih dipilih → jangan tersekat pada tapisan kosong.
-  useEffect(() => {
-    if (categoryFilter && !categories.includes(categoryFilter)) setCategoryFilter(null);
-  }, [categories, categoryFilter]);
+  const effectiveCategory = categoryFilter && categories.includes(categoryFilter) ? categoryFilter : null;
 
   const visible = useMemo(() => {
     const needle = search.trim().toLowerCase();
     return documents.filter((doc) => {
-      if (categoryFilter && doc.category !== categoryFilter) return false;
+      if (effectiveCategory && doc.category !== effectiveCategory) return false;
       if (!needle) return true;
       return (
         doc.file_name.toLowerCase().includes(needle) ||
@@ -111,7 +109,7 @@ export default function DocumentLibraryScreen() {
         (doc.description ?? '').toLowerCase().includes(needle)
       );
     });
-  }, [documents, search, categoryFilter]);
+  }, [documents, search, effectiveCategory]);
 
   // --- Muat naik -------------------------------------------------------------------
   const [picked, setPicked] = useState<PickedDocument | null>(null);
@@ -238,7 +236,7 @@ export default function DocumentLibraryScreen() {
               {categories.length > 0 ? (
                 <PickerField
                   label="Kategori"
-                  value={categoryFilter}
+                  value={effectiveCategory}
                   options={categories.map((name) => ({ value: name, label: name }))}
                   onChange={setCategoryFilter}
                   placeholder="Semua"

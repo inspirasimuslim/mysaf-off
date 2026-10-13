@@ -36,7 +36,10 @@ function TabIcon({ name, focused }: { name: IconName; focused: boolean }) {
 }
 
 function tabIcon(active: IconName, inactive: IconName) {
-  return ({ focused }: { focused: boolean }) => <TabIcon name={focused ? active : inactive} focused={focused} />;
+  function TabBarIcon({ focused }: { focused: boolean }) {
+    return <TabIcon name={focused ? active : inactive} focused={focused} />;
+  }
+  return TabBarIcon;
 }
 
 /**

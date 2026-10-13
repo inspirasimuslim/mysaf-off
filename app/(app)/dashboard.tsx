@@ -52,7 +52,7 @@ export default function DashboardScreen() {
   /* Utama ialah skrin akar selepas log masuk: back di sini bertanya sebelum menutup app. */
   const exitPrompt = useAndroidExitPrompt();
 
-  const [banner, setBanner] = useState<Banner>(null);
+  const [banner] = useState<Banner>(null);
 
   const [events, setEvents] = useState<UpcomingEvent[]>([]);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
@@ -378,7 +378,7 @@ function BirthdayGreeting({ rows, onPress }: { rows: BirthdayToday[]; onPress: (
   const [trackWidth, setTrackWidth] = useState(0);
   const clipRef = useRef<View>(null);
   const trackRef = useRef<View>(null);
-  const offset = useRef(new Animated.Value(0)).current;
+  const [offset] = useState(() => new Animated.Value(0));
 
   const moving = viewWidth > 0 && trackWidth > viewWidth;
 

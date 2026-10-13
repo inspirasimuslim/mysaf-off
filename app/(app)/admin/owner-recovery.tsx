@@ -111,7 +111,7 @@ export default function OwnerRecoveryScreen() {
         <View className="gap-6 px-gutter pb-8 pt-6">
           <Text className="text-sm leading-5 text-ink-muted">
             Lantik atau turunkan Super Admin sekiranya akaun Super Admin sedia ada terjejas atau dirampas. Hanya Owner
-            boleh melakukannya; setiap tindakan direkod dalam Log Aktiviti sebagai "(Pemulihan)".
+            boleh melakukannya; setiap tindakan direkod dalam Log Aktiviti sebagai &quot;(Pemulihan)&quot;.
           </Text>
 
           {banner ? <ToastBanner tone={banner.tone} message={banner.message} /> : null}
