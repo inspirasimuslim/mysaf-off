@@ -65,7 +65,7 @@ export default function ArkibHubScreen() {
 
   return (
     <Screen padTop={false}>
-      <ScreenHeader eyebrow="Simpanan" title="Arkib" />
+      <ScreenHeader title="Direktori" />
 
       <View className="gap-3 px-gutter pb-8 pt-6">
         {rows.map((row, rowIndex) => (
