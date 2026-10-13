@@ -1,6 +1,7 @@
+import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import { ScreenHeader } from '@/components/screen-header';
 import { ActionRow } from '@/components/ui/action-row';
@@ -81,6 +82,10 @@ type Banner = { tone: 'positive' | 'info' | 'negative'; message: string } | null
  * seadanya; yang berubah hanyalah tempat ia tinggal, supaya Dashboard kembali
  * kepada ringkasan sahaja dan tetapan akaun berada rapat dengan Profil.
  */
+/** Versi aplikasi yang dipasang (versionName + versionCode/buildNumber); web jatuh balik ke app.json. */
+const APP_VERSION = Constants.nativeAppVersion ?? Constants.expoConfig?.version ?? '-';
+const APP_BUILD = Constants.nativeBuildVersion ?? null;
+
 export default function TetapanScreen() {
   const { preference: tema, setPreference: setTema } = useTheme();
   const { user } = useAuth();
@@ -449,6 +454,11 @@ export default function TetapanScreen() {
           </View>
 
           <Button label="Log Keluar" variant="danger" loading={signOutBusy} onPress={() => void signOut()} />
+
+          <Text className="pb-2 text-center text-xs text-ink-muted">
+            MySAFF versi {APP_VERSION}
+            {APP_BUILD ? ' (' + APP_BUILD + ')' : ''}
+          </Text>
         </View>
       </Screen>
 
