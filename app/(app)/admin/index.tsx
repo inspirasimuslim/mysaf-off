@@ -244,6 +244,34 @@ export default function AdminHubScreen() {
           </CollapsibleSection>
         ) : null}
 
+        {/* Data kesihatan ahli — department KESIHATAN AHLI sahaja (bukan LAJNAH KEBAJIKAN / JABATAN DATA). */}
+        {kesihatanAccess.canView ? (
+          <CollapsibleSection variant="plain" title="Kesihatan Ahli" count={1} defaultOpen={openByDefault}>
+            <ActionRow
+              icon="medkit-outline"
+              title="Eksport Data Kesihatan"
+              subtitle="Muat turun masalah kesihatan yang direkodkan ahli (sensitif)"
+              onPress={() => router.push('/(app)/admin/eksport-kesihatan')}
+            />
+          </CollapsibleSection>
+        ) : null}
+
+        {/* Permohonan zakat — department TABUNG ZAKAT sahaja (bukan LAJNAH KEBAJIKAN). */}
+        {zakatAccess.canView ? (
+          <CollapsibleSection variant="plain" title="Tabung Zakat" count={1} defaultOpen={openByDefault}>
+            <ActionRow
+              icon="hand-left-outline"
+              title="Permohonan Zakat"
+              subtitle={
+                zakatAccess.canEdit
+                  ? 'Semak, minta maklumat tambahan, luluskan atau tolak permohonan zakat ahli'
+                  : 'Lihat permohonan zakat ahli (paparan sahaja)'
+              }
+              onPress={() => router.push('/(app)/admin/bantuan')}
+            />
+          </CollapsibleSection>
+        ) : null}
+
         {/*
           Modul usrah dimiliki oleh LAJNAH TARBIAH — department yang berbeza
           daripada modul ahli di atas, jadi seorang admin boleh melihat satu
@@ -446,33 +474,6 @@ export default function AdminHubScreen() {
           </CollapsibleSection>
         ) : null}
 
-        {/* Data kesihatan ahli — department KESIHATAN AHLI sahaja (bukan LAJNAH KEBAJIKAN / JABATAN DATA). */}
-        {kesihatanAccess.canView ? (
-          <CollapsibleSection variant="plain" title="Kesihatan Ahli" count={1} defaultOpen={openByDefault}>
-            <ActionRow
-              icon="medkit-outline"
-              title="Eksport Data Kesihatan"
-              subtitle="Muat turun masalah kesihatan yang direkodkan ahli (sensitif)"
-              onPress={() => router.push('/(app)/admin/eksport-kesihatan')}
-            />
-          </CollapsibleSection>
-        ) : null}
-
-        {/* Permohonan zakat — department TABUNG ZAKAT sahaja (bukan LAJNAH KEBAJIKAN). */}
-        {zakatAccess.canView ? (
-          <CollapsibleSection variant="plain" title="Tabung Zakat" count={1} defaultOpen={openByDefault}>
-            <ActionRow
-              icon="hand-left-outline"
-              title="Permohonan Zakat"
-              subtitle={
-                zakatAccess.canEdit
-                  ? 'Semak, minta maklumat tambahan, luluskan atau tolak permohonan zakat ahli'
-                  : 'Lihat permohonan zakat ahli (paparan sahaja)'
-              }
-              onPress={() => router.push('/(app)/admin/bantuan')}
-            />
-          </CollapsibleSection>
-        ) : null}
 
         {/*
           Usrah Sekolah (Naqib/Naqibah) dimiliki oleh LAJNAH PERKADERAN.
