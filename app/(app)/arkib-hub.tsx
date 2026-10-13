@@ -6,6 +6,7 @@ import { Linking, Pressable, Text, View } from 'react-native';
 import { ScreenHeader } from '@/components/screen-header';
 import { Screen } from '@/components/ui/screen';
 import { fetchBantuanPerluTindakan } from '@/lib/bantuan';
+import { fetchCounselMemberUnread } from '@/lib/counseling';
 import { fetchFeedbackMemberUnread } from '@/lib/feedback-chat';
 import { useColors } from '@/lib/theme';
 
@@ -17,7 +18,7 @@ type IconName = keyof typeof Ionicons.glyphMap;
 const COLUMNS = 3;
 
 /**
- * Tab Direktori — grid jubin 3 lajur (nisbah 3:2) ke Zakat, Album, Dokumen, Bisnes, Baitul Muslim dan Maklum Balas.
+ * Tab Direktori — grid jubin 3 lajur (nisbah 3:2) ke Zakat, Kaunseling, Album, Dokumen, Bisnes, Baitul Muslim dan Maklum Balas.
  *
  * Label "Koleksi Dokumen" (dan bukan "Arkib") supaya tidak sama dengan nama tab.
  */
@@ -25,6 +26,7 @@ export default function ArkibHubScreen() {
   const router = useRouter();
   const [perluTindakan, setPerluTindakan] = useState(0);
   const [feedbackUnread, setFeedbackUnread] = useState(0);
+  const [counselUnread, setCounselUnread] = useState(0);
 
   // Lencana ringkas: notifikasi ahli untuk permohonan zakat (keputusan baharu / maklumat tambahan).
   useFocusEffect(
@@ -35,6 +37,9 @@ export default function ArkibHubScreen() {
         .catch(() => undefined);
       fetchFeedbackMemberUnread()
         .then((count) => active && setFeedbackUnread(count))
+        .catch(() => undefined);
+      fetchCounselMemberUnread()
+        .then((count) => active && setCounselUnread(count))
         .catch(() => undefined);
       return () => {
         active = false;
@@ -57,6 +62,7 @@ export default function ArkibHubScreen() {
       title: 'Majlis Baitul Muslim',
       onPress: () => void Linking.openURL(BAITUL_MUSLIM_URL).catch(() => undefined),
     },
+    { icon: 'heart-circle-outline', title: 'Bantuan Kaunseling', badge: counselUnread, onPress: () => router.push('/(app)/kaunseling') },
     { icon: 'chatbubble-ellipses-outline', title: 'Maklum Balas', badge: feedbackUnread, onPress: () => router.push('/(app)/maklum-balas') },
   ];
 

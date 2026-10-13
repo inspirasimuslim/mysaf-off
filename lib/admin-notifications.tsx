@@ -54,9 +54,9 @@ async function fetchAdminNotifications(): Promise<AdminNotification[]> {
  * ada sesuatu untuk dilihat — bukan pada setiap muat semula.
  */
 export function AdminNotificationsProvider({ children }: { children: ReactNode }) {
-  const { loading, isAdmin } = usePermissions();
+  const { loading, isAdmin, isCounselor } = usePermissions();
   const pathname = usePathname();
-  const enabled = !loading && isAdmin();
+  const enabled = !loading && (isAdmin() || isCounselor());
 
   const [items, setItems] = useState<AdminNotification[]>([]);
   const [open, setOpen] = useState(false);

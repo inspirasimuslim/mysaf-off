@@ -502,3 +502,23 @@ Menggantikan peti masuk tunggal (151): TIAP seksyen department di Hub Admin ada 
 `maklum_balas_chat:<id>`, tajuk guna `feedback_department_label()`). Seksyen Hub baharu (hanya butang Maklum Balas):
 TSUA, LHESA, LPN, LK (LAJNAH KEBAJIKAN), LM, I-GEM — nama department sedia ada dalam seed. Susunan Hub: SUA, TSUA,
 JSU, BK, LT, LP, LHESA, LPG, LPN, LK, LM, LEA, JDSM, I-GEM, Organisasi. Perbualan sendiri tetap dikecualikan.
+
+# Bantuan Kaunseling (2026-10-13, migration 153, BELUM di-push ke produksi)
+
+Rujukan: `supabase/migrations/20261013000153_bantuan_kaunseling.sql`, `lib/counseling.ts`,
+`app/(app)/kaunseling.tsx` + `kaunseling-chat.tsx` (ahli/kaunselor), `app/(app)/admin/kaunselor.tsx` (LK),
+`admin/kaunseling-peti.tsx` (kaunselor), tile "Bantuan Kaunseling" di `arkib-hub.tsx`. Diuji pada Postgres 16 tempatan.
+
+- **Kaunselor** = ahli yang dilantik admin LAJNAH KEBAJIKAN (can_edit) — table `counselors` (`aktif`, soft-remove; lantik semula
+  mengaktifkan baris sama). Senarai ahli: nama + generasi + `members.no_tel`; ketik -> WhatsApp / Telefon / "Mesej dalam app".
+- **PRIVASI (syarat utama)**: 4 table (`counselors`, `counseling_contacts/threads/messages`) TERKUNCI — RLS hidup tanpa polisi,
+  tiada GRANT; semua akses melalui RPC `security definer`. LK/Super Admin dalam app hanya dapat `counseling_admin_list()` =
+  BILANGAN ahli berbeza (`count(distinct member_id)`), tidak pernah identiti. Perbualan hanya boleh dibaca ahli pemilik dan
+  kaunselor AKTIF perbualan itu (`my_counselor_id()`). Hati-hati `null = x` dalam semakan akses (guna `coalesce(..., false)`).
+- **"Menghubungi"** = ketikan WhatsApp/Telefon (dicatat `counseling_log_contact`, dedupe 1 minit — app TIDAK dapat mengesahkan
+  panggilan benar-benar berlaku) + mesej dalam app (`counseling_start`). Kaunselor dibuang: hilang akses perbualan, ahli masih
+  nampak sejarah (tidak boleh balas); bilangan + sejarah kekal untuk LK.
+- **Hub Admin**: seksyen LK (Kaunselor + Maklum Balas), seksyen "Sesi Kaunseling" untuk kaunselor aktif (`isCounselor()` dalam
+  `lib/permissions.tsx`, RPC `is_active_counselor`; kaunselor dibenarkan melepasi guard `admin/_layout.tsx`, sidebar, header,
+  dan notifikasi). `admin_notifications()` blok ke-5 (`kaunseling`, tanpa nama ahli). Ahli: lencana tile + banner Utama.
+- **Belum dibuat**: kemas kini Data Safety Play Console / `app/dasar-privasi.tsx` (mesej kaunseling, nombor telefon kaunselor).

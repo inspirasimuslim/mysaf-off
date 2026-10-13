@@ -20,6 +20,7 @@ import {
   useYuranAccess,
   useZakatAccess,
 } from '@/lib/department-access';
+import { useCounselorUnread } from '@/lib/counseling';
 import { departmentLabel, useFeedbackDepartments } from '@/lib/feedback-chat';
 import { useGoBack } from '@/lib/navigation';
 import { ORG_CHART_DEPARTMENT } from '@/lib/org-chart';
@@ -46,7 +47,7 @@ import { kawasanUsrahLabel } from '@/types/database';
 export default function AdminHubScreen() {
   const router = useRouter();
   const goBack = useGoBack();
-  const { isSuperAdmin, isActiveNaqib, kawasanAreas, loading: permissionsLoading } = usePermissions();
+  const { isSuperAdmin, isActiveNaqib, isCounselor, kawasanAreas, loading: permissionsLoading } = usePermissions();
   const memberAccess = useMemberAccess();
   const usrahAccess = useUsrahAccess();
   const programAccess = useProgramAccess();
@@ -88,6 +89,8 @@ export default function AdminHubScreen() {
       </CollapsibleSection>
     ) : null;
 
+  const counselor = isCounselor();
+  const counselorUnread = useCounselorUnread(counselor);
   const superAdmin = isSuperAdmin();
   const naqib = isActiveNaqib();
   // Admin kawasan yang BUKAN admin LAJNAH TARBIAH: seksyen Tarbiah penuh tidak dipaparkan, ganti dengan seksyen kawasannya.
@@ -129,6 +132,7 @@ export default function AdminHubScreen() {
     zakatAccess.canView,
     naqib,
     kawasanOnly,
+    counselor,
     Object.keys(feedback.byName).length > 0,
   ].filter(Boolean).length;
   const nothingAvailable = visibleSections === 0;
@@ -466,7 +470,36 @@ export default function AdminHubScreen() {
 
         {feedbackOnlySection('LAJNAH PEMBANGUNAN NGO', 'Lajnah Pembangunan NGO (LPN)')}
 
-        {feedbackOnlySection('LAJNAH KEBAJIKAN', 'Lajnah Kebajikan (LK)')}
+        {/* Kaunselor dilantik oleh LAJNAH KEBAJIKAN (migration 153); LK hanya nampak BILANGAN ahli yang menghubungi. */}
+        {feedback.byName['LAJNAH KEBAJIKAN'] ? (
+          <CollapsibleSection
+            variant="plain"
+            title="Lajnah Kebajikan (LK)"
+            count={2}
+            alert={fbUnread('LAJNAH KEBAJIKAN')}
+            defaultOpen={openByDefault}>
+            <ActionRow
+              icon="heart-circle-outline"
+              title="Kaunselor"
+              subtitle="Lantik kaunselor, lihat senarai (aktif dan dibuang) serta bilangan ahli yang menghubungi"
+              onPress={() => router.push('/(app)/admin/kaunselor')}
+            />
+            {feedbackRow('LAJNAH KEBAJIKAN')}
+          </CollapsibleSection>
+        ) : null}
+
+        {/* Sesi Kaunseling — hanya kaunselor aktif (bukan melalui department). */}
+        {counselor ? (
+          <CollapsibleSection variant="plain" title="Sesi Kaunseling" count={1} alert={counselorUnread} defaultOpen={openByDefault}>
+            <ActionRow
+              icon="heart-outline"
+              title="Peti Masuk Kaunseling"
+              subtitle="Mesej ahli yang menghubungi anda — hanya anda yang melihat identiti mereka"
+              badge={counselorUnread}
+              onPress={() => router.push('/(app)/admin/kaunseling-peti')}
+            />
+          </CollapsibleSection>
+        ) : null}
 
         {/* Data kesihatan ahli — department KESIHATAN AHLI sahaja (bukan LAJNAH KEBAJIKAN / JABATAN DATA). */}
         {kesihatanAccess.canView ? (

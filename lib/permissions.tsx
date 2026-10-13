@@ -43,6 +43,8 @@ export type PermissionsState = {
   /** Kawasan usrah yang ditadbir akaun ini (`usrah_kawasan_admins`, migration 147) — kosong bagi bukan admin kawasan. */
   kawasanAreas: string[];
   isKawasanAdmin: () => boolean;
+  /** Kaunselor AKTIF (`counselors`, migration 153) — perlu Hub Admin untuk Sesi Kaunseling, walaupun bukan admin. */
+  isCounselor: () => boolean;
 };
 
 const EMPTY: PermissionsState = {
@@ -60,6 +62,7 @@ const EMPTY: PermissionsState = {
   isActiveNaqib: () => false,
   kawasanAreas: [],
   isKawasanAdmin: () => false,
+  isCounselor: () => false,
 };
 
 const PermissionsContext = createContext<PermissionsState>(EMPTY);
@@ -72,6 +75,7 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
   const [assignments, setAssignments] = useState<AdminAssignment[]>([]);
   const [activeNaqib, setActiveNaqib] = useState(false);
   const [kawasanAreas, setKawasanAreas] = useState<string[]>([]);
+  const [counselor, setCounselor] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -86,6 +90,7 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
       setAssignments([]);
       setActiveNaqib(false);
       setKawasanAreas([]);
+      setCounselor(false);
       setError(null);
       setLoading(false);
       return;
@@ -93,7 +98,7 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
 
     setLoading(true);
     try {
-      const [profileResult, assignmentResult, naqibResult, kawasanResult] = await Promise.all([
+      const [profileResult, assignmentResult, naqibResult, kawasanResult, counselorResult] = await Promise.all([
         supabase.from('profiles').select('id, email, full_name, role').eq('id', uid).maybeSingle(),
         supabase.from('admin_assignments').select('id, user_id, department_id, can_view, can_edit').eq('user_id', uid),
         // Kegagalan RPC ini tidak boleh menggagalkan keseluruhan bacaan kebenaran —
@@ -107,6 +112,11 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
           (result) => result,
           () => ({ data: [], error: null }),
         ),
+        // Kegagalan = "bukan kaunselor" (migration 153 mungkin belum dijalankan).
+        supabase.rpc('is_active_counselor').then(
+          (result) => result,
+          () => ({ data: false, error: null }),
+        ),
       ]);
 
       // Sesi sudah bertukar semasa query berjalan — abaikan hasil lapuk ini.
@@ -119,6 +129,7 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
       setAssignments((assignmentResult.data as AdminAssignment[] | null) ?? []);
       setActiveNaqib(Boolean(naqibResult.data));
       setKawasanAreas(Array.isArray(kawasanResult.data) ? (kawasanResult.data as string[]) : []);
+      setCounselor(counselorResult.data === true);
       setError(null);
     } catch (caught) {
       if (activeUser.current !== uid) return;
@@ -126,6 +137,7 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
       setAssignments([]);
       setActiveNaqib(false);
       setKawasanAreas([]);
+      setCounselor(false);
       setError(toMalayError(caught, 'Gagal membaca kebenaran akaun.'));
     } finally {
       if (activeUser.current === uid) setLoading(false);
@@ -164,8 +176,9 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
       isActiveNaqib: () => activeNaqib,
       kawasanAreas,
       isKawasanAdmin: () => kawasanAreas.length > 0,
+      isCounselor: () => counselor,
     };
-  }, [activeNaqib, kawasanAreas, assignments, error, loading, profile, refresh]);
+  }, [activeNaqib, counselor, kawasanAreas, assignments, error, loading, profile, refresh]);
 
   return <PermissionsContext.Provider value={value}>{children}</PermissionsContext.Provider>;
 }
