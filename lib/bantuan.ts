@@ -1,4 +1,5 @@
 import { errorCode, toMalayError } from './errors';
+import { readJpegBytes } from './image-upload';
 import { supabase } from './supabase';
 
 /**
@@ -55,9 +56,8 @@ export type BantuanApplication = {
   sebab_lain: string | null;
   penerangan: string | null;
   pernah_terima: boolean | null;
-  bank_nama_pemegang: string | null;
-  bank_nama: string | null;
-  bank_no_akaun: string | null;
+  qr_path: string | null;
+  qr_dihantar_at: string | null;
   pengakuan_setuju: boolean;
   pertama_dihantar_at: string | null;
   dihantar_at: string | null;
@@ -99,9 +99,6 @@ export type BantuanForm = {
   sebab_lain?: string;
   penerangan?: string;
   pernah_terima?: boolean | null;
-  bank_nama_pemegang?: string;
-  bank_nama?: string;
-  bank_no_akaun?: string;
   pengakuan_setuju?: boolean;
 };
 
@@ -244,31 +241,6 @@ export const SEBAB_OPTIONS: Option[] = [
   { value: 'lain_lain', label: 'Lain-lain' },
 ];
 
-export const BANK_LAIN = 'Lain-lain';
-
-/** Bank utama di Malaysia untuk dropdown; "Lain-lain" membuka medan teks. */
-export const BANK_OPTIONS: string[] = [
-  'Maybank',
-  'CIMB Bank',
-  'Bank Islam',
-  'Bank Rakyat',
-  'BSN',
-  'Public Bank',
-  'RHB Bank',
-  'Hong Leong Bank',
-  'AmBank',
-  'Affin Bank',
-  'Alliance Bank',
-  'Agrobank',
-  'Bank Muamalat',
-  'MBSB Bank',
-  'UOB',
-  'OCBC',
-  'HSBC',
-  'Standard Chartered',
-  BANK_LAIN,
-];
-
 export const PENGAKUAN_TEKS =
   'Saya mengaku bahawa semua maklumat yang diberikan adalah benar. Lajnah Kebajikan (LK) berhak membatalkan dan menarik balik bantuan zakat sekiranya saya memberikan maklumat palsu.';
 
@@ -292,7 +264,7 @@ export const KENALAN_LK: Record<BantuanKategori, { muslimin: KenalanLK[]; muslim
 };
 
 export const MESEJ_SELEPAS_HANTAR =
-  'Pihak LK akan menyemak permohonan anda dan menghubungi anda dalam tempoh 7 hingga 14 hari bekerja dari tarikh permohonan jika diterima.';
+  'Pihak LK akan menyemak permohonan anda dan menghubungi anda dalam tempoh 7 hingga 14 hari bekerja dari tarikh permohonan jika diterima. Jika diluluskan, anda akan diminta menghantar gambar kod QR (DuitNow) untuk penerimaan bantuan.';
 
 /** Pautan WhatsApp daripada nombor tempatan Malaysia (0123… → 60123…). */
 export function waLink(telefon: string): string {
@@ -326,6 +298,7 @@ export const TINDAKAN_LABEL: Record<string, string> = {
   minta_maklumat: 'Maklumat tambahan diminta',
   diluluskan: 'Permohonan diluluskan',
   ditolak: 'Permohonan tidak diluluskan',
+  qr_dihantar: 'Kod QR penerimaan dihantar',
   nota: 'Nota dalaman ditambah',
   pindaan: 'Perubahan semasa hantar semula',
 };
@@ -349,7 +322,7 @@ export function formatTarikh(iso: string | null | undefined): string {
 
 /** Mesej kejayaan untuk ahli bila diluluskan. Sengaja TIDAK menyebut bayaran atau tarikh bayar. */
 export const MESEJ_DILULUSKAN =
-  'Permohonan anda telah diluluskan. Pihak Lajnah Kebajikan akan menghubungi anda untuk urusan penyerahan bantuan.';
+  'Permohonan anda telah diluluskan. Sila hantar gambar kod QR (DuitNow) akaun anda di bawah supaya pihak Lajnah Kebajikan boleh menguruskan penyerahan bantuan.';
 
 /** Ralat RPC `bantuan_*` sudah dalam Bahasa Melayu — papar terus; selainnya terjemah biasa. */
 export function bantuanError(error: unknown, fallback: string): string {
@@ -434,6 +407,40 @@ export async function fetchBantuanHistory(applicationId: string): Promise<Bantua
     .order('created_at', { ascending: true });
   if (error) throw error;
   return (data as BantuanHistory[] | null) ?? [];
+}
+
+// --- Kod QR penerimaan (selepas diluluskan) --------------------------------------
+
+const QR_BUCKET = 'bantuan-qr';
+const QR_MAX_BYTES = 2 * 1024 * 1024;
+
+/**
+ * Muat naik gambar kod QR (DuitNow) selepas permohonan diluluskan. Gambar dimampatkan
+ * kepada JPEG (had 2 MB juga dikuatkuasakan Storage dan `bantuan_set_qr`). Jika
+ * pendaftaran gagal, objek baharu dibuang; jika berjaya, QR lama dibuang (cuba-terbaik).
+ */
+export async function uploadBantuanQr(applicationId: string, imageUri: string): Promise<void> {
+  const bytes = await readJpegBytes(imageUri, 1400);
+  if (bytes.length === 0) throw new Error('Gambar kosong.');
+  if (bytes.length > QR_MAX_BYTES) throw new Error('Saiz gambar melebihi 2 MB.');
+
+  const path = applicationId + '/' + newId() + '.jpg';
+  const upload = await supabase.storage.from(QR_BUCKET).upload(path, bytes, { contentType: 'image/jpeg', upsert: false });
+  if (upload.error) throw upload.error;
+
+  const { data, error } = await supabase.rpc('bantuan_set_qr', { p_app: applicationId, p_path: path });
+  if (error) {
+    void supabase.storage.from(QR_BUCKET).remove([path]);
+    throw error;
+  }
+  if (typeof data === 'string' && data) void supabase.storage.from(QR_BUCKET).remove([data]);
+}
+
+/** URL bertandatangan sementara (5 minit) — gambar kekal persendirian. */
+export async function bantuanQrUrl(path: string): Promise<string> {
+  const { data, error } = await supabase.storage.from(QR_BUCKET).createSignedUrl(path, 300);
+  if (error || !data?.signedUrl) throw error ?? new Error('Gambar QR tidak dapat dibuka.');
+  return data.signedUrl;
 }
 
 // --- Admin --------------------------------------------------------------------

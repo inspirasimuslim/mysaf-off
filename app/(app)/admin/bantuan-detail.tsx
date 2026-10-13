@@ -1,6 +1,6 @@
 import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Text, View } from 'react-native';
+import { Linking, Text, View } from 'react-native';
 
 import { NoAccessScreen } from '@/components/no-access';
 import { ScreenHeader } from '@/components/screen-header';
@@ -27,6 +27,7 @@ import {
   TINDAKAN_LABEL,
   TOLAK_OPTIONS,
   addBantuanNote,
+  bantuanQrUrl,
   approveBantuan,
   bantuanError,
   fetchBantuan,
@@ -146,6 +147,15 @@ export default function AdminBantuanDetailScreen() {
       }
     } finally {
       setBusy(false);
+    }
+  };
+
+  const bukaQr = async (path: string) => {
+    setError(null);
+    try {
+      await Linking.openURL(await bantuanQrUrl(path));
+    } catch (caught) {
+      setError(bantuanError(caught, 'Kod QR tidak dapat dibuka.'));
     }
   };
 
@@ -281,14 +291,21 @@ export default function AdminBantuanDetailScreen() {
           </View>
         </Card>
 
-        <SectionTitle title="Akaun bank" caption="Sulit — untuk penyaluran jika diluluskan." />
-        <Card>
-          <View className="gap-2">
-            <Row label="Nama pemegang" value={app.bank_nama_pemegang ?? '—'} />
-            <Row label="Bank" value={app.bank_nama ?? '—'} />
-            <Row label="Nombor akaun" value={app.bank_no_akaun ?? '—'} />
-          </View>
-        </Card>
+        {app.status === 'approved' ? (
+          <>
+            <SectionTitle title="Kod QR penerimaan" caption="Sulit — dihantar pemohon selepas diluluskan." />
+            <Card>
+              {app.qr_path ? (
+                <View className="gap-3">
+                  <Text className="text-sm text-ink-muted">Dihantar {formatTarikh(app.qr_dihantar_at)}. Pautan sah seketika sahaja.</Text>
+                  <Button label="Buka Kod QR" variant="secondary" onPress={() => void bukaQr(app.qr_path ?? '')} />
+                </View>
+              ) : (
+                <Text className="text-sm text-ink-muted">Pemohon belum menghantar kod QR.</Text>
+              )}
+            </Card>
+          </>
+        ) : null}
 
         {requests.length > 0 ? (
           <>

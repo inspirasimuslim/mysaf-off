@@ -429,7 +429,7 @@ Rujukan: `supabase/migrations/20261013000148_permohonan_bantuan.sql`, `lib/bantu
 `app/(app)/bantuan*.tsx` (ahli), `app/(app)/admin/bantuan*.tsx` (admin), `lib/department-access.ts`
 (`useZakatAccess`). Migration HANYA menambah (department/table/fungsi/polisi) dan menulis semula
 `admin_notifications()` (+ blok ke-3), tiada snapshot. Diuji pada Postgres 16 tempatan dengan skema tiruan
-(bukan Supabase sebenar): ~60 semakan aliran + keselamatan lulus. Migration 148 ditulis semula (belum pernah
+(bukan Supabase sebenar): ~80 semakan aliran + keselamatan lulus. Migration 148 ditulis semula (belum pernah
 dijalankan di produksi) apabila borang manual Google Form diberikan — tiada migration 149.
 
 - **Dua borang satu halaman** (`bantuan-borang.tsx`, param `kategori`): `belajar` dan `bekerja` (Bekerja/Berkahwin),
@@ -448,9 +448,11 @@ dijalankan di produksi) apabila borang manual Google Form diberikan — tiada mi
   (`useZakatAccess`). **Selepas migration dijalankan, tugaskan admin zakat ke TABUNG ZAKAT (Hub Admin → Admin).**
 - **Dokumen sokongan DIBUANG** (borang manual tidak memintanya): tiada table `bantuan_documents`, tiada bucket
   `bantuan-docs`, tiada muat naik — jadi tiada objek yatim dan tiada fail dalam Storage.
-- **Data bank pemohon** (nama pemegang, bank, no. akaun — digit sahaja, 6–20) berada pada baris permohonan: hanya
-  pemilik + admin TABUNG ZAKAT (RLS). Tidak masuk notifikasi (bilangan sahaja). Ahli melihat no. akaun bertopeng
-  (4 digit akhir). Admin melihatnya penuh.
+- **TIADA akaun bank pada borang.** Selepas permohonan `approved`, ahli menghantar gambar kod QR (DuitNow) dari
+  skrin `bantuan-info` (`uploadBantuanQr` → bucket PERSENDIRIAN `bantuan-qr`, JPG/PNG maks 2 MB, mampat JPEG di klien,
+  didaftar oleh RPC `bantuan_set_qr`; QR baharu menggantikan lama, objek lama dipadam klien cuba-terbaik). Muat naik
+  storage hanya dibenarkan pemilik bila status `approved`; baca = pemilik + admin TABUNG ZAKAT (URL bertandatangan 5 min).
+  Admin Kebajikan lain tiada akses. Objek yatim (muat naik tanpa daftar) tidak dibersihkan automatik.
 - **Tulisan hanya melalui RPC `bantuan_*`** (`security definer`); `authenticated` hanya ada SELECT. Status,
   `jumlah_diluluskan`, pelulus ditetapkan pelayan. Peralihan: draft→submitted (ahli), submitted→under_review,
   under_review→needs_information/approved/rejected (admin), needs_information→submitted (ahli). approved/rejected
@@ -463,6 +465,6 @@ dijalankan di produksi) apabila borang manual Google Form diberikan — tiada mi
 - **Notifikasi**: admin — blok dalam `admin_notifications()` (bilangan sahaja). Ahli — TIADA sistem notifikasi ahli;
   hanya lencana "Perlu tindakan anda" pada menu Arkib. Kelulusan BUKAN bayaran — UI tidak pernah memaparkan "Dibayar".
 - **Dikecualikan dengan sengaja**: Excel import/eksport, Dashboard Kelengkapan Data, bayaran.
-- **Belum dibuat (perlu sebelum keluaran Play Store)**: kemas kini Data Safety (maklumat kewangan: akaun bank dikumpul),
-  `app/dasar-privasi.tsx` (data bantuan zakat/akaun bank, siapa boleh lihat, tempoh simpanan) dan semak Financial features
+- **Belum dibuat (perlu sebelum keluaran Play Store)**: kemas kini Data Safety (gambar kod QR DuitNow dikumpul selepas lulus),
+  `app/dasar-privasi.tsx` (data bantuan zakat/gambar QR bank, siapa boleh lihat, tempoh simpanan) dan semak Financial features
   di Play Console. Padam akaun: FK `on delete cascade` memadam rekod permohonan.

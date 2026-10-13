@@ -17,8 +17,6 @@ import { SelectRow } from '@/components/ui/select-row';
 import { TextField } from '@/components/ui/text-field';
 import { useAuth } from '@/lib/auth-context';
 import {
-  BANK_LAIN,
-  BANK_OPTIONS,
   KATEGORI_LABEL,
   KENALAN_LK,
   MAKLUMAT_PENTING,
@@ -94,10 +92,6 @@ type FormState = {
   sebab_lain: string;
   penerangan: string;
   pernah_terima: boolean | null;
-  bank_nama_pemegang: string;
-  bank_pilihan: string;
-  bank_lain: string;
-  bank_no_akaun: string;
   pengakuan_setuju: boolean;
 };
 
@@ -129,18 +123,12 @@ function emptyState(): FormState {
     sebab_lain: '',
     penerangan: '',
     pernah_terima: null,
-    bank_nama_pemegang: '',
-    bank_pilihan: '',
-    bank_lain: '',
-    bank_no_akaun: '',
     pengakuan_setuju: false,
   };
 }
 
 function fromApplication(app: BantuanApplication): FormState {
   const text = (value: string | number | null | undefined) => (value === null || value === undefined ? '' : String(value));
-  const bank = app.bank_nama ?? '';
-  const bankDikenali = BANK_OPTIONS.includes(bank) && bank !== BANK_LAIN;
   return {
     nama_pemohon: text(app.nama_pemohon),
     telefon: text(app.telefon),
@@ -168,10 +156,6 @@ function fromApplication(app: BantuanApplication): FormState {
     sebab_lain: text(app.sebab_lain),
     penerangan: text(app.penerangan),
     pernah_terima: app.pernah_terima,
-    bank_nama_pemegang: text(app.bank_nama_pemegang),
-    bank_pilihan: bank === '' ? '' : bankDikenali ? bank : BANK_LAIN,
-    bank_lain: bank === '' || bankDikenali ? '' : bank,
-    bank_no_akaun: text(app.bank_no_akaun),
     pengakuan_setuju: app.pengakuan_setuju,
   };
 }
@@ -194,7 +178,6 @@ function toPayload(kategori: BantuanKategori, state: FormState): BantuanForm {
   const v = visibility(kategori, state.status_diri);
   const text = (value: string) => value.trim();
   const when = (show: boolean, value: string) => (show ? text(value) : '');
-  const bank = state.bank_pilihan === BANK_LAIN ? text(state.bank_lain) : state.bank_pilihan;
   return {
     kategori,
     nama_pemohon: text(state.nama_pemohon),
@@ -223,9 +206,6 @@ function toPayload(kategori: BantuanKategori, state: FormState): BantuanForm {
     sebab_lain: when(state.sebab_keperluan.includes('lain_lain'), state.sebab_lain),
     penerangan: text(state.penerangan),
     pernah_terima: state.pernah_terima,
-    bank_nama_pemegang: text(state.bank_nama_pemegang),
-    bank_nama: bank,
-    bank_no_akaun: state.bank_no_akaun.replace(/\D/g, ''),
     pengakuan_setuju: state.pengakuan_setuju,
   };
 }
@@ -271,10 +251,6 @@ function problemOf(kategori: BantuanKategori, state: FormState): string | null {
   if (state.sebab_keperluan.includes('lain_lain') && len(state.sebab_lain) < 2) return 'Sila nyatakan sebab keperluan lain.';
   if (len(state.penerangan) < 20) return 'Sila terangkan tujuan keperluan dengan lebih lanjut (sekurang-kurangnya 20 aksara).';
   if (state.pernah_terima === null) return 'Sila nyatakan sama ada anda pernah menerima bantuan zakat sebelum ini.';
-  if (len(state.bank_nama_pemegang) < 2) return 'Sila isi nama pemegang akaun.';
-  if (!state.bank_pilihan) return 'Sila pilih bank.';
-  if (state.bank_pilihan === BANK_LAIN && len(state.bank_lain) < 2) return 'Sila isi nama bank.';
-  if (!/^[0-9]{6,20}$/.test(state.bank_no_akaun.replace(/\D/g, ''))) return 'Sila isi nombor akaun bank yang sah (6 hingga 20 digit).';
   if (!state.pengakuan_setuju) return 'Sila tandakan pengakuan sebelum menghantar.';
   return null;
 }
@@ -659,31 +635,6 @@ export default function BantuanBorangScreen() {
             { value: 'tidak', label: 'Tidak' },
           ]}
           onChange={(value) => set('pernah_terima', value === 'ya')}
-        />
-
-        <SectionTitle title="Maklumat akaun bank" caption="Untuk penyaluran bantuan jika diluluskan. Hanya jawatankuasa zakat LK boleh melihatnya." />
-        <TextField
-          label="Nama pemegang akaun *"
-          value={state.bank_nama_pemegang}
-          onChangeText={(value) => set('bank_nama_pemegang', value)}
-          maxLength={120}
-        />
-        <PickerField
-          label="Nama bank *"
-          value={state.bank_pilihan || null}
-          options={BANK_OPTIONS.map((name) => ({ value: name, label: name }))}
-          onChange={(value) => set('bank_pilihan', value ?? '')}
-          placeholder="Pilih bank"
-        />
-        {state.bank_pilihan === BANK_LAIN ? (
-          <TextField label="Nyatakan nama bank *" value={state.bank_lain} onChangeText={(value) => set('bank_lain', value)} maxLength={80} />
-        ) : null}
-        <TextField
-          label="Nombor akaun bank *"
-          value={state.bank_no_akaun}
-          onChangeText={(value) => set('bank_no_akaun', value.replace(/[^0-9 -]/g, ''))}
-          keyboardType="number-pad"
-          maxLength={26}
         />
 
         <SectionTitle title="Pengakuan pemohon" />

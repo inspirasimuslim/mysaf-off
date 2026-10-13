@@ -22,8 +22,9 @@
 --     'LAJNAH KEBAJIKAN' yang mengurus data ahli / kesihatan. Admin LAJNAH KEBAJIKAN
 --     sedia ada TIDAK mendapat akses kecuali ditugaskan juga ke TABUNG ZAKAT.
 --     Super Admin dirangkumi oleh `has_department_access`. Admin JABATAN DATA tiada akses.
---   * Maklumat akaun bank pemohon berada pada baris permohonan: hanya pemilik dan
---     admin TABUNG ZAKAT boleh membacanya (RLS). Ia TIDAK pernah masuk notifikasi.
+--   * TIADA maklumat akaun bank dikumpul semasa memohon. SELEPAS diluluskan sahaja, ahli
+--     menghantar gambar kod QR (DuitNow) ke bucket PERSENDIRIAN `bantuan-qr` melalui
+--     `bantuan_set_qr`; hanya pemilik + admin TABUNG ZAKAT boleh membacanya (URL bertandatangan).
 --   * Pentadbir yang juga pemohon TIDAK boleh melihat butiran admin, menyemak atau
 --     memutuskan permohonan sendiri (RLS + RPC). Tiada jalan pintas.
 --   * Persaingan: lajur `versi`. Setiap tindakan admin menghantar `versi` yang dilihatnya;
@@ -115,10 +116,9 @@ create table if not exists public.bantuan_applications (
   penerangan           text,
   pernah_terima        boolean,
 
-  -- Akaun bank (SULIT — pemilik + admin TABUNG ZAKAT sahaja).
-  bank_nama_pemegang   text,
-  bank_nama            text,
-  bank_no_akaun        text check (bank_no_akaun is null or bank_no_akaun ~ '^[0-9]{6,20}$'),
+  -- Kod QR penerimaan (DuitNow) — dihantar ahli SELEPAS diluluskan (bantuan_set_qr).
+  qr_path              text,
+  qr_dihantar_at       timestamptz,
 
   -- Pengakuan
   pengakuan_setuju     boolean not null default false,
@@ -148,8 +148,7 @@ create table if not exists public.bantuan_applications (
     and char_length(coalesce(tinggal_di_lain, '')) <= 200 and char_length(coalesce(tahun_pengajian, '')) <= 100
     and char_length(coalesce(pembiayaan_lain, '')) <= 200 and char_length(coalesce(pekerjaan, '')) <= 200
     and char_length(coalesce(pekerjaan_ibu, '')) <= 200 and char_length(coalesce(pekerjaan_bapa, '')) <= 200
-    and char_length(coalesce(sebab_lain, '')) <= 200 and char_length(coalesce(bank_nama_pemegang, '')) <= 200
-    and char_length(coalesce(bank_nama, '')) <= 200
+    and char_length(coalesce(sebab_lain, '')) <= 200
   ),
   constraint bantuan_penerangan_pendek check (char_length(coalesce(penerangan, '')) <= 3000)
 );
@@ -317,7 +316,7 @@ as $$
   select to_jsonb(p_app) - array[
     'id','no_rujukan','member_id','status','versi','created_at','updated_at','snapshot_hantar',
     'jumlah_diluluskan','mesej_keputusan','sebab_tolak_kategori','sebab_tolak_penjelasan',
-    'diputuskan_oleh','diputuskan_at','dihantar_at','pertama_dihantar_at','pengakuan_at'
+    'diputuskan_oleh','diputuskan_at','dihantar_at','pertama_dihantar_at','pengakuan_at','qr_path','qr_dihantar_at'
   ];
 $$;
 revoke all on function public.bantuan_snapshot(public.bantuan_applications) from public, anon, authenticated;
@@ -368,15 +367,6 @@ begin
   end if;
   if a.pernah_terima is null then
     raise exception 'Sila nyatakan sama ada anda pernah menerima bantuan zakat sebelum ini.' using errcode = '22023';
-  end if;
-  if char_length(coalesce(btrim(a.bank_nama_pemegang), '')) < 2 then
-    raise exception 'Sila isi nama pemegang akaun.' using errcode = '22023';
-  end if;
-  if char_length(coalesce(btrim(a.bank_nama), '')) < 2 then
-    raise exception 'Sila isi nama bank.' using errcode = '22023';
-  end if;
-  if a.bank_no_akaun is null then
-    raise exception 'Sila isi nombor akaun bank yang sah (6 hingga 20 digit).' using errcode = '22023';
   end if;
 
   if a.kategori = 'belajar' then
@@ -494,8 +484,6 @@ begin
            pekerjaan_bapa = case when p_data ? 'pekerjaan_bapa' then nullif(btrim(p_data->>'pekerjaan_bapa'), '') else a.pekerjaan_bapa end,
            sebab_lain = case when p_data ? 'sebab_lain' then nullif(btrim(p_data->>'sebab_lain'), '') else a.sebab_lain end,
            penerangan = case when p_data ? 'penerangan' then nullif(btrim(p_data->>'penerangan'), '') else a.penerangan end,
-           bank_nama_pemegang = case when p_data ? 'bank_nama_pemegang' then nullif(btrim(p_data->>'bank_nama_pemegang'), '') else a.bank_nama_pemegang end,
-           bank_nama = case when p_data ? 'bank_nama' then nullif(btrim(p_data->>'bank_nama'), '') else a.bank_nama end,
            pendapatan_pemohon = case when p_data ? 'pendapatan_pemohon' then nullif(btrim(p_data->>'pendapatan_pemohon'), '')::numeric(12,2) else a.pendapatan_pemohon end,
            pendapatan_keluarga = case when p_data ? 'pendapatan_keluarga' then nullif(btrim(p_data->>'pendapatan_keluarga'), '')::numeric(12,2) else a.pendapatan_keluarga end,
            bil_tanggungan = case when p_data ? 'bil_tanggungan' then nullif(btrim(p_data->>'bil_tanggungan'), '')::integer else a.bil_tanggungan end,
@@ -506,7 +494,6 @@ begin
            pengakuan_setuju = case when p_data ? 'pengakuan_setuju' then nullif(btrim(p_data->>'pengakuan_setuju'), '')::boolean else a.pengakuan_setuju end,
            pembiayaan = case when p_data ? 'pembiayaan' then (case when jsonb_typeof(p_data->'pembiayaan') = 'array' then array(select jsonb_array_elements_text(p_data->'pembiayaan')) else null end) else a.pembiayaan end,
            sebab_keperluan = case when p_data ? 'sebab_keperluan' then (case when jsonb_typeof(p_data->'sebab_keperluan') = 'array' then array(select jsonb_array_elements_text(p_data->'sebab_keperluan')) else null end) else a.sebab_keperluan end,
-           bank_no_akaun = case when p_data ? 'bank_no_akaun' then nullif(regexp_replace(coalesce(p_data->>'bank_no_akaun', ''), '[^0-9]', '', 'g'), '') else a.bank_no_akaun end,
            kategori = case
              when a.status = 'draft' and coalesce(p_data->>'kategori', '') in ('belajar', 'bekerja')
                then p_data->>'kategori'
@@ -985,6 +972,130 @@ revoke all on function public.bantuan_admin_sebelum(uuid) from public, anon;
 grant execute on function public.bantuan_admin_list(text, text, text, date, date, integer) to authenticated;
 grant execute on function public.bantuan_admin_ringkasan() to authenticated;
 grant execute on function public.bantuan_admin_sebelum(uuid) to authenticated;
+
+-- -----------------------------------------------------------------------------
+-- 9. Kod QR penerimaan (selepas diluluskan sahaja)
+--
+-- Bucket PERSENDIRIAN `bantuan-qr`: JPG/PNG, maks 2 MB (dikuatkuasakan Storage).
+-- Nama objek: <application_id>/<uuid>.<jpg|png>. Muat naik hanya oleh pemilik
+-- apabila status 'approved'. Tiada polisi UPDATE (tidak boleh ditimpa); QR baharu
+-- menggantikan yang lama melalui `bantuan_set_qr` (klien memadam objek lama).
+-- Bacaan: pemilik atau admin TABUNG ZAKAT (bukan permohonan sendiri) melalui URL bertandatangan.
+-- -----------------------------------------------------------------------------
+
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('bantuan-qr', 'bantuan-qr', false, 2097152, array['image/jpeg', 'image/png'])
+on conflict (id) do update
+  set public = false,
+      file_size_limit = 2097152,
+      allowed_mime_types = array['image/jpeg', 'image/png'];
+
+create or replace function public.bantuan_qr_app(p_name text)
+returns uuid
+language sql immutable
+as $$
+  select case when p_name ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(jpg|png)$'
+              then split_part(p_name, '/', 1)::uuid end;
+$$;
+
+create or replace function public.bantuan_qr_can_read(p_name text)
+returns boolean
+language sql stable security definer set search_path = public
+as $$
+  select public.bantuan_qr_app(p_name) is not null
+     and (public.bantuan_owner_of(public.bantuan_qr_app(p_name))
+          or public.bantuan_admin_can_see(public.bantuan_qr_app(p_name)));
+$$;
+
+create or replace function public.bantuan_qr_can_write(p_name text)
+returns boolean
+language sql stable security definer set search_path = public
+as $$
+  select public.bantuan_qr_app(p_name) is not null
+     and not public.my_account_suspended()
+     and exists (
+       select 1 from public.bantuan_applications a
+        where a.id = public.bantuan_qr_app(p_name)
+          and a.member_id = public.my_member_id()
+          and a.status = 'approved'
+     );
+$$;
+
+revoke all on function public.bantuan_qr_app(text) from public, anon;
+revoke all on function public.bantuan_qr_can_read(text) from public, anon;
+revoke all on function public.bantuan_qr_can_write(text) from public, anon;
+grant execute on function public.bantuan_qr_app(text) to authenticated;
+grant execute on function public.bantuan_qr_can_read(text) to authenticated;
+grant execute on function public.bantuan_qr_can_write(text) to authenticated;
+
+drop policy if exists bantuan_qr_read on storage.objects;
+create policy bantuan_qr_read on storage.objects
+  for select to authenticated
+  using (bucket_id = 'bantuan-qr' and public.bantuan_qr_can_read(name));
+
+drop policy if exists bantuan_qr_insert on storage.objects;
+create policy bantuan_qr_insert on storage.objects
+  for insert to authenticated
+  with check (bucket_id = 'bantuan-qr' and public.bantuan_qr_can_write(name));
+
+drop policy if exists bantuan_qr_delete on storage.objects;
+create policy bantuan_qr_delete on storage.objects
+  for delete to authenticated
+  using (bucket_id = 'bantuan-qr' and public.bantuan_qr_can_write(name));
+
+-- Daftarkan QR. Memulangkan laluan QR LAMA (jika ada) supaya klien boleh memadamnya.
+create or replace function public.bantuan_set_qr(p_app uuid, p_path text)
+returns text
+language plpgsql security definer set search_path = public
+as $$
+declare
+  me   uuid := public.my_member_id();
+  app  public.bantuan_applications;
+  obj  record;
+  v_lama text;
+begin
+  if me is null then
+    raise exception 'Akaun anda belum dipautkan kepada rekod ahli.' using errcode = '42501';
+  end if;
+  if public.my_account_suspended() then
+    raise exception 'Akaun anda digantung.' using errcode = '42501';
+  end if;
+  select * into app from public.bantuan_applications where id = p_app for update;
+  if not found or app.member_id <> me then
+    raise exception 'Permohonan tidak dijumpai.' using errcode = 'P0002';
+  end if;
+  if app.status <> 'approved' then
+    raise exception 'Kod QR hanya boleh dihantar selepas permohonan diluluskan.' using errcode = '55000';
+  end if;
+  if p_path is null or public.bantuan_qr_app(p_path) is distinct from p_app then
+    raise exception 'Laluan fail tidak sah.' using errcode = '22023';
+  end if;
+
+  select coalesce((o.metadata->>'size')::bigint, 0) as saiz, coalesce(o.metadata->>'mimetype', '') as jenis_mime
+    into obj
+    from storage.objects o
+   where o.bucket_id = 'bantuan-qr' and o.name = p_path;
+  if not found then
+    raise exception 'Gambar belum selesai dimuat naik. Sila cuba lagi.' using errcode = '22023';
+  end if;
+  if obj.saiz <= 0 or obj.saiz > 2097152 then
+    raise exception 'Saiz gambar melebihi 2 MB.' using errcode = '22023';
+  end if;
+  if obj.jenis_mime not in ('image/jpeg', 'image/png') then
+    raise exception 'Hanya gambar JPG atau PNG dibenarkan.' using errcode = '22023';
+  end if;
+
+  v_lama := app.qr_path;
+  update public.bantuan_applications a
+     set qr_path = p_path, qr_dihantar_at = now()
+   where a.id = p_app;
+  perform public.bantuan_log(p_app, 'qr_dihantar', 'approved', 'approved', null, true);
+  return v_lama;
+end;
+$$;
+
+revoke all on function public.bantuan_set_qr(uuid, text) from public, anon;
+grant execute on function public.bantuan_set_qr(uuid, text) to authenticated;
 
 -- -----------------------------------------------------------------------------
 -- 10. Notifikasi admin — tambah blok baharu pada `admin_notifications()`

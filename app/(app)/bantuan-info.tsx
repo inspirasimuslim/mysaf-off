@@ -23,6 +23,7 @@ import {
   fetchBantuan,
   fetchBantuanHistory,
   fetchBantuanInfoRequests,
+  uploadBantuanQr,
   formatRM,
   formatTarikh,
   optionLabels,
@@ -30,6 +31,7 @@ import {
   type BantuanHistory,
   type BantuanInfoRequest,
 } from '@/lib/bantuan';
+import { pickImage } from '@/lib/image-upload';
 import { useGoBack } from '@/lib/navigation';
 
 /**
@@ -49,10 +51,14 @@ export default function BantuanInfoScreen() {
   const [requests, setRequests] = useState<BantuanInfoRequest[]>([]);
   const [history, setHistory] = useState<BantuanHistory[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [tick, setTick] = useState(0);
+  const [uploading, setUploading] = useState(false);
+  const [qrInfo, setQrInfo] = useState<string | null>(null);
 
   useFocusEffect(
     useCallback(() => {
       if (!id) return;
+      void tick; // muat semula selepas QR dihantar
       let active = true;
       void (async () => {
         try {
@@ -75,8 +81,26 @@ export default function BantuanInfoScreen() {
       return () => {
         active = false;
       };
-    }, [id]),
+    }, [id, tick]),
   );
+
+  const hantarQr = async () => {
+    if (!id || uploading) return;
+    setError(null);
+    setQrInfo(null);
+    try {
+      const uri = await pickImage();
+      if (!uri) return;
+      setUploading(true);
+      await uploadBantuanQr(id, uri);
+      setQrInfo('Kod QR diterima. Terima kasih.');
+      setTick((value) => value + 1);
+    } catch (caught) {
+      setError(bantuanError(caught, 'Gambar QR gagal dimuat naik. Sila cuba lagi.'));
+    } finally {
+      setUploading(false);
+    }
+  };
 
   if (app === undefined) return <LoadingScreen />;
 
@@ -129,6 +153,26 @@ export default function BantuanInfoScreen() {
           </Card>
         ) : null}
 
+        {app.status === 'approved' ? (
+          <Card>
+            <View className="gap-3">
+              <Text className="text-base font-bold text-ink">Kod QR penerimaan</Text>
+              {qrInfo ? <Notice tone="positive" message={qrInfo} /> : null}
+              <Text className="text-sm leading-5 text-ink-muted">
+                {app.qr_path
+                  ? 'Kod QR anda telah dihantar (' + formatTarikh(app.qr_dihantar_at) + '). Anda boleh menggantikannya jika perlu.'
+                  : 'Hantar tangkap layar atau gambar kod QR DuitNow akaun anda. Hanya jawatankuasa zakat LK boleh melihatnya, dan ia hanya diminta selepas permohonan diluluskan.'}
+              </Text>
+              <Button
+                label={app.qr_path ? 'Ganti Gambar QR' : 'Pilih Gambar QR'}
+                variant={app.qr_path ? 'secondary' : 'primary'}
+                loading={uploading}
+                onPress={() => void hantarQr()}
+              />
+            </View>
+          </Card>
+        ) : null}
+
         {app.status === 'rejected' ? (
           <Card>
             <View className="gap-2">
@@ -158,10 +202,6 @@ export default function BantuanInfoScreen() {
             <Row label="Telefon" value={app.telefon ?? '—'} />
             <Row label="Sebab keperluan" value={optionLabels(SEBAB_OPTIONS, app.sebab_keperluan, app.sebab_lain)} />
             <Row label="Penerangan" value={app.penerangan ?? '—'} />
-            <Row
-              label="Akaun bank"
-              value={app.bank_nama ? app.bank_nama + (app.bank_no_akaun ? ' ••••' + app.bank_no_akaun.slice(-4) : '') : '—'}
-            />
           </View>
         </Card>
 
