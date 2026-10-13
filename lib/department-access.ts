@@ -159,15 +159,18 @@ export const PERKADERAN_DEPARTMENT = 'LAJNAH PERKADERAN';
 /**
  * Mesti sepadan dengan `can_view_health()` dalam
  * `20260929000085_member_health_issues.sql` dan `members_export_kesihatan()`
- * dalam `20260929000095_member_export_sheets.sql`.
+ * dalam `20260929000095_member_export_sheets.sql`, seperti diubah oleh
+ * `20261013000149_kesihatan_department_khusus.sql`.
+ *
+ * Department KHUSUS — sengaja BUKAN `LAJNAH KEBAJIKAN` (admin umum data ahli).
  */
-export const KEBAJIKAN_DEPARTMENT = 'LAJNAH KEBAJIKAN';
+export const KESIHATAN_DEPARTMENT = 'KESIHATAN AHLI';
 
 /**
  * Department KHUSUS yang mengurus Permohonan Zakat (migration 148).
  *
- * Sengaja BUKAN `LAJNAH KEBAJIKAN` — admin Kebajikan yang mengurus data ahli /
- * kesihatan tidak otomatik melihat permohonan zakat. Mesti sepadan dengan
+ * Sengaja BUKAN `LAJNAH KEBAJIKAN` — admin Kebajikan yang mengurus data ahli
+ * tidak otomatik melihat permohonan zakat. Mesti sepadan dengan
  * `can_view_bantuan_admin()` / `can_decide_bantuan()` dalam
  * `20261013000148_permohonan_bantuan.sql`. Tugaskan admin melalui Hub Admin.
  */
@@ -178,9 +181,9 @@ export function useZakatAccess(): DepartmentAccess {
   return useDepartmentAccess(ZAKAT_DEPARTMENT);
 }
 
-/** Pintasan untuk eksport data Kesihatan (LAJNAH KEBAJIKAN). */
-export function useKebajikanAccess(): DepartmentAccess {
-  return useDepartmentAccess(KEBAJIKAN_DEPARTMENT);
+/** Pintasan untuk data Kesihatan ahli (KESIHATAN AHLI). */
+export function useKesihatanAccess(): DepartmentAccess {
+  return useDepartmentAccess(KESIHATAN_DEPARTMENT);
 }
 
 /** Pintasan untuk modul Usrah Sekolah (Naqib/Naqibah). */

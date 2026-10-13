@@ -11,7 +11,7 @@ import { Screen } from '@/components/ui/screen';
 import {
   useDepartmentAccess,
   useGenerasiAccess,
-  useKebajikanAccess,
+  useKesihatanAccess,
   useMemberAccess,
   usePerkaderanAccess,
   usePipisAccess,
@@ -55,8 +55,8 @@ export default function AdminHubScreen() {
   const orgChartAccess = useDepartmentAccess(ORG_CHART_DEPARTMENT);
   const generasiAccess = useGenerasiAccess();
   const perkaderanAccess = usePerkaderanAccess();
-  const kebajikanAccess = useKebajikanAccess();
-  // TABUNG ZAKAT — department khusus, BUKAN LAJNAH KEBAJIKAN (`kebajikanAccess`).
+  const kesihatanAccess = useKesihatanAccess();
+  // TABUNG ZAKAT — department khusus, BUKAN LAJNAH KEBAJIKAN (`kesihatanAccess`).
   const zakatAccess = useZakatAccess();
 
   const superAdmin = isSuperAdmin();
@@ -82,7 +82,7 @@ export default function AdminHubScreen() {
       orgChartAccess,
       generasiAccess,
       perkaderanAccess,
-      kebajikanAccess,
+      kesihatanAccess,
       zakatAccess,
     ].some((access) => access.loading);
   const visibleSections = [
@@ -95,7 +95,7 @@ export default function AdminHubScreen() {
     orgChartAccess.canView,
     generasiAccess.canView,
     perkaderanAccess.canView,
-    kebajikanAccess.canView,
+    kesihatanAccess.canView,
     zakatAccess.canView,
     naqib,
     kawasanOnly,
@@ -446,9 +446,9 @@ export default function AdminHubScreen() {
           </CollapsibleSection>
         ) : null}
 
-        {/* Data kesihatan ahli — LAJNAH KEBAJIKAN sahaja (bukan JABATAN DATA). */}
-        {kebajikanAccess.canView ? (
-          <CollapsibleSection variant="plain" title="Kebajikan" count={1} defaultOpen={openByDefault}>
+        {/* Data kesihatan ahli — department KESIHATAN AHLI sahaja (bukan LAJNAH KEBAJIKAN / JABATAN DATA). */}
+        {kesihatanAccess.canView ? (
+          <CollapsibleSection variant="plain" title="Kesihatan Ahli" count={1} defaultOpen={openByDefault}>
             <ActionRow
               icon="medkit-outline"
               title="Eksport Data Kesihatan"

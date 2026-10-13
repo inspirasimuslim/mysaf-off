@@ -31,7 +31,7 @@ import { useColors } from '@/lib/theme';
  *
  * Sengaja komponen berdikari (memuat dan menyimpan sendiri, butang Simpan
  * sendiri) dan BUKAN sebahagian daripada `MemberForm.onSave`: akses tab ini
- * berbeza daripada tab lain (pemilik + admin LAJNAH KEBAJIKAN + Super Admin,
+ * berbeza daripada tab lain (pemilik + admin KESIHATAN AHLI + Super Admin,
  * bukan admin JABATAN DATA), jadi ia tidak boleh berkongsi laluan simpan atau
  * draf yang sama. Tiada kaitan dengan Dashboard Kelengkapan Data atau Excel.
  * RLS (`can_view_health`/`can_edit_health`) ialah penentu muktamad.

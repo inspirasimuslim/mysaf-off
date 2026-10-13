@@ -10,7 +10,7 @@ import { deliverWorkbook } from './xlsx-download';
  * Eksport data Kesihatan — fail BERASINGAN daripada eksport Ahli Keseluruhan.
  *
  * DATA SENSITIF. `members_export_kesihatan()` menyemak di pelayan bahawa
- * pemanggil ialah admin LAJNAH KEBAJIKAN atau Super Admin; butang yang
+ * pemanggil ialah admin KESIHATAN AHLI atau Super Admin; butang yang
  * tersembunyi dalam app bukan lapisan kawalan.
  */
 

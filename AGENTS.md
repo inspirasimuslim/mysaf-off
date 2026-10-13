@@ -311,7 +311,7 @@ fungsi baharu, tiada data sedia ada disentuh).
   dan `tidak_mahu_nyatakan` tiada medan tambahan; 11 kategori lain + `lain_lain`
   ada nama penyakit + temujanji.
 - **RLS LEBIH KETAT** — `can_view_health(member_id)` / `can_edit_health(member_id)`:
-  pemilik sendiri, Super Admin, admin department `LAJNAH KEBAJIKAN`
+  pemilik sendiri, Super Admin, admin department `KESIHATAN AHLI` (KHUSUS sejak migration 149, 2026-10-13; sebelum itu `LAJNAH KEBAJIKAN` — admin Kebajikan umum KINI TIDAK lagi ada akses; eksport `members_export_kesihatan()` pun sama)
   (`admin_assignments` via `has_department_access`, view=`can_view`,
   edit=`can_edit`). Admin JABATAN DATA & SUMBER MANUSIA TIDAK mendapat akses.
   Sengaja TIDAK bergantung pada padanan teks carta organisasi.

@@ -8,14 +8,14 @@ import { LoadingScreen } from '@/components/ui/loading-screen';
 import { Notice } from '@/components/ui/notice';
 import { Screen } from '@/components/ui/screen';
 import { ToastBanner } from '@/components/ui/toast';
-import { KEBAJIKAN_DEPARTMENT, useDepartmentAccess } from '@/lib/department-access';
+import { KESIHATAN_DEPARTMENT, useDepartmentAccess } from '@/lib/department-access';
 import { toMalayError } from '@/lib/errors';
 import { deliveryMessage, type DeliveryMode } from '@/lib/file-delivery';
 import { downloadHealthExport } from '@/lib/member-health-export';
 import { useGoBack } from '@/lib/navigation';
 
 /**
- * Eksport Data Kesihatan Ahli — admin LAJNAH KEBAJIKAN dan Super Admin sahaja.
+ * Eksport Data Kesihatan Ahli — admin KESIHATAN AHLI dan Super Admin sahaja.
  *
  * Kebenaran LIHAT department sudah memadai (eksport hanya membaca), dan
  * `members_export_kesihatan()` menyemaknya semula di pelayan. Sengaja bukan
@@ -23,7 +23,7 @@ import { useGoBack } from '@/lib/navigation';
  */
 export default function EksportKesihatanScreen() {
   const goBack = useGoBack();
-  const { loading, canView } = useDepartmentAccess(KEBAJIKAN_DEPARTMENT);
+  const { loading, canView } = useDepartmentAccess(KESIHATAN_DEPARTMENT);
 
   const [exporting, setExporting] = useState<DeliveryMode | null>(null);
   const [banner, setBanner] = useState<{ tone: 'positive' | 'info' | 'negative'; message: string } | null>(null);
@@ -54,7 +54,7 @@ export default function EksportKesihatanScreen() {
     return (
       <NoAccessScreen
         title="Eksport Data Kesihatan"
-        description="Eksport ini khusus untuk admin LAJNAH KEBAJIKAN dan Super Admin."
+        description="Eksport ini khusus untuk admin KESIHATAN AHLI dan Super Admin."
       />
     );
   }

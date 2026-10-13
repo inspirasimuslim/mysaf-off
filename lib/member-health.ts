@@ -6,8 +6,8 @@ import { supabase } from './supabase';
  * Operasi pangkalan data untuk tab Kesihatan (`member_health_issues`).
  *
  * DATA SENSITIF. Akses ditentukan sepenuhnya oleh RLS melalui
- * `can_view_health()`/`can_edit_health()` (pemilik sendiri + admin LAJNAH
- * KEBAJIKAN + Super Admin) — kod ini hanya bertanya fungsi yang sama supaya UI
+ * `can_view_health()`/`can_edit_health()` (pemilik sendiri + admin department
+ * KESIHATAN AHLI + Super Admin) — kod ini hanya bertanya fungsi yang sama supaya UI
  * tidak menunjukkan borang yang pasti ditolak. Sengaja BUKAN sebahagian
  * daripada `MemberForm.onSave`, Excel import/eksport atau Dashboard
  * Kelengkapan Data.
