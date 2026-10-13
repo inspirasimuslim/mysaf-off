@@ -16,6 +16,7 @@ import { AdminNotificationsProvider } from '@/lib/admin-notifications';
 import { useAndroidBackNavigation } from '@/lib/android-back';
 import { useAuth } from '@/lib/auth-context';
 import { activityCaptureProps, useIdleTimeout } from '@/lib/idle-timer';
+import { useReturnToHome } from '@/lib/return-to-home';
 import { signOutEverywhere } from '@/lib/session';
 import { useIsDesktop } from '@/lib/use-desktop';
 import { SUSPENDED_MESSAGE, setAuthNotice, useAccountStatus } from '@/lib/suspension';
@@ -202,6 +203,8 @@ function AppGate() {
     password.state === 'expired' ||
     password.state === 'must-change';
   useAndroidBackNavigation(backBlocked);
+  // Keluar app > 5 minit -> kembali ke Utama (bukan pada skrin gate).
+  useReturnToHome(!backBlocked);
 
   if (initialising) return <LoadingScreen />;
   if (!session) return <Redirect href="/(auth)/login" />;

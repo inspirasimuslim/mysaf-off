@@ -39,7 +39,7 @@ import { usePermissions } from '@/lib/permissions';
 import { useColors } from '@/lib/theme';
 
 /**
- * Library Dokumen ("Arkib") — terbuka kepada semua ahli (lihat, muat naik).
+ * Koleksi Dokumen (dahulu "Arkib") — terbuka kepada semua ahli (lihat, muat naik).
  * Padam: pemilik sendiri atau Super Admin sahaja. Fail sebenar di Google Drive;
  * lihat `lib/documents.ts`.
  */
@@ -213,7 +213,7 @@ export default function DocumentLibraryScreen() {
   return (
     <View className="flex-1 bg-background">
       <Screen padTop={false} wide>
-        <ScreenHeader eyebrow="Tetapan" title="Arkib" subtitle="Perpustakaan dokumen untuk semua ahli" onBackPress={goBack} />
+        <ScreenHeader title="Koleksi Dokumen" subtitle="Perpustakaan dokumen untuk semua ahli" onBackPress={goBack} />
 
         <View className="gap-4 px-gutter pt-6">
           {banner ? <ToastBanner tone={banner.tone} message={banner.message} /> : null}
@@ -429,7 +429,7 @@ export default function DocumentLibraryScreen() {
         title="Padam dokumen ini?"
         message={
           pendingDelete
-            ? '"' + pendingDelete.file_name + '" akan dipadam dari Arkib dan dari Google Drive. Tindakan ini tidak boleh dibatalkan.'
+            ? '"' + pendingDelete.file_name + '" akan dipadam dari Koleksi Dokumen dan dari Google Drive. Tindakan ini tidak boleh dibatalkan.'
             : ''
         }
         confirmLabel="Padam"
