@@ -522,3 +522,20 @@ Rujukan: `supabase/migrations/20261013000153_bantuan_kaunseling.sql`, `lib/couns
   `lib/permissions.tsx`, RPC `is_active_counselor`; kaunselor dibenarkan melepasi guard `admin/_layout.tsx`, sidebar, header,
   dan notifikasi). `admin_notifications()` blok ke-5 (`kaunseling`, tanpa nama ahli). Ahli: lencana tile + banner Utama.
 - **Belum dibuat**: kemas kini Data Safety Play Console / `app/dasar-privasi.tsx` (mesej kaunseling, nombor telefon kaunselor).
+
+# Infaq Tabung Zakat (2026-10-13, migration 154, BELUM di-push ke produksi)
+
+Rujukan: `supabase/migrations/20261013000154_infaq_tabung_zakat.sql`, `supabase/functions/create-zakat-bill/`,
+`supabase/functions/_shared/toyyibpay.ts` (`GATEWAY_KINDS.zakat`), `lib/zakat-infaq.ts`, `lib/toyyibpay.ts` (kind `zakat`),
+`app/(app)/infaq-zakat.tsx` (ahli), `app/(app)/admin/infaq-zakat.tsx` (admin). Diuji pada Postgres 16 tempatan (RLS, pembatalan, RPC admin).
+
+- Infaq sukarela, TIADA sasaran. Corak sama PIPIS: baris `zakat_infaq` 'pending' (amount 0, `requested_amount`) dicipta Edge Function
+  sebelum ToyyibPay; HANYA `toyyibpay-callback` (selepas bertanya ToyyibPay) menukar 'success' + amaun. Kekangan: belum/gagal wajib amount 0.
+- Ahli: kad "Infaq Tabung Zakat" di tab Bayar/Infaq (`pembayaran.tsx`) -> skrin `infaq-zakat` (bayar + jumlah berjaya + sejarah sendiri).
+  RLS: pemilik ATAU `can_view_bantuan_admin()` (TABUNG ZAKAT). Tiada INSERT/UPDATE/DELETE untuk authenticated.
+- Admin: Hub -> LK — Tabung Zakat -> "Infaq Zakat": semua rekod (RPC `zakat_infaq_admin_list/summary`, nama + nombor ahli), tapis/cari,
+  muat turun Excel (`downloadZakatInfaqExport`, semua status). Admin Kebajikan umum / JDSM TIDAK nampak (diuji).
+- `cancel_pending_gateway_payment()` dilanjutkan dengan cabang `zakat_infaq`.
+- **DEPLOY**: selepas migration 154 dijalankan, WAJIB deploy Edge Function: `supabase functions deploy create-zakat-bill` DAN
+  `supabase functions deploy toyyibpay-callback` (kod `_shared` berubah; callback mesti tahu table `zakat_infaq`). Tanpa deploy callback,
+  bayaran infaq kekal 'pending'. Deep link kembali: `mysafoff://infaq-zakat` / `/infaq-zakat` (web). Pastikan `APP_WEB_ORIGINS` memuatkan domain web.

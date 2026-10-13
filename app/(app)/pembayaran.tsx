@@ -12,6 +12,7 @@ import { SectionTitle } from '@/components/ui/section-title';
 import { fetchAdhocPayments } from '@/lib/adhoc-payments';
 import { useAuth } from '@/lib/auth-context';
 import { fetchMyMemberLinked } from '@/lib/members';
+import { fetchMyZakatInfaqSummary, ringgitInfaq, type ZakatInfaqSummary } from '@/lib/zakat-infaq';
 import { fetchPipisSummary, peratusLabel, ringgitPipis, type PipisSummary } from '@/lib/pipis';
 import { fetchYuranSummary, ringgit, type YuranSummary } from '@/lib/yuran';
 import type { AdhocPaymentType } from '@/types/database';
@@ -37,6 +38,7 @@ export default function PembayaranScreen() {
 
   const [yuran, setYuran] = useState<YuranSummary | null>(null);
   const [pipis, setPipis] = useState<PipisSummary | null>(null);
+  const [infaq, setInfaq] = useState<ZakatInfaqSummary | null>(null);
   const [adhoc, setAdhoc] = useState<AdhocPaymentType[]>([]);
 
   /*
@@ -56,19 +58,23 @@ export default function PembayaranScreen() {
           const member = await fetchMyMemberLinked(userId);
           if (!active || !member) return;
 
-          const [yuranSummary, pipisSummary] = await Promise.all([
+          const [yuranSummary, pipisSummary, infaqSummary] = await Promise.all([
             fetchYuranSummary(member.id),
             fetchPipisSummary(member.id),
+            // Infaq zakat (migration 154): kegagalan (cth. migration belum dijalankan) tidak menjejaskan kad lain.
+            fetchMyZakatInfaqSummary(member.id).catch(() => null),
           ]);
 
           if (active) {
             setYuran(yuranSummary);
             setPipis(pipisSummary);
+            setInfaq(infaqSummary);
           }
         } catch {
           if (active) {
             setYuran(null);
             setPipis(null);
+            setInfaq(null);
           }
         }
       })();
@@ -147,6 +153,21 @@ export default function PembayaranScreen() {
                       : 'Baki ke sasaran ' + ringgitPipis(pipis.sasaran - pipis.jumlah) + '.'
               }
               onPress={() => router.push('/(app)/pipis')}
+            />
+
+            <SummaryCard
+              icon={<Ionicons name="heart-outline" size={16} color={colors.primary} />}
+              title="Infaq Tabung Zakat"
+              highlight={false}
+              value={infaq === null ? '—' : ringgitInfaq(infaq.jumlah)}
+              caption={
+                infaq === null
+                  ? 'Bayar infaq secara online. Tiada sasaran.'
+                  : infaq.bilangan > 0
+                    ? infaq.bilangan + ' bayaran berjaya. Ketik untuk berinfaq atau lihat sejarah.'
+                    : 'Belum ada infaq. Ketik untuk berinfaq — tiada sasaran.'
+              }
+              onPress={() => router.push('/(app)/infaq-zakat')}
             />
           </View>
         </View>

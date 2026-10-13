@@ -26,6 +26,7 @@ const ITEMS: Item[] = [
 const PARENT: Record<string, string> = {
   yuran: 'pembayaran',
   pipis: 'pembayaran',
+  'infaq-zakat': 'pembayaran',
   'adhoc-payment-info': 'pembayaran',
   'ahli-view': 'ahli',
   album: 'arkib-hub',

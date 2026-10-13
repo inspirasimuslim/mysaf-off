@@ -19,7 +19,7 @@ export type GatewayStatus = 'pending' | 'success' | 'failed';
 export type Outcome = GatewayStatus | 'unknown';
 
 type GatewayKind = {
-  table: 'pipis_contributions' | 'yuran_payments';
+  table: 'pipis_contributions' | 'yuran_payments' | 'zakat_infaq';
   billName: string;
   /** Deep link app native. */
   defaultReturn: string;
@@ -51,6 +51,14 @@ export const GATEWAY_KINDS = {
     webPath: '/yuran',
     extraRow: () => ({ year: malaysiaYear() }),
     pendingNote: null,
+  },
+  zakat: {
+    table: 'zakat_infaq',
+    billName: 'Infaq Tabung Zakat',
+    defaultReturn: 'mysafoff://infaq-zakat',
+    webPath: '/infaq-zakat',
+    extraRow: () => ({}),
+    pendingNote: 'Bayaran online ToyyibPay',
   },
 } satisfies Record<string, GatewayKind>;
 

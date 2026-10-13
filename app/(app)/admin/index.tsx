@@ -517,7 +517,7 @@ export default function AdminHubScreen() {
 
         {/* Permohonan zakat — department TABUNG ZAKAT sahaja (bukan LAJNAH KEBAJIKAN). */}
         {zakatAccess.canView ? (
-          <CollapsibleSection variant="plain" title="Lajnah Kebajikan (LK) — Tabung Zakat" count={1 + fbCount('TABUNG ZAKAT')} alert={fbUnread('TABUNG ZAKAT')} defaultOpen={openByDefault}>
+          <CollapsibleSection variant="plain" title="Lajnah Kebajikan (LK) — Tabung Zakat" count={2 + fbCount('TABUNG ZAKAT')} alert={fbUnread('TABUNG ZAKAT')} defaultOpen={openByDefault}>
             <ActionRow
               icon="hand-left-outline"
               title="Permohonan Zakat"
@@ -527,6 +527,13 @@ export default function AdminHubScreen() {
                   : 'Lihat permohonan zakat ahli (paparan sahaja)'
               }
               onPress={() => router.push('/(app)/admin/bantuan')}
+            />
+
+            <ActionRow
+              icon="cash-outline"
+              title="Infaq Zakat"
+              subtitle="Semua rekod bayaran infaq ahli (ToyyibPay), ringkasan dan muat turun Excel"
+              onPress={() => router.push('/(app)/admin/infaq-zakat')}
             />
 
             {feedbackRow('TABUNG ZAKAT')}

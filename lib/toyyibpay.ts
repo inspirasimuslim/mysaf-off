@@ -4,13 +4,13 @@ import { edgeMessage } from './members';
 import { supabase } from './supabase';
 
 /**
- * Bayaran online ToyyibPay — dikongsi oleh PIPIS ASET dan Yuran Tahunan.
+ * Bayaran online ToyyibPay — dikongsi oleh PIPIS ASET, Yuran Tahunan dan Infaq Tabung Zakat.
  *
  * App tidak pernah menentukan status bayaran. Ia hanya meminta pelayan
  * mencipta bil, dan kemudian meminta pelayan bertanya semula kepada ToyyibPay.
  */
 
-export type GatewayKind = 'pipis' | 'yuran';
+export type GatewayKind = 'pipis' | 'yuran' | 'zakat';
 
 export type GatewayStatus = 'pending' | 'success' | 'failed';
 
@@ -31,6 +31,7 @@ export type GatewayAwareRow = {
 const CREATE_FUNCTION: Record<GatewayKind, string> = {
   pipis: 'create-pipis-bill',
   yuran: 'create-yuran-bill',
+  zakat: 'create-zakat-bill',
 };
 
 /**
@@ -69,6 +70,7 @@ export async function refreshGatewayPayment(reference: string): Promise<GatewayS
 const TABLE: Record<GatewayKind, string> = {
   pipis: 'pipis_contributions',
   yuran: 'yuran_payments',
+  zakat: 'zakat_infaq',
 };
 
 /**
