@@ -4,7 +4,6 @@ import { Pressable, Text, View } from 'react-native';
 
 import { ScreenHeader } from '@/components/screen-header';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { LoadingScreen } from '@/components/ui/loading-screen';
@@ -13,21 +12,24 @@ import { Screen } from '@/components/ui/screen';
 import { useAuth } from '@/lib/auth-context';
 import {
   KATEGORI_LABEL,
+  KATEGORI_PENERANGAN,
   STATUS_LABEL,
   STATUS_TONE,
   bantuanError,
   fetchMyBantuan,
   formatRM,
   formatTarikh,
-  tujuanLabel,
+  optionLabels,
+  SEBAB_OPTIONS,
   type BantuanApplication,
 } from '@/lib/bantuan';
 import { fetchMyMemberLinked } from '@/lib/members';
 import { useGoBack } from '@/lib/navigation';
 
 /**
- * Senarai Permohonan Bantuan milik sendiri (migration 148). Status memakai teks
+ * Senarai Permohonan Zakat milik sendiri (migration 148). Status memakai teks
  * bersama warna. Nombor rujukan hanya ada selepas penghantaran pertama.
+ * Permohonan baharu dipilih mengikut borang: Belajar atau Bekerja/Berkahwin.
  */
 export default function BantuanScreen() {
   const router = useRouter();
@@ -74,16 +76,30 @@ export default function BantuanScreen() {
 
   return (
     <Screen padTop={false}>
-      <ScreenHeader eyebrow="Kebajikan" title="Permohonan Bantuan" onBackPress={goBack} />
+      <ScreenHeader eyebrow="Tabung Zakat" title="Permohonan Zakat" onBackPress={goBack} />
 
       <View className="gap-4 px-gutter pb-10 pt-5">
         <Card>
           <Text className="text-sm leading-5 text-ink-muted">
-            Bantuan diberikan sekali sahaja (one-off) berdasarkan keperluan yang dinilai dan kemampuan organisasi. Permohonan tidak menjamin kelulusan, dan kelulusan tidak bermaksud wang telah dibayar.
+            Bantuan zakat diberikan sekali sahaja (one-off) berdasarkan keperluan yang dinilai dan kemampuan organisasi. Permohonan dibuka setiap bulan dan boleh dihantar lebih daripada sekali pada bulan-bulan berikutnya. Permohonan tidak menjamin kelulusan, dan kelulusan tidak bermaksud wang telah dibayar.
           </Text>
         </Card>
 
-        <Button label="Permohonan Baharu" onPress={() => router.push('/(app)/bantuan-borang')} />
+        {(['belajar', 'bekerja'] as const).map((kategori) => (
+          <Pressable
+            key={kategori}
+            accessibilityRole="button"
+            accessibilityLabel={'Permohonan baharu: ' + KATEGORI_LABEL[kategori]}
+            onPress={() => router.push({ pathname: '/(app)/bantuan-borang', params: { kategori } })}
+            className="active:opacity-70">
+            <Card>
+              <View className="gap-1">
+                <Text className="text-base font-bold text-primary">Permohonan Baharu — {KATEGORI_LABEL[kategori]}</Text>
+                <Text className="text-sm text-ink-muted">{KATEGORI_PENERANGAN[kategori]}</Text>
+              </View>
+            </Card>
+          </Pressable>
+        ))}
 
         {error ? <Notice tone="negative" message={error} /> : null}
 
@@ -111,13 +127,10 @@ export default function BantuanScreen() {
                     <Badge label={STATUS_LABEL[row.status]} tone={STATUS_TONE[row.status]} />
                   </View>
                   <Text className="text-sm text-ink">{KATEGORI_LABEL[row.kategori]}</Text>
-                  <Text className="text-sm text-ink-muted">{tujuanLabel(row.kategori, row.tujuan, row.tujuan_lain)}</Text>
-                  <View className="flex-row justify-between">
-                    <Text className="text-xs text-ink-muted">
-                      {row.dihantar_at ? 'Dihantar ' + formatTarikh(row.dihantar_at) : 'Dikemas kini ' + formatTarikh(row.updated_at)}
-                    </Text>
-                    <Text className="text-xs font-semibold text-ink">Dimohon {formatRM(row.jumlah_dimohon)}</Text>
-                  </View>
+                  <Text className="text-sm text-ink-muted">{optionLabels(SEBAB_OPTIONS, row.sebab_keperluan, row.sebab_lain)}</Text>
+                  <Text className="text-xs text-ink-muted">
+                    {row.dihantar_at ? 'Dihantar ' + formatTarikh(row.dihantar_at) : 'Dikemas kini ' + formatTarikh(row.updated_at)}
+                  </Text>
                   {row.status === 'approved' ? (
                     <Text className="text-xs font-semibold text-positive">Diluluskan {formatRM(row.jumlah_diluluskan)}</Text>
                   ) : null}

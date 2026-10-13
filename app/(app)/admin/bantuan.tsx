@@ -12,7 +12,6 @@ import { Notice } from '@/components/ui/notice';
 import { OptionalDateField } from '@/components/ui/optional-date-field';
 import { PickerField } from '@/components/ui/picker-field';
 import { Screen } from '@/components/ui/screen';
-import { SelectRow } from '@/components/ui/select-row';
 import { TextField } from '@/components/ui/text-field';
 import {
   KATEGORI_LABEL,
@@ -23,18 +22,17 @@ import {
   fetchBantuanSummary,
   formatRM,
   formatTarikh,
-  tujuanLabel,
   type BantuanAdminRow,
   type BantuanKategori,
   type BantuanStatus,
 } from '@/lib/bantuan';
-import { useKebajikanAccess } from '@/lib/department-access';
+import { useZakatAccess } from '@/lib/department-access';
 import { useGoBack } from '@/lib/navigation';
 
 const STATUS_FILTERS: BantuanStatus[] = ['submitted', 'under_review', 'needs_information', 'approved', 'rejected'];
 
 /**
- * Panel semakan Permohonan Bantuan — admin LAJNAH KEBAJIKAN (migration 148).
+ * Panel semakan Permohonan Bantuan — admin TABUNG ZAKAT (migration 148).
  *
  * Akses dikuatkuasakan RPC `bantuan_admin_list` (dan RLS), bukan oleh skrin ini.
  * Draf tidak kelihatan; permohonan admin sendiri dikecualikan oleh pelayan.
@@ -43,14 +41,13 @@ const STATUS_FILTERS: BantuanStatus[] = ['submitted', 'under_review', 'needs_inf
 export default function AdminBantuanScreen() {
   const router = useRouter();
   const goBack = useGoBack();
-  const access = useKebajikanAccess();
+  const access = useZakatAccess();
 
   const [cari, setCari] = useState('');
   const [kategori, setKategori] = useState<BantuanKategori | null>(null);
   const [status, setStatus] = useState<BantuanStatus | null>(null);
   const [dari, setDari] = useState('');
   const [hingga, setHingga] = useState('');
-  const [mendesak, setMendesak] = useState(false);
 
   const [rows, setRows] = useState<BantuanAdminRow[] | null>(null);
   const [summary, setSummary] = useState<Record<string, number>>({});
@@ -71,7 +68,7 @@ export default function AdminBantuanScreen() {
       void (async () => {
         try {
           const [list, counts] = await Promise.all([
-            fetchBantuanAdminList({ cari, kategori, status, dari: dari || null, hingga: hingga || null, mendesak }),
+            fetchBantuanAdminList({ cari, kategori, status, dari: dari || null, hingga: hingga || null }),
             fetchBantuanSummary(),
           ]);
           if (!active) return;
@@ -90,21 +87,21 @@ export default function AdminBantuanScreen() {
       active = false;
       clearTimeout(timer);
     };
-  }, [access.canView, cari, kategori, status, dari, hingga, mendesak, tick]);
+  }, [access.canView, cari, kategori, status, dari, hingga, tick]);
 
   if (access.loading) return <LoadingScreen />;
   if (!access.canView) {
     return (
       <NoAccessScreen
-        title="Permohonan Bantuan"
-        description="Skrin ini khusus untuk admin LAJNAH KEBAJIKAN dan Super Admin."
+        title="Permohonan Zakat"
+        description="Skrin ini khusus untuk admin jabatan TABUNG ZAKAT dan Super Admin."
       />
     );
   }
 
   return (
     <Screen padTop={false}>
-      <ScreenHeader eyebrow="Lajnah Kebajikan" title="Permohonan Bantuan" onBackPress={goBack} />
+      <ScreenHeader eyebrow="Lajnah Kebajikan" title="Permohonan Zakat" onBackPress={goBack} />
 
       <View className="gap-4 px-gutter pb-10 pt-5">
         {error ? <Notice tone="negative" message={error} /> : null}
@@ -123,9 +120,6 @@ export default function AdminBantuanScreen() {
             </Pressable>
           ))}
         </View>
-        {(summary.mendesak_menunggu ?? 0) > 0 ? (
-          <Notice tone="warn" message={summary.mendesak_menunggu + ' permohonan bertanda mendesak masih menunggu keputusan.'} />
-        ) : null}
 
         <TextField label="Cari nama atau nombor rujukan" value={cari} onChangeText={setCari} autoCapitalize="characters" placeholder="cth: BNT-2026-000001" />
         <PickerField
@@ -145,7 +139,6 @@ export default function AdminBantuanScreen() {
             <OptionalDateField label="Hingga" value={hingga} onChange={setHingga} />
           </View>
         </View>
-        <SelectRow title="Tunjuk yang bertanda mendesak sahaja" selected={mendesak} onPress={() => setMendesak(!mendesak)} />
 
         {rows === null ? <LoadingScreen /> : null}
         {rows !== null && rows.length === 0 && !error ? (
@@ -165,18 +158,15 @@ export default function AdminBantuanScreen() {
                   <Text className="text-base font-bold text-ink">{row.no_rujukan}</Text>
                   <Badge label={STATUS_LABEL[row.status]} tone={STATUS_TONE[row.status]} />
                 </View>
-                <Text className="text-sm text-ink">{row.nama_pemohon ?? '—'}</Text>
-                <Text className="text-sm text-ink-muted">
-                  {KATEGORI_LABEL[row.kategori]} · {tujuanLabel(row.kategori, row.tujuan)}
-                </Text>
+                <Text className="text-sm text-ink">{row.nama_pemohon ?? '—'}{row.generasi ? ' (' + row.generasi + ')' : ''}</Text>
+                <Text className="text-sm text-ink-muted">{KATEGORI_LABEL[row.kategori]}</Text>
                 <View className="flex-row flex-wrap gap-2">
-                  {row.tahap_keperluan === 'mendesak' ? <Badge label="Mendesak" tone="warn" /> : null}
                   {row.dihantar_semula ? <Badge label="Dihantar semula" tone="info" /> : null}
                   {row.pertindihan ? <Badge label="Kemungkinan pertindihan" tone="warn" /> : null}
                 </View>
                 <View className="flex-row justify-between">
                   <Text className="text-xs text-ink-muted">Menunggu sejak {formatTarikh(row.dihantar_at)}</Text>
-                  <Text className="text-xs font-semibold text-ink">{formatRM(row.jumlah_dimohon)}</Text>
+                  <Text className="text-xs font-semibold text-ink">Pendapatan keluarga {formatRM(row.pendapatan_keluarga)}</Text>
                 </View>
               </View>
             </Card>

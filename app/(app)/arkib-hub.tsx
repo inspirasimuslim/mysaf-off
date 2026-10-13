@@ -63,7 +63,7 @@ export default function ArkibHubScreen() {
         />
         <HubButton
           icon="hand-left-outline"
-          title="Permohonan Bantuan"
+          title="Permohonan Zakat"
           subtitle={perluTindakan > 0 ? 'Perlu tindakan anda: ' + perluTindakan + ' permohonan' : undefined}
           onPress={() => router.push('/(app)/bantuan')}
         />

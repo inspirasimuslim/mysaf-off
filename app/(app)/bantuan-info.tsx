@@ -1,6 +1,6 @@
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Linking, Pressable, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import { ScreenHeader } from '@/components/screen-header';
 import { Badge } from '@/components/ui/badge';
@@ -16,20 +16,17 @@ import {
   MESEJ_DILULUSKAN,
   STATUS_LABEL,
   STATUS_TONE,
-  TAHAP_OPTIONS,
+  SEBAB_OPTIONS,
   TINDAKAN_LABEL,
   TOLAK_OPTIONS,
-  bantuanDocumentUrl,
   bantuanError,
   fetchBantuan,
-  fetchBantuanDocuments,
   fetchBantuanHistory,
   fetchBantuanInfoRequests,
   formatRM,
   formatTarikh,
-  tujuanLabel,
+  optionLabels,
   type BantuanApplication,
-  type BantuanDocument,
   type BantuanHistory,
   type BantuanInfoRequest,
 } from '@/lib/bantuan';
@@ -49,7 +46,6 @@ export default function BantuanInfoScreen() {
   const { id } = useLocalSearchParams<{ id?: string }>();
 
   const [app, setApp] = useState<BantuanApplication | null | undefined>(undefined);
-  const [docs, setDocs] = useState<BantuanDocument[]>([]);
   const [requests, setRequests] = useState<BantuanInfoRequest[]>([]);
   const [history, setHistory] = useState<BantuanHistory[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -64,13 +60,8 @@ export default function BantuanInfoScreen() {
           if (!active) return;
           setApp(row);
           if (!row) return;
-          const [documents, infoRequests, log] = await Promise.all([
-            fetchBantuanDocuments(id),
-            fetchBantuanInfoRequests(id),
-            fetchBantuanHistory(id),
-          ]);
+          const [infoRequests, log] = await Promise.all([fetchBantuanInfoRequests(id), fetchBantuanHistory(id)]);
           if (!active) return;
-          setDocs(documents);
           setRequests(infoRequests);
           setHistory(log.filter((item) => item.terlihat_ahli));
           setError(null);
@@ -87,21 +78,12 @@ export default function BantuanInfoScreen() {
     }, [id]),
   );
 
-  const openDocument = async (doc: BantuanDocument) => {
-    setError(null);
-    try {
-      await Linking.openURL(await bantuanDocumentUrl(doc.storage_path));
-    } catch (caught) {
-      setError(bantuanError(caught, 'Dokumen tidak dapat dibuka.'));
-    }
-  };
-
   if (app === undefined) return <LoadingScreen />;
 
   if (!app) {
     return (
       <Screen padTop={false}>
-        <ScreenHeader title="Permohonan Bantuan" onBackPress={goBack} />
+        <ScreenHeader title="Permohonan Zakat" onBackPress={goBack} />
         <View className="px-gutter">
           {error ? <Notice tone="negative" message={error} /> : (
             <EmptyState icon="hand-left-outline" title="Permohonan tidak dijumpai" description="Permohonan ini tidak wujud atau bukan milik anda." />
@@ -112,14 +94,13 @@ export default function BantuanInfoScreen() {
   }
 
   const openRequest = [...requests].reverse().find((request) => !request.responded_at) ?? null;
-  const tahap = TAHAP_OPTIONS.find((option) => option.value === app.tahap_keperluan)?.label ?? '—';
 
   return (
     <Screen padTop={false}>
       <ScreenHeader
         eyebrow={KATEGORI_LABEL[app.kategori]}
         title={app.no_rujukan ?? 'Draf'}
-        subtitle={tujuanLabel(app.kategori, app.tujuan, app.tujuan_lain)}
+        subtitle={optionLabels(SEBAB_OPTIONS, app.sebab_keperluan, app.sebab_lain)}
         onBackPress={goBack}
       />
 
@@ -142,9 +123,6 @@ export default function BantuanInfoScreen() {
               <Text className="text-sm leading-5 text-ink">{MESEJ_DILULUSKAN}</Text>
               <Text className="text-sm text-ink">
                 Jumlah diluluskan: <Text className="font-bold">{formatRM(app.jumlah_diluluskan)}</Text>
-                {app.jumlah_dimohon !== null && app.jumlah_diluluskan !== null && app.jumlah_diluluskan < app.jumlah_dimohon
-                  ? ' (daripada ' + formatRM(app.jumlah_dimohon) + ' yang dimohon)'
-                  : ''}
               </Text>
               {app.mesej_keputusan ? <Text className="text-sm leading-5 text-ink-muted">{app.mesej_keputusan}</Text> : null}
             </View>
@@ -176,27 +154,16 @@ export default function BantuanInfoScreen() {
         <SectionTitle title="Maklumat permohonan" />
         <Card>
           <View className="gap-2">
-            <Row label="Jumlah dimohon" value={formatRM(app.jumlah_dimohon)} />
-            <Row label="Tahap keperluan" value={tahap} />
-            {app.tahap_keperluan === 'mendesak' && app.sebab_mendesak ? <Row label="Sebab mendesak" value={app.sebab_mendesak} /> : null}
             <Row label="Pemohon" value={app.nama_pemohon ?? '—'} />
             <Row label="Telefon" value={app.telefon ?? '—'} />
-            <Row label="Keadaan" value={app.keadaan ?? '—'} />
+            <Row label="Sebab keperluan" value={optionLabels(SEBAB_OPTIONS, app.sebab_keperluan, app.sebab_lain)} />
+            <Row label="Penerangan" value={app.penerangan ?? '—'} />
+            <Row
+              label="Akaun bank"
+              value={app.bank_nama ? app.bank_nama + (app.bank_no_akaun ? ' ••••' + app.bank_no_akaun.slice(-4) : '') : '—'}
+            />
           </View>
         </Card>
-
-        {docs.length > 0 ? (
-          <>
-            <SectionTitle title="Dokumen sokongan" />
-            {docs.map((doc) => (
-              <Pressable key={doc.id} accessibilityRole="button" accessibilityLabel={'Buka ' + doc.nama_fail} onPress={() => void openDocument(doc)} className="active:opacity-70">
-                <Card>
-                  <Text className="text-sm font-semibold text-primary" numberOfLines={1}>{doc.nama_fail}</Text>
-                </Card>
-              </Pressable>
-            ))}
-          </>
-        ) : null}
 
         {requests.length > 0 ? (
           <>

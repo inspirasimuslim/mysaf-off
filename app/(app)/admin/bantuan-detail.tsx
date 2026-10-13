@@ -1,6 +1,6 @@
 import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Linking, Pressable, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import { NoAccessScreen } from '@/components/no-access';
 import { ScreenHeader } from '@/components/screen-header';
@@ -17,19 +17,19 @@ import { SectionTitle } from '@/components/ui/section-title';
 import { TextField } from '@/components/ui/text-field';
 import {
   KATEGORI_LABEL,
-  PEKERJAAN_OPTIONS,
-  PENDAPATAN_OPTIONS,
-  PENGAJIAN_OPTIONS,
+  PEMBIAYAAN_OPTIONS,
+  SEBAB_OPTIONS,
+  STATUS_DIRI_OPTIONS,
   STATUS_LABEL,
+  TAHAP_PENDIDIKAN_BELAJAR,
+  TINGGAL_DI_OPTIONS,
   STATUS_TONE,
   TINDAKAN_LABEL,
   TOLAK_OPTIONS,
   addBantuanNote,
   approveBantuan,
-  bantuanDocumentUrl,
   bantuanError,
   fetchBantuan,
-  fetchBantuanDocuments,
   fetchBantuanHistory,
   fetchBantuanInfoRequests,
   fetchBantuanNotes,
@@ -39,15 +39,15 @@ import {
   rejectBantuan,
   requestBantuanInfo,
   startBantuanReview,
-  tujuanLabel,
+  optionLabel,
+  optionLabels,
   type BantuanApplication,
-  type BantuanDocument,
   type BantuanHistory,
   type BantuanInfoRequest,
   type BantuanNote,
   type BantuanPrevious,
 } from '@/lib/bantuan';
-import { useKebajikanAccess } from '@/lib/department-access';
+import { useZakatAccess } from '@/lib/department-access';
 import { useGoBack } from '@/lib/navigation';
 import { errorCode } from '@/lib/errors';
 
@@ -58,7 +58,7 @@ function label<T extends string>(options: { value: T; label: string }[], value: 
 }
 
 /**
- * Halaman semakan satu Permohonan Bantuan — admin LAJNAH KEBAJIKAN (migration 148).
+ * Halaman semakan satu Permohonan Bantuan — admin TABUNG ZAKAT (migration 148).
  *
  * Setiap tindakan menghantar `versi` yang dilihat admin; jika admin lain telah
  * bertindak, pelayan menolak (40001) dan halaman dimuat semula secara automatik.
@@ -69,10 +69,9 @@ function label<T extends string>(options: { value: T; label: string }[], value: 
 export default function AdminBantuanDetailScreen() {
   const goBack = useGoBack();
   const { id } = useLocalSearchParams<{ id?: string }>();
-  const access = useKebajikanAccess();
+  const access = useZakatAccess();
 
   const [app, setApp] = useState<BantuanApplication | null | undefined>(undefined);
-  const [docs, setDocs] = useState<BantuanDocument[]>([]);
   const [requests, setRequests] = useState<BantuanInfoRequest[]>([]);
   const [history, setHistory] = useState<BantuanHistory[]>([]);
   const [notes, setNotes] = useState<BantuanNote[]>([]);
@@ -98,14 +97,12 @@ export default function AdminBantuanDetailScreen() {
       const row = await fetchBantuan(id);
       setApp(row);
       if (!row) return;
-      const [documents, infoRequests, log, noteRows, before] = await Promise.all([
-        fetchBantuanDocuments(id),
+      const [infoRequests, log, noteRows, before] = await Promise.all([
         fetchBantuanInfoRequests(id),
         fetchBantuanHistory(id),
         fetchBantuanNotes(id),
         fetchBantuanPrevious(id),
       ]);
-      setDocs(documents);
       setRequests(infoRequests);
       setHistory(log);
       setNotes(noteRows);
@@ -152,18 +149,9 @@ export default function AdminBantuanDetailScreen() {
     }
   };
 
-  const openDocument = async (doc: BantuanDocument) => {
-    setError(null);
-    try {
-      await Linking.openURL(await bantuanDocumentUrl(doc.storage_path));
-    } catch (caught) {
-      setError(bantuanError(caught, 'Dokumen tidak dapat dibuka.'));
-    }
-  };
-
   if (access.loading || app === undefined) return <LoadingScreen />;
   if (!access.canView) {
-    return <NoAccessScreen title="Semakan Bantuan" description="Skrin ini khusus untuk admin LAJNAH KEBAJIKAN dan Super Admin." />;
+    return <NoAccessScreen title="Semakan Bantuan" description="Skrin ini khusus untuk admin jabatan TABUNG ZAKAT dan Super Admin." />;
   }
 
   if (!app) {
@@ -184,7 +172,6 @@ export default function AdminBantuanDetailScreen() {
 
   const canDecide = access.canEdit;
   const parsedJumlah = Number(jumlah.replace(',', '.'));
-  const partial = app.jumlah_dimohon !== null && parsedJumlah > 0 && parsedJumlah < app.jumlah_dimohon;
   const decided = app.status === 'approved' || app.status === 'rejected';
 
   return (
@@ -202,7 +189,6 @@ export default function AdminBantuanDetailScreen() {
 
         <View className="flex-row flex-wrap items-center gap-2">
           <Badge label={STATUS_LABEL[app.status]} tone={STATUS_TONE[app.status]} />
-          {app.tahap_keperluan === 'mendesak' ? <Badge label="Mendesak (menurut pemohon)" tone="warn" /> : null}
         </View>
 
         {!canDecide ? <Notice tone="info" message="Anda mempunyai akses lihat sahaja. Tindakan semakan dan keputusan memerlukan kebenaran sunting." /> : null}
@@ -213,7 +199,7 @@ export default function AdminBantuanDetailScreen() {
         {canDecide && app.status === 'under_review' ? (
           <View className="gap-3">
             <Button label="Minta Maklumat Tambahan" variant="secondary" onPress={() => setModal('info')} />
-            <Button label="Luluskan" onPress={() => { setJumlah(app.jumlah_dimohon !== null ? String(app.jumlah_dimohon) : ''); setModal('approve'); }} />
+            <Button label="Luluskan" onPress={() => { setJumlah(''); setModal('approve'); }} />
             <Button label="Tolak" variant="danger" onPress={() => setModal('reject')} />
             <Text className="text-xs leading-4 text-ink-muted">
               Jika dana belum tersedia, biarkan status &ldquo;Dalam Semakan&rdquo; dan tulis catatan dalaman di bawah. Jangan melabel pemohon tidak layak semata-mata kerana kekurangan dana.
@@ -227,7 +213,7 @@ export default function AdminBantuanDetailScreen() {
             <View className="gap-2">
               <Text className="text-base font-bold text-ink">{app.status === 'approved' ? 'Diluluskan' : 'Tidak Diluluskan'}</Text>
               {app.status === 'approved' ? (
-                <Text className="text-sm text-ink">Jumlah diluluskan {formatRM(app.jumlah_diluluskan)} daripada {formatRM(app.jumlah_dimohon)} (kelulusan bukan bayaran).</Text>
+                <Text className="text-sm text-ink">Jumlah diluluskan {formatRM(app.jumlah_diluluskan)} (kelulusan bukan bayaran).</Text>
               ) : (
                 <Text className="text-sm text-ink">{label(TOLAK_OPTIONS, app.sebab_tolak_kategori)}</Text>
               )}
@@ -241,78 +227,68 @@ export default function AdminBantuanDetailScreen() {
         <Card>
           <View className="gap-2">
             <Row label="Nama" value={app.nama_pemohon ?? '—'} />
-            <Row label="Nombor ahli" value={app.nombor_ahli_salin ?? '—'} />
             <Row label="Telefon" value={app.telefon ?? '—'} />
-            <Row label="Alamat" value={app.alamat ?? '—'} />
-          </View>
-        </Card>
-
-        <SectionTitle title="Permohonan" />
-        <Card>
-          <View className="gap-2">
-            <Row label="Tujuan" value={tujuanLabel(app.kategori, app.tujuan, app.tujuan_lain)} />
-            <Row label="Jumlah dimohon" value={formatRM(app.jumlah_dimohon)} />
-            <Row label="Keadaan" value={app.keadaan ?? '—'} />
-            {app.tahap_keperluan === 'mendesak' ? <Row label="Sebab mendesak" value={app.sebab_mendesak ?? '—'} /> : null}
-            {app.tarikh_diperlukan ? <Row label="Diperlukan pada" value={formatTarikh(app.tarikh_diperlukan)} /> : null}
-          </View>
-        </Card>
-
-        <SectionTitle title="Isi rumah & kewangan" />
-        <Card>
-          <View className="gap-2">
-            <Row label="Status pekerjaan" value={label(PEKERJAAN_OPTIONS, app.status_pekerjaan)} />
-            <Row label="Jenis pendapatan" value={label(PENDAPATAN_OPTIONS, app.pendapatan_jenis)} />
-            <Row label="Pendapatan isi rumah" value={app.pendapatan_isi_rumah === null ? 'Tidak dinyatakan' : formatRM(app.pendapatan_isi_rumah)} />
-            {app.pendapatan_catatan ? <Row label="Catatan pendapatan" value={app.pendapatan_catatan} /> : null}
-            <Row label="Bil. tanggungan" value={app.bil_tanggungan === null ? '—' : String(app.bil_tanggungan)} />
-            <Row label="Keperluan asas" value={app.ringkasan_perbelanjaan ?? '—'} />
-            <Row label="Bantuan lain" value={app.bantuan_lain_ada ? 'Ya' : app.bantuan_lain_ada === false ? 'Tidak' : '—'} />
-            {app.bantuan_lain_ada ? (
-              <>
-                <Row label="Sumber" value={app.bantuan_lain_sumber ?? '—'} />
-                <Row label="Amaun" value={app.bantuan_lain_amaun === null ? 'Tidak diketahui' : formatRM(app.bantuan_lain_amaun)} />
-                <Row label="Kekerapan" value={app.bantuan_lain_kekerapan ?? '—'} />
-              </>
+            <Row label="Generasi" value={app.generasi ?? '—'} />
+            <Row label="Status" value={optionLabel(STATUS_DIRI_OPTIONS, app.status_diri, app.status_diri_lain)} />
+            <Row label="Tempat menetap" value={app.tempat_menetap ?? '—'} />
+            {app.tahap_pendidikan ? (
+              <Row label="Tahap pendidikan" value={optionLabel(TAHAP_PENDIDIKAN_BELAJAR, app.tahap_pendidikan, app.tahap_pendidikan_lain)} />
             ) : null}
           </View>
         </Card>
 
-        {app.kategori === 'pelajar' ? (
+        {app.kategori === 'belajar' ? (
           <>
-            <SectionTitle title="Maklumat pelajar" />
+            <SectionTitle title="Pengajian" />
             <Card>
               <View className="gap-2">
-                <Row label="Memohon sebagai" value={app.pelajar_hubungan_pemohon === 'penjaga' ? 'Penjaga' : 'Pelajar sendiri'} />
-                <Row label="Nama pelajar" value={app.pelajar_nama ?? '—'} />
-                {app.pelajar_hubungan_pemohon === 'penjaga' ? <Row label="Hubungan" value={app.pelajar_hubungan_ahli ?? '—'} /> : null}
-                <Row label="Institusi" value={app.pelajar_institusi ?? '—'} />
-                <Row label="Program" value={app.pelajar_program ?? '—'} />
-                <Row label="Tahun / semester" value={app.pelajar_tahun_semester ?? '—'} />
-                <Row label="Status pengajian" value={label(PENGAJIAN_OPTIONS, app.pelajar_status_pengajian)} />
-                {app.pelajar_bantuan_sedia_ada ? <Row label="Bantuan sedia ada" value={app.pelajar_bantuan_sedia_ada} /> : null}
+                <Row label="Tinggal di" value={optionLabel(TINGGAL_DI_OPTIONS, app.tinggal_di, app.tinggal_di_lain)} />
+                <Row label="Tahun pengajian" value={app.tahun_pengajian ?? '—'} />
+                <Row label="Pembiayaan" value={optionLabels(PEMBIAYAAN_OPTIONS, app.pembiayaan, app.pembiayaan_lain)} />
               </View>
             </Card>
           </>
         ) : null}
 
-        <SectionTitle title="Dokumen sokongan" />
-        {docs.length === 0 ? (
-          <Card>
-            <Text className="text-sm text-ink-muted">
-              Tiada dokumen dimuat naik.{app.dokumen_tiada_sebab ? ' Sebab: ' + app.dokumen_tiada_sebab : ''}
-            </Text>
-          </Card>
-        ) : (
-          docs.map((doc) => (
-            <Pressable key={doc.id} accessibilityRole="button" accessibilityLabel={'Buka ' + doc.nama_fail} onPress={() => void openDocument(doc)} className="active:opacity-70">
-              <Card>
-                <Text className="text-sm font-semibold text-primary" numberOfLines={1}>{doc.nama_fail}</Text>
-                <Text className="text-xs text-ink-muted">Pautan dokumen sah seketika sahaja.</Text>
-              </Card>
-            </Pressable>
-          ))
-        )}
+        <SectionTitle title="Pekerjaan, pendapatan & keluarga" />
+        <Card>
+          <View className="gap-2">
+            <Row label="Pekerjaan" value={app.pekerjaan ?? '—'} />
+            {app.kategori === 'bekerja' ? <Row label="Pendapatan pemohon" value={formatRM(app.pendapatan_pemohon)} /> : null}
+            <Row label="Pendapatan keluarga" value={formatRM(app.pendapatan_keluarga)} />
+            {app.pekerjaan_ibu || app.pekerjaan_bapa ? (
+              <>
+                <Row label="Pekerjaan ibu" value={app.pekerjaan_ibu ?? '—'} />
+                <Row label="Pekerjaan bapa" value={app.pekerjaan_bapa ?? '—'} />
+              </>
+            ) : null}
+            <Row label="Bil. tanggungan" value={app.bil_tanggungan === null ? '—' : String(app.bil_tanggungan)} />
+            {app.anak_ke !== null && app.bil_adik_beradik !== null ? (
+              <Row label="Kedudukan anak" value={app.anak_ke + ' daripada ' + app.bil_adik_beradik + ' beradik'} />
+            ) : app.bil_adik_beradik !== null ? (
+              <Row label="Adik beradik" value={String(app.bil_adik_beradik)} />
+            ) : null}
+            {app.bil_anak !== null ? <Row label="Bil. anak" value={String(app.bil_anak)} /> : null}
+          </View>
+        </Card>
+
+        <SectionTitle title="Keperluan" />
+        <Card>
+          <View className="gap-2">
+            <Row label="Sebab keperluan" value={optionLabels(SEBAB_OPTIONS, app.sebab_keperluan, app.sebab_lain)} />
+            <Row label="Penerangan" value={app.penerangan ?? '—'} />
+            <Row label="Pernah terima zakat" value={app.pernah_terima ? 'Ya' : app.pernah_terima === false ? 'Tidak' : '—'} />
+          </View>
+        </Card>
+
+        <SectionTitle title="Akaun bank" caption="Sulit — untuk penyaluran jika diluluskan." />
+        <Card>
+          <View className="gap-2">
+            <Row label="Nama pemegang" value={app.bank_nama_pemegang ?? '—'} />
+            <Row label="Bank" value={app.bank_nama ?? '—'} />
+            <Row label="Nombor akaun" value={app.bank_no_akaun ?? '—'} />
+          </View>
+        </Card>
 
         {requests.length > 0 ? (
           <>
@@ -339,7 +315,7 @@ export default function AdminBantuanDetailScreen() {
               <View key={row.id} className="gap-0.5">
                 <Text className="text-sm font-semibold text-ink">{row.no_rujukan} · {STATUS_LABEL[row.status]}</Text>
                 <Text className="text-xs text-ink-muted">
-                  {tujuanLabel(row.kategori, row.tujuan)} · dimohon {formatRM(row.jumlah_dimohon)}
+                  {KATEGORI_LABEL[row.kategori]} · {optionLabels(SEBAB_OPTIONS, row.sebab_keperluan)}
                   {row.status === 'approved' ? ' · diluluskan ' + formatRM(row.jumlah_diluluskan) : ''}
                 </Text>
               </View>
@@ -406,7 +382,7 @@ export default function AdminBantuanDetailScreen() {
       <FormModal
         visible={modal === 'info'}
         title="Minta Maklumat Tambahan"
-        description="Terangkan dengan jelas maklumat atau dokumen yang diperlukan. Pemohon akan melihat mesej ini."
+        description="Terangkan dengan jelas maklumat yang diperlukan. Pemohon akan melihat mesej ini."
         onClose={closeModal}
         dismissable={!busy}
         footer={
@@ -424,7 +400,7 @@ export default function AdminBantuanDetailScreen() {
       <FormModal
         visible={modal === 'approve'}
         title={confirmStep ? 'Sahkan Kelulusan' : 'Luluskan Permohonan'}
-        description={confirmStep ? 'Semak ringkasan sebelum mengesahkan. Keputusan ini muktamad.' : 'Kelulusan sebahagian dibenarkan. Kelulusan bukan pembayaran.'}
+        description={confirmStep ? 'Semak ringkasan sebelum mengesahkan. Keputusan ini muktamad.' : 'Tentukan jumlah yang diluluskan. Kelulusan bukan pembayaran.'}
         onClose={closeModal}
         dismissable={!busy}
         footer={
@@ -436,22 +412,20 @@ export default function AdminBantuanDetailScreen() {
           ) : (
             <Button
               label="Semak Ringkasan"
-              disabled={!(parsedJumlah > 0 && (app.jumlah_dimohon === null || parsedJumlah <= app.jumlah_dimohon)) || alasanLulus.trim().length < 5 || mesejLulus.trim().length < 5}
+              disabled={!(parsedJumlah > 0 && parsedJumlah <= 1000000) || alasanLulus.trim().length < 5 || mesejLulus.trim().length < 5}
               onPress={() => setConfirmStep(true)}
             />
           )
         }>
         {confirmStep ? (
           <View className="gap-3">
-            <Row label="Jumlah dimohon" value={formatRM(app.jumlah_dimohon)} />
             <Row label="Jumlah diluluskan" value={formatRM(parsedJumlah)} />
-            {partial ? <Notice tone="warn" message="Jumlah kurang daripada dimohon. Pastikan mesej kepada pemohon menjelaskan perkara ini." /> : null}
             <Row label="Mesej kepada pemohon" value={mesejLulus.trim()} />
             <Row label="Alasan dalaman" value={alasanLulus.trim()} />
           </View>
         ) : (
           <View className="gap-4">
-            <TextField label={'Jumlah diluluskan (RM) * — dimohon ' + formatRM(app.jumlah_dimohon)} value={jumlah} onChangeText={(v) => setJumlah(v.replace(/[^0-9.,]/g, ''))} keyboardType="decimal-pad" maxLength={10} />
+            <TextField label="Jumlah diluluskan (RM) *" value={jumlah} onChangeText={(v) => setJumlah(v.replace(/[^0-9.,]/g, ''))} keyboardType="decimal-pad" maxLength={10} />
             <TextField label="Alasan kelulusan (dalaman) *" value={alasanLulus} onChangeText={setAlasanLulus} multiline maxLength={3000} />
             <TextField label="Mesej ringkas kepada pemohon *" value={mesejLulus} onChangeText={setMesejLulus} multiline maxLength={2000} />
           </View>

@@ -1,192 +1,290 @@
-import * as DocumentPicker from 'expo-document-picker';
+import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { Text, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Linking, Pressable, Text, View } from 'react-native';
 
-import { NoAccessScreen } from '@/components/no-access';
 import { ScreenHeader } from '@/components/screen-header';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { ChipGroup } from '@/components/ui/chip-group';
 import { LoadingScreen } from '@/components/ui/loading-screen';
 import { Notice } from '@/components/ui/notice';
-import { OptionalDateField } from '@/components/ui/optional-date-field';
 import { PickerField } from '@/components/ui/picker-field';
 import { Screen } from '@/components/ui/screen';
 import { SectionTitle } from '@/components/ui/section-title';
-import { SelectRow } from '@/components/ui/select-row';
 import { Segmented } from '@/components/ui/segmented';
+import { SelectRow } from '@/components/ui/select-row';
 import { TextField } from '@/components/ui/text-field';
 import { useAuth } from '@/lib/auth-context';
 import {
+  BANK_LAIN,
+  BANK_OPTIONS,
   KATEGORI_LABEL,
-  KATEGORI_PENERANGAN,
-  MAX_DOCUMENTS,
-  PEKERJAAN_OPTIONS,
-  PENDAPATAN_OPTIONS,
-  PENGAJIAN_OPTIONS,
-  TAHAP_OPTIONS,
-  TUJUAN_OPTIONS,
+  KENALAN_LK,
+  MAKLUMAT_PENTING,
+  MESEJ_SELEPAS_HANTAR,
+  PEMBIAYAAN_OPTIONS,
+  PENGAKUAN_TEKS,
+  SEBAB_OPTIONS,
+  STATUS_DIRI_OPTIONS,
+  TAHAP_PENDIDIKAN_BEKERJA,
+  TAHAP_PENDIDIKAN_BELAJAR,
+  TINGGAL_DI_OPTIONS,
   bantuanError,
   fetchBantuan,
-  fetchBantuanDocuments,
   fetchBantuanInfoRequests,
-  formatRM,
   newId,
-  removeBantuanDocument,
   saveBantuanDraft,
-  saveBantuanResponse,
   submitBantuan,
-  tujuanLabel,
-  uploadBantuanDocument,
+  tajukBorang,
+  waLink,
   type BantuanApplication,
-  type BantuanDocument,
   type BantuanForm,
   type BantuanInfoRequest,
   type BantuanKategori,
+  type KenalanLK,
 } from '@/lib/bantuan';
-import { fetchMyMemberLinked } from '@/lib/members';
+import { fetchGenerations, fetchMyMemberLinked } from '@/lib/members';
 import { useGoBack } from '@/lib/navigation';
+import { useColors } from '@/lib/theme';
 
 /**
- * Borang Permohonan Bantuan berperingkat (migration 148).
+ * Borang Permohonan Bantuan Zakat — SATU halaman (migration 148).
  *
- * Draf disimpan ke pelayan setiap kali menekan "Seterusnya"/"Simpan Draf" melalui
- * `bantuan_save_draft` (ID dijana di sini, jadi simpan berulang/klik berganda
- * tidak mencipta permohonan berganda). Maklumat hubungan diprafill daripada profil
- * tetapi hanya disalin ke permohonan — profil utama tidak diubah. Semakan sebenar
- * ada di pelayan (`bantuan_validate`); semakan di sini hanya untuk maklum balas awal.
+ * Dua variasi mengikut `kategori`: `belajar` dan `bekerja` (Bekerja/Berkahwin).
+ * Hanya medan yang berkaitan dipaparkan; nilai medan yang disembunyikan tidak
+ * dihantar (`toPayload` mengosongkannya) supaya data lapuk tidak tertinggal.
+ *
+ * Draf disimpan ke pelayan melalui `bantuan_save_draft` (ID dijana di sini, jadi
+ * simpan berulang/klik berganda tidak mencipta permohonan berganda). Nama,
+ * telefon dan generasi diprafill daripada profil tetapi hanya disalin ke
+ * permohonan — profil utama tidak diubah. Semakan sebenar ada di pelayan
+ * (`bantuan_validate`); semakan di sini hanya untuk maklum balas awal.
  *
  * Semasa status "Perlu Maklumat Tambahan", borang yang sama dibuka semula untuk
- * pembetulan; langkah akhir menambah ruang respons dan butang "Hantar Semula".
+ * pembetulan dengan ruang respons tambahan dan butang "Hantar Semula".
+ *
+ * Selepas hantar, skrin terima kasih memaparkan tempoh semakan dan kenalan LK.
  */
 
-type TextKey =
-  | 'tujuan' | 'tujuan_lain' | 'nama_pemohon' | 'nombor_ahli_salin' | 'telefon' | 'alamat' | 'keadaan'
-  | 'jumlah_dimohon' | 'sebab_mendesak' | 'tarikh_diperlukan' | 'status_pekerjaan' | 'pendapatan_jenis'
-  | 'pendapatan_isi_rumah' | 'pendapatan_catatan' | 'bil_tanggungan' | 'ringkasan_perbelanjaan'
-  | 'bantuan_lain_sumber' | 'bantuan_lain_amaun' | 'bantuan_lain_kekerapan' | 'pelajar_hubungan_pemohon'
-  | 'pelajar_nama' | 'pelajar_hubungan_ahli' | 'pelajar_institusi' | 'pelajar_program'
-  | 'pelajar_tahun_semester' | 'pelajar_status_pengajian' | 'pelajar_bantuan_sedia_ada' | 'dokumen_tiada_sebab';
-
-const TEXT_KEYS: TextKey[] = [
-  'tujuan', 'tujuan_lain', 'nama_pemohon', 'nombor_ahli_salin', 'telefon', 'alamat', 'keadaan',
-  'jumlah_dimohon', 'sebab_mendesak', 'tarikh_diperlukan', 'status_pekerjaan', 'pendapatan_jenis',
-  'pendapatan_isi_rumah', 'pendapatan_catatan', 'bil_tanggungan', 'ringkasan_perbelanjaan',
-  'bantuan_lain_sumber', 'bantuan_lain_amaun', 'bantuan_lain_kekerapan', 'pelajar_hubungan_pemohon',
-  'pelajar_nama', 'pelajar_hubungan_ahli', 'pelajar_institusi', 'pelajar_program',
-  'pelajar_tahun_semester', 'pelajar_status_pengajian', 'pelajar_bantuan_sedia_ada', 'dokumen_tiada_sebab',
-];
-
-type FormState = Record<TextKey, string> & {
-  kategori: BantuanKategori | null;
-  tahap_keperluan: 'biasa' | 'mendesak' | null;
-  bantuan_lain_ada: boolean | null;
-  dokumen_tiada: boolean;
-  pengakuan_benar: boolean;
-  pengakuan_proses: boolean;
-  pengakuan_satu_kali: boolean;
+type FormState = {
+  nama_pemohon: string;
+  telefon: string;
+  generasi: string;
+  status_diri: string;
+  status_diri_lain: string;
+  tempat_menetap: string;
+  tahap_pendidikan: string;
+  tahap_pendidikan_lain: string;
+  tinggal_di: string;
+  tinggal_di_lain: string;
+  tahun_pengajian: string;
+  pembiayaan: string[];
+  pembiayaan_lain: string;
+  pekerjaan: string;
+  pendapatan_pemohon: string;
+  pendapatan_keluarga: string;
+  pekerjaan_ibu: string;
+  pekerjaan_bapa: string;
+  bil_tanggungan: string;
+  anak_ke: string;
+  bil_adik_beradik: string;
+  bil_anak: string;
+  sebab_keperluan: string[];
+  sebab_lain: string;
+  penerangan: string;
+  pernah_terima: boolean | null;
+  bank_nama_pemegang: string;
+  bank_pilihan: string;
+  bank_lain: string;
+  bank_no_akaun: string;
+  pengakuan_setuju: boolean;
 };
 
 function emptyState(): FormState {
-  const base = {} as FormState;
-  for (const key of TEXT_KEYS) base[key] = '';
-  base.kategori = null;
-  base.tahap_keperluan = null;
-  base.bantuan_lain_ada = null;
-  base.dokumen_tiada = false;
-  base.pengakuan_benar = false;
-  base.pengakuan_proses = false;
-  base.pengakuan_satu_kali = false;
-  return base;
+  return {
+    nama_pemohon: '',
+    telefon: '',
+    generasi: '',
+    status_diri: '',
+    status_diri_lain: '',
+    tempat_menetap: '',
+    tahap_pendidikan: '',
+    tahap_pendidikan_lain: '',
+    tinggal_di: '',
+    tinggal_di_lain: '',
+    tahun_pengajian: '',
+    pembiayaan: [],
+    pembiayaan_lain: '',
+    pekerjaan: '',
+    pendapatan_pemohon: '',
+    pendapatan_keluarga: '',
+    pekerjaan_ibu: '',
+    pekerjaan_bapa: '',
+    bil_tanggungan: '',
+    anak_ke: '',
+    bil_adik_beradik: '',
+    bil_anak: '',
+    sebab_keperluan: [],
+    sebab_lain: '',
+    penerangan: '',
+    pernah_terima: null,
+    bank_nama_pemegang: '',
+    bank_pilihan: '',
+    bank_lain: '',
+    bank_no_akaun: '',
+    pengakuan_setuju: false,
+  };
 }
 
 function fromApplication(app: BantuanApplication): FormState {
-  const state = emptyState();
-  for (const key of TEXT_KEYS) {
-    const value = app[key as keyof BantuanApplication];
-    state[key] = value === null || value === undefined ? '' : String(value);
-  }
-  state.kategori = app.kategori;
-  state.tahap_keperluan = app.tahap_keperluan;
-  state.bantuan_lain_ada = app.bantuan_lain_ada;
-  state.dokumen_tiada = app.dokumen_tiada;
-  state.pengakuan_benar = app.pengakuan_benar;
-  state.pengakuan_proses = app.pengakuan_proses;
-  state.pengakuan_satu_kali = app.pengakuan_satu_kali;
-  return state;
-}
-
-function toPayload(state: FormState): BantuanForm {
-  const text = (key: TextKey) => (state[key].trim() === '' ? null : state[key].trim());
-  const number = (key: TextKey) => {
-    const raw = state[key].trim().replace(',', '.');
-    return raw === '' ? null : Number(raw);
-  };
-  const pelajar = state.kategori === 'pelajar';
+  const text = (value: string | number | null | undefined) => (value === null || value === undefined ? '' : String(value));
+  const bank = app.bank_nama ?? '';
+  const bankDikenali = BANK_OPTIONS.includes(bank) && bank !== BANK_LAIN;
   return {
-    kategori: state.kategori ?? undefined,
-    tujuan: text('tujuan'),
-    tujuan_lain: state.tujuan === 'lain_lain' ? text('tujuan_lain') : null,
-    nama_pemohon: text('nama_pemohon'),
-    nombor_ahli_salin: text('nombor_ahli_salin'),
-    telefon: text('telefon'),
-    alamat: text('alamat'),
-    keadaan: text('keadaan'),
-    jumlah_dimohon: number('jumlah_dimohon'),
-    tahap_keperluan: state.tahap_keperluan,
-    sebab_mendesak: state.tahap_keperluan === 'mendesak' ? text('sebab_mendesak') : null,
-    tarikh_diperlukan: state.tahap_keperluan === 'mendesak' ? text('tarikh_diperlukan') : null,
-    status_pekerjaan: text('status_pekerjaan'),
-    pendapatan_jenis: text('pendapatan_jenis') as BantuanForm['pendapatan_jenis'],
-    pendapatan_isi_rumah: state.pendapatan_jenis === 'tidak_pasti' ? null : number('pendapatan_isi_rumah'),
-    pendapatan_catatan: text('pendapatan_catatan'),
-    bil_tanggungan: number('bil_tanggungan'),
-    ringkasan_perbelanjaan: text('ringkasan_perbelanjaan'),
-    bantuan_lain_ada: state.bantuan_lain_ada,
-    bantuan_lain_sumber: state.bantuan_lain_ada ? text('bantuan_lain_sumber') : null,
-    bantuan_lain_amaun: state.bantuan_lain_ada ? number('bantuan_lain_amaun') : null,
-    bantuan_lain_kekerapan: state.bantuan_lain_ada ? text('bantuan_lain_kekerapan') : null,
-    pelajar_hubungan_pemohon: pelajar ? (text('pelajar_hubungan_pemohon') as BantuanForm['pelajar_hubungan_pemohon']) : null,
-    pelajar_nama: pelajar ? text('pelajar_nama') : null,
-    pelajar_hubungan_ahli: pelajar ? text('pelajar_hubungan_ahli') : null,
-    pelajar_institusi: pelajar ? text('pelajar_institusi') : null,
-    pelajar_program: pelajar ? text('pelajar_program') : null,
-    pelajar_tahun_semester: pelajar ? text('pelajar_tahun_semester') : null,
-    pelajar_status_pengajian: pelajar ? text('pelajar_status_pengajian') : null,
-    pelajar_bantuan_sedia_ada: pelajar ? text('pelajar_bantuan_sedia_ada') : null,
-    dokumen_tiada: state.dokumen_tiada,
-    dokumen_tiada_sebab: state.dokumen_tiada ? text('dokumen_tiada_sebab') : null,
-    pengakuan_benar: state.pengakuan_benar,
-    pengakuan_proses: state.pengakuan_proses,
-    pengakuan_satu_kali: state.pengakuan_satu_kali,
+    nama_pemohon: text(app.nama_pemohon),
+    telefon: text(app.telefon),
+    generasi: text(app.generasi),
+    status_diri: text(app.status_diri),
+    status_diri_lain: text(app.status_diri_lain),
+    tempat_menetap: text(app.tempat_menetap),
+    tahap_pendidikan: text(app.tahap_pendidikan),
+    tahap_pendidikan_lain: text(app.tahap_pendidikan_lain),
+    tinggal_di: text(app.tinggal_di),
+    tinggal_di_lain: text(app.tinggal_di_lain),
+    tahun_pengajian: text(app.tahun_pengajian),
+    pembiayaan: app.pembiayaan ?? [],
+    pembiayaan_lain: text(app.pembiayaan_lain),
+    pekerjaan: text(app.pekerjaan),
+    pendapatan_pemohon: text(app.pendapatan_pemohon),
+    pendapatan_keluarga: text(app.pendapatan_keluarga),
+    pekerjaan_ibu: text(app.pekerjaan_ibu),
+    pekerjaan_bapa: text(app.pekerjaan_bapa),
+    bil_tanggungan: text(app.bil_tanggungan),
+    anak_ke: text(app.anak_ke),
+    bil_adik_beradik: text(app.bil_adik_beradik),
+    bil_anak: text(app.bil_anak),
+    sebab_keperluan: app.sebab_keperluan ?? [],
+    sebab_lain: text(app.sebab_lain),
+    penerangan: text(app.penerangan),
+    pernah_terima: app.pernah_terima,
+    bank_nama_pemegang: text(app.bank_nama_pemegang),
+    bank_pilihan: bank === '' ? '' : bankDikenali ? bank : BANK_LAIN,
+    bank_lain: bank === '' || bankDikenali ? '' : bank,
+    bank_no_akaun: text(app.bank_no_akaun),
+    pengakuan_setuju: app.pengakuan_setuju,
   };
 }
 
-type StepKey = 'kategori' | 'pemohon' | 'permohonan' | 'kewangan' | 'pelajar' | 'dokumen' | 'semak';
+/** Medan yang dipaparkan bergantung pada kategori dan status diri. */
+function visibility(kategori: BantuanKategori, statusDiri: string) {
+  const belajar = kategori === 'belajar';
+  const berkahwin = statusDiri === 'berkahwin';
+  const bujang = statusDiri === 'bujang';
+  return {
+    belajar,
+    pekerjaanIbuBapa: belajar || bujang,
+    adikBeradik: belajar || bujang,
+    kedudukanAnak: belajar,
+    bilAnak: !belajar && (berkahwin || statusDiri === 'lain_lain'),
+  };
+}
 
-const STEP_LABEL: Record<StepKey, string> = {
-  kategori: 'Kategori',
-  pemohon: 'Maklumat Anda',
-  permohonan: 'Permohonan',
-  kewangan: 'Kewangan Ringkas',
-  pelajar: 'Maklumat Pelajar',
-  dokumen: 'Dokumen Sokongan',
-  semak: 'Semak & Hantar',
-};
+function toPayload(kategori: BantuanKategori, state: FormState): BantuanForm {
+  const v = visibility(kategori, state.status_diri);
+  const text = (value: string) => value.trim();
+  const when = (show: boolean, value: string) => (show ? text(value) : '');
+  const bank = state.bank_pilihan === BANK_LAIN ? text(state.bank_lain) : state.bank_pilihan;
+  return {
+    kategori,
+    nama_pemohon: text(state.nama_pemohon),
+    telefon: text(state.telefon),
+    generasi: state.generasi,
+    status_diri: state.status_diri,
+    status_diri_lain: when(state.status_diri === 'lain_lain', state.status_diri_lain),
+    tempat_menetap: text(state.tempat_menetap),
+    tahap_pendidikan: state.tahap_pendidikan,
+    tahap_pendidikan_lain: when(state.tahap_pendidikan === 'lain_lain', state.tahap_pendidikan_lain),
+    tinggal_di: v.belajar ? state.tinggal_di : '',
+    tinggal_di_lain: when(v.belajar && state.tinggal_di === 'lain_lain', state.tinggal_di_lain),
+    tahun_pengajian: when(v.belajar, state.tahun_pengajian),
+    pembiayaan: v.belajar ? state.pembiayaan : [],
+    pembiayaan_lain: when(v.belajar && state.pembiayaan.includes('lain_lain'), state.pembiayaan_lain),
+    pekerjaan: text(state.pekerjaan),
+    pendapatan_pemohon: when(!v.belajar, state.pendapatan_pemohon),
+    pendapatan_keluarga: text(state.pendapatan_keluarga),
+    pekerjaan_ibu: when(v.pekerjaanIbuBapa, state.pekerjaan_ibu),
+    pekerjaan_bapa: when(v.pekerjaanIbuBapa, state.pekerjaan_bapa),
+    bil_tanggungan: state.bil_tanggungan,
+    anak_ke: v.kedudukanAnak ? state.anak_ke : '',
+    bil_adik_beradik: v.adikBeradik ? state.bil_adik_beradik : '',
+    bil_anak: v.bilAnak ? state.bil_anak : '',
+    sebab_keperluan: state.sebab_keperluan,
+    sebab_lain: when(state.sebab_keperluan.includes('lain_lain'), state.sebab_lain),
+    penerangan: text(state.penerangan),
+    pernah_terima: state.pernah_terima,
+    bank_nama_pemegang: text(state.bank_nama_pemegang),
+    bank_nama: bank,
+    bank_no_akaun: state.bank_no_akaun.replace(/\D/g, ''),
+    pengakuan_setuju: state.pengakuan_setuju,
+  };
+}
 
-const DOC_JENIS_OPTIONS = [
-  { value: 'pendapatan' as const, label: 'Bukti / pengesahan pendapatan' },
-  { value: 'bil' as const, label: 'Bil atau dokumen berkaitan bantuan' },
-  { value: 'pengajian' as const, label: 'Pengesahan pengajian aktif' },
-  { value: 'lain' as const, label: 'Lain-lain' },
-];
+function rangeOptions(from: number, to: number) {
+  return Array.from({ length: to - from + 1 }, (_, i) => ({ value: String(from + i), label: String(from + i) }));
+}
+
+const TANGGUNGAN_OPTIONS = rangeOptions(0, 20);
+const BIL_ANAK_OPTIONS = rangeOptions(0, 20);
+const SAUDARA_OPTIONS = rangeOptions(1, 20);
+
+/** Maklum balas awal sahaja — pelayan mengesahkan semula semuanya. */
+function problemOf(kategori: BantuanKategori, state: FormState): string | null {
+  const v = visibility(kategori, state.status_diri);
+  const len = (value: string) => value.trim().length;
+  if (len(state.nama_pemohon) < 2) return 'Sila isi nama penuh.';
+  if (!/^[0-9+ -]{8,20}$/.test(state.telefon.trim())) return 'Sila isi nombor telefon yang sah.';
+  if (!state.generasi) return 'Sila pilih generasi.';
+  if (!state.status_diri) return 'Sila pilih status.';
+  if (state.status_diri === 'lain_lain' && len(state.status_diri_lain) < 2) return 'Sila nyatakan status anda.';
+  if (len(state.tempat_menetap) < 3) return 'Sila isi tempat menetap terkini.';
+  if (v.belajar && !state.tahap_pendidikan) return 'Sila pilih tahap pendidikan.';
+  if (state.tahap_pendidikan === 'lain_lain' && len(state.tahap_pendidikan_lain) < 2) return 'Sila nyatakan tahap pendidikan.';
+  if (v.belajar) {
+    if (!state.tinggal_di) return 'Sila pilih tempat tinggal semasa belajar.';
+    if (state.tinggal_di === 'lain_lain' && len(state.tinggal_di_lain) < 2) return 'Sila nyatakan tempat tinggal anda.';
+    if (len(state.tahun_pengajian) < 1) return 'Sila isi tahun pengajian.';
+    if (state.pembiayaan.length === 0) return 'Sila pilih sekurang-kurangnya satu sumber pembiayaan pelajaran.';
+    if (state.pembiayaan.includes('lain_lain') && len(state.pembiayaan_lain) < 2) return 'Sila nyatakan sumber pembiayaan lain.';
+  } else {
+    if (len(state.pekerjaan) < 2) return 'Sila isi pekerjaan anda.';
+    if (state.pendapatan_pemohon.trim() === '') return 'Sila isi pendapatan bulanan anda (boleh RM0).';
+  }
+  if (state.pendapatan_keluarga.trim() === '') return 'Sila isi pendapatan keluarga (boleh RM0).';
+  if (v.pekerjaanIbuBapa && (len(state.pekerjaan_ibu) < 2 || len(state.pekerjaan_bapa) < 2)) return 'Sila isi pekerjaan ibu dan bapa.';
+  if (state.bil_tanggungan === '') return 'Sila pilih bilangan tanggungan keluarga.';
+  if (v.kedudukanAnak && (state.anak_ke === '' || state.bil_adik_beradik === '')) return 'Sila pilih kedudukan anak dan bilangan adik beradik.';
+  if (v.kedudukanAnak && Number(state.anak_ke) > Number(state.bil_adik_beradik)) return 'Kedudukan anak tidak boleh melebihi bilangan adik beradik.';
+  if (!v.belajar && v.adikBeradik && state.bil_adik_beradik === '') return 'Sila pilih bilangan adik beradik.';
+  if (v.bilAnak && state.status_diri === 'berkahwin' && state.bil_anak === '') return 'Sila pilih bilangan anak (boleh 0).';
+  if (state.sebab_keperluan.length === 0) return 'Sila pilih sekurang-kurangnya satu sebab keperluan.';
+  if (state.sebab_keperluan.includes('lain_lain') && len(state.sebab_lain) < 2) return 'Sila nyatakan sebab keperluan lain.';
+  if (len(state.penerangan) < 20) return 'Sila terangkan tujuan keperluan dengan lebih lanjut (sekurang-kurangnya 20 aksara).';
+  if (state.pernah_terima === null) return 'Sila nyatakan sama ada anda pernah menerima bantuan zakat sebelum ini.';
+  if (len(state.bank_nama_pemegang) < 2) return 'Sila isi nama pemegang akaun.';
+  if (!state.bank_pilihan) return 'Sila pilih bank.';
+  if (state.bank_pilihan === BANK_LAIN && len(state.bank_lain) < 2) return 'Sila isi nama bank.';
+  if (!/^[0-9]{6,20}$/.test(state.bank_no_akaun.replace(/\D/g, ''))) return 'Sila isi nombor akaun bank yang sah (6 hingga 20 digit).';
+  if (!state.pengakuan_setuju) return 'Sila tandakan pengakuan sebelum menghantar.';
+  return null;
+}
 
 export default function BantuanBorangScreen() {
   const router = useRouter();
   const goBack = useGoBack();
   const { user } = useAuth();
-  const params = useLocalSearchParams<{ id?: string }>();
+  const userId = user?.id;
+  const params = useLocalSearchParams<{ id?: string; kategori?: string }>();
 
   // ID dijana sekali — simpan berulang menyasarkan baris yang sama.
   const appIdRef = useRef<string>(params.id ?? newId());
@@ -195,24 +293,19 @@ export default function BantuanBorangScreen() {
   const [loading, setLoading] = useState(true);
   const [noMember, setNoMember] = useState(false);
   const [app, setApp] = useState<BantuanApplication | null>(null);
+  const [kategori, setKategori] = useState<BantuanKategori | null>(
+    params.kategori === 'belajar' || params.kategori === 'bekerja' ? params.kategori : null,
+  );
   const [state, setState] = useState<FormState>(emptyState());
-  const [docs, setDocs] = useState<BantuanDocument[]>([]);
+  const [generasiOptions, setGenerasiOptions] = useState<{ value: string; label: string }[]>([]);
   const [openRequest, setOpenRequest] = useState<BantuanInfoRequest | null>(null);
   const [respons, setRespons] = useState('');
-  const [stepIndex, setStepIndex] = useState(0);
   const [busy, setBusy] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [docJenis, setDocJenis] = useState<BantuanDocument['jenis']>('pendapatan');
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<string | null>(null);
+  const [done, setDone] = useState<BantuanApplication | null>(null);
 
   const resubmitting = app?.status === 'needs_information';
-
-  const steps: StepKey[] =
-    state.kategori === 'pelajar'
-      ? ['kategori', 'pemohon', 'permohonan', 'kewangan', 'pelajar', 'dokumen', 'semak']
-      : ['kategori', 'pemohon', 'permohonan', 'kewangan', 'dokumen', 'semak'];
-  const step = steps[Math.min(stepIndex, steps.length - 1)] as StepKey;
 
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) => {
     setState((prev) => ({ ...prev, [key]: value }));
@@ -220,12 +313,13 @@ export default function BantuanBorangScreen() {
   };
 
   useEffect(() => {
-    if (!user?.id) return;
+    if (!userId) return;
     let active = true;
     void (async () => {
       try {
-        const member = await fetchMyMemberLinked(user.id);
+        const [member, generations] = await Promise.all([fetchMyMemberLinked(userId), fetchGenerations()]);
         if (!active) return;
+        setGenerasiOptions(generations.map((row) => ({ value: row.code, label: row.label })));
         if (!member) {
           setNoMember(true);
           return;
@@ -242,25 +336,25 @@ export default function BantuanBorangScreen() {
             return;
           }
           setApp(existing);
+          setKategori(existing.kategori);
           setState(fromApplication(existing));
-          const [documents, requests] = await Promise.all([
-            fetchBantuanDocuments(existing.id),
-            existing.status === 'needs_information' ? fetchBantuanInfoRequests(existing.id) : Promise.resolve([]),
-          ]);
-          if (!active) return;
-          setDocs(documents);
-          const open = [...requests].reverse().find((request) => !request.responded_at) ?? null;
-          setOpenRequest(open);
-          setRespons(open?.respons ?? '');
-        } else {
+          if (existing.status === 'needs_information') {
+            const requests = await fetchBantuanInfoRequests(existing.id);
+            if (!active) return;
+            const open = [...requests].reverse().find((request) => !request.responded_at) ?? null;
+            setOpenRequest(open);
+            setRespons(open?.respons ?? '');
+          }
+        } else if (kategori) {
           // Prefill daripada profil — disalin ke permohonan sahaja.
           setState((prev) => ({
             ...prev,
             nama_pemohon: member.full_name ?? '',
-            nombor_ahli_salin: member.nombor_ahli ?? '',
             telefon: member.no_tel ?? '',
-            alamat: member.alamat_semasa ?? member.alamat ?? '',
+            generasi: member.generasi ?? '',
           }));
+        } else {
+          router.replace('/(app)/bantuan');
         }
       } catch (caught) {
         if (active) setError(bantuanError(caught, 'Gagal memuatkan permohonan.'));
@@ -271,122 +365,47 @@ export default function BantuanBorangScreen() {
     return () => {
       active = false;
     };
-  }, [user?.id, params.id, router]);
+    // `kategori` hanya dibaca untuk prefill borang baharu; ia tidak berubah selepas itu.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId, params.id, router]);
 
-  /** Simpan draf ke pelayan. Memulangkan `true` jika berjaya. */
   const persist = useCallback(async (): Promise<boolean> => {
-    if (!state.kategori) {
-      setError('Sila pilih kategori bantuan.');
-      return false;
-    }
+    if (!kategori) return false;
     try {
-      const row = await saveBantuanDraft(appId, toPayload(state));
+      const row = await saveBantuanDraft(appId, toPayload(kategori, state));
       setApp(row);
       return true;
     } catch (caught) {
       setError(bantuanError(caught, 'Gagal menyimpan draf. Sila cuba lagi.'));
       return false;
     }
-  }, [appId, state]);
-
-  const stepProblem = (key: StepKey): string | null => {
-    const text = (k: TextKey) => state[k].trim();
-    switch (key) {
-      case 'kategori':
-        return state.kategori ? null : 'Sila pilih kategori bantuan.';
-      case 'pemohon':
-        if (text('nama_pemohon').length < 2) return 'Sila isi nama pemohon.';
-        if (!/^[0-9+ -]{8,20}$/.test(text('telefon'))) return 'Sila isi nombor telefon yang sah.';
-        if (text('alamat').length < 5) return 'Sila isi alamat.';
-        return null;
-      case 'permohonan':
-        if (!text('tujuan')) return 'Sila pilih tujuan bantuan.';
-        if (state.tujuan === 'lain_lain' && text('tujuan_lain').length < 3) return 'Sila nyatakan tujuan bantuan.';
-        if (text('keadaan').length < 20) return 'Sila terangkan keadaan anda (sekurang-kurangnya 20 aksara).';
-        if (!(Number(text('jumlah_dimohon').replace(',', '.')) > 0)) return 'Sila isi anggaran jumlah yang diperlukan.';
-        if (!state.tahap_keperluan) return 'Sila pilih tahap keperluan.';
-        if (state.tahap_keperluan === 'mendesak' && text('sebab_mendesak').length < 5) return 'Sila nyatakan sebab keperluan mendesak.';
-        return null;
-      case 'kewangan':
-        if (!text('status_pekerjaan')) return 'Sila pilih status pekerjaan.';
-        if (!text('pendapatan_jenis')) return 'Sila pilih jenis pendapatan isi rumah.';
-        if (state.pendapatan_jenis === 'tetap' && text('pendapatan_isi_rumah') === '') return 'Sila isi pendapatan bulanan isi rumah (boleh RM0).';
-        if (state.pendapatan_jenis === 'tidak_pasti' && text('pendapatan_catatan').length < 5) return 'Sila jelaskan keadaan pendapatan yang tidak pasti.';
-        if (text('bil_tanggungan') === '') return 'Sila isi bilangan tanggungan.';
-        if (text('ringkasan_perbelanjaan').length < 5) return 'Sila isi ringkasan keperluan atau perbelanjaan asas.';
-        if (state.bantuan_lain_ada === null) return 'Sila nyatakan sama ada anda menerima bantuan lain.';
-        if (state.bantuan_lain_ada && text('bantuan_lain_sumber').length < 2) return 'Sila nyatakan sumber bantuan lain.';
-        return null;
-      case 'pelajar':
-        if (!text('pelajar_hubungan_pemohon')) return 'Sila nyatakan sama ada anda pelajar atau penjaga.';
-        if (text('pelajar_nama').length < 2) return 'Sila isi nama pelajar.';
-        if (state.pelajar_hubungan_pemohon === 'penjaga' && text('pelajar_hubungan_ahli').length < 2) return 'Sila nyatakan hubungan pelajar dengan anda.';
-        if (text('pelajar_institusi').length < 2) return 'Sila isi institusi pengajian.';
-        if (text('pelajar_program').length < 2) return 'Sila isi program atau peringkat pengajian.';
-        if (text('pelajar_tahun_semester').length < 1) return 'Sila isi tahun atau semester.';
-        if (!text('pelajar_status_pengajian')) return 'Sila pilih status pengajian.';
-        return null;
-      case 'dokumen':
-        if (docs.length === 0 && !state.dokumen_tiada) return 'Sila muat naik sekurang-kurangnya satu dokumen, atau tandakan "Dokumen belum tersedia".';
-        if (docs.length === 0 && state.dokumen_tiada && text('dokumen_tiada_sebab').length < 5) return 'Sila nyatakan sebab dokumen belum tersedia.';
-        return null;
-      case 'semak':
-        if (!(state.pengakuan_benar && state.pengakuan_proses && state.pengakuan_satu_kali)) return 'Sila tandakan semua pengakuan sebelum menghantar.';
-        if (resubmitting && respons.trim().length < 5) return 'Sila tulis respons kepada permintaan maklumat tambahan.';
-        return null;
-    }
-  };
-
-  const next = async () => {
-    if (busy) return;
-    setError(null);
-    const problem = stepProblem(step);
-    if (problem) return setError(problem);
-    setBusy(true);
-    try {
-      if (await persist()) setStepIndex((index) => Math.min(index + 1, steps.length - 1));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const back = async () => {
-    setError(null);
-    if (stepIndex === 0) return goBack();
-    setStepIndex((index) => Math.max(index - 1, 0));
-  };
+  }, [appId, kategori, state]);
 
   const saveDraft = async () => {
-    if (busy) return;
     setError(null);
     setBusy(true);
-    try {
-      if (await persist()) {
-        if (resubmitting && respons.trim()) await saveBantuanResponse(appId, respons.trim());
-        setSaved('Draf disimpan.');
-      }
-    } catch (caught) {
-      setError(bantuanError(caught, 'Gagal menyimpan draf.'));
-    } finally {
-      setBusy(false);
-    }
+    const ok = await persist();
+    setBusy(false);
+    if (ok) setSaved('Draf disimpan.');
   };
 
   const submit = async () => {
-    if (busy) return;
+    if (!kategori) return;
     setError(null);
-    for (const key of steps) {
-      const problem = stepProblem(key);
-      if (problem) {
-        setStepIndex(steps.indexOf(key));
-        return setError(problem);
-      }
+    const problem = problemOf(kategori, state);
+    if (problem) {
+      setError(problem);
+      return;
+    }
+    if (resubmitting && respons.trim().length < 5) {
+      setError('Sila tulis respons kepada permintaan maklumat tambahan.');
+      return;
     }
     setBusy(true);
     try {
       if (!(await persist())) return;
-      await submitBantuan(appId, resubmitting ? respons.trim() : undefined);
-      router.replace({ pathname: '/(app)/bantuan-info', params: { id: appId } });
+      const row = await submitBantuan(appId, resubmitting ? respons.trim() : undefined);
+      setDone(row);
     } catch (caught) {
       setError(bantuanError(caught, 'Gagal menghantar permohonan. Sila cuba lagi.'));
     } finally {
@@ -394,379 +413,368 @@ export default function BantuanBorangScreen() {
     }
   };
 
-  const addDocument = async () => {
-    if (uploading || busy) return;
-    setError(null);
-    if (docs.length >= MAX_DOCUMENTS) return setError('Maksimum ' + MAX_DOCUMENTS + ' dokumen bagi satu permohonan.');
-    try {
-      const result = await DocumentPicker.getDocumentAsync({
-        type: ['application/pdf', 'image/jpeg', 'image/png'],
-        copyToCacheDirectory: true,
-        multiple: false,
-      });
-      if (result.canceled || !result.assets.length) return;
-      const asset = result.assets[0] as DocumentPicker.DocumentPickerAsset;
-      if (asset.size !== undefined && asset.size > 25 * 1024 * 1024) {
-        return setError('Fail terlalu besar. Pilih fail yang lebih kecil (maksimum 5 MB selepas dimampatkan).');
-      }
-      setUploading(true);
-      if (!(await persist())) return;
-      const doc = await uploadBantuanDocument(
-        appId,
-        {
-          uri: asset.uri,
-          name: asset.name,
-          mimeType: asset.mimeType ?? null,
-          size: asset.size ?? null,
-          webFile: asset.file,
-        },
-        docJenis,
-      );
-      setDocs((prev) => [...prev, doc]);
-      set('dokumen_tiada', false);
-    } catch (caught) {
-      setError(bantuanError(caught, 'Gagal memuat naik dokumen.'));
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const removeDocument = async (doc: BantuanDocument) => {
-    if (uploading || busy) return;
-    setError(null);
-    try {
-      await removeBantuanDocument(doc.id);
-      setDocs((prev) => prev.filter((item) => item.id !== doc.id));
-    } catch (caught) {
-      setError(bantuanError(caught, 'Gagal membuang dokumen.'));
-    }
-  };
+  const v = useMemo(() => visibility(kategori ?? 'belajar', state.status_diri), [kategori, state.status_diri]);
 
   if (loading) return <LoadingScreen />;
-  if (noMember) {
+
+  if (noMember || !kategori) {
     return (
-      <NoAccessScreen
-        title="Permohonan Bantuan"
-        description="Akaun anda belum dipautkan kepada rekod ahli. Hubungi admin untuk dipautkan."
-      />
+      <Screen padTop={false}>
+        <ScreenHeader title="Permohonan Zakat" onBackPress={goBack} />
+        <View className="px-gutter pt-5">
+          <Notice
+            tone={error ? 'negative' : 'warn'}
+            message={error ?? 'Akaun anda belum dipautkan kepada rekod ahli, jadi permohonan belum boleh dibuat.'}
+          />
+        </View>
+      </Screen>
     );
   }
 
-  const tujuanOptions = state.kategori ? TUJUAN_OPTIONS[state.kategori] : [];
-  const docEditableIds = new Set(resubmitting && openRequest ? docs.filter((d) => d.info_request_id === openRequest.id).map((d) => d.id) : docs.map((d) => d.id));
-  const isLast = stepIndex >= steps.length - 1;
+  if (done) {
+    return <SelepasHantar kategori={kategori} noRujukan={done.no_rujukan} onSelesai={() => router.replace('/(app)/bantuan')} />;
+  }
+
+  const tahapOptions = v.belajar ? TAHAP_PENDIDIKAN_BELAJAR : TAHAP_PENDIDIKAN_BEKERJA;
 
   return (
     <Screen padTop={false}>
-      <ScreenHeader
-        eyebrow={'Langkah ' + (stepIndex + 1) + ' daripada ' + steps.length}
-        title={STEP_LABEL[step]}
-        subtitle={app?.no_rujukan ?? (resubmitting ? 'Pembetulan permohonan' : 'Permohonan Bantuan')}
-        onBackPress={() => void back()}
-      />
+      <ScreenHeader eyebrow={KATEGORI_LABEL[kategori]} title="Permohonan Zakat" subtitle={tajukBorang(kategori)} onBackPress={goBack} />
 
-      <View className="gap-4 px-gutter pb-10 pt-5">
-        {resubmitting && openRequest ? (
-          <Notice tone="warn" message={'Admin meminta maklumat tambahan: ' + openRequest.mesej} />
-        ) : null}
+      <View className="gap-4 px-gutter pb-12 pt-5">
+        {resubmitting && openRequest ? <Notice tone="warn" message={'Admin meminta maklumat tambahan: ' + openRequest.mesej} /> : null}
+
+        <Card>
+          <View className="gap-2">
+            <Text className="text-sm font-bold text-ink">Maklumat penting</Text>
+            {MAKLUMAT_PENTING.map((line, index) => (
+              <Text key={line} className="text-sm leading-5 text-ink-muted">
+                {index + 1}. {line}
+              </Text>
+            ))}
+          </View>
+        </Card>
+
         {error ? <Notice tone="negative" message={error} /> : null}
         {saved ? <Notice tone="positive" message={saved} /> : null}
 
-        {step === 'kategori' ? (
-          <View className="gap-3">
-            <Text className="text-sm leading-5 text-ink-muted">
-              Bantuan ini diberikan sekali sahaja (one-off) berdasarkan keperluan yang dinilai dan kemampuan organisasi. Permohonan tidak menjamin kelulusan.
-            </Text>
-            {(['keluarga', 'pelajar'] as BantuanKategori[]).map((kategori) => (
-              <SelectRow
-                key={kategori}
-                title={KATEGORI_LABEL[kategori]}
-                subtitle={KATEGORI_PENERANGAN[kategori]}
-                selected={state.kategori === kategori}
-                disabled={resubmitting || (app !== null && app.status !== 'draft')}
-                onPress={() => {
-                  if (state.kategori !== kategori) {
-                    setState((prev) => ({ ...prev, kategori, tujuan: '', tujuan_lain: '' }));
-                    setSaved(null);
-                  }
-                }}
-              />
-            ))}
-          </View>
+        <SectionTitle title="Maklumat diri" />
+        <TextField
+          label="Nama penuh *"
+          value={state.nama_pemohon}
+          onChangeText={(value) => set('nama_pemohon', value)}
+          placeholder="cth: Aman Bin Abdullah"
+          maxLength={120}
+        />
+        <TextField
+          label="Nombor telefon terkini *"
+          value={state.telefon}
+          onChangeText={(value) => set('telefon', value)}
+          keyboardType="phone-pad"
+          maxLength={20}
+        />
+        <PickerField
+          label="Generasi *"
+          value={state.generasi || null}
+          options={generasiOptions}
+          onChange={(value) => set('generasi', value ?? '')}
+          placeholder="Pilih generasi"
+        />
+        <Segmented label="Status *" value={state.status_diri || null} options={STATUS_DIRI_OPTIONS} onChange={(value) => set('status_diri', value)} />
+        {state.status_diri === 'lain_lain' ? (
+          <TextField label="Nyatakan status *" value={state.status_diri_lain} onChangeText={(value) => set('status_diri_lain', value)} maxLength={80} />
         ) : null}
+        <TextField
+          label="Tempat menetap terkini *"
+          value={state.tempat_menetap}
+          onChangeText={(value) => set('tempat_menetap', value)}
+          placeholder="cth: Kota Bharu, Kelantan"
+          maxLength={120}
+        />
 
-        {step === 'pemohon' ? (
-          <View className="gap-4">
-            <Text className="text-sm leading-5 text-ink-muted">
-              Maklumat ini diambil daripada profil anda. Anda boleh membetulkannya untuk permohonan ini — profil utama tidak berubah.
-            </Text>
-            <TextField label="Nama pemohon *" value={state.nama_pemohon} onChangeText={(v) => set('nama_pemohon', v)} maxLength={120} />
-            <TextField label="Nombor ahli" value={state.nombor_ahli_salin} onChangeText={(v) => set('nombor_ahli_salin', v)} maxLength={30} />
-            <TextField label="No. telefon *" value={state.telefon} onChangeText={(v) => set('telefon', v)} keyboardType="phone-pad" maxLength={20} />
-            <TextField label="Alamat *" value={state.alamat} onChangeText={(v) => set('alamat', v)} multiline maxLength={300} />
-          </View>
+        <SectionTitle title={v.belajar ? 'Pengajian' : 'Pendidikan'} caption={v.belajar ? undefined : 'Isi jika anda bekerja sambil belajar.'} />
+        <PickerField
+          label={v.belajar ? 'Tahap pendidikan *' : 'Tahap pendidikan (jika bekerja sambil belajar)'}
+          value={state.tahap_pendidikan || null}
+          options={tahapOptions}
+          onChange={(value) => set('tahap_pendidikan', value ?? '')}
+          clearable={!v.belajar}
+          clearLabel="Tidak berkenaan"
+          placeholder="Pilih tahap pendidikan"
+        />
+        {state.tahap_pendidikan === 'lain_lain' ? (
+          <TextField label="Nyatakan tahap pendidikan *" value={state.tahap_pendidikan_lain} onChangeText={(value) => set('tahap_pendidikan_lain', value)} maxLength={80} />
         ) : null}
-
-        {step === 'permohonan' ? (
-          <View className="gap-4">
+        {v.belajar ? (
+          <>
             <PickerField
-              label="Tujuan bantuan *"
-              value={state.tujuan || null}
-              options={tujuanOptions}
-              onChange={(v) => set('tujuan', v ?? '')}
-              placeholder="Sila pilih"
+              label="Tinggal di *"
+              value={state.tinggal_di || null}
+              options={TINGGAL_DI_OPTIONS}
+              onChange={(value) => set('tinggal_di', value ?? '')}
+              placeholder="Pilih tempat tinggal"
             />
-            {state.tujuan === 'lain_lain' ? (
-              <TextField label="Nyatakan tujuan *" value={state.tujuan_lain} onChangeText={(v) => set('tujuan_lain', v)} maxLength={120} />
+            {state.tinggal_di === 'lain_lain' ? (
+              <TextField label="Nyatakan tempat tinggal *" value={state.tinggal_di_lain} onChangeText={(value) => set('tinggal_di_lain', value)} maxLength={80} />
             ) : null}
             <TextField
-              label="Keadaan dan sebab memerlukan bantuan *"
-              value={state.keadaan}
-              onChangeText={(v) => set('keadaan', v)}
-              multiline
-              maxLength={2000}
-              placeholder="Terangkan keadaan anda dengan ringkas dan jujur."
+              label="Tahun pengajian *"
+              value={state.tahun_pengajian}
+              onChangeText={(value) => set('tahun_pengajian', value)}
+              placeholder="cth: Tahun 2 daripada 4"
+              maxLength={60}
+            />
+            <ChipGroup
+              label="Pembiayaan pelajaran * (boleh pilih lebih daripada satu)"
+              values={state.pembiayaan}
+              options={PEMBIAYAAN_OPTIONS}
+              onChange={(values) => set('pembiayaan', values)}
+            />
+            {state.pembiayaan.includes('lain_lain') ? (
+              <TextField label="Nyatakan pembiayaan lain *" value={state.pembiayaan_lain} onChangeText={(value) => set('pembiayaan_lain', value)} maxLength={80} />
+            ) : null}
+          </>
+        ) : null}
+
+        <SectionTitle title="Pekerjaan dan pendapatan" />
+        <TextField
+          label={v.belajar ? 'Pekerjaan (pilihan — jika ada)' : 'Pekerjaan *'}
+          value={state.pekerjaan}
+          onChangeText={(value) => set('pekerjaan', value)}
+          placeholder={v.belajar ? 'cth: Kerja separuh masa di kedai' : 'cth: Berniaga'}
+          maxLength={100}
+        />
+        {!v.belajar ? (
+          <TextField
+            label="Jumlah pendapatan bulanan anda (RM) *"
+            value={state.pendapatan_pemohon}
+            onChangeText={(value) => set('pendapatan_pemohon', value.replace(/[^0-9.]/g, ''))}
+            keyboardType="decimal-pad"
+            maxLength={10}
+          />
+        ) : null}
+        <TextField
+          label="Jumlah pendapatan keluarga sebulan (RM) *"
+          value={state.pendapatan_keluarga}
+          onChangeText={(value) => set('pendapatan_keluarga', value.replace(/[^0-9.]/g, ''))}
+          keyboardType="decimal-pad"
+          maxLength={10}
+        />
+        <Text className="-mt-2 text-xs text-ink-muted">
+          {v.belajar
+            ? 'Jumlah pendapatan semua yang bekerja dalam keluarga. Isi 0 jika tiada pendapatan.'
+            : 'Jumlah pendapatan semua yang bekerja dalam keluarga (cth: suami + isteri = 3000). Isi 0 jika tiada pendapatan.'}
+        </Text>
+
+        <SectionTitle title="Keluarga" />
+        {v.pekerjaanIbuBapa ? (
+          <>
+            <TextField
+              label="Pekerjaan ibu *"
+              value={state.pekerjaan_ibu}
+              onChangeText={(value) => set('pekerjaan_ibu', value)}
+              placeholder="cth: Suri rumah"
+              maxLength={100}
             />
             <TextField
-              label="Anggaran jumlah diperlukan (RM) *"
-              value={state.jumlah_dimohon}
-              onChangeText={(v) => set('jumlah_dimohon', v.replace(/[^0-9.,]/g, ''))}
-              keyboardType="decimal-pad"
-              maxLength={10}
+              label="Pekerjaan bapa *"
+              value={state.pekerjaan_bapa}
+              onChangeText={(value) => set('pekerjaan_bapa', value)}
+              placeholder="cth: Berniaga sendiri"
+              maxLength={100}
             />
-            <Segmented label="Tahap keperluan *" value={state.tahap_keperluan} options={TAHAP_OPTIONS} onChange={(v) => set('tahap_keperluan', v)} />
-            {state.tahap_keperluan === 'mendesak' ? (
-              <>
-                <Notice tone="info" message="Label mendesak ialah maklumat untuk semakan admin. Ia bukan kelulusan atau keutamaan automatik." />
-                <TextField label="Sebab mendesak *" value={state.sebab_mendesak} onChangeText={(v) => set('sebab_mendesak', v)} multiline maxLength={500} />
-                <OptionalDateField label="Tarikh diperlukan (jika berkaitan)" value={state.tarikh_diperlukan} onChange={(v) => set('tarikh_diperlukan', v)} />
-              </>
-            ) : null}
-          </View>
+          </>
         ) : null}
-
-        {step === 'kewangan' ? (
-          <View className="gap-4">
-            <PickerField
-              label="Status pekerjaan *"
-              value={state.status_pekerjaan || null}
-              options={PEKERJAAN_OPTIONS}
-              onChange={(v) => set('status_pekerjaan', v ?? '')}
-              placeholder="Sila pilih"
-            />
-            <Segmented label="Pendapatan bulanan isi rumah *" value={(state.pendapatan_jenis || null) as 'tetap' | 'tidak_tetap' | 'tidak_pasti' | null} options={PENDAPATAN_OPTIONS} onChange={(v) => set('pendapatan_jenis', v)} />
-            {state.pendapatan_jenis === 'tidak_pasti' ? (
-              <TextField
-                label="Jelaskan keadaan pendapatan *"
-                value={state.pendapatan_catatan}
-                onChangeText={(v) => set('pendapatan_catatan', v)}
-                multiline
-                maxLength={500}
-                placeholder="Cth: kerja kontrak, tiada pendapatan tetap bulan ini."
-              />
-            ) : (
-              <>
-                <TextField
-                  label={state.pendapatan_jenis === 'tidak_tetap' ? 'Anggaran pendapatan bulanan (RM, pilihan)' : 'Jumlah pendapatan bulanan (RM) *'}
-                  value={state.pendapatan_isi_rumah}
-                  onChangeText={(v) => set('pendapatan_isi_rumah', v.replace(/[^0-9.,]/g, ''))}
-                  keyboardType="decimal-pad"
-                  maxLength={10}
-                />
-                <Text className="-mt-2 text-xs text-ink-muted">Isi 0 jika isi rumah tiada pendapatan. Jangan biarkan kosong jika anda sebenarnya tidak tahu.</Text>
-              </>
-            )}
-            <TextField
-              label="Bilangan tanggungan *"
-              value={state.bil_tanggungan}
-              onChangeText={(v) => set('bil_tanggungan', v.replace(/[^0-9]/g, ''))}
-              keyboardType="number-pad"
-              maxLength={2}
-            />
-            <TextField
-              label="Ringkasan keperluan / perbelanjaan asas *"
-              value={state.ringkasan_perbelanjaan}
-              onChangeText={(v) => set('ringkasan_perbelanjaan', v)}
-              multiline
-              maxLength={1000}
-              placeholder="Cth: makan minum, sewa, utiliti, ubat."
-            />
-            <Segmented
-              label="Adakah anda sedang menerima bantuan lain? *"
-              value={state.bantuan_lain_ada === null ? null : state.bantuan_lain_ada ? 'ya' : 'tidak'}
-              options={[
-                { value: 'ya', label: 'Ya' },
-                { value: 'tidak', label: 'Tidak' },
-              ]}
-              onChange={(v) => set('bantuan_lain_ada', v === 'ya')}
-            />
-            {state.bantuan_lain_ada ? (
-              <>
-                <TextField label="Sumber bantuan *" value={state.bantuan_lain_sumber} onChangeText={(v) => set('bantuan_lain_sumber', v)} maxLength={120} />
-                <TextField
-                  label="Amaun (RM, jika diketahui)"
-                  value={state.bantuan_lain_amaun}
-                  onChangeText={(v) => set('bantuan_lain_amaun', v.replace(/[^0-9.,]/g, ''))}
-                  keyboardType="decimal-pad"
-                  maxLength={10}
-                />
-                <TextField label="Kekerapan (jika diketahui)" value={state.bantuan_lain_kekerapan} onChangeText={(v) => set('bantuan_lain_kekerapan', v)} maxLength={60} placeholder="Cth: bulanan" />
-              </>
-            ) : null}
-          </View>
-        ) : null}
-
-        {step === 'pelajar' ? (
-          <View className="gap-4">
-            <Segmented
-              label="Anda memohon sebagai *"
-              value={(state.pelajar_hubungan_pemohon || null) as 'sendiri' | 'penjaga' | null}
-              options={[
-                { value: 'sendiri', label: 'Pelajar sendiri' },
-                { value: 'penjaga', label: 'Penjaga' },
-              ]}
-              onChange={(v) => set('pelajar_hubungan_pemohon', v)}
-            />
-            <TextField label="Nama pelajar *" value={state.pelajar_nama} onChangeText={(v) => set('pelajar_nama', v)} maxLength={120} />
-            {state.pelajar_hubungan_pemohon === 'penjaga' ? (
-              <TextField label="Hubungan pelajar dengan anda *" value={state.pelajar_hubungan_ahli} onChangeText={(v) => set('pelajar_hubungan_ahli', v)} maxLength={60} placeholder="Cth: anak" />
-            ) : null}
-            <TextField label="Institusi pengajian *" value={state.pelajar_institusi} onChangeText={(v) => set('pelajar_institusi', v)} maxLength={160} />
-            <TextField label="Program / peringkat pengajian *" value={state.pelajar_program} onChangeText={(v) => set('pelajar_program', v)} maxLength={160} />
-            <TextField label="Tahun atau semester *" value={state.pelajar_tahun_semester} onChangeText={(v) => set('pelajar_tahun_semester', v)} maxLength={40} />
-            <PickerField
-              label="Status pengajian *"
-              value={state.pelajar_status_pengajian || null}
-              options={PENGAJIAN_OPTIONS}
-              onChange={(v) => set('pelajar_status_pengajian', v ?? '')}
-              placeholder="Sila pilih"
-            />
-            <TextField
-              label="Biasiswa, pinjaman atau bantuan pendidikan sedia ada (jika ada)"
-              value={state.pelajar_bantuan_sedia_ada}
-              onChangeText={(v) => set('pelajar_bantuan_sedia_ada', v)}
-              multiline
-              maxLength={500}
-            />
-          </View>
-        ) : null}
-
-        {step === 'dokumen' ? (
-          <View className="gap-4">
-            <Text className="text-sm leading-5 text-ink-muted">
-              Contoh: bukti pendapatan, bil atau pengesahan pengajian. Format PDF, JPG atau PNG, maksimum 5 MB setiap fail dan {MAX_DOCUMENTS} fail. Jangan muat naik salinan kad pengenalan atau nombor akaun bank.
-            </Text>
-
-            {docs.map((doc) => (
-              <Card key={doc.id}>
-                <View className="flex-row items-center justify-between gap-3">
-                  <View className="flex-1">
-                    <Text className="text-sm font-semibold text-ink" numberOfLines={1}>{doc.nama_fail}</Text>
-                    <Text className="text-xs text-ink-muted">{DOC_JENIS_OPTIONS.find((o) => o.value === doc.jenis)?.label}</Text>
-                  </View>
-                  {docEditableIds.has(doc.id) ? (
-                    <Button label="Buang" variant="danger" size="sm" onPress={() => void removeDocument(doc)} disabled={uploading || busy} />
-                  ) : (
-                    <Badge label="Telah dihantar" tone="neutral" />
-                  )}
-                </View>
-              </Card>
-            ))}
-
-            {docs.length < MAX_DOCUMENTS ? (
-              <>
-                <PickerField label="Jenis dokumen" value={docJenis} options={DOC_JENIS_OPTIONS} onChange={(v) => v && setDocJenis(v)} />
-                <Button label={uploading ? 'Memuat naik…' : 'Tambah Dokumen'} variant="secondary" loading={uploading} onPress={() => void addDocument()} />
-              </>
-            ) : null}
-
-            {docs.length === 0 ? (
-              <>
-                <SelectRow
-                  title="Dokumen belum tersedia"
-                  subtitle="Permohonan masih boleh dihantar untuk penelitian admin. Tiada penolakan automatik."
-                  selected={state.dokumen_tiada}
-                  onPress={() => set('dokumen_tiada', !state.dokumen_tiada)}
-                />
-                {state.dokumen_tiada ? (
-                  <TextField label="Sebab dokumen belum tersedia *" value={state.dokumen_tiada_sebab} onChangeText={(v) => set('dokumen_tiada_sebab', v)} multiline maxLength={300} />
-                ) : null}
-              </>
-            ) : null}
-          </View>
-        ) : null}
-
-        {step === 'semak' ? (
-          <View className="gap-4">
-            <SectionTitle title="Ringkasan permohonan" caption="Semak maklumat sebelum menghantar." />
-            <Card>
-              <View className="gap-2">
-                <Summary label="Kategori" value={state.kategori ? KATEGORI_LABEL[state.kategori] : '—'} />
-                <Summary label="Tujuan" value={state.kategori ? tujuanLabel(state.kategori, state.tujuan || null, state.tujuan_lain || null) : '—'} />
-                <Summary label="Jumlah dimohon" value={formatRM(Number(state.jumlah_dimohon.replace(',', '.')) || null)} />
-                <Summary label="Tahap keperluan" value={state.tahap_keperluan === 'mendesak' ? 'Mendesak' : state.tahap_keperluan === 'biasa' ? 'Biasa' : '—'} />
-                <Summary label="Pemohon" value={state.nama_pemohon || '—'} />
-                <Summary label="Telefon" value={state.telefon || '—'} />
-                <Summary label="Dokumen" value={docs.length > 0 ? docs.length + ' fail' : state.dokumen_tiada ? 'Belum tersedia' : '—'} />
-              </View>
-            </Card>
-
-            {resubmitting ? (
-              <TextField
-                label="Respons kepada admin *"
-                value={respons}
-                onChangeText={(v) => {
-                  setRespons(v);
-                  setSaved(null);
-                }}
-                multiline
-                maxLength={3000}
-                placeholder="Jawab permintaan maklumat tambahan di atas."
-              />
-            ) : null}
-
-            <SectionTitle title="Pengakuan" />
-            <SelectRow title="Maklumat yang saya berikan adalah benar." selected={state.pengakuan_benar} onPress={() => set('pengakuan_benar', !state.pengakuan_benar)} />
-            <SelectRow
-              title="Saya bersetuju maklumat ini diproses oleh pegawai yang diberi kuasa bagi tujuan penilaian bantuan."
-              selected={state.pengakuan_proses}
-              onPress={() => set('pengakuan_proses', !state.pengakuan_proses)}
-            />
-            <SelectRow
-              title="Saya memahami bantuan ini adalah sekali beri dan tertakluk kepada penilaian serta kemampuan organisasi."
-              selected={state.pengakuan_satu_kali}
-              onPress={() => set('pengakuan_satu_kali', !state.pengakuan_satu_kali)}
-            />
-          </View>
-        ) : null}
-
-        <View className="mt-2 gap-3">
-          {isLast ? (
-            <Button label={resubmitting ? 'Hantar Semula' : 'Hantar Permohonan'} loading={busy} onPress={() => void submit()} />
-          ) : (
-            <Button label="Seterusnya" loading={busy} onPress={() => void next()} />
-          )}
+        <PickerField
+          label="Bilangan tanggungan keluarga *"
+          value={state.bil_tanggungan || null}
+          options={TANGGUNGAN_OPTIONS}
+          onChange={(value) => set('bil_tanggungan', value ?? '')}
+          placeholder="Pilih bilangan"
+        />
+        <Text className="-mt-2 text-xs text-ink-muted">Tanggungan yang ditanggung oleh ketua keluarga (cth: 5 orang — ibu, bapa, 2 anak dan isteri).</Text>
+        {v.kedudukanAnak ? (
           <View className="flex-row gap-3">
             <View className="flex-1">
-              <Button label="Kembali" variant="secondary" onPress={() => void back()} disabled={busy} />
+              <PickerField
+                label="Anak ke *"
+                value={state.anak_ke || null}
+                options={SAUDARA_OPTIONS}
+                onChange={(value) => set('anak_ke', value ?? '')}
+                placeholder="Pilih"
+              />
             </View>
-            {state.kategori ? (
-              <View className="flex-1">
-                <Button label="Simpan Draf" variant="ghost" onPress={() => void saveDraft()} disabled={busy} />
-              </View>
-            ) : null}
+            <View className="flex-1">
+              <PickerField
+                label="Daripada (beradik) *"
+                value={state.bil_adik_beradik || null}
+                options={SAUDARA_OPTIONS}
+                onChange={(value) => set('bil_adik_beradik', value ?? '')}
+                placeholder="Pilih"
+              />
+            </View>
           </View>
+        ) : null}
+        {!v.belajar && v.adikBeradik ? (
+          <PickerField
+            label="Bilangan adik beradik *"
+            value={state.bil_adik_beradik || null}
+            options={SAUDARA_OPTIONS}
+            onChange={(value) => set('bil_adik_beradik', value ?? '')}
+            placeholder="Pilih bilangan"
+          />
+        ) : null}
+        {v.bilAnak ? (
+          <PickerField
+            label={state.status_diri === 'berkahwin' ? 'Bilangan anak *' : 'Bilangan anak (jika ada)'}
+            value={state.bil_anak || null}
+            options={BIL_ANAK_OPTIONS}
+            onChange={(value) => set('bil_anak', value ?? '')}
+            placeholder="Pilih bilangan"
+          />
+        ) : null}
+
+        <SectionTitle title="Keperluan" />
+        <ChipGroup
+          label="Sebab keperluan * (boleh pilih lebih daripada satu)"
+          values={state.sebab_keperluan}
+          options={SEBAB_OPTIONS}
+          onChange={(values) => set('sebab_keperluan', values)}
+        />
+        {state.sebab_keperluan.includes('lain_lain') ? (
+          <TextField label="Nyatakan sebab lain *" value={state.sebab_lain} onChangeText={(value) => set('sebab_lain', value)} maxLength={100} />
+        ) : null}
+        <TextField
+          label="Terangkan lebih lanjut berkenaan tujuan keperluan *"
+          value={state.penerangan}
+          onChangeText={(value) => set('penerangan', value)}
+          multiline
+          maxLength={1500}
+        />
+        <Segmented
+          label="Pernah menerima bantuan zakat daripada Ikhwan sebelum ini? *"
+          value={state.pernah_terima === null ? null : state.pernah_terima ? 'ya' : 'tidak'}
+          options={[
+            { value: 'ya', label: 'Ya' },
+            { value: 'tidak', label: 'Tidak' },
+          ]}
+          onChange={(value) => set('pernah_terima', value === 'ya')}
+        />
+
+        <SectionTitle title="Maklumat akaun bank" caption="Untuk penyaluran bantuan jika diluluskan. Hanya jawatankuasa zakat LK boleh melihatnya." />
+        <TextField
+          label="Nama pemegang akaun *"
+          value={state.bank_nama_pemegang}
+          onChangeText={(value) => set('bank_nama_pemegang', value)}
+          maxLength={120}
+        />
+        <PickerField
+          label="Nama bank *"
+          value={state.bank_pilihan || null}
+          options={BANK_OPTIONS.map((name) => ({ value: name, label: name }))}
+          onChange={(value) => set('bank_pilihan', value ?? '')}
+          placeholder="Pilih bank"
+        />
+        {state.bank_pilihan === BANK_LAIN ? (
+          <TextField label="Nyatakan nama bank *" value={state.bank_lain} onChangeText={(value) => set('bank_lain', value)} maxLength={80} />
+        ) : null}
+        <TextField
+          label="Nombor akaun bank *"
+          value={state.bank_no_akaun}
+          onChangeText={(value) => set('bank_no_akaun', value.replace(/[^0-9 -]/g, ''))}
+          keyboardType="number-pad"
+          maxLength={26}
+        />
+
+        <SectionTitle title="Pengakuan pemohon" />
+        <SelectRow
+          title="Setuju"
+          subtitle={PENGAKUAN_TEKS}
+          selected={state.pengakuan_setuju}
+          onPress={() => set('pengakuan_setuju', !state.pengakuan_setuju)}
+        />
+
+        {resubmitting ? (
+          <>
+            <SectionTitle title="Respons kepada admin" />
+            <TextField
+              label="Respons anda *"
+              value={respons}
+              onChangeText={setRespons}
+              multiline
+              maxLength={3000}
+              placeholder="Jawab permintaan maklumat tambahan di atas."
+            />
+          </>
+        ) : null}
+
+        <View className="gap-3 pt-2">
+          <Button label={resubmitting ? 'Hantar Semula' : 'Hantar Permohonan'} loading={busy} onPress={() => void submit()} />
+          <Button label="Simpan Draf" variant="secondary" onPress={() => void saveDraft()} disabled={busy} />
         </View>
       </View>
     </Screen>
   );
 }
 
-function Summary({ label, value }: { label: string; value: string }) {
+/** Skrin selepas hantar: tempoh semakan + kenalan LK mengikut jenis borang. */
+function SelepasHantar({
+  kategori,
+  noRujukan,
+  onSelesai,
+}: {
+  kategori: BantuanKategori;
+  noRujukan: string | null;
+  onSelesai: () => void;
+}) {
+  const kenalan = KENALAN_LK[kategori];
+  const colors = useColors();
   return (
-    <View className="flex-row justify-between gap-4">
-      <Text className="text-sm text-ink-muted">{label}</Text>
-      <Text className="flex-1 text-right text-sm font-semibold text-ink">{value}</Text>
-    </View>
+    <Screen padTop={false}>
+      <ScreenHeader eyebrow="Tabung Zakat" title="Permohonan Dihantar" />
+      <View className="gap-4 px-gutter pb-12 pt-5">
+        <Card>
+          <View className="items-center gap-2">
+            <Ionicons name="checkmark-circle" size={44} color={colors.positive} />
+            <Text className="text-center text-base font-bold text-ink">Terima kasih. Permohonan anda telah diterima.</Text>
+            {noRujukan ? <Text className="text-sm text-ink-muted">No. rujukan: {noRujukan}</Text> : null}
+            <Text className="text-center text-sm leading-5 text-ink">{MESEJ_SELEPAS_HANTAR}</Text>
+          </View>
+        </Card>
+
+        <SectionTitle title="Untuk sebarang pertanyaan, hubungi LK" />
+        <KenalanSeksyen tajuk="Muslimin" senarai={kenalan.muslimin} />
+        <KenalanSeksyen tajuk="Muslimat" senarai={kenalan.muslimat} />
+
+        <Button label="Selesai" onPress={onSelesai} />
+      </View>
+    </Screen>
+  );
+}
+
+function KenalanSeksyen({ tajuk, senarai }: { tajuk: string; senarai: KenalanLK[] }) {
+  const colors = useColors();
+  return (
+    <Card>
+      <View className="gap-3">
+        <Text className="text-sm font-bold text-ink">{tajuk}</Text>
+        {senarai.map((orang) => (
+          <Pressable
+            key={orang.nama}
+            accessibilityRole="link"
+            accessibilityLabel={'Hubungi ' + orang.nama + ' melalui WhatsApp'}
+            onPress={() => void Linking.openURL(waLink(orang.telefon))}
+            className="flex-row items-center justify-between gap-3 active:opacity-70">
+            <View className="flex-1">
+              <Text className="text-sm font-semibold text-ink">
+                {orang.nama} ({orang.generasi})
+              </Text>
+              <Text className="text-sm text-ink-muted">{orang.telefon}</Text>
+            </View>
+            <Ionicons name="logo-whatsapp" size={22} color={colors.positive} />
+          </Pressable>
+        ))}
+      </View>
+    </Card>
   );
 }

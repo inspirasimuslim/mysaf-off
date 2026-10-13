@@ -18,6 +18,7 @@ import {
   useProgramAccess,
   useUsrahAccess,
   useYuranAccess,
+  useZakatAccess,
 } from '@/lib/department-access';
 import { useGoBack } from '@/lib/navigation';
 import { ORG_CHART_DEPARTMENT } from '@/lib/org-chart';
@@ -55,6 +56,8 @@ export default function AdminHubScreen() {
   const generasiAccess = useGenerasiAccess();
   const perkaderanAccess = usePerkaderanAccess();
   const kebajikanAccess = useKebajikanAccess();
+  // TABUNG ZAKAT — department khusus, BUKAN LAJNAH KEBAJIKAN (`kebajikanAccess`).
+  const zakatAccess = useZakatAccess();
 
   const superAdmin = isSuperAdmin();
   const naqib = isActiveNaqib();
@@ -80,6 +83,7 @@ export default function AdminHubScreen() {
       generasiAccess,
       perkaderanAccess,
       kebajikanAccess,
+      zakatAccess,
     ].some((access) => access.loading);
   const visibleSections = [
     superAdmin,
@@ -92,6 +96,7 @@ export default function AdminHubScreen() {
     generasiAccess.canView,
     perkaderanAccess.canView,
     kebajikanAccess.canView,
+    zakatAccess.canView,
     naqib,
     kawasanOnly,
   ].filter(Boolean).length;
@@ -443,22 +448,28 @@ export default function AdminHubScreen() {
 
         {/* Data kesihatan ahli — LAJNAH KEBAJIKAN sahaja (bukan JABATAN DATA). */}
         {kebajikanAccess.canView ? (
-          <CollapsibleSection variant="plain" title="Kebajikan" count={2} defaultOpen={openByDefault}>
-            <ActionRow
-              icon="hand-left-outline"
-              title="Permohonan Bantuan"
-              subtitle={
-                kebajikanAccess.canEdit
-                  ? 'Semak, minta maklumat tambahan, luluskan atau tolak permohonan bantuan ahli'
-                  : 'Lihat permohonan bantuan ahli (paparan sahaja)'
-              }
-              onPress={() => router.push('/(app)/admin/bantuan')}
-            />
+          <CollapsibleSection variant="plain" title="Kebajikan" count={1} defaultOpen={openByDefault}>
             <ActionRow
               icon="medkit-outline"
               title="Eksport Data Kesihatan"
               subtitle="Muat turun masalah kesihatan yang direkodkan ahli (sensitif)"
               onPress={() => router.push('/(app)/admin/eksport-kesihatan')}
+            />
+          </CollapsibleSection>
+        ) : null}
+
+        {/* Permohonan zakat — department TABUNG ZAKAT sahaja (bukan LAJNAH KEBAJIKAN). */}
+        {zakatAccess.canView ? (
+          <CollapsibleSection variant="plain" title="Tabung Zakat" count={1} defaultOpen={openByDefault}>
+            <ActionRow
+              icon="hand-left-outline"
+              title="Permohonan Zakat"
+              subtitle={
+                zakatAccess.canEdit
+                  ? 'Semak, minta maklumat tambahan, luluskan atau tolak permohonan zakat ahli'
+                  : 'Lihat permohonan zakat ahli (paparan sahaja)'
+              }
+              onPress={() => router.push('/(app)/admin/bantuan')}
             />
           </CollapsibleSection>
         ) : null}

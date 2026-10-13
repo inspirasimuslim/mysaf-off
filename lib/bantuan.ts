@@ -1,17 +1,17 @@
-import { File } from 'expo-file-system';
-import { Platform } from 'react-native';
-
 import { errorCode, toMalayError } from './errors';
-import { readJpegBytes } from './image-upload';
 import { supabase } from './supabase';
 
 /**
- * Permohonan Bantuan (one-off) — migration 148.
+ * Permohonan Bantuan Zakat (one-off) — migration 148.
  *
- * SEMUA tulisan melalui RPC (`bantuan_*`); `authenticated` hanya ada SELECT pada
- * table. Status, jumlah diluluskan dan identiti pelulus ditetapkan oleh pelayan.
- * Nota dalaman berada dalam table berasingan yang ahli tidak boleh baca, jadi
- * kod ini tidak menapis medan sulit di sebelah klien.
+ * Dua borang satu halaman: `belajar` dan `bekerja` (Bekerja/Berkahwin). SEMUA tulisan
+ * melalui RPC (`bantuan_*`); `authenticated` hanya ada SELECT pada table. Status,
+ * jumlah diluluskan dan identiti pelulus ditetapkan oleh pelayan. Nota dalaman
+ * berada dalam table berasingan yang ahli tidak boleh baca, jadi kod ini tidak
+ * menapis medan sulit di sebelah klien.
+ *
+ * Admin yang mengurus permohonan = department khusus `TABUNG ZAKAT`
+ * (`ZAKAT_DEPARTMENT` dalam `lib/department-access.ts`), BUKAN LAJNAH KEBAJIKAN.
  *
  * Kelulusan BUKAN pembayaran: modul ini tidak merekod bayaran dan tidak boleh
  * memaparkan "Dibayar" atau menjanjikan tarikh bayaran.
@@ -20,7 +20,7 @@ import { supabase } from './supabase';
 // --- Jenis -------------------------------------------------------------------
 
 export type BantuanStatus = 'draft' | 'submitted' | 'under_review' | 'needs_information' | 'approved' | 'rejected';
-export type BantuanKategori = 'keluarga' | 'pelajar';
+export type BantuanKategori = 'belajar' | 'bekerja';
 
 export type BantuanApplication = {
   id: string;
@@ -29,40 +29,36 @@ export type BantuanApplication = {
   status: BantuanStatus;
   versi: number;
   kategori: BantuanKategori;
-  tujuan: string | null;
-  tujuan_lain: string | null;
   nama_pemohon: string | null;
-  nombor_ahli_salin: string | null;
   telefon: string | null;
-  alamat: string | null;
-  keadaan: string | null;
-  jumlah_dimohon: number | null;
-  tahap_keperluan: 'biasa' | 'mendesak' | null;
-  sebab_mendesak: string | null;
-  tarikh_diperlukan: string | null;
-  status_pekerjaan: string | null;
-  pendapatan_jenis: 'tetap' | 'tidak_tetap' | 'tidak_pasti' | null;
-  pendapatan_isi_rumah: number | null;
-  pendapatan_catatan: string | null;
+  generasi: string | null;
+  status_diri: 'bujang' | 'berkahwin' | 'lain_lain' | null;
+  status_diri_lain: string | null;
+  tempat_menetap: string | null;
+  tahap_pendidikan: string | null;
+  tahap_pendidikan_lain: string | null;
+  tinggal_di: string | null;
+  tinggal_di_lain: string | null;
+  tahun_pengajian: string | null;
+  pembiayaan: string[] | null;
+  pembiayaan_lain: string | null;
+  pekerjaan: string | null;
+  pendapatan_pemohon: number | null;
+  pendapatan_keluarga: number | null;
+  pekerjaan_ibu: string | null;
+  pekerjaan_bapa: string | null;
   bil_tanggungan: number | null;
-  ringkasan_perbelanjaan: string | null;
-  bantuan_lain_ada: boolean | null;
-  bantuan_lain_sumber: string | null;
-  bantuan_lain_amaun: number | null;
-  bantuan_lain_kekerapan: string | null;
-  pelajar_hubungan_pemohon: 'sendiri' | 'penjaga' | null;
-  pelajar_nama: string | null;
-  pelajar_hubungan_ahli: string | null;
-  pelajar_institusi: string | null;
-  pelajar_program: string | null;
-  pelajar_tahun_semester: string | null;
-  pelajar_status_pengajian: string | null;
-  pelajar_bantuan_sedia_ada: string | null;
-  dokumen_tiada: boolean;
-  dokumen_tiada_sebab: string | null;
-  pengakuan_benar: boolean;
-  pengakuan_proses: boolean;
-  pengakuan_satu_kali: boolean;
+  anak_ke: number | null;
+  bil_adik_beradik: number | null;
+  bil_anak: number | null;
+  sebab_keperluan: string[] | null;
+  sebab_lain: string | null;
+  penerangan: string | null;
+  pernah_terima: boolean | null;
+  bank_nama_pemegang: string | null;
+  bank_nama: string | null;
+  bank_no_akaun: string | null;
+  pengakuan_setuju: boolean;
   pertama_dihantar_at: string | null;
   dihantar_at: string | null;
   jumlah_diluluskan: number | null;
@@ -74,31 +70,39 @@ export type BantuanApplication = {
   updated_at: string;
 };
 
-/** Medan borang yang boleh dihantar kepada `bantuan_save_draft`. */
-export type BantuanForm = Partial<
-  Pick<
-    BantuanApplication,
-    | 'kategori' | 'tujuan' | 'tujuan_lain' | 'nama_pemohon' | 'nombor_ahli_salin' | 'telefon' | 'alamat'
-    | 'keadaan' | 'jumlah_dimohon' | 'tahap_keperluan' | 'sebab_mendesak' | 'tarikh_diperlukan'
-    | 'status_pekerjaan' | 'pendapatan_jenis' | 'pendapatan_isi_rumah' | 'pendapatan_catatan' | 'bil_tanggungan'
-    | 'ringkasan_perbelanjaan' | 'bantuan_lain_ada' | 'bantuan_lain_sumber' | 'bantuan_lain_amaun'
-    | 'bantuan_lain_kekerapan' | 'pelajar_hubungan_pemohon' | 'pelajar_nama' | 'pelajar_hubungan_ahli'
-    | 'pelajar_institusi' | 'pelajar_program' | 'pelajar_tahun_semester' | 'pelajar_status_pengajian'
-    | 'pelajar_bantuan_sedia_ada' | 'dokumen_tiada' | 'dokumen_tiada_sebab' | 'pengakuan_benar'
-    | 'pengakuan_proses' | 'pengakuan_satu_kali'
-  >
->;
-
-export type BantuanDocument = {
-  id: string;
-  application_id: string;
-  info_request_id: string | null;
-  storage_path: string;
-  nama_fail: string;
-  mime: string;
-  saiz_bait: number;
-  jenis: 'pendapatan' | 'bil' | 'pengajian' | 'lain';
-  created_at: string;
+/** Medan borang yang boleh dihantar kepada `bantuan_save_draft` (nombor dihantar sebagai teks). */
+export type BantuanForm = {
+  kategori?: BantuanKategori;
+  nama_pemohon?: string;
+  telefon?: string;
+  generasi?: string;
+  status_diri?: string;
+  status_diri_lain?: string;
+  tempat_menetap?: string;
+  tahap_pendidikan?: string;
+  tahap_pendidikan_lain?: string;
+  tinggal_di?: string;
+  tinggal_di_lain?: string;
+  tahun_pengajian?: string;
+  pembiayaan?: string[];
+  pembiayaan_lain?: string;
+  pekerjaan?: string;
+  pendapatan_pemohon?: string;
+  pendapatan_keluarga?: string;
+  pekerjaan_ibu?: string;
+  pekerjaan_bapa?: string;
+  bil_tanggungan?: string;
+  anak_ke?: string;
+  bil_adik_beradik?: string;
+  bil_anak?: string;
+  sebab_keperluan?: string[];
+  sebab_lain?: string;
+  penerangan?: string;
+  pernah_terima?: boolean | null;
+  bank_nama_pemegang?: string;
+  bank_nama?: string;
+  bank_no_akaun?: string;
+  pengakuan_setuju?: boolean;
 };
 
 export type BantuanInfoRequest = {
@@ -136,12 +140,10 @@ export type BantuanAdminRow = {
   id: string;
   no_rujukan: string | null;
   nama_pemohon: string | null;
-  nombor_ahli_salin: string | null;
+  generasi: string | null;
   kategori: BantuanKategori;
-  tujuan: string | null;
   status: BantuanStatus;
-  tahap_keperluan: 'biasa' | 'mendesak' | null;
-  jumlah_dimohon: number | null;
+  pendapatan_keluarga: number | null;
   jumlah_diluluskan: number | null;
   dihantar_at: string | null;
   dihantar_semula: boolean;
@@ -153,16 +155,15 @@ export type BantuanPrevious = {
   id: string;
   no_rujukan: string | null;
   kategori: BantuanKategori;
-  tujuan: string | null;
+  sebab_keperluan: string[] | null;
   status: BantuanStatus;
-  jumlah_dimohon: number | null;
   jumlah_diluluskan: number | null;
   dihantar_at: string | null;
 };
 
 // --- Label -------------------------------------------------------------------
 
-type Option<T extends string> = { value: T; label: string };
+export type Option<T extends string = string> = { value: T; label: string };
 
 export const STATUS_LABEL: Record<BantuanStatus, string> = {
   draft: 'Draf',
@@ -183,68 +184,135 @@ export const STATUS_TONE: Record<BantuanStatus, 'neutral' | 'info' | 'warn' | 'p
 };
 
 export const KATEGORI_LABEL: Record<BantuanKategori, string> = {
-  keluarga: 'Bantuan Keluarga',
-  pelajar: 'Bantuan Pelajar',
+  belajar: 'Belajar',
+  bekerja: 'Bekerja / Berkahwin',
 };
 
 export const KATEGORI_PENERANGAN: Record<BantuanKategori, string> = {
-  keluarga: 'Untuk ahli atau isi rumah ahli yang menghadapi kesulitan memenuhi keperluan asas.',
-  pelajar: 'Untuk ahli yang sedang belajar, atau anak/tanggungan ahli yang sedang belajar.',
+  belajar: 'Untuk ahli yang sedang menuntut (STPM, matrikulasi, diploma, ijazah dan seterusnya).',
+  bekerja: 'Untuk ahli yang sudah bekerja atau berkahwin dan memerlukan bantuan zakat.',
 };
 
-export const TUJUAN_OPTIONS: Record<BantuanKategori, Option<string>[]> = {
-  keluarga: [
-    { value: 'keperluan_harian', label: 'Keperluan harian' },
-    { value: 'sewa_tempat_tinggal', label: 'Sewa atau tempat tinggal' },
-    { value: 'rawatan_perubatan', label: 'Rawatan/perubatan' },
-    { value: 'kehilangan_pendapatan', label: 'Kehilangan pendapatan' },
-    { value: 'kecemasan', label: 'Kecemasan' },
-    { value: 'lain_lain', label: 'Lain-lain' },
-  ],
-  pelajar: [
-    { value: 'yuran_pengajian', label: 'Yuran pengajian' },
-    { value: 'buku_peralatan', label: 'Buku dan peralatan pembelajaran' },
-    { value: 'pengangkutan', label: 'Pengangkutan' },
-    { value: 'penginapan_hidup', label: 'Penginapan atau keperluan hidup semasa belajar' },
-    { value: 'lain_lain', label: 'Lain-lain' },
-  ],
-};
-
-export function tujuanLabel(kategori: BantuanKategori, tujuan: string | null, lain?: string | null): string {
-  if (!tujuan) return '—';
-  const label = TUJUAN_OPTIONS[kategori].find((option) => option.value === tujuan)?.label ?? tujuan;
-  return tujuan === 'lain_lain' && lain ? label + ': ' + lain : label;
+/** Tajuk borang, contoh: "PERMOHONAN TABUNG ZAKAT IKHWAN 2026 (BELAJAR)". */
+export function tajukBorang(kategori: BantuanKategori, tahun: number = new Date().getFullYear()): string {
+  return 'PERMOHONAN TABUNG ZAKAT IKHWAN ' + tahun + ' (' + (kategori === 'belajar' ? 'BELAJAR' : 'BEKERJA/BERKAHWIN') + ')';
 }
 
-export const TAHAP_OPTIONS: Option<'biasa' | 'mendesak'>[] = [
-  { value: 'biasa', label: 'Biasa' },
-  { value: 'mendesak', label: 'Mendesak' },
-];
-
-export const PEKERJAAN_OPTIONS: Option<string>[] = [
-  { value: 'bekerja', label: 'Bekerja (makan gaji)' },
-  { value: 'bekerja_sendiri', label: 'Bekerja sendiri/berniaga' },
-  { value: 'tidak_bekerja', label: 'Tidak bekerja' },
-  { value: 'suri_rumah', label: 'Suri rumah' },
-  { value: 'pesara', label: 'Pesara' },
-  { value: 'pelajar', label: 'Pelajar' },
+export const STATUS_DIRI_OPTIONS: Option[] = [
+  { value: 'bujang', label: 'Bujang' },
+  { value: 'berkahwin', label: 'Berkahwin' },
   { value: 'lain_lain', label: 'Lain-lain' },
 ];
 
-export const PENDAPATAN_OPTIONS: Option<'tetap' | 'tidak_tetap' | 'tidak_pasti'>[] = [
-  { value: 'tetap', label: 'Tetap' },
-  { value: 'tidak_tetap', label: 'Tidak tetap' },
-  { value: 'tidak_pasti', label: 'Tidak pasti' },
+export const TAHAP_PENDIDIKAN_BELAJAR: Option[] = [
+  { value: 'stpm', label: 'STPM' },
+  { value: 'stam', label: 'STAM' },
+  { value: 'matrikulasi', label: 'Matrikulasi' },
+  { value: 'asasi', label: 'Asasi' },
+  { value: 'diploma', label: 'Diploma' },
+  { value: 'sarjana_muda', label: 'Sarjana Muda' },
+  { value: 'sarjana', label: 'Sarjana' },
+  { value: 'phd', label: 'Doktor Falsafah (PhD)' },
+  { value: 'lain_lain', label: 'Lain-lain' },
 ];
 
-export const PENGAJIAN_OPTIONS: Option<string>[] = [
-  { value: 'sedang_belajar', label: 'Sedang belajar' },
-  { value: 'akan_mendaftar', label: 'Akan mendaftar' },
-  { value: 'tangguh', label: 'Menangguh pengajian' },
-  { value: 'tamat', label: 'Telah tamat' },
+/** Borang Bekerja: hanya jika bekerja sambil belajar. */
+export const TAHAP_PENDIDIKAN_BEKERJA: Option[] = TAHAP_PENDIDIKAN_BELAJAR.filter((option) =>
+  ['diploma', 'sarjana_muda', 'sarjana', 'phd'].includes(option.value),
+);
+
+export const TINGGAL_DI_OPTIONS: Option[] = [
+  { value: 'kolej', label: 'Kolej Kediaman Universiti' },
+  { value: 'rumah_sewa', label: 'Rumah Sewa' },
+  { value: 'keluarga', label: 'Kediaman Keluarga (bersama ibu bapa)' },
+  { value: 'lain_lain', label: 'Lain-lain' },
 ];
 
-export const TOLAK_OPTIONS: Option<string>[] = [
+export const PEMBIAYAAN_OPTIONS: Option[] = [
+  { value: 'biasiswa', label: 'Biasiswa' },
+  { value: 'pinjaman', label: 'Pinjaman' },
+  { value: 'ibu_bapa', label: 'Ibu bapa' },
+  { value: 'kerja_separuh_masa', label: 'Bekerja part time sambil belajar' },
+  { value: 'lain_lain', label: 'Lain-lain' },
+];
+
+export const SEBAB_OPTIONS: Option[] = [
+  { value: 'sara_hidup', label: 'Sara hidup' },
+  { value: 'perubatan', label: 'Perubatan' },
+  { value: 'pendidikan', label: 'Pendidikan' },
+  { value: 'tempat_tinggal', label: 'Tempat tinggal' },
+  { value: 'lain_lain', label: 'Lain-lain' },
+];
+
+export const BANK_LAIN = 'Lain-lain';
+
+/** Bank utama di Malaysia untuk dropdown; "Lain-lain" membuka medan teks. */
+export const BANK_OPTIONS: string[] = [
+  'Maybank',
+  'CIMB Bank',
+  'Bank Islam',
+  'Bank Rakyat',
+  'BSN',
+  'Public Bank',
+  'RHB Bank',
+  'Hong Leong Bank',
+  'AmBank',
+  'Affin Bank',
+  'Alliance Bank',
+  'Agrobank',
+  'Bank Muamalat',
+  'MBSB Bank',
+  'UOB',
+  'OCBC',
+  'HSBC',
+  'Standard Chartered',
+  BANK_LAIN,
+];
+
+export const PENGAKUAN_TEKS =
+  'Saya mengaku bahawa semua maklumat yang diberikan adalah benar. Lajnah Kebajikan (LK) berhak membatalkan dan menarik balik bantuan zakat sekiranya saya memberikan maklumat palsu.';
+
+export const MAKLUMAT_PENTING: string[] = [
+  'Pemohon mestilah ahli Ikhwan yang layak dan memerlukan bantuan zakat.',
+  'Permohonan dibuka setiap bulan dan boleh dihantar lebih daripada sekali pada bulan-bulan berikutnya.',
+  'Semua maklumat adalah sulit dan hanya boleh dicapai oleh jawatankuasa zakat daripada Lajnah Kebajikan (LK).',
+];
+
+export type KenalanLK = { nama: string; generasi: string; telefon: string };
+
+/** Kenalan LK pada skrin selepas hantar. Muslimat sama untuk kedua-dua borang. */
+const MUSLIMAT: KenalanLK[] = [
+  { nama: 'Izzah Atirah', generasi: 'i16', telefon: '0139362972' },
+  { nama: 'Ili Syafaf Amani', generasi: 'i15', telefon: '0194046523' },
+];
+
+export const KENALAN_LK: Record<BantuanKategori, { muslimin: KenalanLK[]; muslimat: KenalanLK[] }> = {
+  belajar: { muslimin: [{ nama: 'Syamsul Irham', generasi: 'i17', telefon: '01111717713' }], muslimat: MUSLIMAT },
+  bekerja: { muslimin: [{ nama: 'Zulkifli Che Noh', generasi: 'i07', telefon: '01115057114' }], muslimat: MUSLIMAT },
+};
+
+export const MESEJ_SELEPAS_HANTAR =
+  'Pihak LK akan menyemak permohonan anda dan menghubungi anda dalam tempoh 7 hingga 14 hari bekerja dari tarikh permohonan jika diterima.';
+
+/** Pautan WhatsApp daripada nombor tempatan Malaysia (0123… → 60123…). */
+export function waLink(telefon: string): string {
+  const digits = telefon.replace(/\D/g, '');
+  const intl = digits.startsWith('0') ? '6' + digits : digits;
+  return 'https://wa.me/' + intl;
+}
+
+export function optionLabel(options: Option[], value: string | null | undefined, lain?: string | null): string {
+  if (!value) return '—';
+  const label = options.find((option) => option.value === value)?.label ?? value;
+  return value === 'lain_lain' && lain ? label + ': ' + lain : label;
+}
+
+export function optionLabels(options: Option[], values: string[] | null | undefined, lain?: string | null): string {
+  if (!values || values.length === 0) return '—';
+  return values.map((value) => optionLabel(options, value, lain)).join(', ');
+}
+
+export const TOLAK_OPTIONS: Option[] = [
   { value: 'luar_skop', label: 'Keperluan tidak menepati skop bantuan' },
   { value: 'tidak_dapat_disahkan', label: 'Maklumat belum dapat disahkan selepas semakan' },
   { value: 'telah_ditampung', label: 'Keperluan sama telah ditampung sepenuhnya' },
@@ -261,10 +329,6 @@ export const TINDAKAN_LABEL: Record<string, string> = {
   nota: 'Nota dalaman ditambah',
   pindaan: 'Perubahan semasa hantar semula',
 };
-
-export const MAX_DOCUMENTS = 5;
-export const MAX_DOCUMENT_BYTES = 5 * 1024 * 1024;
-const BUCKET = 'bantuan-docs';
 
 // --- Paparan -----------------------------------------------------------------
 
@@ -352,16 +416,6 @@ export async function saveBantuanResponse(id: string, respons: string): Promise<
   if (error) throw error;
 }
 
-export async function fetchBantuanDocuments(applicationId: string): Promise<BantuanDocument[]> {
-  const { data, error } = await supabase
-    .from('bantuan_documents')
-    .select('*')
-    .eq('application_id', applicationId)
-    .order('created_at', { ascending: true });
-  if (error) throw error;
-  return (data as BantuanDocument[] | null) ?? [];
-}
-
 export async function fetchBantuanInfoRequests(applicationId: string): Promise<BantuanInfoRequest[]> {
   const { data, error } = await supabase
     .from('bantuan_info_requests')
@@ -382,94 +436,6 @@ export async function fetchBantuanHistory(applicationId: string): Promise<Bantua
   return (data as BantuanHistory[] | null) ?? [];
 }
 
-// --- Dokumen ------------------------------------------------------------------
-
-export type PickedFile = {
-  uri: string;
-  name: string;
-  mimeType: string | null;
-  size: number | null;
-  webFile?: globalThis.File;
-};
-
-function extensionOf(file: PickedFile): 'pdf' | 'jpg' | 'png' | null {
-  const mime = (file.mimeType ?? '').toLowerCase();
-  const ext = file.name.includes('.') ? file.name.split('.').pop()!.toLowerCase() : '';
-  if (mime === 'application/pdf' || ext === 'pdf') return 'pdf';
-  if (mime === 'image/png' || ext === 'png') return 'png';
-  if (mime === 'image/jpeg' || ext === 'jpg' || ext === 'jpeg') return 'jpg';
-  return null;
-}
-
-async function readBytes(file: PickedFile): Promise<Uint8Array> {
-  if (Platform.OS === 'web') {
-    if (file.webFile) return new Uint8Array(await file.webFile.arrayBuffer());
-    return new Uint8Array(await (await fetch(file.uri)).arrayBuffer());
-  }
-  return await new File(file.uri).bytes();
-}
-
-/**
- * Muat naik satu dokumen sokongan. Semakan di sini sekadar kemudahan: Storage
- * (saiz + MIME bucket) dan `bantuan_add_document` (had 5 fail, status, pemilikan,
- * saiz sebenar) mengesahkannya semula di pelayan. Jika pendaftaran gagal, objek
- * yang baru dimuat naik dibuang supaya tidak tertinggal tanpa rekod.
- */
-export async function uploadBantuanDocument(
-  applicationId: string,
-  file: PickedFile,
-  jenis: BantuanDocument['jenis'],
-): Promise<BantuanDocument> {
-  const ext = extensionOf(file);
-  if (!ext) throw new Error('Hanya fail PDF, JPG dan PNG dibenarkan.');
-
-  let bytes: Uint8Array;
-  if (ext === 'pdf') {
-    bytes = await readBytes(file);
-    if (bytes.length > MAX_DOCUMENT_BYTES) throw new Error('Saiz fail melebihi 5 MB.');
-    if (bytes.length < 5 || String.fromCharCode(...bytes.subarray(0, 4)) !== '%PDF') {
-      throw new Error('Fail PDF tidak sah.');
-    }
-  } else {
-    // Gambar dimampatkan kepada JPEG (menjimatkan kuota dan memastikan di bawah 5 MB).
-    bytes = await readJpegBytes(file.uri, 1600);
-    if (bytes.length > MAX_DOCUMENT_BYTES) throw new Error('Saiz fail melebihi 5 MB.');
-  }
-  if (bytes.length === 0) throw new Error('Fail kosong.');
-
-  const storedExt = ext === 'pdf' ? 'pdf' : 'jpg';
-  const contentType = ext === 'pdf' ? 'application/pdf' : 'image/jpeg';
-  const path = applicationId + '/' + newId() + '.' + storedExt;
-
-  const upload = await supabase.storage.from(BUCKET).upload(path, bytes, { contentType, upsert: false });
-  if (upload.error) throw upload.error;
-
-  const { data, error } = await supabase.rpc('bantuan_add_document', {
-    p_app: applicationId,
-    p_path: path,
-    p_nama_fail: file.name.slice(0, 200),
-    p_jenis: jenis,
-  });
-  if (error) {
-    void supabase.storage.from(BUCKET).remove([path]);
-    throw error;
-  }
-  return data as BantuanDocument;
-}
-
-export async function removeBantuanDocument(documentId: string): Promise<void> {
-  const { data, error } = await supabase.rpc('bantuan_remove_document', { p_doc: documentId });
-  if (error) throw error;
-  if (typeof data === 'string' && data) void supabase.storage.from(BUCKET).remove([data]);
-}
-
-/** URL bertandatangan sementara (5 minit) — fail kekal persendirian. */
-export async function bantuanDocumentUrl(path: string): Promise<string> {
-  const { data, error } = await supabase.storage.from(BUCKET).createSignedUrl(path, 300);
-  if (error || !data?.signedUrl) throw error ?? new Error('Pautan dokumen tidak dapat dijana.');
-  return data.signedUrl;
-}
-
 // --- Admin --------------------------------------------------------------------
 
 export type BantuanFilter = {
@@ -478,7 +444,6 @@ export type BantuanFilter = {
   status?: BantuanStatus | null;
   dari?: string | null;
   hingga?: string | null;
-  mendesak?: boolean;
 };
 
 export async function fetchBantuanAdminList(filter: BantuanFilter): Promise<BantuanAdminRow[]> {
@@ -488,7 +453,6 @@ export async function fetchBantuanAdminList(filter: BantuanFilter): Promise<Bant
     p_status: filter.status ?? null,
     p_dari: filter.dari ?? null,
     p_hingga: filter.hingga ?? null,
-    p_mendesak: filter.mendesak ?? false,
     p_had: 200,
   });
   if (error) throw error;
