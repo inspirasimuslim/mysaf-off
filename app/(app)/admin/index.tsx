@@ -1,5 +1,4 @@
-import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useRouter } from 'expo-router';
 import { View } from 'react-native';
 
 import { PendingTasksNotice } from '@/components/admin-notifications-ui';
@@ -21,7 +20,7 @@ import {
   useYuranAccess,
   useZakatAccess,
 } from '@/lib/department-access';
-import { fetchFeedbackAdminInbox } from '@/lib/feedback-chat';
+import { departmentLabel, useFeedbackDepartments } from '@/lib/feedback-chat';
 import { useGoBack } from '@/lib/navigation';
 import { ORG_CHART_DEPARTMENT } from '@/lib/org-chart';
 import { usePermissions } from '@/lib/permissions';
@@ -61,19 +60,33 @@ export default function AdminHubScreen() {
   // TABUNG ZAKAT — department khusus, BUKAN LAJNAH KEBAJIKAN (`kesihatanAccess`).
   const zakatAccess = useZakatAccess();
 
-  // Peti masuk Maklum Balas Ahli (migration 151): Super Admin atau admin mana-mana department.
-  const [feedbackInbox, setFeedbackInbox] = useState<boolean | null>(null);
-  useFocusEffect(
-    useCallback(() => {
-      let active = true;
-      fetchFeedbackAdminInbox()
-        .then((value) => active && setFeedbackInbox(value))
-        .catch(() => active && setFeedbackInbox(false));
-      return () => {
-        active = false;
-      };
-    }, []),
-  );
+  // Maklum Balas Ahli (migration 151/152): SETIAP department ada butang sendiri; peta ini mengandungi
+  // department yang pemanggil boleh lihat (Super Admin: semua aktif) beserta bilangan belum dibaca.
+  const feedback = useFeedbackDepartments();
+  const fbCount = (name: string) => (feedback.byName[name] ? 1 : 0);
+  const fbUnread = (name: string) => feedback.byName[name]?.unread ?? 0;
+  const feedbackRow = (name: string) => {
+    const info = feedback.byName[name];
+    if (!info) return null;
+    return (
+      <ActionRow
+        icon="chatbubbles-outline"
+        title="Maklum Balas"
+        subtitle={'Balas dan lihat sejarah chat ahli untuk ' + departmentLabel(name)}
+        badge={info.unread}
+        onPress={() =>
+          router.push({ pathname: '/(app)/admin/maklum-balas-chat', params: { dept: info.id, n: String(Date.now()) } })
+        }
+      />
+    );
+  };
+  // Seksyen yang hanya mengandungi butang Maklum Balas (department tanpa modul lain lagi).
+  const feedbackOnlySection = (name: string, title: string) =>
+    feedback.byName[name] ? (
+      <CollapsibleSection variant="plain" title={title} count={1} alert={fbUnread(name)} defaultOpen={openByDefault}>
+        {feedbackRow(name)}
+      </CollapsibleSection>
+    ) : null;
 
   const superAdmin = isSuperAdmin();
   const naqib = isActiveNaqib();
@@ -89,7 +102,7 @@ export default function AdminHubScreen() {
   */
   const accessLoading =
     permissionsLoading ||
-    feedbackInbox === null ||
+    feedback.loading ||
     [
       memberAccess,
       usrahAccess,
@@ -116,7 +129,7 @@ export default function AdminHubScreen() {
     zakatAccess.canView,
     naqib,
     kawasanOnly,
-    feedbackInbox === true,
+    Object.keys(feedback.byName).length > 0,
   ].filter(Boolean).length;
   const nothingAvailable = visibleSections === 0;
   const openByDefault = visibleSections === 1;
@@ -133,18 +146,6 @@ export default function AdminHubScreen() {
         <PendingTasksNotice />
         {accessLoading ? null : (
         <>
-        {/* Maklum Balas Ahli (chat) — Super Admin dan admin mana-mana department; DB menapis perbualan mengikut kebenaran. */}
-        {feedbackInbox ? (
-          <CollapsibleSection variant="plain" title="Maklum Balas Ahli" count={1} defaultOpen={openByDefault}>
-            <ActionRow
-              icon="chatbubbles-outline"
-              title="Peti Masuk Maklum Balas"
-              subtitle="Balas dan lihat sejarah chat ahli untuk department anda"
-              onPress={() => router.push('/(app)/admin/maklum-balas-chat')}
-            />
-          </CollapsibleSection>
-        ) : null}
-
         {/*
           Carta organisasi dan Ahli Diputihkan dimiliki oleh department
           SETIAUSAHA — BUKAN JABATAN SETIAUSAHA di atas walaupun namanya
@@ -158,7 +159,7 @@ export default function AdminHubScreen() {
           <CollapsibleSection
             variant="plain"
             title="Setiausaha Agung (SUA)"
-            count={orgChartAccess.canEdit ? 2 : 1}
+            count={orgChartAccess.canEdit ? 2 : 1 + fbCount('SETIAUSAHA')} alert={fbUnread('SETIAUSAHA')}
             defaultOpen={openByDefault}>
             {orgChartAccess.canEdit ? (
               <ActionRow
@@ -179,8 +180,12 @@ export default function AdminHubScreen() {
               }
               onPress={() => router.push('/(app)/admin/ahli-diputihkan')}
             />
+
+            {feedbackRow('SETIAUSAHA')}
           </CollapsibleSection>
         ) : null}
+
+        {feedbackOnlySection('TIMBALAN SETIAUSAHA', 'Timbalan Setiausaha (TSUA)')}
 
         {/*
           Program am berkongsi table dan kod QR dengan usrah, tetapi bukan
@@ -192,7 +197,7 @@ export default function AdminHubScreen() {
           <CollapsibleSection
             variant="plain"
             title="Jabatan Setiausaha (JSU)"
-            count={programAccess.canEdit ? 3 : 2}
+            count={programAccess.canEdit ? 3 : 2 + fbCount('JABATAN SETIAUSAHA')} alert={fbUnread('JABATAN SETIAUSAHA')}
             defaultOpen={openByDefault}>
             <ActionRow
               icon="calendar-outline"
@@ -224,6 +229,8 @@ export default function AdminHubScreen() {
                 onPress={() => router.push({ pathname: '/(app)/admin/rais-lantikan', params: { jenis: 'generasi' } })}
               />
             ) : null}
+
+            {feedbackRow('JABATAN SETIAUSAHA')}
           </CollapsibleSection>
         ) : null}
 
@@ -235,8 +242,8 @@ export default function AdminHubScreen() {
         {yuranAccess.canView ? (
           <CollapsibleSection
             variant="plain"
-            title="Bendahari Kehormat"
-            count={4}
+            title="Bendahari Kehormat (BK)"
+            count={4 + fbCount('BENDAHARI')} alert={fbUnread('BENDAHARI')}
             defaultOpen={openByDefault}>
             <ActionRow
               icon="wallet-outline"
@@ -283,6 +290,8 @@ export default function AdminHubScreen() {
               subtitle="Kutipan bulanan dan tunggakan mengikut generasi"
               onPress={() => router.push('/(app)/admin/statistik-yuran')}
             />
+
+            {feedbackRow('BENDAHARI')}
           </CollapsibleSection>
         ) : null}
 
@@ -322,7 +331,7 @@ export default function AdminHubScreen() {
           <CollapsibleSection
             variant="plain"
             title="Lajnah Tarbiah (LT)"
-            count={usrahAccess.canEdit ? 7 : 3}
+            count={usrahAccess.canEdit ? 7 : 3 + fbCount('LAJNAH TARBIAH')} alert={fbUnread('LAJNAH TARBIAH')}
             defaultOpen={openByDefault}>
             <ActionRow
               icon="qr-code-outline"
@@ -384,6 +393,8 @@ export default function AdminHubScreen() {
                 onPress={() => router.push({ pathname: '/(app)/admin/rais-lantikan', params: { jenis: 'kawasan' } })}
               />
             ) : null}
+
+            {feedbackRow('LAJNAH TARBIAH')}
           </CollapsibleSection>
         ) : null}
 
@@ -396,7 +407,7 @@ export default function AdminHubScreen() {
           <CollapsibleSection
             variant="plain"
             title="Lajnah Perkaderan (LP)"
-            count={perkaderanAccess.canEdit ? 3 : 2}
+            count={perkaderanAccess.canEdit ? 3 : 2 + fbCount('LAJNAH PERKADERAN')} alert={fbUnread('LAJNAH PERKADERAN')}
             defaultOpen={openByDefault}>
             {perkaderanAccess.canEdit ? (
               <ActionRow
@@ -423,10 +434,14 @@ export default function AdminHubScreen() {
               subtitle="Naqib mengikut sekolah dan kekerapan usrah mengikut bulan"
               onPress={() => router.push('/(app)/admin/statistik-perkaderan')}
             />
+
+            {feedbackRow('LAJNAH PERKADERAN')}
           </CollapsibleSection>
         ) : null}
 
         {naqib ? <NaqibHubSection defaultOpen={openByDefault} /> : null}
+
+        {feedbackOnlySection('LAJNAH HAL EHWAL SEKOLAH & ALUMNI', 'Lajnah Hal Ehwal Sekolah & Alumni (LHESA)')}
 
         {/*
           Penarafan aktiviti dimiliki oleh LAJNAH PEMBANGUNAN GENERASI. Admin
@@ -436,7 +451,7 @@ export default function AdminHubScreen() {
           <CollapsibleSection
             variant="plain"
             title="Lajnah Pembangunan Generasi (LPG)"
-            count={1}
+            count={1 + fbCount('LAJNAH PEMBANGUNAN GENERASI')} alert={fbUnread('LAJNAH PEMBANGUNAN GENERASI')}
             defaultOpen={openByDefault}>
             <ActionRow
               icon="trophy-outline"
@@ -444,24 +459,32 @@ export default function AdminHubScreen() {
               subtitle="Ahli paling aktif, generasi terbaik dan ahli paling tidak aktif mengikut tempoh"
               onPress={() => router.push('/(app)/admin/aktiviti-terbaik')}
             />
+
+            {feedbackRow('LAJNAH PEMBANGUNAN GENERASI')}
           </CollapsibleSection>
         ) : null}
 
+        {feedbackOnlySection('LAJNAH PEMBANGUNAN NGO', 'Lajnah Pembangunan NGO (LPN)')}
+
+        {feedbackOnlySection('LAJNAH KEBAJIKAN', 'Lajnah Kebajikan (LK)')}
+
         {/* Data kesihatan ahli — department KESIHATAN AHLI sahaja (bukan LAJNAH KEBAJIKAN / JABATAN DATA). */}
         {kesihatanAccess.canView ? (
-          <CollapsibleSection variant="plain" title="Lajnah Kebajikan (LK) — Kesihatan Ahli" count={1} defaultOpen={openByDefault}>
+          <CollapsibleSection variant="plain" title="Lajnah Kebajikan (LK) — Kesihatan Ahli" count={1 + fbCount('KESIHATAN AHLI')} alert={fbUnread('KESIHATAN AHLI')} defaultOpen={openByDefault}>
             <ActionRow
               icon="medkit-outline"
               title="Eksport Data Kesihatan"
               subtitle="Muat turun masalah kesihatan yang direkodkan ahli (sensitif)"
               onPress={() => router.push('/(app)/admin/eksport-kesihatan')}
             />
+
+            {feedbackRow('KESIHATAN AHLI')}
           </CollapsibleSection>
         ) : null}
 
         {/* Permohonan zakat — department TABUNG ZAKAT sahaja (bukan LAJNAH KEBAJIKAN). */}
         {zakatAccess.canView ? (
-          <CollapsibleSection variant="plain" title="Lajnah Kebajikan (LK) — Tabung Zakat" count={1} defaultOpen={openByDefault}>
+          <CollapsibleSection variant="plain" title="Lajnah Kebajikan (LK) — Tabung Zakat" count={1 + fbCount('TABUNG ZAKAT')} alert={fbUnread('TABUNG ZAKAT')} defaultOpen={openByDefault}>
             <ActionRow
               icon="hand-left-outline"
               title="Permohonan Zakat"
@@ -472,8 +495,12 @@ export default function AdminHubScreen() {
               }
               onPress={() => router.push('/(app)/admin/bantuan')}
             />
+
+            {feedbackRow('TABUNG ZAKAT')}
           </CollapsibleSection>
         ) : null}
+
+        {feedbackOnlySection('LAJNAH MUSLIMAT', 'Lajnah Muslimat (LM)')}
 
         {/*
           PIPIS ASET dimiliki oleh LAJNAH EKONOMI DAN ASET dan bukan oleh
@@ -484,7 +511,7 @@ export default function AdminHubScreen() {
           <CollapsibleSection
             variant="plain"
             title="Lajnah Ekonomi & Aset (LEA)"
-            count={3}
+            count={3 + fbCount('LAJNAH EKONOMI DAN ASET')} alert={fbUnread('LAJNAH EKONOMI DAN ASET')}
             defaultOpen={openByDefault}>
             <ActionRow
               icon="business-outline"
@@ -515,6 +542,8 @@ export default function AdminHubScreen() {
               }
               onPress={() => router.push('/(app)/admin/semakan-iklan')}
             />
+
+            {feedbackRow('LAJNAH EKONOMI DAN ASET')}
           </CollapsibleSection>
         ) : null}
 
@@ -527,7 +556,7 @@ export default function AdminHubScreen() {
           <CollapsibleSection
             variant="plain"
             title="Jabatan Data & Sumber Manusia (JDSM)"
-            count={memberAccess.canEdit ? 3 : 2}
+            count={memberAccess.canEdit ? 3 : 2 + fbCount('JABATAN DATA & SUMBER MANUSIA')} alert={fbUnread('JABATAN DATA & SUMBER MANUSIA')}
             defaultOpen={openByDefault}>
             <ActionRow
               icon="people-outline"
@@ -555,8 +584,12 @@ export default function AdminHubScreen() {
                 onPress={() => router.push('/(app)/admin/ahli-upload')}
               />
             ) : null}
+
+            {feedbackRow('JABATAN DATA & SUMBER MANUSIA')}
           </CollapsibleSection>
         ) : null}
+
+        {feedbackOnlySection('I-GEM', 'Ikhwan Generasi Muda (I-GEM)')}
 
         {/*
           Ketiga-tiga skrin ini menolak bukan-Super Admin dengan skrin "Tiada

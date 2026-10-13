@@ -1,4 +1,4 @@
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
@@ -25,6 +25,8 @@ import { useGoBack } from '@/lib/navigation';
 export default function AdminMaklumBalasChatScreen() {
   const goBack = useGoBack();
   const router = useRouter();
+  // `dept` = id department (butang Maklum Balas pada seksyen Hub / notifikasi). Tanpa `dept` = semua yang boleh dilihat.
+  const { dept } = useLocalSearchParams<{ dept?: string }>();
 
   const [threads, setThreads] = useState<FeedbackAdminThread[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -32,7 +34,7 @@ export default function AdminMaklumBalasChatScreen() {
   useFocusEffect(
     useCallback(() => {
       let active = true;
-      fetchAdminFeedbackThreads()
+      fetchAdminFeedbackThreads(dept)
         .then((rows) => {
           if (!active) return;
           setThreads(rows);
@@ -46,18 +48,20 @@ export default function AdminMaklumBalasChatScreen() {
       return () => {
         active = false;
       };
-    }, []),
+    }, [dept]),
   );
 
   if (threads === null) return <LoadingScreen />;
 
   const unread = threads.filter((thread) => thread.unread).length;
+  // Semua perbualan dalam satu department yang sama -> tajuk ikut nama department.
+  const deptName = dept && threads.length > 0 ? departmentLabel(threads[0]!.department_name) : null;
 
   return (
     <Screen padTop={false}>
       <ScreenHeader
         eyebrow="Panel Pentadbiran"
-        title="Maklum Balas Ahli"
+        title={deptName ? 'Maklum Balas — ' + deptName : 'Maklum Balas Ahli'}
         subtitle={unread > 0 ? unread + ' belum dibaca · ' + threads.length + ' perbualan' : threads.length + ' perbualan'}
         onBackPress={goBack}
       />
@@ -69,7 +73,7 @@ export default function AdminMaklumBalasChatScreen() {
           <EmptyState
             icon="chatbubble-ellipses-outline"
             title="Belum ada perbualan"
-            description="Maklum balas yang dihantar ahli kepada department anda akan muncul di sini."
+            description="Maklum balas yang dihantar ahli kepada department ini akan muncul di sini."
           />
         ) : (
           threads.map((thread) => (

@@ -1,3 +1,6 @@
+import { useFocusEffect } from 'expo-router';
+import { useCallback, useState } from 'react';
+
 import { supabase } from './supabase';
 
 /** Mesti sepadan dengan semakan panjang dalam migration 151. */
@@ -45,11 +48,15 @@ export type FeedbackMessage = {
 const DEPARTMENT_LABELS: Record<string, string> = {
   SETIAUSAHA: 'Setiausaha Agung (SUA)',
   'JABATAN SETIAUSAHA': 'Jabatan Setiausaha (JSU)',
-  'TIMBALAN SETIAUSAHA': 'Timbalan Setiausaha',
-  BENDAHARI: 'Bendahari Kehormat',
+  'TIMBALAN SETIAUSAHA': 'Timbalan Setiausaha (TSUA)',
+  BENDAHARI: 'Bendahari Kehormat (BK)',
   'LAJNAH TARBIAH': 'Lajnah Tarbiah (LT)',
   'LAJNAH PERKADERAN': 'Lajnah Perkaderan (LP)',
+  'LAJNAH HAL EHWAL SEKOLAH & ALUMNI': 'Lajnah Hal Ehwal Sekolah & Alumni (LHESA)',
   'LAJNAH PEMBANGUNAN GENERASI': 'Lajnah Pembangunan Generasi (LPG)',
+  'LAJNAH PEMBANGUNAN NGO': 'Lajnah Pembangunan NGO (LPN)',
+  'LAJNAH MUSLIMAT': 'Lajnah Muslimat (LM)',
+  'I-GEM': 'Ikhwan Generasi Muda (I-GEM)',
   'LAJNAH KEBAJIKAN': 'Lajnah Kebajikan (LK)',
   'LAJNAH EKONOMI DAN ASET': 'Lajnah Ekonomi & Aset (LEA)',
   'JABATAN DATA & SUMBER MANUSIA': 'Jabatan Data & Sumber Manusia (JDSM)',
@@ -95,10 +102,51 @@ export async function fetchFeedbackMemberUnread(): Promise<number> {
   return Number(data ?? 0);
 }
 
-export async function fetchAdminFeedbackThreads(): Promise<FeedbackAdminThread[]> {
-  const { data, error } = await supabase.rpc('feedback_admin_threads');
+/** Perbualan satu department (`departmentId`); tanpa argumen = semua yang boleh dilihat pemanggil. */
+export async function fetchAdminFeedbackThreads(departmentId?: string): Promise<FeedbackAdminThread[]> {
+  const { data, error } = await supabase.rpc('feedback_admin_threads', { p_department: departmentId ?? null });
   if (error) throw error;
   return (data as FeedbackAdminThread[] | null) ?? [];
+}
+
+export type FeedbackAdminDepartment = { department_id: string; department_name: string; unread: number };
+
+/** Department yang pemanggil boleh lihat (Super Admin: semua aktif) + bilangan perbualan belum dibaca. */
+export async function fetchFeedbackAdminDepartments(): Promise<FeedbackAdminDepartment[]> {
+  const { data, error } = await supabase.rpc('feedback_admin_unread_by_dept');
+  if (error) throw error;
+  return ((data as FeedbackAdminDepartment[] | null) ?? []).map((row) => ({ ...row, unread: Number(row.unread) }));
+}
+
+/**
+ * Peta nama department -> { id, unread } untuk Hub Admin; dimuat semula setiap kali skrin difokus
+ * (lencana susut selepas admin membuka perbualan). `loading` = bacaan pertama belum selesai.
+ */
+export function useFeedbackDepartments(): {
+  loading: boolean;
+  byName: Record<string, { id: string; unread: number }>;
+} {
+  const [state, setState] = useState<{ loading: boolean; byName: Record<string, { id: string; unread: number }> }>({
+    loading: true,
+    byName: {},
+  });
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      fetchFeedbackAdminDepartments()
+        .then((rows) => {
+          if (!active) return;
+          const byName: Record<string, { id: string; unread: number }> = {};
+          for (const row of rows) byName[row.department_name] = { id: row.department_id, unread: row.unread };
+          setState({ loading: false, byName });
+        })
+        .catch(() => active && setState((prev) => ({ ...prev, loading: false })));
+      return () => {
+        active = false;
+      };
+    }, []),
+  );
+  return state;
 }
 
 /** Adakah pemanggil Super Admin atau admin mana-mana department (untuk papar peti masuk di Hub Admin)? */

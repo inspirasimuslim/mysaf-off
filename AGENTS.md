@@ -492,3 +492,13 @@ perbualan dikongsi), `app/(app)/admin/maklum-balas-chat.tsx` (peti masuk admin),
   TIDAK dimigrasikan. Skrin tab tersembunyi kekal terpasang: skrin chat/borang guna `key` + param `n` (cap masa).
 - Diuji pada Postgres 16 tempatan dengan skema tiruan (akses, balas, tanda baca, RLS); blok `admin_notifications()`
   TIDAK diuji (bergantung pada migration 148).
+
+## Maklum Balas ikut department (2026-10-13, migration 152, BELUM di-push ke produksi)
+
+Menggantikan peti masuk tunggal (151): TIAP seksyen department di Hub Admin ada butang "Maklum Balas" sendiri
+(`feedbackRow()` dalam `admin/index.tsx`, lencana belum dibaca) yang membuka `admin/maklum-balas-chat?dept=<id>`.
+`feedback_admin_threads(p_department)` menapis; `feedback_admin_unread_by_dept()` membekal peta nama->{id,unread}
+(`useFeedbackDepartments()`); `admin_notifications()` blok ke-4 = SATU baris setiap department (kind
+`maklum_balas_chat:<id>`, tajuk guna `feedback_department_label()`). Seksyen Hub baharu (hanya butang Maklum Balas):
+TSUA, LHESA, LPN, LK (LAJNAH KEBAJIKAN), LM, I-GEM — nama department sedia ada dalam seed. Susunan Hub: SUA, TSUA,
+JSU, BK, LT, LP, LHESA, LPG, LPN, LK, LM, LEA, JDSM, I-GEM, Organisasi. Perbualan sendiri tetap dikecualikan.

@@ -8,9 +8,11 @@ type Props = {
   subtitle?: string;
   onPress: () => void;
   tone?: 'default' | 'danger';
+  /** Lencana bilangan (mis. mesej belum dibaca); dipapar bila > 0. */
+  badge?: number;
 };
 
-export function ActionRow({ icon, title, subtitle, onPress, tone = 'default' }: Props) {
+export function ActionRow({ icon, title, subtitle, onPress, tone = 'default', badge = 0 }: Props) {
   const colors = useColors();
   const danger = tone === 'danger';
 
@@ -27,6 +29,14 @@ export function ActionRow({ icon, title, subtitle, onPress, tone = 'default' }: 
         <Text className={`text-base font-semibold ${danger ? 'text-negative' : 'text-ink'}`}>{title}</Text>
         {subtitle ? <Text className="mt-0.5 text-sm text-ink-muted">{subtitle}</Text> : null}
       </View>
+
+      {badge > 0 ? (
+        <View
+          accessibilityLabel={badge + ' belum dibaca'}
+          className="min-w-[22px] items-center rounded-pill bg-negative px-1.5 py-0.5">
+          <Text className="text-[11px] font-bold text-white">{badge > 99 ? '99+' : badge}</Text>
+        </View>
+      ) : null}
 
       <Ionicons name="chevron-forward" size={18} color={colors.inkFaint} />
     </Pressable>

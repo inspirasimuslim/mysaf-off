@@ -11,6 +11,8 @@ type Props = {
    * di dalam hub. Memberi sebab untuk membuka tanpa perlu membukanya.
    */
   count?: number;
+  /** Lencana merah (mis. maklum balas belum dibaca) supaya kelihatan walaupun seksyen tertutup. */
+  alert?: number;
   defaultOpen?: boolean;
   /**
    * `card` membungkus seksyen dalam kad (borang). `plain` hanya kepala tanpa
@@ -35,6 +37,7 @@ export function CollapsibleSection({
   title,
   caption,
   count,
+  alert = 0,
   defaultOpen = false,
   variant = 'card',
   children,
@@ -55,6 +58,14 @@ export function CollapsibleSection({
           <Text className={plain ? 'text-lg font-bold text-ink' : 'text-base font-semibold text-ink'}>{title}</Text>
           {caption ? <Text className="mt-0.5 text-sm text-ink-muted">{caption}</Text> : null}
         </View>
+
+        {alert > 0 ? (
+          <View
+            accessibilityLabel={alert + ' belum dibaca'}
+            className="min-w-[22px] items-center rounded-pill bg-negative px-1.5 py-1">
+            <Text className="text-xs font-bold text-white">{alert > 99 ? '99+' : alert}</Text>
+          </View>
+        ) : null}
 
         {count ? (
           <View className="rounded-pill bg-primary-soft px-3 py-1">
