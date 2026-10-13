@@ -1,10 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { Linking, Pressable, Text, View } from 'react-native';
 
 import { ScreenHeader } from '@/components/screen-header';
 import { Card } from '@/components/ui/card';
 import { Screen } from '@/components/ui/screen';
+import { fetchBantuanPerluTindakan } from '@/lib/bantuan';
 import { useColors } from '@/lib/theme';
 
 /** Halaman luar (Canva) untuk Majlis Baitul Muslim. */
@@ -19,6 +21,20 @@ type IconName = keyof typeof Ionicons.glyphMap;
  */
 export default function ArkibHubScreen() {
   const router = useRouter();
+  const [perluTindakan, setPerluTindakan] = useState(0);
+
+  // Lencana ringkas: permohonan bantuan yang menunggu maklumat tambahan daripada ahli.
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      fetchBantuanPerluTindakan()
+        .then((count) => active && setPerluTindakan(count))
+        .catch(() => undefined);
+      return () => {
+        active = false;
+      };
+    }, []),
+  );
 
   return (
     <Screen padTop={false}>
@@ -44,6 +60,12 @@ export default function ArkibHubScreen() {
           icon="heart-outline"
           title="Majlis Baitul Muslim"
           onPress={() => void Linking.openURL(BAITUL_MUSLIM_URL).catch(() => undefined)}
+        />
+        <HubButton
+          icon="hand-left-outline"
+          title="Permohonan Bantuan"
+          subtitle={perluTindakan > 0 ? 'Perlu tindakan anda: ' + perluTindakan + ' permohonan' : undefined}
+          onPress={() => router.push('/(app)/bantuan')}
         />
         <HubButton
           icon="chatbubble-ellipses-outline"

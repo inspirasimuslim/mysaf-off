@@ -443,7 +443,17 @@ export default function AdminHubScreen() {
 
         {/* Data kesihatan ahli — LAJNAH KEBAJIKAN sahaja (bukan JABATAN DATA). */}
         {kebajikanAccess.canView ? (
-          <CollapsibleSection variant="plain" title="Kebajikan" count={1} defaultOpen={openByDefault}>
+          <CollapsibleSection variant="plain" title="Kebajikan" count={2} defaultOpen={openByDefault}>
+            <ActionRow
+              icon="hand-left-outline"
+              title="Permohonan Bantuan"
+              subtitle={
+                kebajikanAccess.canEdit
+                  ? 'Semak, minta maklumat tambahan, luluskan atau tolak permohonan bantuan ahli'
+                  : 'Lihat permohonan bantuan ahli (paparan sahaja)'
+              }
+              onPress={() => router.push('/(app)/admin/bantuan')}
+            />
             <ActionRow
               icon="medkit-outline"
               title="Eksport Data Kesihatan"

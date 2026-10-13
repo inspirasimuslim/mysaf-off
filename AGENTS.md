@@ -422,3 +422,34 @@ pernah disegerakkan, jadi pasangan dipautkan boleh berbeza dan `list_mbm_couples
   `ahli-mbm.tsx` tidak perlu diubah — dua nilai sentiasa sama.
 - **Known minor issue (belum disentuh, semak lain hari):** ahli 0145 dipautkan
   MBM tetapi `status_perkahwinan` NULL. Senarai Ahli MBM tidak bergantung padanya.
+
+# Permohonan Bantuan (one-off) — LAJNAH KEBAJIKAN (2026-10-13, migration 148, BELUM di-push ke produksi)
+
+Rujukan: `supabase/migrations/20261013000148_permohonan_bantuan.sql`, `lib/bantuan.ts`,
+`app/(app)/bantuan*.tsx` (ahli), `app/(app)/admin/bantuan*.tsx` (admin). Migration HANYA menambah
+(table/fungsi/bucket/polisi) dan menulis semula `admin_notifications()` (+ blok ke-3), tiada snapshot.
+Diuji pada Postgres 16 tempatan dengan skema tiruan (bukan Supabase sebenar): ~150 semakan lulus.
+
+- **Tulisan hanya melalui RPC `bantuan_*`** (`security definer`); `authenticated` hanya ada SELECT. Status,
+  `jumlah_diluluskan`, pelulus (`diputuskan_oleh`) ditetapkan pelayan. Peralihan: draft→submitted (ahli),
+  submitted→under_review, under_review→needs_information/approved/rejected (admin), needs_information→submitted (ahli).
+  approved/rejected muktamad. `bantuan_submit` idempoten (klik berganda); `id` draf dijana klien.
+- **Data sulit admin dalam table berasingan** (`bantuan_admin_notes`, baris `bantuan_history` dengan `terlihat_ahli=false`),
+  bukan lajur yang disembunyikan — ahli tiada dasar SELECT padanya.
+- **Akses admin = `has_department_access('LAJNAH KEBAJIKAN')`** (sama tab Kesihatan; lihat=can_view, tindakan=can_edit).
+  Admin JABATAN DATA tiada akses. Permohonan SENDIRI dikecualikan daripada senarai/notifikasi/tindakan admin (RLS + RPC);
+  tiada jalan pintas — pentadbir lain mesti menyemaknya. Tiada skop cawangan (satu organisasi).
+- **Persaingan**: lajur `versi`; setiap tindakan admin menghantar `versi` → 40001 jika sudah berubah (UI memuat semula).
+  Nombor rujukan `BNT-<tahun>-<6 digit>` melalui `bantuan_counters` (kunci baris), diberi sekali pada hantar pertama.
+- **Dokumen**: bucket PERSENDIRIAN `bantuan-docs` (PDF/JPG/PNG, 5 MB, nama `<application_id>/<uuid>.<ext>`), maks 5 fail;
+  `bantuan_add_document` mengesahkan objek wujud dan memakai saiz/MIME SEBENAR daripada Storage. Imej dimampatkan ke JPEG
+  di klien. Muat turun melalui URL bertandatangan 5 minit. Objek yatim (muat naik tanpa daftar) tidak dibersihkan automatik.
+- **Notifikasi**: admin — blok baharu dalam `admin_notifications()` (bilangan sahaja, tiada nama/jumlah). Ahli — TIADA sistem
+  notifikasi ahli; hanya lencana "Perlu tindakan anda" pada menu Arkib dan status pada senarai. Keputusan baharu tidak
+  ditanda "belum dibaca".
+- **Dikecualikan dengan sengaja**: Excel import/eksport, Dashboard Kelengkapan Data, bayaran. Kelulusan BUKAN bayaran —
+  UI tidak pernah memaparkan "Dibayar".
+- **Belum dibuat (perlu sebelum keluaran Play Store)**: kemas kini Data Safety, `app/dasar-privasi.tsx` (data kewangan/
+  dokumen bantuan, siapa boleh lihat, tempoh simpanan) dan semak Financial features di Play Console. Padam akaun:
+  FK `on delete cascade` memadam rekod, tetapi fail dalam `bantuan-docs` tinggal sebagai objek yatim.
+- Akses: tambah admin ke department LAJNAH KEBAJIKAN (Hub Admin → Admin) — sama seperti untuk Kesihatan.

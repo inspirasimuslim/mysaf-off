@@ -39,6 +39,9 @@ const PARENT: Record<string, string> = {
   'bisnes-ahli': 'dashboard',
   'bisnes-upload': 'dashboard',
   'bisnes-info': 'dashboard',
+  bantuan: 'arkib-hub',
+  'bantuan-borang': 'arkib-hub',
+  'bantuan-info': 'arkib-hub',
 };
 
 /**
