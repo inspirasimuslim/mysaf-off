@@ -140,7 +140,7 @@ function LoginWindowExpired() {
 }
 
 /**
- * Log keluar automatik selepas 20 minit tidak aktif — lihat `lib/idle-timer.ts`.
+ * Log keluar automatik selepas 2 jam tidak aktif — lihat `lib/idle-timer.ts`.
  *
  * Dipasang DI LUAR gate supaya ia aktif pada skrin sekatan dan tukar kata
  * laluan paksa juga. View pembalut menangkap setiap sentuhan pada fasa capture

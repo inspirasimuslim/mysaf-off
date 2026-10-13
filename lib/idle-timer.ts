@@ -49,7 +49,7 @@ import { setAuthNotice } from './suspension';
  * build release melalui `adb logcat -s ReactNativeJS`.
  */
 
-export const IDLE_TIMEOUT_MS = 20 * 60 * 1000;
+export const IDLE_TIMEOUT_MS = 2 * 60 * 60 * 1000;
 
 export const IDLE_MESSAGE = 'Sesi tamat kerana tidak aktif. Sila log masuk semula.';
 
