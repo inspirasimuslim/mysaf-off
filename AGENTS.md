@@ -539,3 +539,12 @@ Rujukan: `supabase/migrations/20261013000154_infaq_tabung_zakat.sql`, `supabase/
 - **DEPLOY**: selepas migration 154 dijalankan, WAJIB deploy Edge Function: `supabase functions deploy create-zakat-bill` DAN
   `supabase functions deploy toyyibpay-callback` (kod `_shared` berubah; callback mesti tahu table `zakat_infaq`). Tanpa deploy callback,
   bayaran infaq kekal 'pending'. Deep link kembali: `mysafoff://infaq-zakat` / `/infaq-zakat` (web). Pastikan `APP_WEB_ORIGINS` memuatkan domain web.
+
+# Features MySAFF + "Apa yang baharu" (2026-10-13, tiada migration)
+
+Rujukan: `lib/app-changelog.ts`, `app/(app)/features.tsx`, `components/whats-new-notice.tsx`, tile di `arkib-hub.tsx`.
+- Jubin "Features MySAFF" di Direktori -> skrin `features` (catatan versi terbaru di atas + senarai ciri BM).
+- **AMALAN WAJIB setiap kali versi dinaikkan**: tambah entri di HUJUNG `CHANGELOG` (versi = `version` app.json) dan kemas kini `FEATURE_GROUPS`.
+- `WhatsNewNotice` (Utama) muncul sekali bagi setiap versi terpasang yang ada entri; versi dilihat disimpan tempatan
+  (`lib/secure-storage`, kunci `mysaff.whatsnew.seen`) — per peranti, bukan DB. Tiada entri untuk versi semasa = tiada notifikasi.
+- Versi dinaikkan ke 1.3.30 (36) untuk build seterusnya.

@@ -63,6 +63,7 @@ export default function ArkibHubScreen() {
       onPress: () => void Linking.openURL(BAITUL_MUSLIM_URL).catch(() => undefined),
     },
     { icon: 'heart-circle-outline', title: 'Bantuan Kaunseling', badge: counselUnread, onPress: () => router.push('/(app)/kaunseling') },
+    { icon: 'sparkles-outline', title: 'Features MySAFF', onPress: () => router.push('/(app)/features') },
     { icon: 'chatbubble-ellipses-outline', title: 'Maklum Balas', badge: feedbackUnread, onPress: () => router.push('/(app)/maklum-balas') },
   ];
 
