@@ -79,12 +79,6 @@ export default function BantuanScreen() {
       <ScreenHeader eyebrow="Tabung Zakat" title="Permohonan Bantuan Zakat" onBackPress={goBack} />
 
       <View className="gap-4 px-gutter pb-10 pt-5">
-        <Card>
-          <Text className="text-sm leading-5 text-ink-muted">
-            Bantuan zakat diberikan sekali sahaja (one-off) berdasarkan keperluan yang dinilai dan kemampuan organisasi. Permohonan dibuka setiap bulan dan boleh dihantar lebih daripada sekali pada bulan-bulan berikutnya. Permohonan tidak menjamin kelulusan, dan kelulusan tidak bermaksud wang telah dibayar.
-          </Text>
-        </Card>
-
         {(['belajar', 'bekerja'] as const).map((kategori) => (
           <Pressable
             key={kategori}

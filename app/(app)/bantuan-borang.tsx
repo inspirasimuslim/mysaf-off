@@ -277,7 +277,13 @@ export default function BantuanBorangScreen() {
   const [openRequest, setOpenRequest] = useState<BantuanInfoRequest | null>(null);
   const [respons, setRespons] = useState('');
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setErrorState] = useState<string | null>(null);
+  const [topSignal, setTopSignal] = useState(0);
+  // Ralat dipapar di atas borang; tatal ke atas supaya pengguna nampak tanpa menatal.
+  const setError = useCallback((message: string | null) => {
+    setErrorState(message);
+    if (message) setTopSignal((n) => n + 1);
+  }, []);
   const [saved, setSaved] = useState<string | null>(null);
   const [done, setDone] = useState<BantuanApplication | null>(null);
 
@@ -355,7 +361,7 @@ export default function BantuanBorangScreen() {
       setError(bantuanError(caught, 'Gagal menyimpan draf. Sila cuba lagi.'));
       return false;
     }
-  }, [appId, kategori, state]);
+  }, [appId, kategori, state, setError]);
 
   const saveDraft = async () => {
     setError(null);
@@ -414,7 +420,7 @@ export default function BantuanBorangScreen() {
   const tahapOptions = v.belajar ? TAHAP_PENDIDIKAN_BELAJAR : TAHAP_PENDIDIKAN_BEKERJA;
 
   return (
-    <Screen padTop={false}>
+    <Screen padTop={false} scrollTopSignal={topSignal}>
       <ScreenHeader eyebrow={KATEGORI_LABEL[kategori]} title="Permohonan Zakat" subtitle={tajukBorang(kategori)} onBackPress={goBack} />
 
       <View className="gap-4 px-gutter pb-12 pt-5">

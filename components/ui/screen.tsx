@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { ScrollView, View, type ViewProps } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -21,9 +21,11 @@ type Props = ViewProps & {
   className?: string;
   /** Mod desktop sahaja: benarkan lebar grid (skrin yang sudah disusun semula untuk desktop). */
   wide?: boolean;
+  /** Bila nilai ini berubah (dan bukan 0), skrin ditatal ke atas — cth. memaparkan ralat di atas borang. */
+  scrollTopSignal?: number;
 };
 
-export function Screen({ scroll = true, padTop = true, wide = false, className = '', children, ...rest }: Props) {
+export function Screen({ scroll = true, padTop = true, wide = false, scrollTopSignal = 0, className = '', children, ...rest }: Props) {
   const insets = useSafeAreaInsets();
   const desktop = useIsDesktop();
   // Dipasang di panel kanan (panel berkembar): isi lebar panel, tanpa padding atas.
@@ -38,6 +40,9 @@ export function Screen({ scroll = true, padTop = true, wide = false, className =
     KeyboardAvoidingView berasingan di setiap borang. Lihat lib/keyboard-aware.
   */
   const keyboard = useKeyboardAware(scrollRef);
+  useEffect(() => {
+    if (scrollTopSignal) scrollRef.current?.scrollTo({ y: 0, animated: true });
+  }, [scrollTopSignal]);
 
   const body = (
     <View className="w-full self-center" style={{ maxWidth: embedded ? undefined : maxWidth, paddingTop }}>

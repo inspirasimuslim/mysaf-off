@@ -246,7 +246,6 @@ export const PENGAKUAN_TEKS =
 
 export const MAKLUMAT_PENTING: string[] = [
   'Pemohon mestilah ahli Ikhwan yang layak dan memerlukan bantuan zakat.',
-  'Permohonan dibuka setiap bulan dan boleh dihantar lebih daripada sekali pada bulan-bulan berikutnya.',
   'Semua maklumat adalah sulit dan hanya boleh dicapai oleh jawatankuasa zakat daripada Lajnah Kebajikan (LK).',
 ];
 
