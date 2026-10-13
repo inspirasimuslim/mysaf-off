@@ -471,3 +471,24 @@ dijalankan di produksi) apabila borang manual Google Form diberikan — tiada mi
 - **Dikecualikan dengan sengaja** (data sensitif): Dashboard Kelengkapan Data,
   `lib/ahli-import.ts`, `lib/member-sheet.ts`/eksport, `members_full_export()`.
 
+
+# Maklum Balas gaya chat — ahli <-> department (2026-10-13, migration 151, BELUM di-push ke produksi)
+
+Rujukan: `supabase/migrations/20261013000151_feedback_chat.sql`, `lib/feedback-chat.ts`,
+`app/(app)/maklum-balas.tsx` (ahli: senarai + chat baharu), `app/(app)/maklum-balas-chat.tsx` (skrin
+perbualan dikongsi), `app/(app)/admin/maklum-balas-chat.tsx` (peti masuk admin), `components/feedback-notice.tsx`.
+
+- **Ahli pilih department** (dropdown daripada `feedback_departments()` = semua department aktif; label paparan
+  dalam `DEPARTMENT_LABELS`, lib/feedback-chat.ts) lalu mulakan chat. Admin department itu (can_view = lihat,
+  can_edit = balas) dan Super Admin melihat/membalas. Sejarah penuh kekal untuk kedua-dua pihak.
+- Table `feedback_threads` + `feedback_messages`; SELECT sahaja untuk `authenticated`, tulis melalui RPC
+  (`feedback_start/send/mark_read`). Status baca dikongsi: `admin_read_at` (mana-mana admin department),
+  `member_read_at`. Had 30 mesej ahli sejam. Perbualan SENDIRI dikecualikan daripada peti masuk/notifikasi admin.
+- **Notifikasi dalam-app sahaja**: admin — blok ke-4 `admin_notifications()` (bilangan perbualan belum dibaca,
+  hilang bila dibuka); peti masuk di Hub Admin (seksyen "Maklum Balas Ahli", dipaparkan bila `feedback_admin_inbox()`).
+  Ahli — `FeedbackNotice` di Utama + lencana jubin Maklum Balas di Direktori (`feedback_member_unread()`).
+  Skrin chat memuat semula setiap 10 saat (tiada realtime/push).
+- **Maklum balas lama** (`app_feedback`) kekal arkib baca-sahaja Super Admin ("Arkib Maklum Balas Lama"),
+  TIDAK dimigrasikan. Skrin tab tersembunyi kekal terpasang: skrin chat/borang guna `key` + param `n` (cap masa).
+- Diuji pada Postgres 16 tempatan dengan skema tiruan (akses, balas, tanda baca, RLS); blok `admin_notifications()`
+  TIDAK diuji (bergantung pada migration 148).

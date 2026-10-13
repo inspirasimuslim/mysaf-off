@@ -1,4 +1,5 @@
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { View } from 'react-native';
 
 import { PendingTasksNotice } from '@/components/admin-notifications-ui';
@@ -20,6 +21,7 @@ import {
   useYuranAccess,
   useZakatAccess,
 } from '@/lib/department-access';
+import { fetchFeedbackAdminInbox } from '@/lib/feedback-chat';
 import { useGoBack } from '@/lib/navigation';
 import { ORG_CHART_DEPARTMENT } from '@/lib/org-chart';
 import { usePermissions } from '@/lib/permissions';
@@ -59,6 +61,20 @@ export default function AdminHubScreen() {
   // TABUNG ZAKAT — department khusus, BUKAN LAJNAH KEBAJIKAN (`kesihatanAccess`).
   const zakatAccess = useZakatAccess();
 
+  // Peti masuk Maklum Balas Ahli (migration 151): Super Admin atau admin mana-mana department.
+  const [feedbackInbox, setFeedbackInbox] = useState<boolean | null>(null);
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      fetchFeedbackAdminInbox()
+        .then((value) => active && setFeedbackInbox(value))
+        .catch(() => active && setFeedbackInbox(false));
+      return () => {
+        active = false;
+      };
+    }, []),
+  );
+
   const superAdmin = isSuperAdmin();
   const naqib = isActiveNaqib();
   // Admin kawasan yang BUKAN admin LAJNAH TARBIAH: seksyen Tarbiah penuh tidak dipaparkan, ganti dengan seksyen kawasannya.
@@ -73,6 +89,7 @@ export default function AdminHubScreen() {
   */
   const accessLoading =
     permissionsLoading ||
+    feedbackInbox === null ||
     [
       memberAccess,
       usrahAccess,
@@ -99,6 +116,7 @@ export default function AdminHubScreen() {
     zakatAccess.canView,
     naqib,
     kawasanOnly,
+    feedbackInbox === true,
   ].filter(Boolean).length;
   const nothingAvailable = visibleSections === 0;
   const openByDefault = visibleSections === 1;
@@ -115,6 +133,18 @@ export default function AdminHubScreen() {
         <PendingTasksNotice />
         {accessLoading ? null : (
         <>
+        {/* Maklum Balas Ahli (chat) — Super Admin dan admin mana-mana department; DB menapis perbualan mengikut kebenaran. */}
+        {feedbackInbox ? (
+          <CollapsibleSection variant="plain" title="Maklum Balas Ahli" count={1} defaultOpen={openByDefault}>
+            <ActionRow
+              icon="chatbubbles-outline"
+              title="Peti Masuk Maklum Balas"
+              subtitle="Balas dan lihat sejarah chat ahli untuk department anda"
+              onPress={() => router.push('/(app)/admin/maklum-balas-chat')}
+            />
+          </CollapsibleSection>
+        ) : null}
+
         {/*
           Carta organisasi dan Ahli Diputihkan dimiliki oleh department
           SETIAUSAHA — BUKAN JABATAN SETIAUSAHA di atas walaupun namanya
@@ -590,8 +620,8 @@ export default function AdminHubScreen() {
             */}
             <ActionRow
               icon="chatbubble-ellipses-outline"
-              title="Maklum Balas Aplikasi"
-              subtitle="Baca maklum balas yang dihantar ahli"
+              title="Arkib Maklum Balas Lama"
+              subtitle="Maklum balas sehala yang dihantar ahli sebelum sistem chat"
               onPress={() => router.push('/(app)/admin/app-feedback')}
             />
 

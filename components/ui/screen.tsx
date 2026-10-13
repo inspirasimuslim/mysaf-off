@@ -23,9 +23,11 @@ type Props = ViewProps & {
   wide?: boolean;
   /** Bila nilai ini berubah (dan bukan 0), skrin ditatal ke atas — cth. memaparkan ralat di atas borang. */
   scrollTopSignal?: number;
+  /** Bila nilai ini berubah (dan bukan 0), skrin ditatal ke bawah — cth. mesej terbaru dalam chat. */
+  scrollEndSignal?: number;
 };
 
-export function Screen({ scroll = true, padTop = true, wide = false, scrollTopSignal = 0, className = '', children, ...rest }: Props) {
+export function Screen({ scroll = true, padTop = true, wide = false, scrollTopSignal = 0, scrollEndSignal = 0, className = '', children, ...rest }: Props) {
   const insets = useSafeAreaInsets();
   const desktop = useIsDesktop();
   // Dipasang di panel kanan (panel berkembar): isi lebar panel, tanpa padding atas.
@@ -43,6 +45,9 @@ export function Screen({ scroll = true, padTop = true, wide = false, scrollTopSi
   useEffect(() => {
     if (scrollTopSignal) scrollRef.current?.scrollTo({ y: 0, animated: true });
   }, [scrollTopSignal]);
+  useEffect(() => {
+    if (scrollEndSignal) scrollRef.current?.scrollToEnd({ animated: true });
+  }, [scrollEndSignal]);
 
   const body = (
     <View className="w-full self-center" style={{ maxWidth: embedded ? undefined : maxWidth, paddingTop }}>

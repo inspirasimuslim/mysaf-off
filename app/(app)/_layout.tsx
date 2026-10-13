@@ -329,6 +329,7 @@ function AppGate() {
       <Tabs.Screen name="bisnes-info" options={{ href: null }} />
       <Tabs.Screen name="bantuan" options={{ href: null }} />
       <Tabs.Screen name="bantuan-borang" options={{ href: null }} />
+      <Tabs.Screen name="maklum-balas-chat" options={{ href: null }} />
       <Tabs.Screen name="bantuan-info" options={{ href: null }} />
     </Tabs>
   );

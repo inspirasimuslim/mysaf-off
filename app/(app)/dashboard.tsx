@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Animated, Easing, Platform, Pressable, Text, View, type TextStyle } from 'react-native';
 
 import { BantuanNotice } from '@/components/bantuan-notice';
+import { FeedbackNotice } from '@/components/feedback-notice';
 import { BusinessAdCarousel } from '@/components/business-ad-carousel';
 import { PosterCarousel, type PosterItem } from '@/components/poster-carousel';
 import { BIRTHDAY_GOLD, RANK_GOLD } from '@/constants/theme';
@@ -237,6 +238,7 @@ export default function DashboardScreen() {
               sumbangan yang sudah dibuat, bukan sesuatu yang perlu dilangsaikan.
             */}
             <BantuanNotice />
+            <FeedbackNotice />
 
             <View className="flex-row gap-[5px]" style={desktop ? { minHeight: 168 } : undefined}>
               <YuranCard summary={yuran} onPress={() => router.push('/(app)/yuran')} />

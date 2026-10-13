@@ -6,6 +6,7 @@ import { Linking, Pressable, Text, View } from 'react-native';
 import { ScreenHeader } from '@/components/screen-header';
 import { Screen } from '@/components/ui/screen';
 import { fetchBantuanPerluTindakan } from '@/lib/bantuan';
+import { fetchFeedbackMemberUnread } from '@/lib/feedback-chat';
 import { useColors } from '@/lib/theme';
 
 /** Halaman luar (Canva) untuk Majlis Baitul Muslim. */
@@ -23,6 +24,7 @@ const COLUMNS = 3;
 export default function ArkibHubScreen() {
   const router = useRouter();
   const [perluTindakan, setPerluTindakan] = useState(0);
+  const [feedbackUnread, setFeedbackUnread] = useState(0);
 
   // Lencana ringkas: notifikasi ahli untuk permohonan zakat (keputusan baharu / maklumat tambahan).
   useFocusEffect(
@@ -30,6 +32,9 @@ export default function ArkibHubScreen() {
       let active = true;
       fetchBantuanPerluTindakan()
         .then((count) => active && setPerluTindakan(count))
+        .catch(() => undefined);
+      fetchFeedbackMemberUnread()
+        .then((count) => active && setFeedbackUnread(count))
         .catch(() => undefined);
       return () => {
         active = false;
@@ -52,7 +57,7 @@ export default function ArkibHubScreen() {
       title: 'Majlis Baitul Muslim',
       onPress: () => void Linking.openURL(BAITUL_MUSLIM_URL).catch(() => undefined),
     },
-    { icon: 'chatbubble-ellipses-outline', title: 'Maklum Balas', onPress: () => router.push('/(app)/maklum-balas') },
+    { icon: 'chatbubble-ellipses-outline', title: 'Maklum Balas', badge: feedbackUnread, onPress: () => router.push('/(app)/maklum-balas') },
   ];
 
   // Tiga jubin sebaris; baris terakhir dilapik dengan ruang kosong supaya lebar jubin sama.
