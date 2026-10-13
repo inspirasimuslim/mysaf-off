@@ -76,7 +76,7 @@ export default function BantuanScreen() {
 
   return (
     <Screen padTop={false}>
-      <ScreenHeader eyebrow="Tabung Zakat" title="Permohonan Zakat" onBackPress={goBack} />
+      <ScreenHeader eyebrow="Tabung Zakat" title="Permohonan Bantuan Zakat" onBackPress={goBack} />
 
       <View className="gap-4 px-gutter pb-10 pt-5">
         <Card>

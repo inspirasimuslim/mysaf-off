@@ -42,6 +42,12 @@ export default function ArkibHubScreen() {
 
       <View className="gap-4 px-gutter pb-8 pt-6">
         <HubButton
+          icon="hand-left-outline"
+          title="Permohonan Bantuan Zakat"
+          subtitle={perluTindakan > 0 ? 'Notifikasi baharu: ' + perluTindakan + ' permohonan' : undefined}
+          onPress={() => router.push('/(app)/bantuan')}
+        />
+        <HubButton
           icon="images-outline"
           title="Album"
           onPress={() => router.push('/(app)/album')}
@@ -60,12 +66,6 @@ export default function ArkibHubScreen() {
           icon="heart-outline"
           title="Majlis Baitul Muslim"
           onPress={() => void Linking.openURL(BAITUL_MUSLIM_URL).catch(() => undefined)}
-        />
-        <HubButton
-          icon="hand-left-outline"
-          title="Permohonan Zakat"
-          subtitle={perluTindakan > 0 ? 'Notifikasi baharu: ' + perluTindakan + ' permohonan' : undefined}
-          onPress={() => router.push('/(app)/bantuan')}
         />
         <HubButton
           icon="chatbubble-ellipses-outline"
