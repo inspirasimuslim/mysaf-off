@@ -255,12 +255,30 @@ function problemOf(kategori: BantuanKategori, state: FormState): string | null {
   return null;
 }
 
+/**
+ * Skrin tab tersembunyi KEKAL terpasang selepas ditinggalkan, dan membuka semula
+ * dengan parameter baharu hanya mengemas kini `params` — bukan memasang semula.
+ * Tanpa `key`, "Permohonan Baharu — Bekerja" selepas "Belajar" memaparkan borang
+ * Belajar lama (state kategori + id draf yang sama). `n` (cap masa dari pemanggil)
+ * memastikan setiap pembukaan ialah borang yang segar, termasuk kategori yang sama.
+ */
 export default function BantuanBorangScreen() {
+  const params = useLocalSearchParams<{ id?: string; kategori?: string; n?: string }>();
+  return (
+    <BantuanBorangForm
+      key={(params.id ?? '') + '|' + (params.kategori ?? '') + '|' + (params.n ?? '')}
+      id={params.id}
+      kategoriParam={params.kategori}
+    />
+  );
+}
+
+function BantuanBorangForm({ id: paramId, kategoriParam }: { id?: string; kategoriParam?: string }) {
   const router = useRouter();
   const goBack = useGoBack();
   const { user } = useAuth();
   const userId = user?.id;
-  const params = useLocalSearchParams<{ id?: string; kategori?: string }>();
+  const params = { id: paramId, kategori: kategoriParam };
 
   // ID dijana sekali — simpan berulang menyasarkan baris yang sama.
   const appIdRef = useRef<string>(params.id ?? newId());

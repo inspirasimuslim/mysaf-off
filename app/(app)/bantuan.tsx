@@ -84,7 +84,7 @@ export default function BantuanScreen() {
             key={kategori}
             accessibilityRole="button"
             accessibilityLabel={'Permohonan baharu: ' + KATEGORI_LABEL[kategori]}
-            onPress={() => router.push({ pathname: '/(app)/bantuan-borang', params: { kategori } })}
+            onPress={() => router.push({ pathname: '/(app)/bantuan-borang', params: { kategori, n: String(Date.now()) } })}
             className="active:opacity-70">
             <Card>
               <View className="gap-1">
@@ -110,7 +110,7 @@ export default function BantuanScreen() {
               accessibilityLabel={'Permohonan ' + (row.no_rujukan ?? 'draf') + ', ' + STATUS_LABEL[row.status]}
               onPress={() =>
                 row.status === 'draft'
-                  ? router.push({ pathname: '/(app)/bantuan-borang', params: { id: row.id } })
+                  ? router.push({ pathname: '/(app)/bantuan-borang', params: { id: row.id, n: String(Date.now()) } })
                   : router.push({ pathname: '/(app)/bantuan-info', params: { id: row.id } })
               }
               className="active:opacity-70">

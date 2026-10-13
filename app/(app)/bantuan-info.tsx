@@ -44,9 +44,15 @@ import { useGoBack } from '@/lib/navigation';
  * menyebut "dibayar" atau menjanjikan tarikh bayaran.
  */
 export default function BantuanInfoScreen() {
+  // Skrin tab tersembunyi kekal terpasang: `key` memastikan permohonan lain tidak
+  // memaparkan data permohonan sebelumnya (lihat catatan pada bantuan-borang.tsx).
+  const { id } = useLocalSearchParams<{ id?: string }>();
+  return <BantuanInfoContent key={id ?? ''} id={id} />;
+}
+
+function BantuanInfoContent({ id }: { id?: string }) {
   const router = useRouter();
   const goBack = useGoBack();
-  const { id } = useLocalSearchParams<{ id?: string }>();
 
   const [app, setApp] = useState<BantuanApplication | null | undefined>(undefined);
   const [requests, setRequests] = useState<BantuanInfoRequest[]>([]);
@@ -193,7 +199,7 @@ export default function BantuanInfoScreen() {
             <View className="gap-3">
               <Text className="text-base font-bold text-warn">Maklumat tambahan diperlukan</Text>
               <Text className="text-sm leading-5 text-ink">{openRequest.mesej}</Text>
-              <Button label="Kemas Kini & Hantar Semula" onPress={() => router.push({ pathname: '/(app)/bantuan-borang', params: { id: app.id } })} />
+              <Button label="Kemas Kini & Hantar Semula" onPress={() => router.push({ pathname: '/(app)/bantuan-borang', params: { id: app.id, n: String(Date.now()) } })} />
             </View>
           </Card>
         ) : null}
