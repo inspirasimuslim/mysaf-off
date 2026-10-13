@@ -548,3 +548,16 @@ Rujukan: `lib/app-changelog.ts`, `app/(app)/features.tsx`, `components/whats-new
 - `WhatsNewNotice` (Utama) muncul sekali bagi setiap versi terpasang yang ada entri; versi dilihat disimpan tempatan
   (`lib/secure-storage`, kunci `mysaff.whatsnew.seen`) — per peranti, bukan DB. Tiada entri untuk versi semasa = tiada notifikasi.
 - Versi dinaikkan ke 1.3.30 (36) untuk build seterusnya.
+
+# Kehadiran manual ikut acara (2026-10-13, migration 155, BELUM di-push ke produksi)
+
+Rujukan: `supabase/migrations/20261013000155_admin_event_attendance.sql`, `lib/usrah.ts`
+(`fetchAttendanceEvents`, `adminSetEventAttendance`), `app/(app)/admin/ahli-usrah-history.tsx`.
+- "Betulkan kehadiran usrah" bulanan (`admin_set_usrah_attendance`) hanya menulis grid
+  `usrah_monthly_attendance`; Excel kehadiran acara membaca `usrah_attendance_scans`. Bahagian baharu
+  "Kehadiran Ikut Program" pada skrin yang sama: dropdown acara (belum diarkib, yang boleh disunting admin
+  itu) + mod Bersemuka/Online -> `admin_set_event_attendance()` menulis scan (`method = 'manual'`, Badge
+  "Admin" di Kehadiran Live) DAN grid bulanan (logik `attendance_core`, `recorded_by = 'admin'`, butiran sedia
+  ada tidak ditimpa). Kebenaran `can_edit_event_at()`; dilog dalam Log Aktiviti.
+- "Buang" memadam scan acara itu SAHAJA; grid bulanan tidak disentuh (guna editor bulanan untuk itu).
+- Diuji pada Postgres 16 tempatan (skema tiruan). Migration 155 belum dijalankan di produksi.

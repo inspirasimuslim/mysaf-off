@@ -19,12 +19,15 @@ import { toMalayError } from '@/lib/errors';
 import { useGoBack } from '@/lib/navigation';
 import {
   adminClearUsrahAttendance,
+  adminSetEventAttendance,
   adminSetUsrahAttendance,
+  fetchAttendanceEvents,
   fetchUsrahYearRecords,
+  type AttendanceEventOption,
   usrahYearOptions,
   type UsrahMonthRecord,
 } from '@/lib/usrah';
-import { KAWASAN_USRAH_OPTIONS, MONTH_NAMES } from '@/types/database';
+import { KAWASAN_USRAH_OPTIONS, MONTH_NAMES, dateLabel } from '@/types/database';
 
 /**
  * Rekod / betulkan kehadiran usrah SEORANG ahli — LAJNAH TARBIAH.
@@ -49,6 +52,11 @@ type Draft = {
 
 const YEAR_OPTIONS = usrahYearOptions();
 
+const MOD_OPTIONS = [
+  { value: 'bersemuka' as const, label: 'Bersemuka' },
+  { value: 'online' as const, label: 'Online' },
+];
+
 const HADIR_OPTIONS = [
   { value: 'hadir' as const, label: 'Hadir' },
   { value: 'tidak' as const, label: 'Tidak hadir' },
@@ -66,6 +74,9 @@ export default function AhliUsrahHistoryScreen() {
   const [draft, setDraft] = useState<Draft | null>(null);
   const [saving, setSaving] = useState(false);
   const [clearing, setClearing] = useState(false);
+  const [events, setEvents] = useState<AttendanceEventOption[] | null>(null);
+  const [eventDraft, setEventDraft] = useState<{ eventId: string | null; mode: 'bersemuka' | 'online' } | null>(null);
+  const [eventSaving, setEventSaving] = useState(false);
 
   const load = useCallback(async () => {
     if (!memberId) return;
@@ -77,12 +88,52 @@ export default function AhliUsrahHistoryScreen() {
     }
   }, [memberId, year]);
 
+  const loadEvents = useCallback(async () => {
+    if (!memberId) return;
+    try {
+      setEvents(await fetchAttendanceEvents(memberId));
+    } catch {
+      setEvents([]);
+    }
+  }, [memberId]);
+
   useFocusEffect(
     useCallback(() => {
       if (accessLoading || !canView) return;
       void load();
-    }, [accessLoading, canView, load]),
+      void loadEvents();
+    }, [accessLoading, canView, load, loadEvents]),
   );
+
+  const saveEvent = async () => {
+    if (!eventDraft?.eventId || !memberId || eventSaving) return;
+    setEventSaving(true);
+    try {
+      await adminSetEventAttendance({ memberId, eventId: eventDraft.eventId, hadir: true, mode: eventDraft.mode });
+      setBanner({ tone: 'positive', message: 'Kehadiran program ditanda.' });
+      setEventDraft(null);
+      await Promise.all([load(), loadEvents()]);
+    } catch (caught) {
+      setBanner({ tone: 'negative', message: toMalayError(caught, 'Gagal menanda kehadiran program.') });
+      setEventDraft(null);
+    } finally {
+      setEventSaving(false);
+    }
+  };
+
+  const removeEvent = async (eventId: string) => {
+    if (!memberId || eventSaving) return;
+    setEventSaving(true);
+    try {
+      await adminSetEventAttendance({ memberId, eventId, hadir: false, mode: 'bersemuka' });
+      setBanner({ tone: 'positive', message: 'Kehadiran program dibuang.' });
+      await loadEvents();
+    } catch (caught) {
+      setBanner({ tone: 'negative', message: toMalayError(caught, 'Gagal membuang kehadiran program.') });
+    } finally {
+      setEventSaving(false);
+    }
+  };
 
   const openEdit = (record: UsrahMonthRecord) => {
     setBanner(null);
@@ -199,8 +250,73 @@ export default function AhliUsrahHistoryScreen() {
               </View>
             </>
           )}
+
+          {canEdit && events !== null ? (
+            <View className="gap-3 pt-2">
+              <Text className="text-base font-bold text-ink">Kehadiran Ikut Program</Text>
+              <Text className="text-sm text-ink-muted">
+                Tanda ahli hadir pada usrah / program yang pernah dicipta. Ini yang dibaca oleh Excel kehadiran program.
+              </Text>
+              <Button label="Tanda Hadir Program" onPress={() => setEventDraft({ eventId: null, mode: 'bersemuka' })} />
+              {events
+                .filter((item) => item.hadir)
+                .map((item) => (
+                  <View key={item.eventId} className="flex-row items-center gap-3 rounded-field border border-line bg-surface p-3">
+                    <View className="flex-1">
+                      <Text className="text-sm font-bold text-ink">{item.name}</Text>
+                      <Text className="text-xs text-ink-muted">
+                        {dateLabel(item.startDate) + ' · ' + (item.attendanceMode === 'online' ? 'Online' : 'Bersemuka')}
+                      </Text>
+                    </View>
+                    <Button
+                      label="Buang"
+                      variant="danger"
+                      disabled={eventSaving}
+                      onPress={() => void removeEvent(item.eventId)}
+                    />
+                  </View>
+                ))}
+            </View>
+          ) : null}
         </View>
       </Screen>
+
+      <FormModal
+        visible={eventDraft !== null}
+        title="Tanda Hadir Program"
+        description="Pilih usrah / program, kemudian mod kehadiran."
+        onClose={() => setEventDraft(null)}
+        dismissable={!eventSaving}
+        footer={
+          <Button
+            label="Simpan"
+            loading={eventSaving}
+            disabled={eventSaving || !eventDraft?.eventId}
+            onPress={() => void saveEvent()}
+          />
+        }>
+        {eventDraft ? (
+          <>
+            <PickerField
+              label="Program"
+              value={eventDraft.eventId}
+              options={(events ?? [])
+                .filter((item) => !item.hadir)
+                .map((item) => ({ value: item.eventId, label: item.name + ' · ' + dateLabel(item.startDate) }))}
+              onChange={(next) => setEventDraft({ ...eventDraft, eventId: next })}
+              placeholder="Pilih program"
+              disabled={eventSaving}
+            />
+            <Segmented
+              label="Mod"
+              value={eventDraft.mode}
+              options={MOD_OPTIONS}
+              onChange={(next) => setEventDraft({ ...eventDraft, mode: next })}
+              disabled={eventSaving}
+            />
+          </>
+        ) : null}
+      </FormModal>
 
       <FormModal
         visible={draft !== null}

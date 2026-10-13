@@ -249,3 +249,51 @@ export function usrahYearOptions(): { value: string; label: string }[] {
   }
   return years;
 }
+
+
+export type AttendanceEventOption = {
+  eventId: string;
+  name: string;
+  eventType: string;
+  startDate: string;
+  kawasanUsrah: string | null;
+  hadir: boolean;
+  attendanceMode: 'bersemuka' | 'online' | null;
+};
+
+/**
+ * Acara (usrah/program) yang BOLEH disunting oleh admin ini, dengan status
+ * kehadiran ahli itu pada setiap satu. Kebenaran disemak di pelayan.
+ */
+export async function fetchAttendanceEvents(memberId: string): Promise<AttendanceEventOption[]> {
+  const { data, error } = await supabase.rpc('admin_events_for_attendance', { p_member_id: memberId });
+  if (error) throw new Error(error.message);
+  return ((data as Record<string, unknown>[] | null) ?? []).map((row) => ({
+    eventId: row.event_id as string,
+    name: row.name as string,
+    eventType: row.event_type as string,
+    startDate: row.start_date as string,
+    kawasanUsrah: (row.kawasan_usrah as string | null) ?? null,
+    hadir: row.hadir === true,
+    attendanceMode: (row.attendance_mode as 'bersemuka' | 'online' | null) ?? null,
+  }));
+}
+
+/**
+ * Tanda (atau buang) kehadiran ahli pada SATU acara — menulis rekod acara yang dibaca
+ * Excel kehadiran + grid bulanan. Migration 155.
+ */
+export async function adminSetEventAttendance(input: {
+  memberId: string;
+  eventId: string;
+  hadir: boolean;
+  mode: 'bersemuka' | 'online';
+}): Promise<void> {
+  const { error } = await supabase.rpc('admin_set_event_attendance', {
+    p_member_id: input.memberId,
+    p_event_id: input.eventId,
+    p_hadir: input.hadir,
+    p_mode: input.mode,
+  });
+  if (error) throw new Error(error.message);
+}
