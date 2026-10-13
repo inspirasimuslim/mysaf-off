@@ -137,6 +137,7 @@ create table if not exists public.bantuan_applications (
   sebab_tolak_penjelasan text,
   diputuskan_oleh      uuid,
   diputuskan_at        timestamptz,
+  keputusan_dilihat_at timestamptz,                            -- ahli sudah melihat keputusan (notifikasi ahli)
   created_at           timestamptz not null default now(),
   updated_at           timestamptz not null default now(),
 
@@ -316,7 +317,7 @@ as $$
   select to_jsonb(p_app) - array[
     'id','no_rujukan','member_id','status','versi','created_at','updated_at','snapshot_hantar',
     'jumlah_diluluskan','mesej_keputusan','sebab_tolak_kategori','sebab_tolak_penjelasan',
-    'diputuskan_oleh','diputuskan_at','dihantar_at','pertama_dihantar_at','pengakuan_at','qr_path','qr_dihantar_at'
+    'diputuskan_oleh','diputuskan_at','dihantar_at','pertama_dihantar_at','pengakuan_at','qr_path','qr_dihantar_at','keputusan_dilihat_at'
   ];
 $$;
 revoke all on function public.bantuan_snapshot(public.bantuan_applications) from public, anon, authenticated;
@@ -645,15 +646,50 @@ grant execute on function public.bantuan_save_draft(uuid, jsonb) to authenticate
 grant execute on function public.bantuan_save_response(uuid, text) to authenticated;
 grant execute on function public.bantuan_submit(uuid, text) to authenticated;
 
--- Bilangan permohonan yang memerlukan tindakan ahli (lencana menu).
+-- Notifikasi ahli (DITERBITKAN, sama falsafah `admin_notifications()`): permohonan sendiri yang
+--   * memerlukan maklumat tambahan (hilang sendiri bila dihantar semula), atau
+--   * sudah diputuskan (diluluskan / tidak diluluskan) dan keputusannya belum dilihat.
+-- Kandungan hanya status + nombor rujukan. Keputusan dianggap dilihat apabila ahli membuka
+-- butiran permohonan (`bantuan_tandakan_dilihat`).
+create or replace function public.bantuan_notifikasi_ahli()
+returns table (id uuid, no_rujukan text, status text, waktu timestamptz)
+language sql stable security definer set search_path = public
+as $$
+  select a.id, a.no_rujukan, a.status, coalesce(a.diputuskan_at, a.updated_at)
+    from public.bantuan_applications a
+   where a.member_id = public.my_member_id()
+     and public.my_member_id() is not null
+     and (a.status = 'needs_information'
+          or (a.status in ('approved', 'rejected') and a.keputusan_dilihat_at is null))
+   order by 4 desc;
+$$;
+
+create or replace function public.bantuan_tandakan_dilihat(p_id uuid)
+returns void
+language plpgsql security definer set search_path = public
+as $$
+begin
+  update public.bantuan_applications a
+     set keputusan_dilihat_at = now()
+   where a.id = p_id
+     and a.member_id = public.my_member_id()
+     and a.status in ('approved', 'rejected')
+     and a.keputusan_dilihat_at is null;
+end;
+$$;
+
+-- Bilangan notifikasi ahli (lencana menu).
 create or replace function public.bantuan_perlu_tindakan()
 returns integer
 language sql stable security definer set search_path = public
 as $$
-  select count(*)::integer from public.bantuan_applications a
-   where a.member_id = public.my_member_id() and a.status = 'needs_information';
+  select count(*)::integer from public.bantuan_notifikasi_ahli();
 $$;
+revoke all on function public.bantuan_notifikasi_ahli() from public, anon;
+revoke all on function public.bantuan_tandakan_dilihat(uuid) from public, anon;
 revoke all on function public.bantuan_perlu_tindakan() from public, anon;
+grant execute on function public.bantuan_notifikasi_ahli() to authenticated;
+grant execute on function public.bantuan_tandakan_dilihat(uuid) to authenticated;
 grant execute on function public.bantuan_perlu_tindakan() to authenticated;
 
 -- -----------------------------------------------------------------------------

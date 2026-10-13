@@ -23,7 +23,7 @@ export default function ArkibHubScreen() {
   const router = useRouter();
   const [perluTindakan, setPerluTindakan] = useState(0);
 
-  // Lencana ringkas: permohonan bantuan yang menunggu maklumat tambahan daripada ahli.
+  // Lencana ringkas: notifikasi ahli untuk permohonan zakat (keputusan baharu / maklumat tambahan).
   useFocusEffect(
     useCallback(() => {
       let active = true;
@@ -64,7 +64,7 @@ export default function ArkibHubScreen() {
         <HubButton
           icon="hand-left-outline"
           title="Permohonan Zakat"
-          subtitle={perluTindakan > 0 ? 'Perlu tindakan anda: ' + perluTindakan + ' permohonan' : undefined}
+          subtitle={perluTindakan > 0 ? 'Notifikasi baharu: ' + perluTindakan + ' permohonan' : undefined}
           onPress={() => router.push('/(app)/bantuan')}
         />
         <HubButton

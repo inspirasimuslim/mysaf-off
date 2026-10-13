@@ -366,6 +366,26 @@ export async function fetchBantuan(id: string): Promise<BantuanApplication | nul
   return (data as BantuanApplication | null) ?? null;
 }
 
+export type BantuanNotifikasi = {
+  id: string;
+  no_rujukan: string | null;
+  status: 'needs_information' | 'approved' | 'rejected';
+  waktu: string;
+};
+
+/** Notifikasi ahli: perlu maklumat tambahan, atau keputusan (lulus/tolak) yang belum dilihat. */
+export async function fetchBantuanNotifikasi(): Promise<BantuanNotifikasi[]> {
+  const { data, error } = await supabase.rpc('bantuan_notifikasi_ahli');
+  if (error) throw error;
+  return (data as BantuanNotifikasi[] | null) ?? [];
+}
+
+/** Tandakan keputusan sudah dilihat (dipanggil bila ahli membuka butiran permohonan). */
+export async function markBantuanSeen(id: string): Promise<void> {
+  const { error } = await supabase.rpc('bantuan_tandakan_dilihat', { p_id: id });
+  if (error) throw error;
+}
+
 export async function fetchBantuanPerluTindakan(): Promise<number> {
   const { data, error } = await supabase.rpc('bantuan_perlu_tindakan');
   if (error) throw error;

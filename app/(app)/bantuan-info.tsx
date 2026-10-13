@@ -23,6 +23,7 @@ import {
   fetchBantuan,
   fetchBantuanHistory,
   fetchBantuanInfoRequests,
+  markBantuanSeen,
   uploadBantuanQr,
   formatRM,
   formatTarikh,
@@ -66,6 +67,8 @@ export default function BantuanInfoScreen() {
           if (!active) return;
           setApp(row);
           if (!row) return;
+          // Keputusan dianggap dilihat sebaik butiran dibuka (padam notifikasi di Utama).
+          if (row.status === 'approved' || row.status === 'rejected') void markBantuanSeen(id).catch(() => undefined);
           const [infoRequests, log] = await Promise.all([fetchBantuanInfoRequests(id), fetchBantuanHistory(id)]);
           if (!active) return;
           setRequests(infoRequests);
