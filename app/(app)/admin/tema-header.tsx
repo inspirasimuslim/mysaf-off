@@ -133,7 +133,7 @@ export default function TemaHeaderScreen() {
             tone="info"
             message={
               `Muat naik PNG/WebP (maks 2 MB). Mobile ${THEME_SPEC.mobile.width}×${THEME_SPEC.mobile.height}px, ` +
-              `desktop ${THEME_SPEC.desktop.width}×${THEME_SPEC.desktop.height}px (pilihan — jika tiada, imej mobile dipakai). ` +
+              `desktop ${THEME_SPEC.desktop.width}×${THEME_SPEC.desktop.height}px (pilihan — jika tiada, desktop kekal hijau). ` +
               'Biarkan kawasan kiri (avatar + nama) dan kanan-atas (ikon) tidak sibuk. Tema hari jadi mengatasi perayaan pada hari lahir ahli itu sendiri.'
             }
           />
@@ -164,7 +164,7 @@ export default function TemaHeaderScreen() {
                     ) : (
                       <Text className="text-sm text-ink-muted">Hari lahir setiap ahli (ikut NRIC)</Text>
                     )}
-                    {!row.image_desktop ? <Text className="text-xs text-ink-muted">Tiada imej desktop — imej mobile dipakai.</Text> : null}
+                    {!row.image_desktop ? <Text className="text-xs text-ink-muted">Tiada imej desktop — desktop kekal hijau.</Text> : null}
                     <View className="flex-row items-center gap-3">
                       <Switch
                         value={row.aktif}
@@ -315,7 +315,7 @@ function ThemeForm({
           {`Imej desktop (${THEME_SPEC.desktop.width}×${THEME_SPEC.desktop.height}px, pilihan)`}
         </Text>
         <Text className="text-xs text-ink-muted">
-          {desktopUri ? 'Imej baharu dipilih.' : editing?.image_desktop && !clearDesktop ? 'Imej sedia ada dikekalkan.' : 'Tiada — imej mobile dipakai.'}
+          {desktopUri ? 'Imej baharu dipilih.' : editing?.image_desktop && !clearDesktop ? 'Imej sedia ada dikekalkan.' : 'Tiada — desktop kekal hijau.'}
         </Text>
         <Button label="Pilih Imej Desktop" variant="secondary" size="sm" onPress={() => void pick(setDesktopUri)} disabled={busy} />
         {editing?.image_desktop && !desktopUri && !clearDesktop ? (

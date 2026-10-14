@@ -192,7 +192,7 @@ export default function DashboardScreen() {
   return (
     <Screen padTop={false} wide>
       <ScreenHeader
-        backgroundUrl={desktop ? (headerTheme?.desktopUrl ?? headerTheme?.mobileUrl ?? null) : (headerTheme?.mobileUrl ?? null)}
+        backgroundUrl={desktop ? (headerTheme?.desktopUrl ?? null) : (headerTheme?.mobileUrl ?? null)}
         eyebrow="Assalamualaikum,"
         title={profile?.greetingName ?? displayName(user)}
         /*

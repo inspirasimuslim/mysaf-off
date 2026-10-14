@@ -632,6 +632,6 @@ Rujukan: `supabase/migrations/20261014000158_header_themes.sql`, `lib/header-the
   `header-themes` (PNG/WebP, 2 MB). Baca = semua ahli; tulis (table + Storage) = Super Admin sahaja.
 - `my_header_theme()` memilih: tema hari jadi jika hari ini hari jadi PEMANGGIL (NRIC, waktu Malaysia) > perayaan aktif dalam julat
   (mula terkini menang) > tiada (klien kekal hijau). Perayaan dimasukkan satu per satu — tiada tarikh berulang/seed.
-- Saiz templat: mobile 1440×600, desktop 2400×300 (pilihan; tiada = imej mobile). Dipapar HANYA pada header Utama, dengan
+- Saiz templat: mobile 1440×600, desktop 2400×300 (pilihan; tiada = desktop kekal hijau, imej mobile TIDAK dipakai di desktop). Dipapar HANYA pada header Utama, dengan
   lapisan gelap 18% supaya teks putih terbaca. Muat naik mentah (kekal alfa) — BUKAN melalui `readJpegBytes`; tandatangan PNG/WebP disemak.
 - Cache sesi 5 minit di klien. Diuji pada Postgres 16 tempatan (pilihan tema, kekangan, idempotent).
