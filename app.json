@@ -10,7 +10,11 @@
     "backgroundColor": "#FAFAFA",
     "ios": {
       "bundleIdentifier": "com.sakuradigital.mysafoff",
-      "supportsTablet": true
+      "buildNumber": "1",
+      "supportsTablet": false,
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.sakuradigital.mysafoff",
@@ -75,14 +79,17 @@
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "MySAFF menggunakan lokasi anda untuk mengesahkan kehadiran usrah di lokasi program."
+          "locationAlwaysAndWhenInUsePermission": "MySAFF menggunakan lokasi anda untuk mengesahkan kehadiran usrah di lokasi program.",
+          "locationWhenInUsePermission": "MySAFF menggunakan lokasi anda untuk mengesahkan kehadiran usrah di lokasi program.",
+          "locationAlwaysPermission": "MySAFF menggunakan lokasi anda untuk mengesahkan kehadiran usrah di lokasi program."
         }
       ],
       [
         "expo-camera",
         {
           "cameraPermission": "MySAFF menggunakan kamera untuk mengimbas kod QR kehadiran usrah.",
-          "recordAudioAndroid": false
+          "recordAudioAndroid": false,
+          "microphonePermission": false
         }
       ],
       [

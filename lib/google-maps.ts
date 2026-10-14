@@ -30,7 +30,19 @@ const ANDROID_PACKAGE = 'com.sakuradigital.mysafoff';
 const ANDROID_CERT_SHA1 = '5E8F16062EA3CD2C4A0D547876BAA6F38CABF625';
 const GOOGLE_MAPS_ANDROID_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_ANDROID_API_KEY ?? '';
 
-const placesKey = Platform.OS === 'android' ? GOOGLE_MAPS_ANDROID_API_KEY : GOOGLE_MAPS_WEB_API_KEY;
+/**
+ * iOS: kunci iOS (disekat "iOS apps") + header `X-Ios-Bundle-Identifier`. Tanpa kunci iOS, jatuh ke kunci web
+ * — tetapi kunci web disekat ikut HTTP referrer yang tiada pada app native, jadi carian tempat iOS akan ditolak.
+ */
+const IOS_BUNDLE_ID = 'com.sakuradigital.mysafoff';
+const GOOGLE_MAPS_IOS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_IOS_API_KEY ?? '';
+
+const placesKey =
+  Platform.OS === 'android'
+    ? GOOGLE_MAPS_ANDROID_API_KEY
+    : Platform.OS === 'ios' && GOOGLE_MAPS_IOS_API_KEY
+      ? GOOGLE_MAPS_IOS_API_KEY
+      : GOOGLE_MAPS_WEB_API_KEY;
 
 /** Carian tempat (Places REST) boleh digunakan pada platform semasa. */
 export const placesConfigured = placesKey.trim() !== '' && !placesKey.startsWith('GANTI_');
@@ -39,6 +51,7 @@ function placesHeaders(extra: Record<string, string> = {}): Record<string, strin
   return {
     'X-Goog-Api-Key': placesKey,
     ...(Platform.OS === 'android' ? { 'X-Android-Package': ANDROID_PACKAGE, 'X-Android-Cert': ANDROID_CERT_SHA1 } : {}),
+    ...(Platform.OS === 'ios' && GOOGLE_MAPS_IOS_API_KEY ? { 'X-Ios-Bundle-Identifier': IOS_BUNDLE_ID } : {}),
     ...extra,
   };
 }
@@ -157,7 +170,11 @@ export function staticMapSource(
     point +
     '&key=' +
     placesKey;
-  const headers =
-    Platform.OS === 'android' ? { 'X-Android-Package': ANDROID_PACKAGE, 'X-Android-Cert': ANDROID_CERT_SHA1 } : undefined;
+  const headers: Record<string, string> | undefined =
+    Platform.OS === 'android'
+      ? { 'X-Android-Package': ANDROID_PACKAGE, 'X-Android-Cert': ANDROID_CERT_SHA1 }
+      : Platform.OS === 'ios' && GOOGLE_MAPS_IOS_API_KEY
+        ? { 'X-Ios-Bundle-Identifier': IOS_BUNDLE_ID }
+        : undefined;
   return { uri, headers };
 }

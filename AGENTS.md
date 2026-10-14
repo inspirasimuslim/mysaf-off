@@ -642,3 +642,15 @@ Rujukan: `supabase/migrations/20261014000158_header_themes.sql`, `lib/header-the
   `android/gradle.properties` dengan 4 senibina, jadi config plugin `plugins/with-arm64-only.js` (didaftar dalam `app.json`)
   menetapkan `reactNativeArchitectures=arm64-v8a` pada setiap prebuild. Folder `android/` tidak dijejaki git.
 - Selepas prebuild, `versionCode`/`versionName` dalam `android/app/build.gradle` mungkin perlu ditetapkan semula ikut `app.json`.
+
+# Persediaan iOS (2026-10-14, akaun Apple Developer Individual, Team ID 6SD8VQ7XW4)
+
+- Keputusan: teruskan dengan akaun **Individual** (nama penerbit = nama peribadi). Risiko semakan Apple: Guideline 5.1.1(ix)
+  (kewangan/kesihatan oleh individu) dan pungutan infaq/zakat — jika ditolak, pertimbangkan akaun Organization.
+- `app.json` ios: `buildNumber "1"` (naikkan setiap upload), `supportsTablet false`, `ITSAppUsesNonExemptEncryption false`;
+  `expo-camera` `microphonePermission false`; `expo-location` rentetan Bahasa Malaysia untuk When-In-Use/Always.
+- `eas.json`: profil `ios` (extends production) + `submit.production.ios.appleTeamId`. Bina dengan `eas build -p ios --profile ios`.
+  EAS cloud memerlukan pembolehubah env persekitaran `production` (EXPO_PUBLIC_SUPABASE_URL/ANON_KEY, kunci Google Maps) ditetapkan di EAS.
+- Carian tempat iOS guna `EXPO_PUBLIC_GOOGLE_MAPS_IOS_API_KEY` + header `X-Ios-Bundle-Identifier`; tanpa kunci jatuh ke kunci web
+  (disekat referrer → ditolak pada app native). Peta `react-native-maps` pada iOS = Apple Maps (tiada kunci).
+- Belum: aset skrin App Store, ikon 1024 tanpa alfa, akaun demo untuk penyemak, label privasi, URL dasar privasi awam, navigasi iOS (`navigationUrl` TODO).
