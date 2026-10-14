@@ -669,7 +669,7 @@ export default function AdminHubScreen() {
           <CollapsibleSection
             variant="plain"
             title="Organisasi"
-            count={8}
+            count={9}
             defaultOpen={openByDefault}>
             <ActionRow
               icon="business-outline"
@@ -690,6 +690,13 @@ export default function AdminHubScreen() {
               title="Senarai Sekolah"
               subtitle="Tambah, sunting, aktif/nonaktif dan padam sekolah (dropdown tab Pendidikan)"
               onPress={() => router.push('/(app)/admin/senarai-sekolah')}
+            />
+
+            <ActionRow
+              icon="color-palette-outline"
+              title="Tema Header"
+              subtitle="Muat naik latar header Utama untuk perayaan dan hari jadi ahli"
+              onPress={() => router.push('/(app)/admin/tema-header')}
             />
 
             <ActionRow

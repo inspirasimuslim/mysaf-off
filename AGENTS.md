@@ -623,3 +623,15 @@ Postgres 16 tempatan (skema tiruan): 7 NGO, 96 ahli jawatankuasa, jalan semula t
 - Lantik kaunselor (`admin/kaunselor.tsx`): carian semasa menaip (tangguh 300ms, min 2 aksara, jawapan lapuk dibuang melalui `searchSeq`),
   tiada butang "Cari" lagi; RPC `counseling_member_search` tidak berubah.
 - Susunan tile Direktori (3 lajur): Zakat · Kaunseling · Baitul Muslim / Bisnes Ahli · NGO Rasmi · Maklum Balas / Ciri-ciri MySAFF · Album · Dokumen.
+
+# Tema Header Utama — perayaan / hari jadi (2026-10-14, migration 158, BELUM di-push ke produksi)
+
+Rujukan: `supabase/migrations/20261014000158_header_themes.sql`, `lib/header-theme.ts`, `components/screen-header.tsx`
+(prop `backgroundUrl`), `app/(app)/dashboard.tsx`, `app/(app)/admin/tema-header.tsx` (Hub Admin → Organisasi → Tema Header).
+- Table `header_themes` (jenis `perayaan` dengan `mula`/`tamat` WAJIB, atau `hari_jadi` tanpa tarikh dan SATU sahaja); bucket awam
+  `header-themes` (PNG/WebP, 2 MB). Baca = semua ahli; tulis (table + Storage) = Super Admin sahaja.
+- `my_header_theme()` memilih: tema hari jadi jika hari ini hari jadi PEMANGGIL (NRIC, waktu Malaysia) > perayaan aktif dalam julat
+  (mula terkini menang) > tiada (klien kekal hijau). Perayaan dimasukkan satu per satu — tiada tarikh berulang/seed.
+- Saiz templat: mobile 1440×600, desktop 2400×300 (pilihan; tiada = imej mobile). Dipapar HANYA pada header Utama, dengan
+  lapisan gelap 18% supaya teks putih terbaca. Muat naik mentah (kekal alfa) — BUKAN melalui `readJpegBytes`; tandatangan PNG/WebP disemak.
+- Cache sesi 5 minit di klien. Diuji pada Postgres 16 tempatan (pilihan tema, kekangan, idempotent).

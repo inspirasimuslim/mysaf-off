@@ -88,7 +88,7 @@ export async function pickImages(selectionLimit: number): Promise<string[]> {
  * Blob dihantar KOSONG. Bait mentah mengelakkan laluan itu sekali gus
  * membolehkan satu semakan integriti yang sama untuk kedua-dua platform.
  */
-async function readBytes(uri: string): Promise<Uint8Array> {
+export async function readBytes(uri: string): Promise<Uint8Array> {
   if (Platform.OS === 'web') {
     const response = await fetch(uri);
     return new Uint8Array(await response.arrayBuffer());

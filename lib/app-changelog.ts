@@ -67,6 +67,7 @@ export const FEATURE_GROUPS: FeatureGroup[] = [
       'Bisnes Ahli: promosi dan carian perniagaan ahli.',
       'Majlis Baitul Muslim.',
       'NGO Rasmi: perihal, tahun penubuhan dan jawatankuasa terkini NGO persatuan.',
+      'Header skrin Utama bertema mengikut perayaan dan hari jadi anda.',
       'Maklum Balas: berbual terus dengan department yang anda pilih.',
       'Ciri-ciri MySAFF: senarai ciri dan catatan versi ini.',
     ],

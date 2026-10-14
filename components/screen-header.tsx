@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import type { ReactNode } from 'react';
 import { Pressable, Text, View } from 'react-native';
@@ -26,6 +27,8 @@ type Props = {
   leading?: ReactNode;
   /** Papar anak panah kembali di kiri bila diberi — untuk skrin dalam (bukan tab). */
   onBackPress?: () => void;
+  /** Latar bertema (perayaan/hari jadi) — hanya skrin Utama yang memberinya. */
+  backgroundUrl?: string | null;
 };
 
 /**
@@ -40,7 +43,7 @@ type Props = {
  * dan mengetuk perisai dari dalam stack admin patut kembali ke Hub, bukan
  * menimbun salinan Hub kedua di atasnya.
  */
-export function ScreenHeader({ title, eyebrow, subtitle, leading, onBackPress }: Props) {
+export function ScreenHeader({ title, eyebrow, subtitle, leading, onBackPress, backgroundUrl }: Props) {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { isAdmin, isActiveNaqib, isKawasanAdmin, isCounselor } = usePermissions();
@@ -50,8 +53,21 @@ export function ScreenHeader({ title, eyebrow, subtitle, leading, onBackPress }:
 
   return (
     <View
-      className={`bg-primary ${embedded ? 'mx-4 mt-4 rounded-2xl px-5 pb-4' : desktop ? 'mt-6 rounded-2xl px-6 pb-5' : 'rounded-b-[28px] px-gutter pb-7'}`}
+      className={`overflow-hidden bg-primary ${embedded ? 'mx-4 mt-4 rounded-2xl px-5 pb-4' : desktop ? 'mt-6 rounded-2xl px-6 pb-5' : 'rounded-b-[28px] px-gutter pb-7'}`}
       style={{ paddingTop: embedded ? 16 : desktop ? 20 : insets.top + 18 }}>
+      {backgroundUrl ? (
+        <>
+          <Image
+            source={{ uri: backgroundUrl }}
+            contentFit="cover"
+            contentPosition="center"
+            style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+            accessibilityIgnoresInvertColors
+          />
+          {/* Lapisan gelap nipis supaya teks putih kekal terbaca di atas apa jua latar. */}
+          <View pointerEvents="none" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.18)' }} />
+        </>
+      ) : null}
       <View className="flex-row items-center gap-4">
         {onBackPress && !embedded ? <HeaderIcon icon="chevron-back" label="Kembali" onPress={onBackPress} /> : null}
 

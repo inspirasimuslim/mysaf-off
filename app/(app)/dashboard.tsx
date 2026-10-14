@@ -24,6 +24,7 @@ import { fetchActiveBusinessAds, type ActiveBusinessAd } from '@/lib/business-ad
 import { fetchBirthdaysToday, type BirthdayToday } from '@/lib/birthdays';
 import { fetchMyMemberLinked } from '@/lib/members';
 import { fetchPipisSummary, peratusLabel, ringgitPipis, type PipisSummary } from '@/lib/pipis';
+import { useHeaderTheme } from '@/lib/header-theme';
 import { useIsDesktop } from '@/lib/use-desktop';
 import { fetchUpcomingEvents } from '@/lib/usrah-events';
 import { fetchYuranSummary, ringgit, type YuranSummary } from '@/lib/yuran';
@@ -51,6 +52,7 @@ export default function DashboardScreen() {
   const { user } = useAuth();
   const router = useRouter();
   const desktop = useIsDesktop();
+  const headerTheme = useHeaderTheme();
   /* Utama ialah skrin akar selepas log masuk: back di sini bertanya sebelum menutup app. */
   const exitPrompt = useAndroidExitPrompt();
 
@@ -190,6 +192,7 @@ export default function DashboardScreen() {
   return (
     <Screen padTop={false} wide>
       <ScreenHeader
+        backgroundUrl={desktop ? (headerTheme?.desktopUrl ?? headerTheme?.mobileUrl ?? null) : (headerTheme?.mobileUrl ?? null)}
         eyebrow="Assalamualaikum,"
         title={profile?.greetingName ?? displayName(user)}
         /*
