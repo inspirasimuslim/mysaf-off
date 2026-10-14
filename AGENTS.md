@@ -572,3 +572,17 @@ tidak pernah dijawab (Promise tidak ditolak, tiada ralat).
 - `getSession`: pengaman 15s melepaskan `initialising`; jika selesai kemudian sesi tetap dipulihkan.
 - `permissions.load()`: RPC pilihan (naqib/kawasan/kaunselor) 8s -> dianggap tiada keupayaan; bacaan asas (profil, tugasan admin) 15s -> ralat + cuba semula.
 - `withTimeout` TIDAK membatalkan permintaan asal — hanya berhenti menunggu. Dihantar dengan build APK seterusnya.
+
+# Pengerasan keselamatan (2026-10-14, tiada migration)
+
+Rujukan: `vercel.json`, `.github/dependabot.yml`. Hasil semakan 10 item keselamatan.
+- **Header keselamatan web** (`vercel.json`): HSTS (1 tahun), nosniff, `X-Frame-Options: DENY`, Referrer-Policy,
+  Permissions-Policy (kamera + geolokasi `self` sahaja), CSP TERHAD (`frame-ancestors/base-uri/object-src/form-action`
+  sahaja). CSP penuh (`script-src`) SENGAJA belum — eksport statik Expo + Google Maps + Supabase perlu diuji dahulu
+  (mulakan dengan `Content-Security-Policy-Report-Only`). Header baru berkesan selepas Vercel deploy `master`.
+- **Dependabot** mingguan (Isnin 08:00 MYT), patch+minor sahaja, major diabaikan. JANGAN `npm audit fix --force`
+  (mencadangkan `expo@44`). 1 kritikal `shell-quote` + banyak "tinggi" ialah rantaian alat bina, bukan kod yang dihantar.
+- **CORS Edge Function kekal `*` dengan sengaja**: semua fungsi memerlukan JWT Bearer (bukan cookie), CORS bukan kawalan
+  akses, dan app native tidak menghantar Origin. Menyekatnya tiada nilai keselamatan tetapi berisiko memutuskan web/pratonton.
+- **Belum / di dashboard**: kata laluan minimum 6 -> 8 + huruf & nombor (Authentication > Providers > Email), semak had kadar
+  log masuk, hadkan kunci Google Maps (nama pakej + SHA-1, domain web), CAPTCHA & kunci akaun ditangguh.
