@@ -120,6 +120,17 @@ export const CHANGELOG: ChangelogEntry[] = [
       'Notifikasi "Apa yang baharu" selepas app dikemas kini.',
     ],
   },
+  {
+    version: '1.3.31',
+    date: '14 Okt 2026',
+    highlights: [
+      'Header skrin Utama kini bertema mengikut perayaan dan hari jadi anda.',
+      'NGO Rasmi: perihal, tahun penubuhan dan jawatankuasa terkini 7 NGO persatuan.',
+      'Hari Jadi Bulan Ini: hari ini diserlahkan dan nama boleh diketik terus ke profil ahli.',
+      'Lantik kaunselor lebih mudah: cadangan nama muncul semasa menaip.',
+      'Pembetulan app tersangkut "loading" semasa dibuka dalam rangkaian perlahan.',
+    ],
+  },
 ];
 
 const SEEN_KEY = 'mysaff.whatsnew.seen';

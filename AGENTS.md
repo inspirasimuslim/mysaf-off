@@ -547,7 +547,7 @@ Rujukan: `lib/app-changelog.ts`, `app/(app)/features.tsx`, `components/whats-new
 - **AMALAN WAJIB setiap kali versi dinaikkan**: tambah entri di HUJUNG `CHANGELOG` (versi = `version` app.json) dan kemas kini `FEATURE_GROUPS`.
 - `WhatsNewNotice` (Utama) muncul sekali bagi setiap versi terpasang yang ada entri; versi dilihat disimpan tempatan
   (`lib/secure-storage`, kunci `mysaff.whatsnew.seen`) — per peranti, bukan DB. Tiada entri untuk versi semasa = tiada notifikasi.
-- Versi dinaikkan ke 1.3.30 (36) untuk build seterusnya.
+- Versi dinaikkan ke 1.3.31 (37) untuk build seterusnya (1.3.30 = 36).
 
 # Kehadiran manual ikut acara (2026-10-13, migration 155, BELUM di-push ke produksi)
 
