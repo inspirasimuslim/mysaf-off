@@ -18,7 +18,7 @@
     },
     "android": {
       "package": "com.sakuradigital.mysafoff",
-      "versionCode": 37,
+      "versionCode": 38,
       "adaptiveIcon": {
         "backgroundColor": "#FFFFFF",
         "foregroundImage": "./assets/images/mysaff-adaptive-foreground-v3.png",

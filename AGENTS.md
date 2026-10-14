@@ -666,3 +666,7 @@ Rujukan: `supabase/migrations/20261014000159_pemadaman_akaun_data_baharu.sql`, `
 - Perbualan kaunseling/maklum balas, permohonan bantuan dan sejarah ikut `cascade`. Fail QR `bantuan-qr` dibuang oleh Edge Function
   (laluan dibaca sebelum padam, dibuang selepas padam berjaya). Gambar iklan bisnes dan bucket lain TIDAK disentuh.
 - **DEPLOY**: `supabase db push --linked` DAN `supabase functions deploy admin-delete-member`. Dasar privasi baharu hanya hidup selepas web di-deploy dari `master`.
+
+# Versi Android (2026-10-15)
+- `android.versionCode` dinaikkan ke **38** (versionName kekal 1.3.31): Play menolak 37 ("already been used"). Setiap muat naik AAB/APK baharu ke Play
+  MESTI versionCode yang belum pernah digunakan (semak Play Console > App bundle explorer). Ingat `android/app/build.gradle` (tidak dijejak git) mesti ditetapkan sama.
