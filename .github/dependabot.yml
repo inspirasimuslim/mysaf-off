@@ -2,6 +2,10 @@
 # Versi MAJOR diabaikan: Expo SDK 57 dan pakej React Native dipasang pada versi
 # yang serasi antara satu sama lain (`npx expo install --check`). Naik major
 # dibuat secara manual semasa naik taraf SDK, bukan oleh bot.
+# Pakej terurus SDK (expo*, react, react-native*) juga diabaikan sepenuhnya:
+# react-native 0.x menaikkan "minor" (0.86 -> 0.87) yang sebenarnya pecah, dan
+# @expo/cli SDK 57 gagal bina (rn-get-polyfills). Naikkan dengan
+# `npx expo install --fix` semasa naik taraf SDK.
 version: 2
 updates:
   - package-ecosystem: npm
@@ -15,6 +19,15 @@ updates:
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-major"]
+      - dependency-name: "expo"
+      - dependency-name: "expo-*"
+      - dependency-name: "@expo/*"
+      - dependency-name: "react"
+      - dependency-name: "react-dom"
+      - dependency-name: "react-native"
+      - dependency-name: "react-native-*"
+      - dependency-name: "@react-native/*"
+      - dependency-name: "@react-native-community/*"
     groups:
       patch-dan-minor:
         update-types: ["patch", "minor"]
