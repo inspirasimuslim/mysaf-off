@@ -9,7 +9,17 @@ Pakej: `com.sakuradigital.mysafoff` · versi semasa 1.3.20 (kod 26). Play menola
 ## Halangan sebelum hantar
 1. **Dasar Privasi (URL awam)** — SIAP dalam app: `/dasar-privasi` (web). Perlu deploy web dahulu; URL itu dimasukkan dalam Play Console. Isi `SUPPORT_EMAIL` dalam `constants/legal.ts`.
 2. **Padam akaun** — SIAP: Tetapan > Padam Akaun (migration 143, berasaskan permintaan), skrin Super Admin `Permintaan Padam Akaun`, URL web `/padam-akaun` untuk Play Console.
-3. **Borang Data Safety** — nyatakan: nama, emel, no. telefon, NRIC, lokasi tepat (semasa guna), foto, maklumat kewangan (yuran/PIPIS, bukan kad), disimpan di Supabase, tidak dijual, disulitkan semasa penghantaran.
+3. **Borang Data Safety** (kemas kini 2026-10-15; Play Console > Policy and programs > App content > Data safety) — nyatakan:
+   - Personal info: nama, emel, no. telefon, NRIC, alamat, maklumat lain (pekerjaan, pendidikan, keluarga).
+   - Financial info: maklumat kewangan lain (status yuran/PIPIS, infaq, pendapatan dan status permohonan bantuan); BUKAN nombor kad.
+   - Health info: tab Kesihatan (sukarela) dan kandungan kaunseling.
+   - Messages: mesej dalam app lain (Maklum Balas dan Bantuan Kaunseling).
+   - Photos: gambar profil/poster/program dan gambar QR DuitNow.
+   - Location: lokasi tepat (hanya semasa sahkan kehadiran).
+   - Dikongsi: nama/emel/telefon dihantar ke ToyyibPay untuk memproses bil (semak definisi "service provider" semasa Google).
+   - Disimpan di Supabase, tidak dijual, disulitkan semasa penghantaran, pengguna boleh minta padam (/padam-akaun).
+   - Deklarasi lain yang dikemas kini 2026-10-15: Health apps (Mental and behavioral health + Other), Financial features (Other).
+   - Dasar privasi (app/dasar-privasi.tsx) mesti sepadan; kemas kini terakhir 15 Oktober 2026.
 4. **Akses ujian** — beri akaun ujian (emel + kata laluan) kerana app hanya untuk ahli; tanpa itu reviewer tolak.
 5. **Akaun pembangun peribadi baharu**: ujian tertutup 12 penguji selama 14 hari sebelum boleh ke Production.
 
