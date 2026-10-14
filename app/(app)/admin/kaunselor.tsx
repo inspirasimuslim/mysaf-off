@@ -119,7 +119,7 @@ export default function KaunselorScreen() {
       setToRemove(null);
       await load();
     } catch (caught) {
-      setError(counselErrorMessage(caught, 'Gagal membuang kaunselor.'));
+      setError(counselErrorMessage(caught, 'Gagal menyahtugas kaunselor.'));
       setToRemove(null);
     } finally {
       setBusyId(null);
@@ -142,7 +142,7 @@ export default function KaunselorScreen() {
         <Text className="text-sm font-semibold text-ink">{row.ahli_menghubungi + ' ahli menghubungi'}</Text>
         {row.aktif && access.canEdit ? (
           <Button
-            label="Buang"
+            label="Nyahtugas"
             variant="danger"
             size="sm"
             disabled={busyId === row.id}
@@ -212,14 +212,14 @@ export default function KaunselorScreen() {
 
       <ConfirmDialog
         visible={toRemove !== null}
-        title="Buang kaunselor?"
+        title="Nyahtugas kaunselor?"
         message={
           toRemove
             ? toRemove.full_name +
               ' tidak lagi dipaparkan kepada ahli dan kehilangan akses kepada perbualannya. Sejarah dan bilangan kekal.'
             : ''
         }
-        confirmLabel="Buang"
+        confirmLabel="Nyahtugas"
         destructive
         busy={busyId !== null}
         onConfirm={() => void confirmRemove()}

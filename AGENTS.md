@@ -596,4 +596,4 @@ Rujukan: `supabase/migrations/20261014000156_birthday_this_month_profil.sql`, `a
 - Skrin: bahagian "Hari Jadi Hari Ini (n)" di ATAS (tiada skrol), baris hari ini diserlahkan (emas) dalam kalendar bulan juga.
   Ketik nama -> profil: admin yang boleh lihat ahli -> `admin/ahli-detail`, ahli biasa -> `ahli-view` (corak sama tab Ahli).
   Sebelum migration 156 dijalankan: tiada `hari_ini`/`nombor_ahli` -> skrin kekal berfungsi tetapi tiada serlahan & nama tak boleh diketik.
-- Kaunselor: label "Dibuang" -> "Tidak lagi bertugas" (lencana, tarikh, tajuk seksyen, notis). Butang tindakan "Buang" kekal.
+- Kaunselor: label "Dibuang" -> "Tidak lagi bertugas" (lencana, tarikh, tajuk seksyen, notis). Butang tindakan "Buang" -> "Nyahtugas" (juga tajuk + sahkan dialog).
