@@ -18,7 +18,7 @@ type IconName = keyof typeof Ionicons.glyphMap;
 const COLUMNS = 3;
 
 /**
- * Tab Direktori — grid jubin 3 lajur (nisbah 3:2) ke Zakat, Kaunseling, Album, Dokumen, Bisnes, Baitul Muslim dan Maklum Balas.
+ * Tab Direktori — grid jubin 3 lajur (nisbah 3:2) ke Zakat, Kaunseling, Album, Dokumen, Bisnes, Baitul Muslim, NGO Rasmi dan Maklum Balas.
  *
  * Label "Koleksi Dokumen" (dan bukan "Arkib") supaya tidak sama dengan nama tab.
  */
@@ -63,6 +63,7 @@ export default function ArkibHubScreen() {
       onPress: () => void Linking.openURL(BAITUL_MUSLIM_URL).catch(() => undefined),
     },
     { icon: 'heart-circle-outline', title: 'Bantuan Kaunseling', badge: counselUnread, onPress: () => router.push('/(app)/kaunseling') },
+    { icon: 'people-circle-outline', title: 'NGO Rasmi', onPress: () => router.push('/(app)/ngo') },
     { icon: 'sparkles-outline', title: 'Features MySAFF', onPress: () => router.push('/(app)/features') },
     { icon: 'chatbubble-ellipses-outline', title: 'Maklum Balas', badge: feedbackUnread, onPress: () => router.push('/(app)/maklum-balas') },
   ];

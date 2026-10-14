@@ -10,6 +10,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { Screen } from '@/components/ui/screen';
 import {
   useDepartmentAccess,
+  useNgoAccess,
   useGenerasiAccess,
   useKesihatanAccess,
   useMemberAccess,
@@ -60,6 +61,8 @@ export default function AdminHubScreen() {
   const kesihatanAccess = useKesihatanAccess();
   // TABUNG ZAKAT — department khusus, BUKAN LAJNAH KEBAJIKAN (`kesihatanAccess`).
   const zakatAccess = useZakatAccess();
+  // LAJNAH PEMBANGUNAN NGO — memiliki modul NGO Rasmi (migration 157).
+  const ngoAccess = useNgoAccess();
 
   // Maklum Balas Ahli (migration 151/152): SETIAP department ada butang sendiri; peta ini mengandungi
   // department yang pemanggil boleh lihat (Super Admin: semua aktif) beserta bilangan belum dibaca.
@@ -117,6 +120,7 @@ export default function AdminHubScreen() {
       perkaderanAccess,
       kesihatanAccess,
       zakatAccess,
+      ngoAccess,
     ].some((access) => access.loading);
   const visibleSections = [
     superAdmin,
@@ -130,6 +134,7 @@ export default function AdminHubScreen() {
     perkaderanAccess.canView,
     kesihatanAccess.canView,
     zakatAccess.canView,
+    ngoAccess.canView,
     naqib,
     kawasanOnly,
     counselor,
@@ -468,7 +473,30 @@ export default function AdminHubScreen() {
           </CollapsibleSection>
         ) : null}
 
-        {feedbackOnlySection('LAJNAH PEMBANGUNAN NGO', 'Lajnah Pembangunan NGO (LPN)')}
+        {/* NGO Rasmi dimiliki oleh LAJNAH PEMBANGUNAN NGO: lihat = can_view, tambah/sunting/padam = can_edit. */}
+        {ngoAccess.canView || feedback.byName['LAJNAH PEMBANGUNAN NGO'] ? (
+          <CollapsibleSection
+            variant="plain"
+            title="Lajnah Pembangunan NGO (LPN)"
+            count={(ngoAccess.canView ? 1 : 0) + fbCount('LAJNAH PEMBANGUNAN NGO')}
+            alert={fbUnread('LAJNAH PEMBANGUNAN NGO')}
+            defaultOpen={openByDefault}>
+            {ngoAccess.canView ? (
+              <ActionRow
+                icon="people-circle-outline"
+                title="NGO Rasmi"
+                subtitle={
+                  ngoAccess.canEdit
+                    ? 'Tambah, sunting atau padam NGO, perihal, tahun penubuhan dan jawatankuasa'
+                    : 'Lihat senarai NGO dan jawatankuasa (paparan sahaja)'
+                }
+                onPress={() => router.push('/(app)/ngo')}
+              />
+            ) : null}
+
+            {feedbackRow('LAJNAH PEMBANGUNAN NGO')}
+          </CollapsibleSection>
+        ) : null}
 
         {/* Kaunselor dilantik oleh LAJNAH KEBAJIKAN (migration 153); LK hanya nampak BILANGAN ahli yang menghubungi. */}
         {feedback.byName['LAJNAH KEBAJIKAN'] ? (

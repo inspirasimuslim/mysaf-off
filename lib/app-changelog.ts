@@ -66,6 +66,7 @@ export const FEATURE_GROUPS: FeatureGroup[] = [
       'Koleksi Dokumen persatuan.',
       'Bisnes Ahli: promosi dan carian perniagaan ahli.',
       'Majlis Baitul Muslim.',
+      'NGO Rasmi: perihal, tahun penubuhan dan jawatankuasa terkini NGO persatuan.',
       'Maklum Balas: berbual terus dengan department yang anda pilih.',
       'Features MySAFF: senarai ciri dan catatan versi ini.',
     ],

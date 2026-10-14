@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { fetchDepartments } from './admin';
 import { KAWASAN_USRAH_OPTIONS } from '@/types/database';
 
+import { NGO_DEPARTMENT } from './ngo';
 import { usePermissions } from './permissions';
 
 /**
@@ -223,4 +224,9 @@ export function useUsrahKawasanAccess() {
       ? KAWASAN_USRAH_OPTIONS
       : KAWASAN_USRAH_OPTIONS.filter((option) => kawasanAreas.includes(option.value)),
   };
+}
+
+/** Pintasan untuk modul NGO Rasmi (department LAJNAH PEMBANGUNAN NGO). */
+export function useNgoAccess(): DepartmentAccess {
+  return useDepartmentAccess(NGO_DEPARTMENT);
 }

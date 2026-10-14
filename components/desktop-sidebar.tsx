@@ -46,6 +46,8 @@ const PARENT: Record<string, string> = {
   'maklum-balas': 'arkib-hub',
   'maklum-balas-chat': 'arkib-hub',
   features: 'arkib-hub',
+  ngo: 'arkib-hub',
+  'ngo-detail': 'arkib-hub',
   kaunseling: 'arkib-hub',
   'kaunseling-chat': 'arkib-hub',
 };

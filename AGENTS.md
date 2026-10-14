@@ -597,3 +597,22 @@ Rujukan: `supabase/migrations/20261014000156_birthday_this_month_profil.sql`, `a
   Ketik nama -> profil: admin yang boleh lihat ahli -> `admin/ahli-detail`, ahli biasa -> `ahli-view` (corak sama tab Ahli).
   Sebelum migration 156 dijalankan: tiada `hari_ini`/`nombor_ahli` -> skrin kekal berfungsi tetapi tiada serlahan & nama tak boleh diketik.
 - Kaunselor: label "Dibuang" -> "Tidak lagi bertugas" (lencana, tarikh, tajuk seksyen, notis). Butang tindakan "Buang" -> "Nyahtugas" (juga tajuk + sahkan dialog).
+
+# NGO Rasmi (tile Direktori) — LAJNAH PEMBANGUNAN NGO (2026-10-14, migration 157, BELUM di-push ke produksi)
+
+Rujukan: `supabase/migrations/20261014000157_ngo_rasmi.sql`, `lib/ngo.ts`, `lib/department-access.ts` (`useNgoAccess`),
+`app/(app)/ngo.tsx` (senarai), `app/(app)/ngo-detail.tsx` (butiran + jawatankuasa), `components/ngo-form-modal.tsx`,
+tile "NGO Rasmi" di `arkib-hub.tsx`, seksyen "Lajnah Pembangunan NGO (LPN)" di `admin/index.tsx`. Migration diuji pada
+Postgres 16 tempatan (skema tiruan): 7 NGO, 96 ahli jawatankuasa, jalan semula tidak menggandakan data.
+- Table `ngos` (nama, nama_penuh, perihal, tahun_penubuhan) + `ngo_committee` (jawatan, nama, `generasi` pilihan, `kumpulan` pilihan;
+  `on delete cascade`). BACA: semua ahli (`can_read_shared()`). TULIS terus ke table: hanya `can_edit_ngo()` =
+  `has_department_access('LAJNAH PEMBANGUNAN NGO', true)` (+ Super Admin) — corak `org_positions`. Department itu sudah wujud (migration 001).
+- Ahli jawatankuasa = NAMA TEKS (bukan FK `members`): kebanyakan pemegang jawatan ialah alumni/luar. Susunan = `display_order`
+  (tambah di hujung; belum ada ubah susunan). Tiada audit trigger Log Aktiviti (fungsi `audit_admin_activity()` perlu kes per table).
+- Admin: Hub -> Lajnah Pembangunan NGO (LPN) -> "NGO Rasmi" membuka skrin SAMA dengan ahli; butang Tambah/Sunting/Padam hanya
+  muncul bila can_edit. **Selepas migration dijalankan, tugaskan admin ke department LAJNAH PEMBANGUNAN NGO.**
+- DATA AWAL daripada PDF laporan LPAN 2024 (aktiviti/program TIDAK diambil): IMAN, IMPAK, INTAN, Minda Segak, KPK (Kelab Patriotisme
+  Kelantan), iNaim (Alumni SMKA Naim — jawatankuasa TIADA dalam PDF, kosong), Al-Falah (Alumni SMKA Falahiah).
+  PERIHAL dan TAHUN PENUBUHAN ialah DATA CONTOH (perihal bermula "[Contoh]"; tahun 2012–2018 rekaan) — WAJIB diganti admin.
+  Pengelompokan: IMPAK ("Jabatan Setiausaha", "Pengerusi IMPAK Negeri"), INTAN (4 Exco), KPK ("Team Media", "Team Program").
+  Ejaan nama disalin seperti dalam PDF (cth "Syuawari Bin Mohamed" pada Al-Falah mungkin sama orang dengan "Syuwari Mohamad" IMAN).
