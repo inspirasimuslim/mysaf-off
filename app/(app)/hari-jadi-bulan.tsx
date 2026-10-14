@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useEffect, useState } from 'react';
-import { Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
 import { ScreenHeader } from '@/components/screen-header';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -12,6 +12,7 @@ import { BIRTHDAY_GOLD } from '@/constants/theme';
 import { fetchBirthdaysThisMonth, type BirthdayThisMonth } from '@/lib/birthdays';
 import { toMalayError } from '@/lib/errors';
 import { useGoBack } from '@/lib/navigation';
+import { useMemberOpener } from '@/lib/open-member';
 import { MONTH_NAMES } from '@/types/database';
 
 type State =
@@ -33,6 +34,7 @@ type State =
 export default function HariJadiBulanScreen() {
   const goBack = useGoBack();
   const [state, setState] = useState<State>({ step: 'memuat' });
+  const { open, canOpen } = useMemberOpener();
 
   useEffect(() => {
     let active = true;
@@ -81,14 +83,46 @@ export default function HariJadiBulanScreen() {
       );
     }
 
+    const today = state.rows.filter((row) => row.hari_ini);
+
     return (
       <View className="gap-2 px-gutter pb-8 pt-4">
+        {/*
+          Yang sambut HARI INI dipaparkan dahulu di atas, supaya tiada skrol untuk
+          menjumpai mereka walaupun tarikhnya jauh dalam kalendar sebulan.
+          `hari_ini` dikira pangkalan data (waktu Malaysia), bukan jam peranti.
+        */}
+        {today.length ? (
+          <View className="mb-2 gap-2">
+            <View className="flex-row items-center gap-2">
+              <Ionicons name="gift" size={18} color={BIRTHDAY_GOLD} />
+              <Text className="text-base font-bold" style={{ color: BIRTHDAY_GOLD }}>
+                {'Hari Jadi Hari Ini (' + today.length + ')'}
+              </Text>
+            </View>
+            {today.map((row, index) => (
+              <BirthdayCard
+                key={'hari-ini:' + row.full_name + ':' + index}
+                row={row}
+                highlight
+                onPress={canOpen(row.nombor_ahli) ? () => open(row.nombor_ahli) : undefined}
+              />
+            ))}
+            <Text className="mt-2 text-sm font-semibold text-ink-muted">Sepanjang bulan</Text>
+          </View>
+        ) : null}
+
         {state.rows.map((row, index) => (
-          <BirthdayCard key={row.full_name + ':' + index} row={row} />
+          <BirthdayCard
+            key={row.full_name + ':' + index}
+            row={row}
+            highlight={!!row.hari_ini}
+            onPress={canOpen(row.nombor_ahli) ? () => open(row.nombor_ahli) : undefined}
+          />
         ))}
       </View>
     );
-  }, [monthName, state]);
+  }, [canOpen, monthName, open, state]);
 
   return (
     <Screen padTop={false}>
@@ -131,16 +165,30 @@ function shortMonth(tarikh: string): string {
  * membaca setiap nama. Nama dipotong pada satu baris supaya setiap baris sama
  * tinggi dan lebih banyak nama muat dalam satu skrin.
  */
-function BirthdayCard({ row }: { row: BirthdayThisMonth }) {
-  return (
-    <View className="flex-row items-center gap-3 rounded-field border border-line bg-surface px-3 py-2">
+function BirthdayCard({
+  row,
+  highlight = false,
+  onPress,
+}: {
+  row: BirthdayThisMonth;
+  highlight?: boolean;
+  onPress?: () => void;
+}) {
+  const content = (
+    <View
+      className="flex-row items-center gap-3 rounded-field border border-line bg-surface px-3 py-2"
+      style={
+        highlight
+          ? { borderColor: BIRTHDAY_GOLD, backgroundColor: BIRTHDAY_GOLD + '14', borderWidth: 1.5 }
+          : undefined
+      }>
       <View
         className="w-11 items-center justify-center rounded-lg py-1"
-        style={{ backgroundColor: BIRTHDAY_GOLD + '1A' }}>
-        <Text className="text-base font-bold leading-5" style={{ color: BIRTHDAY_GOLD }}>
+        style={{ backgroundColor: highlight ? BIRTHDAY_GOLD : BIRTHDAY_GOLD + '1A' }}>
+        <Text className="text-base font-bold leading-5" style={{ color: highlight ? '#FFFFFF' : BIRTHDAY_GOLD }}>
           {row.hari}
         </Text>
-        <Text className="text-xs font-semibold leading-4" style={{ color: BIRTHDAY_GOLD }}>
+        <Text className="text-xs font-semibold leading-4" style={{ color: highlight ? '#FFFFFF' : BIRTHDAY_GOLD }}>
           {shortMonth(row.tarikh_lahir)}
         </Text>
       </View>
@@ -152,7 +200,24 @@ function BirthdayCard({ row }: { row: BirthdayThisMonth }) {
         <GenerationChip code={row.generasi} />
       </View>
 
-      <Ionicons name="gift-outline" size={15} color={BIRTHDAY_GOLD} />
+      {highlight ? (
+        <Text className="text-xs font-bold" style={{ color: BIRTHDAY_GOLD }}>
+          Hari ini
+        </Text>
+      ) : null}
+      <Ionicons name={onPress ? 'chevron-forward' : 'gift-outline'} size={onPress ? 16 : 15} color={BIRTHDAY_GOLD} />
     </View>
+  );
+
+  if (!onPress) return content;
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={'Buka profil ' + row.full_name}
+      onPress={onPress}
+      className="active:opacity-70">
+      {content}
+    </Pressable>
   );
 }

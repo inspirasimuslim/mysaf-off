@@ -586,3 +586,14 @@ Rujukan: `vercel.json`, `.github/dependabot.yml`. Hasil semakan 10 item keselama
   akses, dan app native tidak menghantar Origin. Menyekatnya tiada nilai keselamatan tetapi berisiko memutuskan web/pratonton.
 - **Belum / di dashboard**: kata laluan minimum 6 -> 8 + huruf & nombor (Authentication > Providers > Email), semak had kadar
   log masuk, hadkan kunci Google Maps (nama pakej + SHA-1, domain web), CAPTCHA & kunci akaun ditangguh.
+
+# Hari Jadi Bulan: serlah hari ini + ketik ke profil; label kaunselor (2026-10-14, migration 156, BELUM di-push ke produksi)
+
+Rujukan: `supabase/migrations/20261014000156_birthday_this_month_profil.sql`, `app/(app)/hari-jadi-bulan.tsx`,
+`lib/open-member.ts` (`useMemberOpener`), `lib/birthdays.ts`, `app/(app)/admin/kaunselor.tsx`.
+- `birthday_this_month()` (drop+create) +`nombor_ahli` +`hari_ini` (dikira waktu Malaysia di DB). Logik tapisan/susunan sama 038.
+  Diuji pada Postgres 16 tempatan (hari_ini betul, jalan semula idempotent). Klien lama mengabaikan dua kolum baharu.
+- Skrin: bahagian "Hari Jadi Hari Ini (n)" di ATAS (tiada skrol), baris hari ini diserlahkan (emas) dalam kalendar bulan juga.
+  Ketik nama -> profil: admin yang boleh lihat ahli -> `admin/ahli-detail`, ahli biasa -> `ahli-view` (corak sama tab Ahli).
+  Sebelum migration 156 dijalankan: tiada `hari_ini`/`nombor_ahli` -> skrin kekal berfungsi tetapi tiada serlahan & nama tak boleh diketik.
+- Kaunselor: label "Dibuang" -> "Tidak lagi bertugas" (lencana, tarikh, tajuk seksyen, notis). Butang tindakan "Buang" kekal.

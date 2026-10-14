@@ -30,7 +30,7 @@ const KEBAJIKAN_DEPARTMENT = 'LAJNAH KEBAJIKAN';
 
 /**
  * Kaunselor (migration 153) — LAJNAH KEBAJIKAN melantik / membuang kaunselor dan melihat
- * senarai (aktif + dibuang) dengan BILANGAN ahli yang menghubungi. Identiti ahli TIDAK
+ * senarai (aktif + tidak lagi bertugas) dengan BILANGAN ahli yang menghubungi. Identiti ahli TIDAK
  * dipaparkan di sini dan tidak dapat dibaca daripada pangkalan data oleh admin.
  */
 export default function KaunselorScreen() {
@@ -115,7 +115,7 @@ export default function KaunselorScreen() {
     setError(null);
     try {
       await removeCounselor(toRemove.id);
-      setNotice(toRemove.full_name + ' dibuang daripada senarai kaunselor.');
+      setNotice(toRemove.full_name + ' tidak lagi bertugas sebagai kaunselor.');
       setToRemove(null);
       await load();
     } catch (caught) {
@@ -134,10 +134,10 @@ export default function KaunselorScreen() {
             {row.full_name}
             {row.generasi ? '  ·  ' + row.generasi : ''}
           </Text>
-          <Badge label={row.aktif ? 'Aktif' : 'Dibuang'} tone={row.aktif ? 'positive' : 'neutral'} />
+          <Badge label={row.aktif ? 'Aktif' : 'Tidak lagi bertugas'} tone={row.aktif ? 'positive' : 'neutral'} />
         </View>
         <Text className="text-sm text-ink-muted">
-          {'Dilantik ' + formatTarikh(row.appointed_at) + (row.removed_at ? ' · Dibuang ' + formatTarikh(row.removed_at) : '')}
+          {'Dilantik ' + formatTarikh(row.appointed_at) + (row.removed_at ? ' · Tidak lagi bertugas sejak ' + formatTarikh(row.removed_at) : '')}
         </Text>
         <Text className="text-sm font-semibold text-ink">{row.ahli_menghubungi + ' ahli menghubungi'}</Text>
         {row.aktif && access.canEdit ? (
@@ -204,7 +204,7 @@ export default function KaunselorScreen() {
 
         {dibuang.length > 0 ? (
           <>
-            <SectionTitle title={'Pernah Dilantik / Dibuang (' + dibuang.length + ')'} />
+            <SectionTitle title={'Pernah Dilantik / Tidak Lagi Bertugas (' + dibuang.length + ')'} />
             {dibuang.map(renderRow)}
           </>
         ) : null}

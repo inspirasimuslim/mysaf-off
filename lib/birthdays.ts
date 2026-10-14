@@ -27,6 +27,10 @@ export type BirthdayThisMonth = {
   generasi: string | null;
   hari: number;
   tarikh_lahir: string;
+  /** Kunci padanan ke direktori; tiada sebelum migration 156 -> nama tidak boleh diketik. */
+  nombor_ahli?: string | null;
+  /** Dikira pangkalan data (waktu Malaysia); tiada sebelum migration 156. */
+  hari_ini?: boolean;
 };
 
 export async function fetchBirthdaysThisMonth(): Promise<BirthdayThisMonth[]> {
