@@ -68,7 +68,7 @@ export const FEATURE_GROUPS: FeatureGroup[] = [
       'Majlis Baitul Muslim.',
       'NGO Rasmi: perihal, tahun penubuhan dan jawatankuasa terkini NGO persatuan.',
       'Maklum Balas: berbual terus dengan department yang anda pilih.',
-      'Features MySAFF: senarai ciri dan catatan versi ini.',
+      'Ciri-ciri MySAFF: senarai ciri dan catatan versi ini.',
     ],
   },
   {
@@ -115,7 +115,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     version: '1.3.30',
     date: '13 Okt 2026',
     highlights: [
-      'Features MySAFF: senarai lengkap ciri app dalam Bahasa Malaysia di tab Direktori.',
+      'Ciri-ciri MySAFF: senarai lengkap ciri app dalam Bahasa Malaysia di tab Direktori.',
       'Notifikasi "Apa yang baharu" selepas app dikemas kini.',
     ],
   },

@@ -9,7 +9,7 @@ import { CHANGELOG, FEATURE_GROUPS, currentAppVersion } from '@/lib/app-changelo
 import { useGoBack } from '@/lib/navigation';
 import { useColors } from '@/lib/theme';
 
-/** Features MySAFF — catatan versi (terbaru di atas) dan senarai ciri app dalam Bahasa Malaysia. */
+/** Ciri-ciri MySAFF — catatan versi (terbaru di atas) dan senarai ciri app dalam Bahasa Malaysia. */
 export default function FeaturesScreen() {
   const goBack = useGoBack();
   const colors = useColors();
@@ -18,7 +18,7 @@ export default function FeaturesScreen() {
 
   return (
     <Screen padTop={false}>
-      <ScreenHeader eyebrow={version ? 'Versi ' + version : undefined} title="Features MySAFF" onBackPress={goBack} />
+      <ScreenHeader eyebrow={version ? 'Versi ' + version : undefined} title="Ciri-ciri MySAFF" onBackPress={goBack} />
 
       <View className="gap-4 px-gutter pb-10 pt-5">
         <SectionTitle title="Apa yang Baharu" />

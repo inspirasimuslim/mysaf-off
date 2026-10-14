@@ -47,6 +47,7 @@ export default function ArkibHubScreen() {
     }, []),
   );
 
+  // Susunan (3 lajur): Zakat · Kaunseling · Baitul Muslim / Bisnes Ahli · NGO Rasmi · Maklum Balas / Ciri-ciri MySAFF · Album · Dokumen.
   const tiles: TileProps[] = [
     {
       icon: 'hand-left-outline',
@@ -54,18 +55,18 @@ export default function ArkibHubScreen() {
       badge: perluTindakan,
       onPress: () => router.push('/(app)/bantuan'),
     },
-    { icon: 'images-outline', title: 'Album', onPress: () => router.push('/(app)/album') },
-    { icon: 'folder-open-outline', title: 'Koleksi Dokumen', onPress: () => router.push('/(app)/document-library') },
-    { icon: 'storefront-outline', title: 'Bisnes Ahli', onPress: () => router.push('/(app)/bisnes-ahli') },
+    { icon: 'heart-circle-outline', title: 'Bantuan Kaunseling', badge: counselUnread, onPress: () => router.push('/(app)/kaunseling') },
     {
       icon: 'heart-outline',
       title: 'Majlis Baitul Muslim',
       onPress: () => void Linking.openURL(BAITUL_MUSLIM_URL).catch(() => undefined),
     },
-    { icon: 'heart-circle-outline', title: 'Bantuan Kaunseling', badge: counselUnread, onPress: () => router.push('/(app)/kaunseling') },
+    { icon: 'storefront-outline', title: 'Bisnes Ahli', onPress: () => router.push('/(app)/bisnes-ahli') },
     { icon: 'people-circle-outline', title: 'NGO Rasmi', onPress: () => router.push('/(app)/ngo') },
-    { icon: 'sparkles-outline', title: 'Features MySAFF', onPress: () => router.push('/(app)/features') },
     { icon: 'chatbubble-ellipses-outline', title: 'Maklum Balas', badge: feedbackUnread, onPress: () => router.push('/(app)/maklum-balas') },
+    { icon: 'sparkles-outline', title: 'Ciri-ciri MySAFF', onPress: () => router.push('/(app)/features') },
+    { icon: 'images-outline', title: 'Album', onPress: () => router.push('/(app)/album') },
+    { icon: 'folder-open-outline', title: 'Koleksi Dokumen', onPress: () => router.push('/(app)/document-library') },
   ];
 
   // Tiga jubin sebaris; baris terakhir dilapik dengan ruang kosong supaya lebar jubin sama.

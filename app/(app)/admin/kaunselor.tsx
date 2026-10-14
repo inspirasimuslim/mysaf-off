@@ -1,5 +1,5 @@
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Text, View } from 'react-native';
 
 import { ScreenHeader } from '@/components/screen-header';
@@ -44,8 +44,18 @@ export default function KaunselorScreen() {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<CounselorSearchRow[]>([]);
   const [searching, setSearching] = useState(false);
+  // Carian semasa menaip: tangguh 300ms; `searchSeq` membuang jawapan lapuk bila teks sudah berubah.
+  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const searchSeq = useRef(0);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [toRemove, setToRemove] = useState<CounselorAdminRow | null>(null);
+
+  useEffect(
+    () => () => {
+      if (searchTimer.current) clearTimeout(searchTimer.current);
+    },
+    [],
+  );
 
   const load = useCallback(async () => {
     try {
@@ -81,16 +91,33 @@ export default function KaunselorScreen() {
   const aktif = list.filter((row) => row.aktif);
   const dibuang = list.filter((row) => !row.aktif);
 
-  const search = async () => {
-    setSearching(true);
-    setError(null);
-    try {
-      setResults(await searchCounselorCandidates(query));
-    } catch (caught) {
-      setError(counselErrorMessage(caught, 'Gagal mencari ahli.'));
-    } finally {
+  const onQueryChange = (value: string) => {
+    setQuery(value);
+    if (searchTimer.current) clearTimeout(searchTimer.current);
+    const mySeq = ++searchSeq.current;
+
+    if (value.trim().length < 2) {
+      setResults([]);
       setSearching(false);
+      return;
     }
+
+    setSearching(true);
+    searchTimer.current = setTimeout(() => {
+      void (async () => {
+        try {
+          const found = await searchCounselorCandidates(value.trim());
+          if (mySeq === searchSeq.current) {
+            setResults(found);
+            setError(null);
+          }
+        } catch (caught) {
+          if (mySeq === searchSeq.current) setError(counselErrorMessage(caught, 'Gagal mencari ahli.'));
+        } finally {
+          if (mySeq === searchSeq.current) setSearching(false);
+        }
+      })();
+    }, 300);
   };
 
   const appoint = async (candidate: CounselorSearchRow) => {
@@ -99,8 +126,10 @@ export default function KaunselorScreen() {
     try {
       await appointCounselor(candidate.id);
       setNotice(candidate.full_name + ' dilantik sebagai kaunselor.');
+      searchSeq.current += 1;
       setResults([]);
       setQuery('');
+      setSearching(false);
       await load();
     } catch (caught) {
       setError(counselErrorMessage(caught, 'Gagal melantik kaunselor.'));
@@ -167,9 +196,19 @@ export default function KaunselorScreen() {
 
         {access.canEdit ? (
           <View className="gap-3">
-            <SectionTitle title="Lantik Kaunselor" caption="Cari ahli mengikut nama atau nombor ahli (sekurang-kurangnya 2 aksara)." />
-            <TextField label="Cari ahli" value={query} onChangeText={setQuery} placeholder="Nama atau nombor ahli" />
-            <Button label="Cari" loading={searching} disabled={searching || query.trim().length < 2} onPress={() => void search()} />
+            <SectionTitle title="Lantik Kaunselor" caption="Taip nama atau nombor ahli (sekurang-kurangnya 2 aksara) — cadangan muncul terus." />
+            <TextField
+              label="Cari ahli"
+              value={query}
+              onChangeText={onQueryChange}
+              placeholder="Taip sebahagian nama atau nombor ahli"
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            {searching ? <Text className="text-sm text-ink-muted">Mencari…</Text> : null}
+            {!searching && query.trim().length >= 2 && results.length === 0 ? (
+              <Text className="text-sm text-ink-muted">Tiada ahli yang sepadan.</Text>
+            ) : null}
             {results.map((candidate) => (
               <Card key={candidate.id}>
                 <View className="gap-2">

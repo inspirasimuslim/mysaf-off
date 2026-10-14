@@ -543,7 +543,7 @@ Rujukan: `supabase/migrations/20261013000154_infaq_tabung_zakat.sql`, `supabase/
 # Features MySAFF + "Apa yang baharu" (2026-10-13, tiada migration)
 
 Rujukan: `lib/app-changelog.ts`, `app/(app)/features.tsx`, `components/whats-new-notice.tsx`, tile di `arkib-hub.tsx`.
-- Jubin "Features MySAFF" di Direktori -> skrin `features` (catatan versi terbaru di atas + senarai ciri BM).
+- Jubin "Ciri-ciri MySAFF" (dulu "Features MySAFF") di Direktori -> skrin `features` (catatan versi terbaru di atas + senarai ciri BM).
 - **AMALAN WAJIB setiap kali versi dinaikkan**: tambah entri di HUJUNG `CHANGELOG` (versi = `version` app.json) dan kemas kini `FEATURE_GROUPS`.
 - `WhatsNewNotice` (Utama) muncul sekali bagi setiap versi terpasang yang ada entri; versi dilihat disimpan tempatan
   (`lib/secure-storage`, kunci `mysaff.whatsnew.seen`) — per peranti, bukan DB. Tiada entri untuk versi semasa = tiada notifikasi.
@@ -616,3 +616,10 @@ Postgres 16 tempatan (skema tiruan): 7 NGO, 96 ahli jawatankuasa, jalan semula t
   PERIHAL dan TAHUN PENUBUHAN ialah DATA CONTOH (perihal bermula "[Contoh]"; tahun 2012–2018 rekaan) — WAJIB diganti admin.
   Pengelompokan: IMPAK ("Jabatan Setiausaha", "Pengerusi IMPAK Negeri"), INTAN (4 Exco), KPK ("Team Media", "Team Program").
   Ejaan nama disalin seperti dalam PDF (cth "Syuawari Bin Mohamed" pada Al-Falah mungkin sama orang dengan "Syuwari Mohamad" IMAN).
+
+# Ciri-ciri MySAFF, carian kaunselor, susunan tile Direktori (2026-10-14, tiada migration)
+
+- "Features MySAFF" dinamakan semula **"Ciri-ciri MySAFF"** (tile, tajuk skrin, senarai ciri + catatan versi). Laluan `features` kekal.
+- Lantik kaunselor (`admin/kaunselor.tsx`): carian semasa menaip (tangguh 300ms, min 2 aksara, jawapan lapuk dibuang melalui `searchSeq`),
+  tiada butang "Cari" lagi; RPC `counseling_member_search` tidak berubah.
+- Susunan tile Direktori (3 lajur): Zakat · Kaunseling · Baitul Muslim / Bisnes Ahli · NGO Rasmi · Maklum Balas / Ciri-ciri MySAFF · Album · Dokumen.
