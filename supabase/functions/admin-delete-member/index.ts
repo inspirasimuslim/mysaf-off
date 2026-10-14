@@ -16,7 +16,7 @@ import {
  * mengesahkan niat (dialog dua lapis) sebelum memanggil; fungsi ini menganggap
  * pengesahan itu sudah berlaku dan hanya menyemak kebenaran.
  *
- * Urutan padam sengaja: avatar, kemudian rekod ahli, kemudian akaun. Kalau
+ * Urutan padam sengaja: avatar, kemudian rekod ahli (+ fail QR bantuan), kemudian akaun. Kalau
  * langkah akaun gagal, yang tertinggal hanyalah akaun tanpa rekod — keadaan
  * yang admin masih boleh lihat dan bereskan. Urutan bertentangan akan
  * meninggalkan rekod ahli yang menunjuk kepada akaun yang sudah tiada.
@@ -75,9 +75,25 @@ Deno.serve(async (request) => {
       () => {},
     );
 
+    // Gambar QR DuitNow (permohonan bantuan) disimpan dalam Storage tanpa foreign key;
+    // baris `bantuan_applications` hilang bersama ahli, jadi laluan MESTI dibaca sebelum
+    // padam dan fail dibuang selepas padam berjaya (jika padam gagal, fail dikekalkan).
+    const { data: qrRows } = await admin
+      .from('bantuan_applications')
+      .select('qr_path')
+      .eq('member_id', memberId)
+      .not('qr_path', 'is', null);
+    const qrPaths = (qrRows ?? []).map((row: { qr_path: string | null }) => row.qr_path).filter(
+      (path: string | null): path is string => typeof path === 'string' && path.length > 0,
+    );
+
     const { error: deleteMemberError } = await admin.from('members').delete().eq('id', memberId);
     if (deleteMemberError) {
       throw new RequestError('Gagal memadam rekod ahli: ' + deleteMemberError.message, 500);
+    }
+
+    if (qrPaths.length > 0) {
+      await admin.storage.from('bantuan-qr').remove(qrPaths).catch(() => {});
     }
 
     const logDeletion = (accountDeleted: boolean) =>

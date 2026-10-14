@@ -654,3 +654,15 @@ Rujukan: `supabase/migrations/20261014000158_header_themes.sql`, `lib/header-the
 - Carian tempat iOS guna `EXPO_PUBLIC_GOOGLE_MAPS_IOS_API_KEY` + header `X-Ios-Bundle-Identifier`; tanpa kunci jatuh ke kunci web
   (disekat referrer → ditolak pada app native). Peta `react-native-maps` pada iOS = Apple Maps (tiada kunci).
 - Belum: aset skrin App Store, ikon 1024 tanpa alfa, akaun demo untuk penyemak, label privasi, URL dasar privasi awam, navigasi iOS (`navigationUrl` TODO).
+
+
+# Pemadaman akaun & ciri baharu (2026-10-15, migration 159, BELUM di-push ke produksi)
+
+Rujukan: `supabase/migrations/20261014000159_pemadaman_akaun_data_baharu.sql`, `supabase/functions/admin-delete-member/index.ts`,
+`app/dasar-privasi.tsx` (dikemas kini 15 Okt 2026), `docs/play-store.md` (senarai Data Safety). Diuji pada Postgres 16 tempatan (skema tiruan).
+- `counselors.member_id` dan `zakat_infaq.member_id` kini nullable + `on delete set null` (dulu `restrict` -> `admin-delete-member` gagal untuk
+  kaunselor/penderma). Infaq kekal tanpa identiti ("Ahli dipadam" dalam senarai admin). Kaunselor menjadi cangkerang tak aktif (trigger
+  `members_deactivate_counselor_on_delete`) supaya sejarah perbualan ahli lain kekal; "Kaunselor (akaun dipadam)" dipapar.
+- Perbualan kaunseling/maklum balas, permohonan bantuan dan sejarah ikut `cascade`. Fail QR `bantuan-qr` dibuang oleh Edge Function
+  (laluan dibaca sebelum padam, dibuang selepas padam berjaya). Gambar iklan bisnes dan bucket lain TIDAK disentuh.
+- **DEPLOY**: `supabase db push --linked` DAN `supabase functions deploy admin-delete-member`. Dasar privasi baharu hanya hidup selepas web di-deploy dari `master`.
