@@ -561,3 +561,14 @@ Rujukan: `supabase/migrations/20261013000155_admin_event_attendance.sql`, `lib/u
   ada tidak ditimpa). Kebenaran `can_edit_event_at()`; dilog dalam Log Aktiviti.
 - "Buang" memadam scan acara itu SAHAJA; grid bulanan tidak disentuh (guna editor bulanan untuk itu).
 - Diuji pada Postgres 16 tempatan (skema tiruan). Migration 155 belum dijalankan di produksi.
+
+# Had masa permulaan app (2026-10-14, tiada migration)
+
+Rujukan: `lib/with-timeout.ts` (`withTimeout`, `TimeoutError`), `lib/suspension.ts`, `lib/temp-password.ts`,
+`lib/auth-context.tsx`, `lib/permissions.tsx`. Punca: APK tersangkut "loading" bila satu bacaan rangkaian permulaan
+tidak pernah dijawab (Promise tidak ditolak, tiada ralat).
+- `my_account_suspended`: 8s setiap percubaan (3 percubaan) -> 'unknown' -> skrin cuba semula sedia ada (kekal fail-closed).
+- `my_password_status`: 8s -> 'unknown' (fail-open, seperti dulu).
+- `getSession`: pengaman 15s melepaskan `initialising`; jika selesai kemudian sesi tetap dipulihkan.
+- `permissions.load()`: RPC pilihan (naqib/kawasan/kaunselor) 8s -> dianggap tiada keupayaan; bacaan asas (profil, tugasan admin) 15s -> ralat + cuba semula.
+- `withTimeout` TIDAK membatalkan permintaan asal — hanya berhenti menunggu. Dihantar dengan build APK seterusnya.

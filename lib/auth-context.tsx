@@ -42,6 +42,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let active = true;
     applyForcedSignOut = () => setSession(null);
 
+    // Pengaman: jika bacaan sesi tersangkut (rangkaian lemah semasa menyegar token), lepaskan skrin
+    // loading selepas 15 saat. Jika ia selesai kemudian, `setSession` di bawah tetap memulihkan sesi.
+    const stallTimer = setTimeout(() => {
+      if (active) setInitialising(false);
+    }, 15000);
+
     supabase.auth
       .getSession()
       .then(({ data }) => {
@@ -52,6 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (active) setSession(null);
       })
       .finally(() => {
+        clearTimeout(stallTimer);
         if (active) setInitialising(false);
       });
 
@@ -67,6 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return () => {
       active = false;
+      clearTimeout(stallTimer);
       applyForcedSignOut = null;
       subscription.subscription.unsubscribe();
     };

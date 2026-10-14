@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { withTimeout } from './with-timeout';
 
 /**
  * Kata laluan sementara.
@@ -47,8 +48,10 @@ export type PasswordStatus =
 type StatusRow = { must_change: boolean; expires_at: string | null };
 
 export async function fetchPasswordStatus(): Promise<PasswordStatus> {
-  const { data, error } = await supabase.rpc('my_password_status');
-  if (error) return { state: 'unknown' };
+  // Gagal-terbuka: tanpa jawapan dalam 8 saat -> 'unknown' (app dibuka), bukan loading kekal.
+  const result = await withTimeout(supabase.rpc('my_password_status'), 8000).catch(() => null);
+  if (!result || result.error) return { state: 'unknown' };
+  const { data } = result;
 
   const row = (data as StatusRow[] | null)?.[0];
 

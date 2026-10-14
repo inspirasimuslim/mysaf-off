@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 
 import { supabase } from './supabase';
+import { withTimeout } from './with-timeout';
 
 /**
  * Sekatan akaun.
@@ -51,6 +52,8 @@ export type AccountStatus = 'checking' | 'active' | 'suspended' | 'unknown';
 /** Percubaan bacaan sebelum menyerah — kegagalan sekejap lebih lazim daripada sekatan. */
 const ATTEMPTS = 3;
 const RETRY_DELAY_MS = 500;
+/** Had masa satu percubaan semakan sekatan (3 percubaan => paling lama ~25 saat sebelum skrin cuba semula). */
+const RPC_TIMEOUT_MS = 8000;
 
 /** Selang semakan semula bagi sesi yang sedang hidup. */
 const RECHECK_INTERVAL_MS = 5 * 60 * 1000;
@@ -70,8 +73,9 @@ function delay(ms: number): Promise<void> {
  */
 export async function fetchAccountStatus(): Promise<AccountStatus> {
   for (let attempt = 0; attempt < ATTEMPTS; attempt += 1) {
-    const { data, error } = await supabase.rpc('my_account_suspended');
-    if (!error) return data === true ? 'suspended' : 'active';
+    // Had masa setiap percubaan: tanpa jawapan akhirnya 'unknown' (skrin cuba semula sedia ada), bukan loading kekal.
+    const result = await withTimeout(supabase.rpc('my_account_suspended'), RPC_TIMEOUT_MS).catch(() => null);
+    if (result && !result.error) return result.data === true ? 'suspended' : 'active';
     if (attempt < ATTEMPTS - 1) await delay(RETRY_DELAY_MS * (attempt + 1));
   }
 

@@ -5,6 +5,7 @@ import type { AdminAssignment, Profile, UserRole } from '@/types/database';
 import { useAuth } from './auth-context';
 import { toMalayError } from './errors';
 import { supabase } from './supabase';
+import { withTimeout } from './with-timeout';
 
 /**
  * Sumber tunggal kebenaran di dalam app.
@@ -16,6 +17,11 @@ import { supabase } from './supabase';
  * Semakan di sini adalah untuk UI sahaja. Kuasa sebenar terletak pada RLS di
  * Supabase — lihat `supabase/migrations/20260906000001_roles_permissions.sql`.
  */
+
+/** Bacaan asas (profil, tugasan admin) — selepas ini ralat dipapar. */
+const CORE_TIMEOUT_MS = 15000;
+/** RPC tambahan (naqib, kawasan, kaunselor) — selepas ini dianggap "tiada keupayaan itu" dan app diteruskan. */
+const OPTIONAL_TIMEOUT_MS = 8000;
 
 export type PermissionsState = {
   /** `true` sehingga profil + assignment selesai dibaca. */
@@ -99,21 +105,30 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
     setLoading(true);
     try {
       const [profileResult, assignmentResult, naqibResult, kawasanResult, counselorResult] = await Promise.all([
-        supabase.from('profiles').select('id, email, full_name, role').eq('id', uid).maybeSingle(),
-        supabase.from('admin_assignments').select('id, user_id, department_id, can_view, can_edit').eq('user_id', uid),
+        // Bacaan asas: tanpa jawapan dalam 15 saat -> ralat + cuba semula, bukan loading kekal.
+        withTimeout(
+          supabase.from('profiles').select('id, email, full_name, role').eq('id', uid).maybeSingle(),
+          CORE_TIMEOUT_MS,
+          'Pembacaan kebenaran akaun mengambil masa terlalu lama. Semak talian dan cuba lagi.',
+        ),
+        withTimeout(
+          supabase.from('admin_assignments').select('id, user_id, department_id, can_view, can_edit').eq('user_id', uid),
+          CORE_TIMEOUT_MS,
+          'Pembacaan kebenaran akaun mengambil masa terlalu lama. Semak talian dan cuba lagi.',
+        ),
         // Kegagalan RPC ini tidak boleh menggagalkan keseluruhan bacaan kebenaran —
         // ia hanya menambah SATU keupayaan, bukan asas identiti akaun.
-        supabase.rpc('is_active_naqib').then(
+        withTimeout(supabase.rpc('is_active_naqib'), OPTIONAL_TIMEOUT_MS).then(
           (result) => result,
           () => ({ data: false, error: null }),
         ),
         // Sama: kegagalan hanya bermakna "bukan admin kawasan", bukan kegagalan kebenaran.
-        supabase.rpc('my_usrah_kawasan').then(
+        withTimeout(supabase.rpc('my_usrah_kawasan'), OPTIONAL_TIMEOUT_MS).then(
           (result) => result,
           () => ({ data: [], error: null }),
         ),
         // Kegagalan = "bukan kaunselor" (migration 153 mungkin belum dijalankan).
-        supabase.rpc('is_active_counselor').then(
+        withTimeout(supabase.rpc('is_active_counselor'), OPTIONAL_TIMEOUT_MS).then(
           (result) => result,
           () => ({ data: false, error: null }),
         ),
