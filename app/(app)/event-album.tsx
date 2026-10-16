@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { useLocalSearchParams } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { FlatList, Modal, Platform, Pressable, Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -98,8 +98,18 @@ export default function EventAlbumScreen() {
     }
   }, []);
 
+  /** Acara yang datanya sedang dipapar — untuk muat semula senyap bila acara sama dibuka semula. */
+  const loadedEventIdRef = useRef<string | null>(null);
+
   const load = useCallback(async () => {
-    setLoading(true);
+    // Acara sama sudah ada data -> muat semula senyap (tiada spinner penuh, data lama kekal
+    // sehingga yang baharu tiba). Acara berbeza -> kosongkan supaya gambar acara lain tidak terpapar.
+    const silent = loadedEventIdRef.current !== null && loadedEventIdRef.current === eventId;
+    if (!silent) {
+      setLoading(true);
+      setPhotos([]);
+      setEvent(null);
+    }
     setBanner(null);
     if (!eventId) {
       // Jangan biarkan spinner berputar selama-lamanya bila param tiada — lihat nota `withTimeout`.
@@ -113,6 +123,7 @@ export default function EventAlbumScreen() {
         Promise.all([fetchUsrahEvent(eventId), fetchEventPhotos(eventId)]),
         'senarai album',
       );
+      loadedEventIdRef.current = eventId;
       setEvent(eventRow);
       setPhotos(photoRows);
 
@@ -128,9 +139,14 @@ export default function EventAlbumScreen() {
     }
   }, [eventId, loadToken]);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  // `useFocusEffect` (bukan `useEffect`): skrin tab tersembunyi kekal terpasang, jadi
+  // `useEffect` tidak muat semula bila album yang sama dibuka kali kedua — jumlah gambar
+  // pada senarai (dikira pelayan) tidak sepadan dengan isi album yang basi.
+  useFocusEffect(
+    useCallback(() => {
+      void load();
+    }, [load]),
+  );
 
   const canEdit =
     isSuperAdmin() || (event ? (event.event_type === 'usrah' ? usrahAccess.canEdit : programAccess.canEdit) : false);
