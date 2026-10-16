@@ -1,19 +1,19 @@
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Switch, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import { EventExtraInfoEditor } from '@/components/event-extra-info-editor';
 import { EventQrCard } from '@/components/event-qr-card';
 import { LocationPicker } from '@/components/location-picker';
 import { SaveShareButtons } from '@/components/save-share-buttons';
 import { ScreenHeader } from '@/components/screen-header';
-import { StaticMap } from '@/components/static-map';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { DateTimeField } from '@/components/ui/date-time-field';
 import { EmptyState } from '@/components/ui/empty-state';
+import { FormModal } from '@/components/ui/form-modal';
 import { LoadingScreen } from '@/components/ui/loading-screen';
 import { Notice } from '@/components/ui/notice';
 import { PickerField } from '@/components/ui/picker-field';
@@ -52,14 +52,12 @@ import {
   type EventMode,
   type UsrahEvent,
 } from '@/types/database';
-import { useColors } from '@/lib/theme';
 
 type Banner = { tone: 'positive' | 'info' | 'negative'; message: string } | null;
 
 const STATUS_TONE = { aktif: 'positive', tamat: 'neutral', nonaktif: 'warn' } as const;
 
 export default function UsrahEventDetailScreen() {
-  const colors = useColors();
   const goBack = useGoBack();
   const router = useRouter();
   /**
@@ -206,28 +204,20 @@ export default function UsrahEventDetailScreen() {
     !gantiUsrah ||
     (Number.isFinite(parsedGantiYear) && parsedGantiYear >= 2000 && parsedGantiYear <= 2100 && gantiMonth !== null);
 
-  /** Togol status program (`is_active`) atau kod QR (`qr_enabled`) — satu laluan kemas kini. */
-  const toggleFlag = useCallback(
-    async (patch: { is_active: boolean } | { qr_enabled: boolean }, failMessage: string) => {
-      if (!event || busy) return;
-
-      setBanner(null);
-      setBusy(true);
-      try {
-        hydrate(await updateUsrahEvent(event.id, patch));
-      } catch (caught) {
-        setBanner({ tone: 'negative', message: toMalayError(caught, failMessage) });
-      } finally {
-        setBusy(false);
-      }
-    },
-    [busy, event, hydrate],
-  );
-
   // --- RSVP -------------------------------------------------------------------
   const [rsvp, setRsvp] = useState<RsvpSummary | null>(null);
+  /** RSVP disorok: hanya dipapar dalam helaian bila admin menekan "Lihat RSVP". */
+  const [rsvpModalOpen, setRsvpModalOpen] = useState(false);
   const [rsvpBusy, setRsvpBusy] = useState<DeliveryMode | null>(null);
   const eventId = event?.id;
+
+  // Butang "Maklumat Tambahan" melompat ke bahagiannya: kedudukan diukur dengan onLayout.
+  const [containerY, setContainerY] = useState(0);
+  const [extraY, setExtraY] = useState(0);
+  const [scrollTarget, setScrollTarget] = useState<{ y: number; token: number } | undefined>(undefined);
+  const jumpToExtra = useCallback(() => {
+    setScrollTarget((previous) => ({ y: Math.max(0, containerY + extraY - 12), token: (previous?.token ?? 0) + 1 }));
+  }, [containerY, extraY]);
 
   useEffect(() => {
     if (!eventId) return;
@@ -259,6 +249,8 @@ export default function UsrahEventDetailScreen() {
         setBanner({ tone: 'negative', message: toMalayError(caught, 'Gagal menjana senarai RSVP.') });
       } finally {
         setRsvpBusy(null);
+        // Mesej hasil dipapar di halaman, di belakang helaian — tutup supaya ia kelihatan.
+        setRsvpModalOpen(false);
       }
     },
     [event, rsvpBusy],
@@ -356,8 +348,42 @@ export default function UsrahEventDetailScreen() {
   // atasnya — bukan kebenaran yang admin ini kebetulan pegang paling banyak.
   const canEdit = event.event_type === 'usrah' ? usrahAccess.canEdit : programAccess.canEdit;
 
+  const hasExtraSection = canEdit || extra.enabled;
+
+  /** Butang tindakan padat — dua sebaris. Dipapar kepada semua yang boleh melihat acara. */
+  const actionButtons = (
+    <View className="flex-row flex-wrap gap-3">
+      <View className="min-w-[45%] flex-1">
+        <Button
+          label="Kehadiran Live"
+          variant="secondary"
+          size="sm"
+          // Paparan besar untuk laptop/projektor semasa program berlangsung.
+          onPress={() => router.push({ pathname: '/(app)/admin/event-attendance-live', params: { id: event.id } })}
+        />
+      </View>
+      <View className="min-w-[45%] flex-1">
+        <Button
+          label="Album Gambar"
+          variant="secondary"
+          size="sm"
+          // Album: crowd-sourced (semua ahli boleh sumbang), bukan admin sahaja.
+          onPress={() => router.push({ pathname: '/(app)/event-album', params: { event_id: event.id } })}
+        />
+      </View>
+      <View className="min-w-[45%] flex-1">
+        <Button label="Lihat RSVP" variant="secondary" size="sm" onPress={() => setRsvpModalOpen(true)} />
+      </View>
+      {hasExtraSection ? (
+        <View className="min-w-[45%] flex-1">
+          <Button label="Maklumat Tambahan" variant="secondary" size="sm" onPress={jumpToExtra} />
+        </View>
+      ) : null}
+    </View>
+  );
+
   return (
-    <Screen padTop={false}>
+    <Screen padTop={false} scrollTarget={scrollTarget}>
       <ScreenHeader
         eyebrow="Panel Admin"
         title={event.name}
@@ -371,7 +397,7 @@ export default function UsrahEventDetailScreen() {
         onBackPress={goBack}
       />
 
-      <View className="gap-6 px-gutter pt-6">
+      <View className="gap-6 px-gutter pt-6" onLayout={(e) => setContainerY(e.nativeEvent.layout.y)}>
         {banner ? <ToastBanner tone={banner.tone} message={banner.message} /> : null}
 
         {/* Hilang sendiri sebaik poster berjaya dimuat naik semula. */}
@@ -398,11 +424,7 @@ export default function UsrahEventDetailScreen() {
           />
         ) : null}
 
-        {/*
-          --- Kod QR --------------------------------------------------------
-          Thumbnail padat (ketik untuk besarkan & simpan). Status dan togol
-          "Kod QR Aktif" duduk DALAM kad yang sama — bukan seksyen berasingan.
-        */}
+        {/* --- Kod QR: thumbnail padat (ketik untuk besarkan & simpan). --------- */}
         <View className="gap-3">
           <EventQrCard
             token={event.qr_token}
@@ -429,28 +451,6 @@ export default function UsrahEventDetailScreen() {
               ) : null}
               {!event.qr_enabled ? <Badge label="Kod QR dimatikan" tone="warn" /> : null}
             </View>
-
-            {canEdit ? (
-              <View className="flex-row items-center gap-3">
-                <View className="flex-1">
-                  <Text className="text-sm font-semibold text-ink">Kod QR Aktif</Text>
-                  <Text className="text-xs text-ink-muted">
-                    {event.qr_enabled
-                      ? 'Ahli boleh merekod kehadiran.'
-                      : 'Semua imbasan ditolak sehingga dihidupkan semula.'}
-                  </Text>
-                </View>
-                <Switch
-                  value={event.qr_enabled}
-                  onValueChange={(next) => void toggleFlag({ qr_enabled: next }, 'Gagal menukar status kod QR.')}
-                  disabled={busy}
-                  trackColor={{ false: colors.line, true: colors.primaryMid }}
-                  thumbColor={colors.white}
-                  ios_backgroundColor={colors.line}
-                  accessibilityLabel="Kod QR Aktif"
-                />
-              </View>
-            ) : null}
           </EventQrCard>
 
           {status !== 'aktif' ? (
@@ -459,57 +459,6 @@ export default function UsrahEventDetailScreen() {
               message="Kod ini tidak lagi menerima kehadiran kerana program sudah tamat tempoh atau dimatikan."
             />
           ) : null}
-
-          {/* Paparan besar untuk laptop/projektor semasa program berlangsung. */}
-          <Button
-            label="Lihat Kehadiran Live"
-            variant="secondary"
-            onPress={() => router.push({ pathname: '/(app)/admin/event-attendance-live', params: { id: event.id } })}
-          />
-
-          {/* Album Gambar: crowd-sourced (semua ahli boleh sumbang), bukan admin sahaja. */}
-          <Button
-            label="Lihat Album Gambar"
-            variant="secondary"
-            onPress={() => router.push({ pathname: '/(app)/event-album', params: { event_id: event.id } })}
-          />
-        </View>
-
-        {/* --- RSVP ---------------------------------------------------------- */}
-        <View>
-          <SectionTitle
-            title="RSVP Ahli"
-            caption="Belum respon dikira terhadap semua ahli aktif yang mempunyai akaun."
-          />
-          <Card>
-            <View className="gap-4">
-              <View className="flex-row">
-                <RsvpStat value={rsvp?.hadir} label="Akan Hadir" />
-                <RsvpStat value={rsvp?.tidak_hadir} label="Tidak Hadir" />
-                <RsvpStat value={rsvp?.belum} label="Belum Respon" />
-              </View>
-              {rsvp ? (
-                <Text className="text-center text-xs text-ink-muted">
-                  {'Anak dibawa: ' + rsvp.anak + ' · Jumlah makan: ' + (rsvp.hadir + rsvp.anak) + ' · Bermalam: ' + (rsvp.ahli_bermalam + rsvp.anak_bermalam) + ' (' + rsvp.ahli_bermalam + ' ahli, ' + rsvp.anak_bermalam + ' anak)'}
-                </Text>
-              ) : null}
-              <Text className="text-center text-xs text-ink-muted">
-                {rsvp
-                  ? rsvp.hadir + ' Akan Hadir · ' + rsvp.tidak_hadir + ' Tidak Hadir · ' + rsvp.belum + ' Belum Respon'
-                  : 'Ringkasan RSVP tidak dapat dimuatkan.'}
-              </Text>
-            </View>
-          </Card>
-          <View className="pt-3">
-            <SaveShareButtons
-              kind="file"
-              variant="secondary"
-              webLabel="Muat Turun Senarai RSVP"
-              nativeCaption="Senarai RSVP (.xlsx)"
-              busy={rsvpBusy}
-              onPress={(mode) => void downloadRsvp(mode)}
-            />
-          </View>
         </View>
 
         {/* --- Poster -------------------------------------------------------- */}
@@ -540,154 +489,129 @@ export default function UsrahEventDetailScreen() {
           ) : null}
         </View>
 
-        {/* --- Maklumat Tambahan --------------------------------------------- */}
-        {canEdit || extra.enabled ? (
+        {canEdit ? (
+          /* --- Suntingan: medan, kemudian satu kumpulan tindakan, Simpan paling bawah. --- */
           <View>
-            <SectionTitle title="Maklumat Tambahan" />
-            <EventExtraInfoEditor value={extra} onChange={setExtra} disabled={!canEdit || extraBusy} />
-            {canEdit ? (
-              <View className="pt-3">
-                <Button
-                  label="Simpan Maklumat Tambahan"
-                  variant="secondary"
-                  loading={extraBusy}
-                  disabled={extraBusy}
-                  onPress={() => void saveExtra()}
+            <SectionTitle
+              title="Sunting Maklumat"
+              caption="Menukar tarikh atau masa TAMAT mengira semula tetingkap sah."
+            />
+            <View className="gap-3">
+              <TextField
+                label={event.event_type === 'usrah' ? 'Nama sesi' : 'Nama program'}
+                value={name}
+                onChangeText={setName}
+                editable={!busy}
+                autoCapitalize="sentences"
+                autoCorrect={false}
+              />
+              {/* Mula di kiri, tamat di kanan — sama seperti skrin cipta. */}
+              <View className="flex-row items-start gap-3">
+                <View className="flex-1">
+                  <DateTimeField label="Tarikh mula" mode="date" value={startDate} onChange={setStartDate} disabled={busy} />
+                </View>
+                <View className="flex-1">
+                  <DateTimeField label="Tarikh tamat" mode="date" value={endDate} onChange={setEndDate} disabled={busy} />
+                </View>
+              </View>
+              <View className="flex-row items-start gap-3">
+                <View className="flex-1">
+                  <DateTimeField label="Masa mula" mode="time" value={startTime} onChange={setStartTime} disabled={busy} />
+                </View>
+                <View className="flex-1">
+                  <DateTimeField label="Masa tamat" mode="time" value={endTime} onChange={setEndTime} disabled={busy} />
+                </View>
+              </View>
+              {event.event_type === 'program' ? (
+                <>
+                  <ToggleRow
+                    icon="swap-horizontal-outline"
+                    title="Ganti Usrah"
+                    subtitle={
+                      !gantiUsrah
+                        ? 'Kehadiran program ini boleh dikira sebagai kehadiran Usrah bagi bulan yang dipilih.'
+                        : gantiValid && gantiMonth
+                          ? 'Dikira sebagai kehadiran Usrah bulan ' +
+                            (MONTH_NAMES[Number.parseInt(gantiMonth, 10) - 1] ?? '') +
+                            ' ' +
+                            parsedGantiYear +
+                            '. Kehadiran yang sudah direkod tidak berubah.'
+                          : 'Pilih tahun dan bulan usrah yang digantikan.'
+                    }
+                    value={gantiUsrah}
+                    onValueChange={setGantiUsrah}
+                    disabled={busy}
+                  />
+                  {gantiUsrah ? (
+                    <View className="flex-row items-start gap-3">
+                      <View className="flex-1">
+                        <TextField
+                          label="Tahun"
+                          placeholder="Contoh: 2026"
+                          value={gantiYear}
+                          onChangeText={(value) => setGantiYear(value.replace(/[^\d]/g, '').slice(0, 4))}
+                          editable={!busy}
+                          keyboardType="number-pad"
+                          error={gantiYear.length > 0 && !gantiValid ? 'Antara 2000 dan 2100.' : null}
+                        />
+                      </View>
+                      <View className="flex-1">
+                        <PickerField
+                          label="Bulan"
+                          value={gantiMonth}
+                          options={MONTH_OPTIONS}
+                          onChange={setGantiMonth}
+                          disabled={busy}
+                          clearable={false}
+                        />
+                      </View>
+                    </View>
+                  ) : null}
+                </>
+              ) : null}
+              <TextField
+                label="Lokasi"
+                value={locationText}
+                onChangeText={setLocationText}
+                editable={!busy}
+                autoCapitalize="sentences"
+                autoCorrect={false}
+              />
+              {/* Pin tanpa nama: ahli nampak "Ditandakan pada peta" sahaja — ingatkan admin. */}
+              {coords && !locationText.trim() ? (
+                <Notice tone="info" message="Pin sudah ditetapkan tetapi nama lokasi kosong. Taip nama tempat di atas supaya ahli nampak lokasi sebenar." />
+              ) : null}
+              {/* Satu-satunya peta: boleh disunting (carian, pin, koordinat). Tiada pratonton gambar berasingan. */}
+              <View>
+                <Text className="mb-1.5 text-xs text-ink-muted">
+                  Geofence: imbasan dalam radius dilabel Bersemuka; di luar radius dilabel Online. Geofence tidak menolak kehadiran.
+                </Text>
+                <LocationPicker
+                  latitude={coords?.latitude ?? null}
+                  longitude={coords?.longitude ?? null}
+                  radiusMeters={radius}
+                  onChange={setCoords}
+                  onPlaceSelected={setLocationText}
+                  disabled={busy}
                 />
               </View>
-            ) : null}
-          </View>
-        ) : null}
-
-        {/* --- Lokasi -------------------------------------------------------- */}
-        <View>
-          <SectionTitle
-            title="Lokasi & Geofence"
-            caption="Imbasan dalam radius dilabel Bersemuka; di luar radius dilabel Online. Geofence tidak menolak kehadiran."
-          />
-          <Card>
-            <View className="gap-2">
-              <Line label="Lokasi" value={event.location_text ?? 'Tiada'} />
-              {event.latitude !== null && event.longitude !== null ? (
-                <StaticMap latitude={Number(event.latitude)} longitude={Number(event.longitude)} />
-              ) : null}
-              <Line
-                label="Koordinat"
-                value={
-                  event.latitude !== null && event.longitude !== null
-                    ? Number(event.latitude).toFixed(6) + ', ' + Number(event.longitude).toFixed(6)
-                    : 'Tiada pin'
-                }
-              />
-              <Line label="Radius" value={event.geofence_radius_meters + ' meter'} />
-            </View>
-          </Card>
-        </View>
-
-        {/* --- Suntingan ----------------------------------------------------- */}
-        {canEdit ? (
-          <>
-            <View>
-              <SectionTitle
-                title="Status"
-                caption="Mematikan program menghentikan kehadiran serta-merta, tanpa menunggu tetingkap masa tamat."
-              />
-              <ToggleRow
-                icon="power-outline"
-                title="Program aktif"
-                subtitle="Matikan untuk menutup kehadiran lebih awal."
-                value={event.is_active}
-                onValueChange={(next) => void toggleFlag({ is_active: next }, 'Gagal menukar status program.')}
+              <StepperField
+                label="Radius geofence (10–5000 m)"
+                value={radius}
+                onChange={setRadius}
+                step={10}
+                min={10}
+                max={5000}
+                suffix="m"
                 disabled={busy}
               />
-            </View>
 
-            <View className="pb-8">
-              <SectionTitle
-                title="Sunting Maklumat"
-                caption="Menukar tarikh atau masa TAMAT mengira semula tetingkap sah."
-              />
-              <View className="gap-3">
-                <TextField
-                  label={event.event_type === 'usrah' ? 'Nama sesi' : 'Nama program'}
-                  value={name}
-                  onChangeText={setName}
-                  editable={!busy}
-                  autoCapitalize="sentences"
-                  autoCorrect={false}
-                />
-                {/* Mula di kiri, tamat di kanan — sama seperti skrin cipta. */}
-                <View className="flex-row items-start gap-3">
-                  <View className="flex-1">
-                    <DateTimeField label="Tarikh mula" mode="date" value={startDate} onChange={setStartDate} disabled={busy} />
-                  </View>
-                  <View className="flex-1">
-                    <DateTimeField label="Tarikh tamat" mode="date" value={endDate} onChange={setEndDate} disabled={busy} />
-                  </View>
-                </View>
-                <View className="flex-row items-start gap-3">
-                  <View className="flex-1">
-                    <DateTimeField label="Masa mula" mode="time" value={startTime} onChange={setStartTime} disabled={busy} />
-                  </View>
-                  <View className="flex-1">
-                    <DateTimeField label="Masa tamat" mode="time" value={endTime} onChange={setEndTime} disabled={busy} />
-                  </View>
-                </View>
-                {event.event_type === 'program' ? (
-                  <>
-                    <ToggleRow
-                      icon="swap-horizontal-outline"
-                      title="Ganti Usrah"
-                      subtitle={
-                        !gantiUsrah
-                          ? 'Kehadiran program ini boleh dikira sebagai kehadiran Usrah bagi bulan yang dipilih.'
-                          : gantiValid && gantiMonth
-                            ? 'Dikira sebagai kehadiran Usrah bulan ' +
-                              (MONTH_NAMES[Number.parseInt(gantiMonth, 10) - 1] ?? '') +
-                              ' ' +
-                              parsedGantiYear +
-                              '. Kehadiran yang sudah direkod tidak berubah.'
-                            : 'Pilih tahun dan bulan usrah yang digantikan.'
-                      }
-                      value={gantiUsrah}
-                      onValueChange={setGantiUsrah}
-                      disabled={busy}
-                    />
-                    {gantiUsrah ? (
-                      <View className="flex-row items-start gap-3">
-                        <View className="flex-1">
-                          <TextField
-                            label="Tahun"
-                            placeholder="Contoh: 2026"
-                            value={gantiYear}
-                            onChangeText={(value) => setGantiYear(value.replace(/[^\d]/g, '').slice(0, 4))}
-                            editable={!busy}
-                            keyboardType="number-pad"
-                            error={gantiYear.length > 0 && !gantiValid ? 'Antara 2000 dan 2100.' : null}
-                          />
-                        </View>
-                        <View className="flex-1">
-                          <PickerField
-                            label="Bulan"
-                            value={gantiMonth}
-                            options={MONTH_OPTIONS}
-                            onChange={setGantiMonth}
-                            disabled={busy}
-                            clearable={false}
-                          />
-                        </View>
-                      </View>
-                    ) : null}
-                  </>
-                ) : null}
+              {/* --- Satu kumpulan: suis, butang padat, kemudian Simpan penuh lebar --- */}
+              <View className="gap-3 pt-3">
                 <ToggleRow
                   icon="bed-outline"
                   title="Bermalam"
-                  subtitle={
-                    bermalam
-                      ? 'Ahli yang mengesahkan hadir diwajibkan bermalam.'
-                      : 'Tidak bermalam.'
-                  }
+                  subtitle={bermalam ? 'Ahli yang mengesahkan hadir diwajibkan bermalam.' : 'Tidak bermalam.'}
                   value={bermalam}
                   onValueChange={setBermalam}
                   disabled={busy}
@@ -704,32 +628,7 @@ export default function UsrahEventDetailScreen() {
                     ? 'Imbasan dari luar radius geofence ditolak.'
                     : 'Imbasan dari mana-mana lokasi diterima; luar radius dilabel Online.'}
                 </Text>
-                <TextField
-                  label="Lokasi"
-                  value={locationText}
-                  onChangeText={setLocationText}
-                  editable={!busy}
-                  autoCapitalize="sentences"
-                  autoCorrect={false}
-                />
-                <LocationPicker
-                  latitude={coords?.latitude ?? null}
-                  longitude={coords?.longitude ?? null}
-                  radiusMeters={radius}
-                  onChange={setCoords}
-                  onPlaceSelected={setLocationText}
-                  disabled={busy}
-                />
-                <StepperField
-                  label="Radius geofence (10–5000 m)"
-                  value={radius}
-                  onChange={setRadius}
-                  step={10}
-                  min={10}
-                  max={5000}
-                  suffix="m"
-                  disabled={busy}
-                />
+                {actionButtons}
                 <Button
                   label="Simpan Perubahan"
                   loading={busy}
@@ -738,9 +637,91 @@ export default function UsrahEventDetailScreen() {
                 />
               </View>
             </View>
+          </View>
+        ) : (
+          <>
+            {/* Pelihat sahaja: ringkasan teks lokasi (tanpa gambar peta) dan butang padat. */}
+            <View>
+              <SectionTitle title="Lokasi" />
+              <Card>
+                <View className="gap-2">
+                  <Line label="Lokasi" value={event.location_text ?? 'Tiada'} />
+                  <Line
+                    label="Koordinat"
+                    value={
+                      event.latitude !== null && event.longitude !== null
+                        ? Number(event.latitude).toFixed(6) + ', ' + Number(event.longitude).toFixed(6)
+                        : 'Tiada pin'
+                    }
+                  />
+                  <Line label="Radius" value={event.geofence_radius_meters + ' meter'} />
+                </View>
+              </Card>
+            </View>
+            {actionButtons}
           </>
-        ) : null}
+        )}
+
+        {/* --- Maklumat Tambahan: paling bawah; butang "Maklumat Tambahan" melompat ke sini. --- */}
+        <View className="pb-8" onLayout={(e) => setExtraY(e.nativeEvent.layout.y)}>
+          {hasExtraSection ? (
+            <>
+              <SectionTitle title="Maklumat Tambahan" />
+              <EventExtraInfoEditor value={extra} onChange={setExtra} disabled={!canEdit || extraBusy} />
+              {canEdit ? (
+                <View className="pt-3">
+                  <Button
+                    label="Simpan Maklumat Tambahan"
+                    variant="secondary"
+                    loading={extraBusy}
+                    disabled={extraBusy}
+                    onPress={() => void saveExtra()}
+                  />
+                </View>
+              ) : null}
+            </>
+          ) : null}
+        </View>
       </View>
+
+      {/* --- RSVP: disorok; dibuka melalui butang "Lihat RSVP". ------------------- */}
+      <FormModal
+        visible={rsvpModalOpen}
+        title="RSVP Ahli"
+        description={event.name}
+        dismissable={!rsvpBusy}
+        onClose={() => setRsvpModalOpen(false)}
+      >
+        <View className="gap-4">
+          <Card>
+            <View className="gap-4">
+              <View className="flex-row">
+                <RsvpStat value={rsvp?.hadir} label="Akan Hadir" />
+                <RsvpStat value={rsvp?.tidak_hadir} label="Tidak Hadir" />
+                <RsvpStat value={rsvp?.belum} label="Belum Respon" />
+              </View>
+              {rsvp ? (
+                <Text className="text-center text-xs text-ink-muted">
+                  {'Anak dibawa: ' + rsvp.anak + ' · Jumlah makan: ' + (rsvp.hadir + rsvp.anak) + ' · Bermalam: ' + (rsvp.ahli_bermalam + rsvp.anak_bermalam) + ' (' + rsvp.ahli_bermalam + ' ahli, ' + rsvp.anak_bermalam + ' anak)'}
+                </Text>
+              ) : (
+                <Text className="text-center text-xs text-ink-muted">Ringkasan RSVP tidak dapat dimuatkan.</Text>
+              )}
+              <Text className="text-center text-xs text-ink-muted">
+                Belum respon dikira terhadap semua ahli aktif yang mempunyai akaun.
+              </Text>
+            </View>
+          </Card>
+          <SaveShareButtons
+            kind="file"
+            variant="secondary"
+            webLabel="Muat Turun Senarai RSVP"
+            nativeCaption="Senarai RSVP (.xlsx)"
+            busy={rsvpBusy}
+            onPress={(mode) => void downloadRsvp(mode)}
+          />
+        </View>
+      </FormModal>
     </Screen>
   );
 }

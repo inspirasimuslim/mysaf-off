@@ -25,9 +25,11 @@ type Props = ViewProps & {
   scrollTopSignal?: number;
   /** Bila nilai ini berubah (dan bukan 0), skrin ditatal ke bawah — cth. mesej terbaru dalam chat. */
   scrollEndSignal?: number;
+  /** Tatal ke kedudukan `y` (piksel dari atas kandungan) setiap kali `token` berubah — cth. butang yang melompat ke satu bahagian. */
+  scrollTarget?: { y: number; token: number };
 };
 
-export function Screen({ scroll = true, padTop = true, wide = false, scrollTopSignal = 0, scrollEndSignal = 0, className = '', children, ...rest }: Props) {
+export function Screen({ scroll = true, padTop = true, wide = false, scrollTopSignal = 0, scrollEndSignal = 0, scrollTarget, className = '', children, ...rest }: Props) {
   const insets = useSafeAreaInsets();
   const desktop = useIsDesktop();
   // Dipasang di panel kanan (panel berkembar): isi lebar panel, tanpa padding atas.
@@ -48,6 +50,11 @@ export function Screen({ scroll = true, padTop = true, wide = false, scrollTopSi
   useEffect(() => {
     if (scrollEndSignal) scrollRef.current?.scrollToEnd({ animated: true });
   }, [scrollEndSignal]);
+  const scrollTargetY = scrollTarget?.y;
+  const scrollTargetToken = scrollTarget?.token ?? 0;
+  useEffect(() => {
+    if (scrollTargetToken && scrollTargetY !== undefined) scrollRef.current?.scrollTo({ y: scrollTargetY, animated: true });
+  }, [scrollTargetToken, scrollTargetY]);
 
   const body = (
     <View className="w-full self-center" style={{ maxWidth: embedded ? undefined : maxWidth, paddingTop }}>

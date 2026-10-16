@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { Linking, Platform, Pressable, Text, View } from 'react-native';
 
 import { EventQrCard } from '@/components/event-qr-card';
@@ -123,44 +123,57 @@ export default function EventInfoScreen() {
     }
   }, [draftAnak, draftBawaAnak, draftBermalam, draftResponse, event, myRsvp, rsvpSaving]);
 
-  useEffect(() => {
-    if (!id) return;
-    let active = true;
+  /*
+    Dibaca semula SETIAP KALI skrin difokus, bukan sekali bagi setiap `id`.
+    `event-info` ialah skrin tab tersembunyi (`href: null`) yang kekal terpasang:
+    membuka poster yang sama untuk kali kedua tidak memasang semula skrin, jadi
+    `useEffect([id])` tidak berjalan lagi dan lokasi/tarikh yang baru disunting
+    admin kekal "Belum ditetapkan". Muat semula kali kedua senyap — kandungan
+    sedia ada dikekalkan sehingga data baharu tiba.
+  */
+  useFocusEffect(
+    useCallback(() => {
+      if (!id) return;
+      let active = true;
 
-    void (async () => {
-      setLoading(true);
-      try {
-        /*
-          Direktori dibaca semula dan bukan diserahkan melalui parameter
-          navigasi: pautan dalam yang dibuka terus (contoh: refresh halaman di
-          web) tidak membawa apa-apa selain `id`, dan skrin yang bergantung pada
-          parameter yang dihantar akan kosong di situ.
-        */
-        const [rows, mine] = await Promise.all([
-          fetchAllEventsDirectory(),
-          // Jawapan sedia ada tidak kritikal: gagal dibaca bermakna butang tidak disorot, bukan skrin rosak.
-          fetchMyRsvp(id).catch(() => null),
-        ]);
-        // Maklumat tambahan pilihan juga — gagal dibaca bermakna bahagiannya tidak dipapar, bukan skrin rosak.
-        const extra = await fetchEventExtraInfo(id).catch(() => null);
-        if (active) {
-          setEvent(rows.find((row) => row.id === id) ?? null);
-          setMyRsvpState(mine);
-          setExtraInfo(extra);
+      void (async () => {
+        try {
+          /*
+            Direktori dibaca semula dan bukan diserahkan melalui parameter
+            navigasi: pautan dalam yang dibuka terus (contoh: refresh halaman di
+            web) tidak membawa apa-apa selain `id`, dan skrin yang bergantung pada
+            parameter yang dihantar akan kosong di situ.
+          */
+          const [rows, mine] = await Promise.all([
+            fetchAllEventsDirectory(),
+            // Jawapan sedia ada tidak kritikal: gagal dibaca bermakna butang tidak disorot, bukan skrin rosak.
+            fetchMyRsvp(id).catch(() => null),
+          ]);
+          // Maklumat tambahan pilihan juga — gagal dibaca bermakna bahagiannya tidak dipapar, bukan skrin rosak.
+          const extra = await fetchEventExtraInfo(id).catch(() => null);
+          if (active) {
+            setEvent(rows.find((row) => row.id === id) ?? null);
+            setMyRsvpState(mine);
+            setExtraInfo(extra);
+          }
+        } catch {
+          // Muat semula gagal: kekalkan apa yang sudah dipaparkan. Pemuatan pertama
+          // yang gagal meninggalkan `event` null -> "Acara tidak dijumpai".
+        } finally {
+          if (active) setLoading(false);
         }
-      } catch {
-        if (active) setEvent(null);
-      } finally {
-        if (active) setLoading(false);
-      }
-    })();
+      })();
 
-    return () => {
-      active = false;
-    };
-  }, [id]);
+      return () => {
+        active = false;
+      };
+    }, [id]),
+  );
 
-  if (loading) return <LoadingScreen />;
+  // Skrin kekal terpasang: bila `id` bertukar, jangan papar acara sebelumnya sementara data baharu dimuatkan.
+  const staleEvent = event !== null && event.id !== id;
+
+  if (loading || staleEvent) return <LoadingScreen />;
 
   if (!event) {
     return (
@@ -339,7 +352,17 @@ export default function EventInfoScreen() {
               <Row icon="pricetag-outline" label="Jenis" value={EVENT_TYPE_LABEL[event.event_type]} />
               <Row icon="calendar-outline" label="Tarikh" value={dateRangeLabel(event.start_date, event.end_date)} />
               <Row icon="time-outline" label="Masa" value={timeRangeLabel(event.start_time, event.end_time)} />
-              <Row icon="location-outline" label="Lokasi" value={event.location_text ?? 'Belum ditetapkan'} />
+              <Row
+                icon="location-outline"
+                label="Lokasi"
+                value={
+                  event.location_text?.trim()
+                    ? event.location_text
+                    : event.latitude !== null && event.longitude !== null
+                      ? 'Ditandakan pada peta'
+                      : 'Belum ditetapkan'
+                }
+              />
               {event.latitude !== null && event.longitude !== null ? (
                 <StaticMap latitude={event.latitude} longitude={event.longitude} />
               ) : null}

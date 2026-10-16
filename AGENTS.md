@@ -670,3 +670,17 @@ Rujukan: `supabase/migrations/20261014000159_pemadaman_akaun_data_baharu.sql`, `
 # Versi Android (2026-10-15)
 - `android.versionCode` dinaikkan ke **38** (versionName kekal 1.3.31): Play menolak 37 ("already been used"). Setiap muat naik AAB/APK baharu ke Play
   MESTI versionCode yang belum pernah digunakan (semak Play Console > App bundle explorer). Ingat `android/app/build.gradle` (tidak dijejak git) mesti ditetapkan sama.
+
+# Skrin edit program/usrah + lokasi poster (2026-10-16, tiada migration)
+
+Rujukan: `app/(app)/admin/usrah-event-detail.tsx`, `app/(app)/event-info.tsx`, `components/ui/screen.tsx` (prop `scrollTarget`).
+- **Pepijat lokasi poster**: `event-info` ialah skrin tab tersembunyi (`href: null`) yang kekal terpasang, jadi `useEffect([id])` tidak
+  memuat semula bila poster yang sama dibuka kali kedua — lokasi yang baru disunting kekal "Belum ditetapkan". Kini guna `useFocusEffect`
+  (muat semula senyap setiap kali difokus). Lokasi tanpa nama tetapi ada pin dipapar "Ditandakan pada peta". PELAJARAN: skrin di
+  `Tabs.Screen ... href: null` TIDAK boleh bergantung pada `useEffect([id])` untuk data yang boleh berubah.
+- **Skrin edit**: pratonton peta gambar (`StaticMap`) dibuang (hanya `LocationPicker` yang boleh disunting kekal; pelihat tanpa kebenaran
+  edit nampak ringkasan teks lokasi). Suis "Program aktif" dan "Kod QR Aktif" DIBUANG daripada UI (`is_active`/`qr_enabled` kekal di DB;
+  lencana "Kod QR dimatikan" masih dipapar tetapi tiada cara menghidupkannya semula dari app). RSVP disorok — dibuka dalam helaian
+  melalui "Lihat RSVP". Satu butang "Maklumat Tambahan" melompat (skrol) ke editor di bahagian paling bawah halaman.
+- **Susunan akhir**: medan sunting → Bermalam → Jenis kehadiran → butang padat (Kehadiran Live, Album Gambar, Lihat RSVP, Maklumat
+  Tambahan) → "Simpan Perubahan" penuh lebar → editor Maklumat Tambahan (simpan sendiri).
