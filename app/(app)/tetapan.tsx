@@ -386,7 +386,7 @@ export default function TetapanScreen() {
             <SectionTitle title="Tetapan Akaun" />
             <View className="gap-4">
               <ToggleRow
-                icon="finger-print"
+                icon={support && !support.hasHardware ? 'close-circle' : 'finger-print'}
                 title="Log Masuk Biometrik"
                 subtitle={biometricSubtitle}
                 value={biometricOn}

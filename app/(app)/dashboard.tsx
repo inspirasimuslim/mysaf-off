@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Animated, Easing, Platform, Pressable, Text, View, type TextStyle } from 'react-native';
 
 import { BantuanNotice } from '@/components/bantuan-notice';
+import { BiometricNotice } from '@/components/biometric-notice';
 import { FeedbackNotice } from '@/components/feedback-notice';
 import { WhatsNewNotice } from '@/components/whats-new-notice';
 import { BusinessAdCarousel } from '@/components/business-ad-carousel';
@@ -242,6 +243,7 @@ export default function DashboardScreen() {
               sumbangan yang sudah dibuat, bukan sesuatu yang perlu dilangsaikan.
             */}
             <BantuanNotice />
+            <BiometricNotice />
             <WhatsNewNotice />
             <FeedbackNotice />
 
