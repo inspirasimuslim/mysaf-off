@@ -22,7 +22,7 @@ import { useColors } from '@/lib/theme';
  *   hijau penuh          — hadir usrah
  *   atas kuning, bawah hijau — hadir melalui program "Ganti Usrah"
  *   hitam                — tidak hadir (termasuk bulan yang sudah tamat tanpa sebarang rekod)
- *   kelabu               — belum ada rekod (bulan semasa dan bulan akan datang)
+ *   kosong (garis halus) — bulan semasa/akan datang, atau sebelum ahli menjadi ahli
  */
 
 const DOT_SIZE = 14;
@@ -58,6 +58,21 @@ function MonthDot({ month }: { month: UsrahMonthDetail | undefined }) {
         <View style={{ flex: 1, backgroundColor: GANTI_COLOR }} />
         <View style={{ flex: 1, backgroundColor: colors.primary }} />
       </View>
+    );
+  }
+
+  // Tiada rekod (bulan semasa/akan datang, atau sebelum menjadi ahli) -> kosong: bulatan lutsinar bergaris halus.
+  if (attended === null) {
+    return (
+      <View
+        style={{
+          width: DOT_SIZE,
+          height: DOT_SIZE,
+          borderRadius: DOT_SIZE / 2,
+          borderWidth: 1,
+          borderColor: colors.line,
+        }}
+      />
     );
   }
 

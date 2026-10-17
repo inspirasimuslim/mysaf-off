@@ -40,6 +40,29 @@ export function isUsrahMonthEnded(year: number, month: number, now: Date = new D
   return year < currentYear || (year === currentYear && month < currentMonth);
 }
 
+/**
+ * Ahli yang direkod SEBELUM tarikh ini ialah "ahli lama" (data diimport): semua bulan dikira.
+ * Ahli yang direkod pada/selepas tarikh ini ialah "ahli baharu": hanya bulan SELEPAS (dan termasuk)
+ * bulan dia menjadi ahli dikira — bulan sebelumnya kosong. Waktu Malaysia (UTC+8).
+ */
+const NEW_MEMBER_RULE_START = Date.parse('2026-10-17T00:00:00+08:00');
+
+/** Bulan ini sudah tamat DAN layak dikira tidak hadir automatik (bukan sebelum ahli menjadi ahli). */
+export function isUsrahMonthCounted(year: number, month: number, joinedAt: string | null, now: Date = new Date()): boolean {
+  if (!isUsrahMonthEnded(year, month, now)) return false;
+  if (!joinedAt) return true;
+  const joinedMs = Date.parse(joinedAt);
+  if (!Number.isFinite(joinedMs) || joinedMs < NEW_MEMBER_RULE_START) return true;
+  const my = new Date(joinedMs + 8 * 60 * 60 * 1000);
+  return year > my.getUTCFullYear() || (year === my.getUTCFullYear() && month >= my.getUTCMonth() + 1);
+}
+
+async function fetchMemberJoinedAt(memberId: string): Promise<string | null> {
+  const { data, error } = await supabase.from('members').select('created_at').eq('id', memberId).maybeSingle();
+  if (error) return null;
+  return (data as { created_at: string } | null)?.created_at ?? null;
+}
+
 export type UsrahImportProgress = { done: number; total: number };
 
 type AttendanceRow = {
@@ -84,18 +107,21 @@ export async function fetchUsrahYear(memberId: string, year: number): Promise<Us
  * `{ attended: null, source: null }`.
  */
 export async function fetchUsrahYearDetail(memberId: string, year: number): Promise<UsrahMonthDetail[]> {
-  const { data, error } = await supabase
-    .from('usrah_monthly_attendance')
-    .select('month, attended, attendance_source')
-    .eq('member_id', memberId)
-    .eq('year', year);
+  const [{ data, error }, joinedAt] = await Promise.all([
+    supabase
+      .from('usrah_monthly_attendance')
+      .select('month, attended, attendance_source')
+      .eq('member_id', memberId)
+      .eq('year', year),
+    fetchMemberJoinedAt(memberId),
+  ]);
 
   if (error) throw error;
 
   const months: UsrahMonthDetail[] = Array.from({ length: 12 }, (_, index) => ({
     attended: null,
     source: null,
-    autoAbsent: isUsrahMonthEnded(year, index + 1),
+    autoAbsent: isUsrahMonthCounted(year, index + 1, joinedAt),
   }));
   (
     (data as { month: number; attended: boolean | null; attendance_source: UsrahAttendanceSource }[] | null) ?? []
@@ -104,7 +130,7 @@ export async function fetchUsrahYearDetail(memberId: string, year: number): Prom
       months[row.month - 1] = {
         attended: row.attended,
         source: row.attendance_source,
-        autoAbsent: row.attended === null && isUsrahMonthEnded(year, row.month),
+        autoAbsent: row.attended === null && isUsrahMonthCounted(year, row.month, joinedAt),
       };
     }
   });
@@ -189,11 +215,14 @@ type RecordRow = {
  * LAJNAH TARBIAH membaca semua.
  */
 export async function fetchUsrahYearRecords(memberId: string, year: number): Promise<UsrahMonthRecord[]> {
-  const { data, error } = await supabase
-    .from('usrah_monthly_attendance')
-    .select('month, attended, attendance_source, kawasan_attended, location_text, attended_date, recorded_by')
-    .eq('member_id', memberId)
-    .eq('year', year);
+  const [{ data, error }, joinedAt] = await Promise.all([
+    supabase
+      .from('usrah_monthly_attendance')
+      .select('month, attended, attendance_source, kawasan_attended, location_text, attended_date, recorded_by')
+      .eq('member_id', memberId)
+      .eq('year', year),
+    fetchMemberJoinedAt(memberId),
+  ]);
 
   if (error) throw error;
 
@@ -205,7 +234,7 @@ export async function fetchUsrahYearRecords(memberId: string, year: number): Pro
     locationText: null,
     attendedDate: null,
     recordedBy: null,
-    autoAbsent: isUsrahMonthEnded(year, index + 1),
+    autoAbsent: isUsrahMonthCounted(year, index + 1, joinedAt),
   }));
 
   ((data as RecordRow[] | null) ?? []).forEach((row) => {
@@ -218,7 +247,7 @@ export async function fetchUsrahYearRecords(memberId: string, year: number): Pro
       locationText: row.location_text,
       attendedDate: row.attended_date,
       recordedBy: row.recorded_by,
-      autoAbsent: row.attended === null && isUsrahMonthEnded(year, row.month),
+      autoAbsent: row.attended === null && isUsrahMonthCounted(year, row.month, joinedAt),
     };
   });
 
