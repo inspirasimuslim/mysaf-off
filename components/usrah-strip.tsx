@@ -21,8 +21,8 @@ import { useColors } from '@/lib/theme';
  * Warna membawa makna, bukan hiasan:
  *   hijau penuh          — hadir usrah
  *   atas kuning, bawah hijau — hadir melalui program "Ganti Usrah"
- *   hitam                — tidak hadir
- *   kelabu               — belum ada rekod (termasuk bulan yang belum berlaku)
+ *   hitam                — tidak hadir (termasuk bulan yang sudah tamat tanpa sebarang rekod)
+ *   kelabu               — belum ada rekod (bulan semasa dan bulan akan datang)
  */
 
 const DOT_SIZE = 14;
@@ -46,7 +46,8 @@ function dotColor(attended: boolean | null, colors: ThemeColors): string {
  */
 function MonthDot({ month }: { month: UsrahMonthDetail | undefined }) {
   const colors = useColors();
-  const attended = month?.attended ?? null;
+  // Bulan sudah tamat tanpa rekod -> hitam (tidak hadir automatik), bukan kelabu.
+  const attended = month?.attended ?? (month?.autoAbsent ? false : null);
   const ganti = attended === true && month?.source === 'program_ganti';
 
   if (ganti) {

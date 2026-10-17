@@ -26,6 +26,7 @@ function status(record: UsrahMonthRecord): { label: string; tone: 'positive' | '
       : { label: 'Hadir', tone: 'positive' };
   }
   if (record.attended === false) return { label: 'Tidak Hadir', tone: 'neutral' };
+  if (record.autoAbsent) return { label: 'Tidak Hadir (automatik)', tone: 'neutral' };
   return { label: 'Tiada Rekod', tone: 'neutral' };
 }
 

@@ -22,7 +22,23 @@ export type UsrahYear = (boolean | null)[];
  */
 export type UsrahAttendanceSource = 'usrah' | 'program_ganti';
 
-export type UsrahMonthDetail = { attended: boolean | null; source: UsrahAttendanceSource | null };
+export type UsrahMonthDetail = {
+  attended: boolean | null;
+  source: UsrahAttendanceSource | null;
+  /** Bulan sudah tamat tanpa sebarang rekod -> dikira tidak hadir (paparan sahaja, DB tidak diubah). */
+  autoAbsent: boolean;
+};
+
+/**
+ * Sudahkah bulan itu TAMAT (waktu Malaysia, UTC+8)? Bulan semasa belum tamat, jadi
+ * ahli yang belum scan bulan ini kekal "belum ada rekod" dan bukan terus tidak hadir.
+ */
+export function isUsrahMonthEnded(year: number, month: number, now: Date = new Date()): boolean {
+  const my = new Date(now.getTime() + 8 * 60 * 60 * 1000);
+  const currentYear = my.getUTCFullYear();
+  const currentMonth = my.getUTCMonth() + 1;
+  return year < currentYear || (year === currentYear && month < currentMonth);
+}
 
 export type UsrahImportProgress = { done: number; total: number };
 
@@ -76,12 +92,20 @@ export async function fetchUsrahYearDetail(memberId: string, year: number): Prom
 
   if (error) throw error;
 
-  const months: UsrahMonthDetail[] = Array.from({ length: 12 }, () => ({ attended: null, source: null }));
+  const months: UsrahMonthDetail[] = Array.from({ length: 12 }, (_, index) => ({
+    attended: null,
+    source: null,
+    autoAbsent: isUsrahMonthEnded(year, index + 1),
+  }));
   (
     (data as { month: number; attended: boolean | null; attendance_source: UsrahAttendanceSource }[] | null) ?? []
   ).forEach((row) => {
     if (row.month >= 1 && row.month <= 12) {
-      months[row.month - 1] = { attended: row.attended, source: row.attendance_source };
+      months[row.month - 1] = {
+        attended: row.attended,
+        source: row.attendance_source,
+        autoAbsent: row.attended === null && isUsrahMonthEnded(year, row.month),
+      };
     }
   });
 
@@ -145,6 +169,8 @@ export type UsrahMonthRecord = {
   /** 'YYYY-MM-DD' */
   attendedDate: string | null;
   recordedBy: UsrahRecordedBy | null;
+  /** Tiada rekod hingga bulan tamat -> dikira tidak hadir (paparan sahaja). */
+  autoAbsent: boolean;
 };
 
 type RecordRow = {
@@ -179,6 +205,7 @@ export async function fetchUsrahYearRecords(memberId: string, year: number): Pro
     locationText: null,
     attendedDate: null,
     recordedBy: null,
+    autoAbsent: isUsrahMonthEnded(year, index + 1),
   }));
 
   ((data as RecordRow[] | null) ?? []).forEach((row) => {
@@ -191,6 +218,7 @@ export async function fetchUsrahYearRecords(memberId: string, year: number): Pro
       locationText: row.location_text,
       attendedDate: row.attended_date,
       recordedBy: row.recorded_by,
+      autoAbsent: row.attended === null && isUsrahMonthEnded(year, row.month),
     };
   });
 
