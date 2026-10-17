@@ -262,7 +262,7 @@ menimpa pilihan borang dengan `null` (sebelum ini `sektor_pekerjaan: null`
 dihantar setiap kali). `toPendapatanRange()` dikemas kini ke bracket baharu
 (<15000 → `10000-14999`, <20000 → `15000-19999`, selebihnya `20000+`).
 
-## Susulan Pekerjaan (2026-09-30, migration 082–083, BELUM di-push)
+## Susulan Pekerjaan (2026-09-30, migration 082–083, sudah live di produksi)
 
 Rujukan: `20260929000082_pekerjaan_pesara_backup.sql`,
 `20260929000083_pekerjaan_pesara_dan_completeness_v5.sql`. Mengatasi butiran
@@ -287,7 +287,7 @@ Rujukan: `20260929000082_pekerjaan_pesara_backup.sql`,
   majikan tidak). Kerajaan/swasta/glc tidak berubah. `ParsedMember` juga
   mengecualikan `bidang_pekerjaan_lama`; `members_full_export()` +1 kolum.
 
-## Susulan 2 Pekerjaan (2026-09-30, migration 084, BELUM di-push)
+## Susulan 2 Pekerjaan (2026-09-30, migration 084, sudah live di produksi)
 
 - "Bekerja/Tidak Bekerja" dan "Berniaga/Tidak Berniaga" kini `Segmented`
   (sama komponen Status Perkahwinan), bukan suis; logik/lalai tidak berubah.
@@ -327,7 +327,7 @@ fungsi baharu, tiada data sedia ada disentuh).
 - **Dikecualikan dengan sengaja** (data sensitif): Dashboard Kelengkapan Data,
   `lib/ahli-import.ts`, `lib/member-sheet.ts`/eksport, `members_full_export()`.
 
-# Keluarga + Jawatan Rasmi + Kemaskini Terakhir (2026-09-30, migration 086–087, BELUM di-push)
+# Keluarga + Jawatan Rasmi + Kemaskini Terakhir (2026-09-30, migration 086–087, sudah live di produksi)
 
 Rujukan: `20260929000086_keluarga_jawatan_backup.sql` (snapshot
 `backup_20260929.members_pre_keluarga_jawatan`), `20260929000087_keluarga_jawatan_rasmi.sql`,
@@ -366,7 +366,7 @@ Rujukan: `20260929000086_keluarga_jawatan_backup.sql` (snapshot
   `members_full_export()`/Excel TIDAK diubah; `ParsedMember` mengecualikan
   kedua-dua medan supaya upsert import tidak menimpanya.
 
-## Pembetulan: Jawatan dari carta organisasi (2026-09-30, migration 088–089, BELUM di-push)
+## Pembetulan: Jawatan dari carta organisasi (2026-09-30, migration 088–089, sudah live di produksi)
 
 Menggantikan butiran `jawatan_rasmi` dalam bahagian "Keluarga + Jawatan Rasmi"
 di atas — reka bentuk medan manual itu SALAH FAHAM. Jawatan kini automatik
@@ -388,7 +388,7 @@ daripada `org_positions` (carta organisasi).
 - `cenderung_baitul_muslim`, pembuangan `nama_anak` dan format "Kemaskini
   terakhir" dalam bahagian yang sama KEKAL.
 
-## Penarafan Ahli dan Generasi — pembetulan `jawatan_pas_3` (2026-09-30, migration 091, BELUM di-push)
+## Penarafan Ahli dan Generasi — pembetulan `jawatan_pas_3` (2026-09-30, migration 091, sudah live di produksi)
 
 `activity_scores_internal()` (versi semasa = `20260916000045_yuran_toyyibpay.sql`,
 BUKAN 039) masih merujuk `members.jawatan_pas_3` yang dipadam 074 -> fungsi
@@ -397,7 +397,7 @@ plpgsql hanya gagal ketika dipanggil, menjatuhkan `member_activity_score()`,
 baris itu. Logik komponen 5 (Jawatan PAS) TIDAK diubah. PELAJARAN: `drop column`
 pada `members` mesti disusuli imbasan grep semua fungsi plpgsql untuk nama kolum.
 
-**Susulan (migration 092, BELUM di-push)**: komponen 5 (Jawatan PAS) dalam
+**Susulan (migration 092, sudah live di produksi)**: komponen 5 (Jawatan PAS) dalam
 `activity_scores_internal()` kini guna `members.jawatan_pas_aktif` SAHAJA
 (true = 1 markah, false/null = 0) — bukan lagi teks `jawatan_pas_1/2`.
 Komponen lain tidak berubah (salinan tepat versi 091). Kesan: ahli dengan
@@ -423,7 +423,7 @@ pernah disegerakkan, jadi pasangan dipautkan boleh berbeza dan `list_mbm_couples
 - **Known minor issue (belum disentuh, semak lain hari):** ahli 0145 dipautkan
   MBM tetapi `status_perkahwinan` NULL. Senarai Ahli MBM tidak bergantung padanya.
 
-# Permohonan Zakat / Bantuan (one-off) — TABUNG ZAKAT (2026-10-13, migration 148, BELUM di-push ke produksi)
+# Permohonan Zakat / Bantuan (one-off) — TABUNG ZAKAT (2026-10-13, migration 148, sudah live di produksi)
 
 Rujukan: `supabase/migrations/20261013000148_permohonan_bantuan.sql`, `lib/bantuan.ts`,
 `app/(app)/bantuan*.tsx` (ahli), `app/(app)/admin/bantuan*.tsx` (admin), `lib/department-access.ts`
@@ -472,7 +472,7 @@ dijalankan di produksi) apabila borang manual Google Form diberikan — tiada mi
   `lib/ahli-import.ts`, `lib/member-sheet.ts`/eksport, `members_full_export()`.
 
 
-# Maklum Balas gaya chat — ahli <-> department (2026-10-13, migration 151, BELUM di-push ke produksi)
+# Maklum Balas gaya chat — ahli <-> department (2026-10-13, migration 151, sudah live di produksi)
 
 Rujukan: `supabase/migrations/20261013000151_feedback_chat.sql`, `lib/feedback-chat.ts`,
 `app/(app)/maklum-balas.tsx` (ahli: senarai + chat baharu), `app/(app)/maklum-balas-chat.tsx` (skrin
@@ -493,7 +493,7 @@ perbualan dikongsi), `app/(app)/admin/maklum-balas-chat.tsx` (peti masuk admin),
 - Diuji pada Postgres 16 tempatan dengan skema tiruan (akses, balas, tanda baca, RLS); blok `admin_notifications()`
   TIDAK diuji (bergantung pada migration 148).
 
-## Maklum Balas ikut department (2026-10-13, migration 152, BELUM di-push ke produksi)
+## Maklum Balas ikut department (2026-10-13, migration 152, sudah live di produksi)
 
 Menggantikan peti masuk tunggal (151): TIAP seksyen department di Hub Admin ada butang "Maklum Balas" sendiri
 (`feedbackRow()` dalam `admin/index.tsx`, lencana belum dibaca) yang membuka `admin/maklum-balas-chat?dept=<id>`.
@@ -503,7 +503,7 @@ Menggantikan peti masuk tunggal (151): TIAP seksyen department di Hub Admin ada 
 TSUA, LHESA, LPN, LK (LAJNAH KEBAJIKAN), LM, I-GEM — nama department sedia ada dalam seed. Susunan Hub: SUA, TSUA,
 JSU, BK, LT, LP, LHESA, LPG, LPN, LK, LM, LEA, JDSM, I-GEM, Organisasi. Perbualan sendiri tetap dikecualikan.
 
-# Bantuan Kaunseling (2026-10-13, migration 153, BELUM di-push ke produksi)
+# Bantuan Kaunseling (2026-10-13, migration 153, sudah live di produksi)
 
 Rujukan: `supabase/migrations/20261013000153_bantuan_kaunseling.sql`, `lib/counseling.ts`,
 `app/(app)/kaunseling.tsx` + `kaunseling-chat.tsx` (ahli/kaunselor), `app/(app)/admin/kaunselor.tsx` (LK),
@@ -523,7 +523,7 @@ Rujukan: `supabase/migrations/20261013000153_bantuan_kaunseling.sql`, `lib/couns
   dan notifikasi). `admin_notifications()` blok ke-5 (`kaunseling`, tanpa nama ahli). Ahli: lencana tile + banner Utama.
 - **Belum dibuat**: kemas kini Data Safety Play Console / `app/dasar-privasi.tsx` (mesej kaunseling, nombor telefon kaunselor).
 
-# Infaq Tabung Zakat (2026-10-13, migration 154, BELUM di-push ke produksi)
+# Infaq Tabung Zakat (2026-10-13, migration 154, sudah live di produksi)
 
 Rujukan: `supabase/migrations/20261013000154_infaq_tabung_zakat.sql`, `supabase/functions/create-zakat-bill/`,
 `supabase/functions/_shared/toyyibpay.ts` (`GATEWAY_KINDS.zakat`), `lib/zakat-infaq.ts`, `lib/toyyibpay.ts` (kind `zakat`),
@@ -549,7 +549,7 @@ Rujukan: `lib/app-changelog.ts`, `app/(app)/features.tsx`, `components/whats-new
   (`lib/secure-storage`, kunci `mysaff.whatsnew.seen`) — per peranti, bukan DB. Tiada entri untuk versi semasa = tiada notifikasi.
 - Versi dinaikkan ke 1.3.31 (37) untuk build seterusnya (1.3.30 = 36).
 
-# Kehadiran manual ikut acara (2026-10-13, migration 155, BELUM di-push ke produksi)
+# Kehadiran manual ikut acara (2026-10-13, migration 155, sudah live di produksi)
 
 Rujukan: `supabase/migrations/20261013000155_admin_event_attendance.sql`, `lib/usrah.ts`
 (`fetchAttendanceEvents`, `adminSetEventAttendance`), `app/(app)/admin/ahli-usrah-history.tsx`.
@@ -587,7 +587,7 @@ Rujukan: `vercel.json`, `.github/dependabot.yml`. Hasil semakan 10 item keselama
 - **Belum / di dashboard**: kata laluan minimum 6 -> 8 + huruf & nombor (Authentication > Providers > Email), semak had kadar
   log masuk, hadkan kunci Google Maps (nama pakej + SHA-1, domain web), CAPTCHA & kunci akaun ditangguh.
 
-# Hari Jadi Bulan: serlah hari ini + ketik ke profil; label kaunselor (2026-10-14, migration 156, BELUM di-push ke produksi)
+# Hari Jadi Bulan: serlah hari ini + ketik ke profil; label kaunselor (2026-10-14, migration 156, sudah live di produksi)
 
 Rujukan: `supabase/migrations/20261014000156_birthday_this_month_profil.sql`, `app/(app)/hari-jadi-bulan.tsx`,
 `lib/open-member.ts` (`useMemberOpener`), `lib/birthdays.ts`, `app/(app)/admin/kaunselor.tsx`.
@@ -598,7 +598,7 @@ Rujukan: `supabase/migrations/20261014000156_birthday_this_month_profil.sql`, `a
   Sebelum migration 156 dijalankan: tiada `hari_ini`/`nombor_ahli` -> skrin kekal berfungsi tetapi tiada serlahan & nama tak boleh diketik.
 - Kaunselor: label "Dibuang" -> "Tidak lagi bertugas" (lencana, tarikh, tajuk seksyen, notis). Butang tindakan "Buang" -> "Nyahtugas" (juga tajuk + sahkan dialog).
 
-# NGO Rasmi (tile Direktori) — LAJNAH PEMBANGUNAN NGO (2026-10-14, migration 157, BELUM di-push ke produksi)
+# NGO Rasmi (tile Direktori) — LAJNAH PEMBANGUNAN NGO (2026-10-14, migration 157, sudah live di produksi)
 
 Rujukan: `supabase/migrations/20261014000157_ngo_rasmi.sql`, `lib/ngo.ts`, `lib/department-access.ts` (`useNgoAccess`),
 `app/(app)/ngo.tsx` (senarai), `app/(app)/ngo-detail.tsx` (butiran + jawatankuasa), `components/ngo-form-modal.tsx`,
@@ -624,7 +624,7 @@ Postgres 16 tempatan (skema tiruan): 7 NGO, 96 ahli jawatankuasa, jalan semula t
   tiada butang "Cari" lagi; RPC `counseling_member_search` tidak berubah.
 - Susunan tile Direktori (3 lajur): Zakat · Kaunseling · Baitul Muslim / Bisnes Ahli · NGO Rasmi · Maklum Balas / Ciri-ciri MySAFF · Album · Dokumen.
 
-# Tema Header Utama — perayaan / hari jadi (2026-10-14, migration 158, BELUM di-push ke produksi)
+# Tema Header Utama — perayaan / hari jadi (2026-10-14, migration 158, sudah live di produksi)
 
 Rujukan: `supabase/migrations/20261014000158_header_themes.sql`, `lib/header-theme.ts`, `components/screen-header.tsx`
 (prop `backgroundUrl`), `app/(app)/dashboard.tsx`, `app/(app)/admin/tema-header.tsx` (Hub Admin → Organisasi → Tema Header).
@@ -656,7 +656,7 @@ Rujukan: `supabase/migrations/20261014000158_header_themes.sql`, `lib/header-the
 - Belum: aset skrin App Store, ikon 1024 tanpa alfa, akaun demo untuk penyemak, label privasi, URL dasar privasi awam, navigasi iOS (`navigationUrl` TODO).
 
 
-# Pemadaman akaun & ciri baharu (2026-10-15, migration 159, BELUM di-push ke produksi)
+# Pemadaman akaun & ciri baharu (2026-10-15, migration 159, sudah live di produksi)
 
 Rujukan: `supabase/migrations/20261014000159_pemadaman_akaun_data_baharu.sql`, `supabase/functions/admin-delete-member/index.ts`,
 `app/dasar-privasi.tsx` (dikemas kini 15 Okt 2026), `docs/play-store.md` (senarai Data Safety). Diuji pada Postgres 16 tempatan (skema tiruan).
@@ -684,3 +684,10 @@ Rujukan: `app/(app)/admin/usrah-event-detail.tsx`, `app/(app)/event-info.tsx`, `
   melalui "Lihat RSVP". Satu butang "Maklumat Tambahan" melompat (skrol) ke editor di bahagian paling bawah halaman.
 - **Susunan akhir**: medan sunting → Bermalam → Jenis kehadiran → butang padat (Kehadiran Live, Album Gambar, Lihat RSVP, Maklumat
   Tambahan) → "Simpan Perubahan" penuh lebar → editor Maklumat Tambahan (simpan sendiri).
+
+# Status produksi (2026-10-17)
+
+Migration 001–159 disahkan sudah live (`supabase migration list --linked` sepadan; `db push` tiada apa tertunggak).
+Edge Function `create-zakat-bill`, `toyyibpay-callback`, `admin-delete-member` sudah di-deploy. Penanda "BELUM di-push"
+dalam rekod di atas sebelum tarikh ini sudah dibuang. Tinggal: tugaskan admin (TABUNG ZAKAT, KESIHATAN AHLI, LAJNAH
+PEMBANGUNAN NGO), ganti data contoh NGO, dan uji bayaran infaq ToyyibPay (RM1).
