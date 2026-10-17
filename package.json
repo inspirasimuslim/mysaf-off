@@ -7,7 +7,7 @@
     "@expo/vector-icons": "^15.0.2",
     "@react-google-maps/api": "^2.20.8",
     "@react-native-community/datetimepicker": "9.1.0",
-    "@supabase/supabase-js": "^2.115.0",
+    "@supabase/supabase-js": "^2.117.3",
     "expo": "~57.0.20",
     "expo-build-properties": "~57.0.22",
     "expo-camera": "~57.0.4",
@@ -35,7 +35,7 @@
     "expo-symbols": "~57.0.2",
     "expo-system-ui": "~57.0.3",
     "expo-web-browser": "~57.0.2",
-    "nativewind": "^4.2.6",
+    "nativewind": "^4.2.7",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-native": "0.86.3",
@@ -59,7 +59,7 @@
     "@types/react": "~19.2.2",
     "eslint": "^9.0.0",
     "eslint-config-expo": "~57.0.2",
-    "pg": "^8.23.0",
+    "pg": "^8.23.1",
     "typescript": "~6.0.3"
   },
   "scripts": {
