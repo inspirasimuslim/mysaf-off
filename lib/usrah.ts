@@ -297,6 +297,36 @@ export async function adminClearUsrahAttendance(input: { memberId: string; year:
   if (error) throw new Error(error.message);
 }
 
+export type UsrahSessionOption = {
+  eventId: string;
+  name: string;
+  /** 'YYYY-MM-DD' */
+  date: string;
+  locationText: string | null;
+};
+
+/**
+ * Sesi usrah yang SUDAH berlangsung bagi bulan + kawasan (waktu Malaysia) — untuk
+ * mengisi tarikh dan tempat secara automatik semasa admin menanda ahli hadir.
+ */
+export async function fetchUsrahSessions(year: number, month: number, kawasan: string): Promise<UsrahSessionOption[]> {
+  const todayMy = new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const { data, error } = await supabase
+    .from('usrah_events')
+    .select('id, name, start_date, location_text')
+    .eq('event_type', 'usrah')
+    .eq('kawasan_usrah', kawasan)
+    .eq('year', year)
+    .eq('month', month)
+    .is('archived_at', null)
+    .lte('start_date', todayMy)
+    .order('start_date', { ascending: true });
+  if (error) throw error;
+  return ((data as { id: string; name: string; start_date: string; location_text: string | null }[] | null) ?? []).map(
+    (row) => ({ eventId: row.id, name: row.name, date: row.start_date, locationText: row.location_text }),
+  );
+}
+
 /** Tahun untuk pemilih: tahun depan hingga tahun data terawal (2025). */
 export function usrahYearOptions(): { value: string; label: string }[] {
   const current = new Date().getFullYear();

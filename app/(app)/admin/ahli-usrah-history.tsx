@@ -1,6 +1,7 @@
 import { useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
+import { Notice } from '@/components/ui/notice';
 
 import { NoAccessScreen } from '@/components/no-access';
 import { ScreenHeader } from '@/components/screen-header';
@@ -22,10 +23,12 @@ import {
   adminSetEventAttendance,
   adminSetUsrahAttendance,
   fetchAttendanceEvents,
+  fetchUsrahSessions,
   fetchUsrahYearRecords,
   type AttendanceEventOption,
   usrahYearOptions,
   type UsrahMonthRecord,
+  type UsrahSessionOption,
 } from '@/lib/usrah';
 import { KAWASAN_USRAH_OPTIONS, MONTH_NAMES, dateLabel } from '@/types/database';
 
@@ -77,6 +80,8 @@ export default function AhliUsrahHistoryScreen() {
   const [events, setEvents] = useState<AttendanceEventOption[] | null>(null);
   const [eventDraft, setEventDraft] = useState<{ eventId: string | null; mode: 'bersemuka' | 'online' } | null>(null);
   const [eventSaving, setEventSaving] = useState(false);
+  /** Sesi usrah yang sudah berlangsung bagi bulan + kawasan terpilih; null = sedang/belum dicari. */
+  const [sessions, setSessions] = useState<UsrahSessionOption[] | null>(null);
 
   const load = useCallback(async () => {
     if (!memberId) return;
@@ -104,6 +109,40 @@ export default function AhliUsrahHistoryScreen() {
       void loadEvents();
     }, [accessLoading, canView, load, loadEvents]),
   );
+
+  // Pilih kawasan -> cari sesi usrah bulan itu dan isi tarikh + tempat secara automatik.
+  const draftMonth = draft?.month ?? null;
+  const draftKawasan = draft?.kawasan ?? null;
+  const draftHadir = draft?.hadir ?? null;
+  useEffect(() => {
+    if (draftMonth === null || !draftKawasan || draftHadir !== 'hadir') {
+      setSessions(null);
+      return;
+    }
+    let active = true;
+    setSessions(null);
+    void (async () => {
+      try {
+        const found = await fetchUsrahSessions(Number(year), draftMonth, draftKawasan);
+        if (!active) return;
+        setSessions(found);
+        const first = found[0];
+        // Satu sesi sahaja (atau yang terawal) diisi terus; jika ramai, admin boleh tukar.
+        if (first) {
+          setDraft((current) =>
+            current && current.month === draftMonth && current.kawasan === draftKawasan
+              ? { ...current, tarikh: first.date, lokasi: first.locationText ?? '' }
+              : current,
+          );
+        }
+      } catch {
+        if (active) setSessions([]);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [draftMonth, draftKawasan, draftHadir, year]);
 
   const saveEvent = async () => {
     if (!eventDraft?.eventId || !memberId || eventSaving) return;
@@ -354,24 +393,59 @@ export default function AhliUsrahHistoryScreen() {
                   label="Kawasan dihadiri"
                   value={draft.kawasan}
                   options={KAWASAN_USRAH_OPTIONS}
-                  onChange={(next) => setDraft({ ...draft, kawasan: next })}
+                  onChange={(next) => setDraft({ ...draft, kawasan: next, tarikh: '', lokasi: '' })}
                   placeholder="Tiada rekod kawasan"
                   disabled={saving}
                 />
-                <TextField
-                  label="Nama tempat (pilihan)"
-                  placeholder="Contoh: Surau Taman Melawati"
-                  value={draft.lokasi}
-                  onChangeText={(value) => setDraft({ ...draft, lokasi: value })}
-                  editable={!saving}
-                  autoCapitalize="words"
-                />
-                <OptionalDateField
-                  label="Tarikh (pilihan)"
-                  value={draft.tarikh}
-                  onChange={(value) => setDraft({ ...draft, tarikh: value })}
-                  disabled={saving}
-                />
+                {!draft.kawasan ? (
+                  <Text className="text-sm text-ink-muted">
+                    Pilih kawasan — tarikh dan tempat usrah akan diisi automatik.
+                  </Text>
+                ) : sessions === null ? (
+                  <Text className="text-sm text-ink-muted">Mencari usrah…</Text>
+                ) : sessions.length > 0 ? (
+                  <>
+                    {sessions.length > 1 ? (
+                      <PickerField
+                        label="Sesi usrah"
+                        value={sessions.find((item) => item.date === draft.tarikh)?.eventId ?? sessions[0]?.eventId ?? null}
+                        options={sessions.map((item) => ({ value: item.eventId, label: dateLabel(item.date) }))}
+                        clearable={false}
+                        onChange={(next) => {
+                          const chosen = sessions.find((item) => item.eventId === next);
+                          if (chosen) setDraft({ ...draft, tarikh: chosen.date, lokasi: chosen.locationText ?? '' });
+                        }}
+                        disabled={saving}
+                      />
+                    ) : null}
+                    <View className="gap-1 rounded-field border border-line bg-surface p-3">
+                      <Text className="text-xs text-ink-muted">Dikesan automatik</Text>
+                      <Text className="text-sm font-semibold text-ink">{draft.tarikh ? dateLabel(draft.tarikh) : '-'}</Text>
+                      <Text className="text-sm text-ink">{draft.lokasi || 'Tempat tidak direkodkan'}</Text>
+                    </View>
+                  </>
+                ) : (
+                  <>
+                    <Notice
+                      tone="warn"
+                      message="Tiada usrah dijumpai bagi kawasan dan bulan ini. Isi tarikh dan tempat secara manual jika perlu."
+                    />
+                    <TextField
+                      label="Nama tempat (pilihan)"
+                      placeholder="Contoh: Surau Taman Melawati"
+                      value={draft.lokasi}
+                      onChangeText={(value) => setDraft({ ...draft, lokasi: value })}
+                      editable={!saving}
+                      autoCapitalize="words"
+                    />
+                    <OptionalDateField
+                      label="Tarikh (pilihan)"
+                      value={draft.tarikh}
+                      onChange={(value) => setDraft({ ...draft, tarikh: value })}
+                      disabled={saving}
+                    />
+                  </>
+                )}
               </>
             ) : (
               <Text className="text-sm text-ink-muted">
