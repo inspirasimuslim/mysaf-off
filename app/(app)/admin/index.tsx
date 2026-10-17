@@ -668,7 +668,7 @@ export default function AdminHubScreen() {
         {superAdmin ? (
           <CollapsibleSection
             variant="plain"
-            title="Organisasi"
+            title="Super Admin"
             count={9}
             defaultOpen={openByDefault}>
             <ActionRow
