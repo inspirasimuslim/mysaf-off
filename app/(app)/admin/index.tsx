@@ -1,4 +1,5 @@
 import { useRouter } from 'expo-router';
+import { useState } from 'react';
 import { View } from 'react-native';
 
 import { PendingTasksNotice } from '@/components/admin-notifications-ui';
@@ -8,6 +9,7 @@ import { ActionRow } from '@/components/ui/action-row';
 import { CollapsibleSection } from '@/components/ui/collapsible-section';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Screen } from '@/components/ui/screen';
+import { TextField } from '@/components/ui/text-field';
 import {
   useDepartmentAccess,
   useNgoAccess,
@@ -23,6 +25,7 @@ import {
 } from '@/lib/department-access';
 import { useCounselorUnread } from '@/lib/counseling';
 import { departmentLabel, useFeedbackDepartments } from '@/lib/feedback-chat';
+import { HubSearchProvider } from '@/lib/hub-search';
 import { useGoBack } from '@/lib/navigation';
 import { ORG_CHART_DEPARTMENT } from '@/lib/org-chart';
 import { usePermissions } from '@/lib/permissions';
@@ -48,6 +51,7 @@ import { kawasanUsrahLabel } from '@/types/database';
 export default function AdminHubScreen() {
   const router = useRouter();
   const goBack = useGoBack();
+  const [hubSearch, setHubSearch] = useState('');
   const { isSuperAdmin, isActiveNaqib, isCounselor, kawasanAreas, loading: permissionsLoading } = usePermissions();
   const memberAccess = useMemberAccess();
   const usrahAccess = useUsrahAccess();
@@ -151,8 +155,22 @@ export default function AdminHubScreen() {
         onBackPress={goBack}
       />
 
+      <HubSearchProvider value={hubSearch}>
       <View className="gap-4 px-gutter pt-6">
         <PendingTasksNotice />
+        {/* Cari modul: tapis kad ikut tajuk/keterangan merentas semua seksyen (seksyen yang sepadan dibuka sendiri). */}
+        {accessLoading || visibleSections < 3 ? null : (
+          <TextField
+            label="Cari dalam Hub"
+            placeholder="cth. yuran, zakat, kaunselor"
+            value={hubSearch}
+            onChangeText={setHubSearch}
+            autoCapitalize="none"
+            autoCorrect={false}
+            returnKeyType="search"
+            topAnchored
+          />
+        )}
         {accessLoading ? null : (
         <>
         {/*
@@ -777,6 +795,7 @@ export default function AdminHubScreen() {
         </>
         )}
       </View>
+      </HubSearchProvider>
     </Screen>
   );
 }

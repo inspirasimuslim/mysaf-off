@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useState, type ReactNode } from 'react';
+import { Children, isValidElement, useState, type ReactElement, type ReactNode } from 'react';
 import { Pressable, Text, View } from 'react-native';
+import { useHubSearch } from '@/lib/hub-search';
 import { useColors } from '@/lib/theme';
 
 type Props = {
@@ -46,12 +47,38 @@ export function CollapsibleSection({
   const [open, setOpen] = useState(defaultOpen);
   const plain = variant === 'plain';
 
+  /*
+    Carian Hub Admin (lib/hub-search): bila ada kata carian, seksyen dibuka paksa dan hanya kad
+    (`ActionRow` — anak yang mempunyai prop `title`) yang sepadan dengan tajuk/subtitle dipaparkan.
+    Seksyen tanpa padanan disembunyikan. Anak yang bukan kad bertajuk (cth. seksyen naqib) dikekalkan.
+    Tanpa kata carian (lalai) tiada apa berubah.
+  */
+  const query = useHubSearch().trim().toLowerCase();
+  let shownChildren: ReactNode = children;
+  let searching = false;
+  if (query) {
+    searching = true;
+    const titleHit = title.toLowerCase().includes(query);
+    if (!titleHit) {
+      const kept = Children.toArray(children).filter((child) => {
+        if (!isValidElement(child)) return false;
+        const props = (child as ReactElement<{ title?: unknown; subtitle?: unknown }>).props;
+        if (typeof props.title !== 'string') return true;
+        const haystack = (props.title + ' ' + (typeof props.subtitle === 'string' ? props.subtitle : '')).toLowerCase();
+        return haystack.includes(query);
+      });
+      if (kept.length === 0) return null;
+      shownChildren = kept;
+    }
+  }
+  const isOpen = open || searching;
+
   return (
     <View className={plain ? '' : 'overflow-hidden rounded-card border border-line bg-surface'}>
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={title}
-        accessibilityState={{ expanded: open }}
+        accessibilityState={{ expanded: isOpen }}
         onPress={() => setOpen((current) => !current)}
         className={`flex-row items-center gap-4 active:opacity-70 ${plain ? 'py-2' : 'p-card'}`}>
         <View className="flex-1">
@@ -73,11 +100,11 @@ export function CollapsibleSection({
           </View>
         ) : null}
 
-        <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={18} color={colors.inkMuted} />
+        <Ionicons name={isOpen ? 'chevron-up' : 'chevron-down'} size={18} color={colors.inkMuted} />
       </Pressable>
 
-      {open ? (
-        <View className={plain ? 'gap-4 pt-3' : 'gap-4 border-t border-line p-card'}>{children}</View>
+      {isOpen ? (
+        <View className={plain ? 'gap-4 pt-3' : 'gap-4 border-t border-line p-card'}>{shownChildren}</View>
       ) : null}
     </View>
   );
