@@ -691,3 +691,11 @@ Migration 001–159 disahkan sudah live (`supabase migration list --linked` sepa
 Edge Function `create-zakat-bill`, `toyyibpay-callback`, `admin-delete-member` sudah di-deploy. Penanda "BELUM di-push"
 dalam rekod di atas sebelum tarikh ini sudah dibuang. Tinggal: tugaskan admin (TABUNG ZAKAT, KESIHATAN AHLI, LAJNAH
 PEMBANGUNAN NGO), ganti data contoh NGO, dan uji bayaran infaq ToyyibPay (RM1).
+
+# Statistik Tarbiah: tidak hadir automatik (2026-10-19, migration 160, sudah live di produksi)
+
+Rujukan: `supabase/migrations/20261018000160_stat_tarbiah_auto_absent.sql`. `stat_tarbiah()` kini mengira ahli tanpa rekod
+bagi bulan yang sudah tamat (waktu Malaysia) sebagai TIDAK HADIR; ahli lama (`created_at` < 2026-10-17 MY) semua bulan, ahli
+baharu dari bulan menyertai, ahli `disekat` dikecualikan HANYA daripada baris automatik. Rekod sedia ada sentiasa dikira
+(termasuk bulan semasa). Kesan produksi: Ogos 7/100% -> 323/2.2%, September 0/null -> 323/0%. Bentuk jsonb tidak berubah.
+`DonutStat`: kategori ke-4+ digabung menjadi "Lain-lain" (kelabu) — palet 3 warna tidak lagi dikitar.

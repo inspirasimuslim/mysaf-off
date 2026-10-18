@@ -28,6 +28,7 @@ import { useColors } from '@/lib/theme';
 /** Palet kategori — urutan tetap, tidak dikitar. Lulus validator (mod cerah). */
 const CATEGORICAL = ['#157347', '#D97706', '#2563EB'] as const;
 const NO_RECORD_COLOR = '#D1D5DB';
+const OTHER_COLOR = '#6B7280';
 
 function percent(count: number, total: number): string {
   if (total <= 0) return '0%';
@@ -125,14 +126,21 @@ export function DonutStat({
 }) {
   const colors = useColors();
   const coloured = useMemo(() => {
-    let categoryIndex = 0;
-    return slices.map((slice) => {
-      // Warna mengikut kedudukan kategori dalam senarai tetap, bukan saiznya.
-      const color = isNoRecord(slice.label)
-        ? NO_RECORD_COLOR
-        : (CATEGORICAL[categoryIndex++ % CATEGORICAL.length] as string);
-      return { ...slice, color };
-    });
+    // Palet hanya ada 3 warna tersahih. Kategori ke-4 dan seterusnya DIGABUNG
+    // menjadi satu kepingan "Lain-lain" (kelabu) — warna tidak dikitar semula
+    // kerana dua kepingan berwarna sama tidak boleh dibezakan.
+    const known = slices.filter((slice) => !isNoRecord(slice.label));
+    const noRecord = slices.filter((slice) => isNoRecord(slice.label));
+    const head = known.slice(0, CATEGORICAL.length);
+    const rest = known.slice(CATEGORICAL.length);
+    const out: Array<StatSlice & { color: string }> = head.map((slice, index) => ({
+      ...slice,
+      color: CATEGORICAL[index] as string,
+    }));
+    if (rest.length) {
+      out.push({ label: 'Lain-lain', count: rest.reduce((sum, slice) => sum + slice.count, 0), color: OTHER_COLOR });
+    }
+    return out.concat(noRecord.map((slice) => ({ ...slice, color: NO_RECORD_COLOR })));
   }, [slices]);
 
   const recorded = coloured.filter((slice) => !isNoRecord(slice.label)).reduce((sum, slice) => sum + slice.count, 0);
