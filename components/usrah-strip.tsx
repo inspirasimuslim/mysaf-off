@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useState, type ReactNode } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import type { ThemeColors } from '@/constants/theme';
@@ -25,9 +25,9 @@ import { useColors } from '@/lib/theme';
  *   kosong (garis halus) — bulan semasa/akan datang, atau sebelum ahli menjadi ahli
  */
 
-const DOT_SIZE = 14;
+const DOT_SIZE = 16;
 /** Ruang untuk label menegak; label tiga huruf pada 9px muat dalam 26px. */
-const LABEL_BOX = 26;
+const LABEL_BOX = 28;
 /** Separuh atas bulatan program ganti. */
 const GANTI_COLOR = '#EAB308';
 
@@ -57,6 +57,9 @@ function MonthDot({ month }: { month: UsrahMonthDetail | undefined }) {
         accessibilityLabel="Hadir melalui program ganti usrah">
         <View style={{ flex: 1, backgroundColor: GANTI_COLOR }} />
         <View style={{ flex: 1, backgroundColor: colors.primary }} />
+        <View style={{ position: 'absolute', inset: 0, alignItems: 'center', justifyContent: 'center' }}>
+          <Ionicons name="checkmark" size={11} color="#FFFFFF" />
+        </View>
       </View>
     );
   }
@@ -76,15 +79,29 @@ function MonthDot({ month }: { month: UsrahMonthDetail | undefined }) {
     );
   }
 
+  // Bentuk membawa makna juga (bukan warna sahaja): tanda ✓ = hadir, ✕ = tidak hadir.
   return (
     <View
+      accessibilityLabel={attended ? 'Hadir' : 'Tidak hadir'}
       style={{
         width: DOT_SIZE,
         height: DOT_SIZE,
         borderRadius: DOT_SIZE / 2,
         backgroundColor: dotColor(attended, colors),
-      }}
-    />
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}>
+      <Ionicons name={attended ? 'checkmark' : 'close'} size={11} color="#FFFFFF" />
+    </View>
+  );
+}
+
+function LegendItem({ children, label }: { children: ReactNode; label: string }) {
+  return (
+    <View className="flex-row items-center gap-1.5">
+      {children}
+      <Text className="text-xs text-ink-muted">{label}</Text>
+    </View>
   );
 }
 
@@ -162,7 +179,7 @@ export function UsrahStrip({ userId }: { userId: string | null }) {
               <Text
                 style={{
                   width: LABEL_BOX,
-                  fontSize: 9,
+                  fontSize: 11,
                   textAlign: 'center',
                   color: colors.inkFaint,
                   transform: [{ rotate: '-90deg' }],
@@ -173,6 +190,18 @@ export function UsrahStrip({ userId }: { userId: string | null }) {
             </View>
           </View>
         ))}
+      </View>
+
+      <View className="mt-2 flex-row flex-wrap gap-x-4 gap-y-1">
+        <LegendItem label="Hadir">
+          <MonthDot month={{ attended: true, source: 'usrah', autoAbsent: false }} />
+        </LegendItem>
+        <LegendItem label="Tidak hadir">
+          <MonthDot month={{ attended: false, source: null, autoAbsent: false }} />
+        </LegendItem>
+        <LegendItem label="Belum direkod">
+          <MonthDot month={undefined} />
+        </LegendItem>
       </View>
     </Pressable>
   );

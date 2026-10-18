@@ -91,7 +91,7 @@ export function AchievementBadge({ rank }: { rank: MyActivityRank }) {
               color={item.done ? TICK : CROSS}
             />
             <Text
-              className="flex-1 text-[11px]"
+              className="flex-1 text-xs"
               style={{ color: item.done ? '#FFFFFF' : 'rgba(255,255,255,0.55)' }}
               numberOfLines={1}>
               {item.label}

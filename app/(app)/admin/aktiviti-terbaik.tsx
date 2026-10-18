@@ -381,7 +381,7 @@ function PodiumCard({ row, rank }: { row: MemberActivity; rank: number }) {
           <Text className="font-bold" style={{ fontSize: 34, lineHeight: 38, color: medal.color, fontVariant: ['tabular-nums'] }}>
             {row.total_score}
           </Text>
-          <Text className="text-[10px] text-ink-muted">markah</Text>
+          <Text className="text-xs text-ink-muted">markah</Text>
         </View>
       </View>
 
@@ -449,7 +449,7 @@ function ScoreChips({ row, compact = false }: { row: MemberActivity; compact?: b
             size={compact ? 10 : 12}
             color={chip.earned ? colors.primary : colors.inkFaint}
           />
-          <Text className={`${compact ? 'text-[10px]' : 'text-xs'} font-semibold ${chip.earned ? 'text-primary' : 'text-ink-faint'}`}>
+          <Text className={`${compact ? 'text-xs' : 'text-xs'} font-semibold ${chip.earned ? 'text-primary' : 'text-ink-faint'}`}>
             {chip.label}
           </Text>
         </View>
@@ -567,7 +567,7 @@ function GenerationRow({ row, rank, maxTotal }: { row: GenerationActivity; rank:
           <Text className="text-lg font-bold text-ink" style={{ fontVariant: ['tabular-nums'] }}>
             {row.jumlah_markah_generasi}
           </Text>
-          <Text className="text-[10px] text-ink-muted">markah</Text>
+          <Text className="text-xs text-ink-muted">markah</Text>
         </View>
       </View>
 
@@ -743,7 +743,7 @@ function ScoringGuide() {
             <Text className="flex-1 text-xs leading-4 text-ink-muted">{text}</Text>
           </View>
         ))}
-        <Text className="mt-1 text-[11px] leading-4 text-ink-faint">
+        <Text className="mt-1 text-xs leading-4 text-ink-faint">
           PIPIS dikira ikut tarikh rekod dimasukkan ke sistem — sumbangan yang diimport dikira pada tarikh import.
         </Text>
       </View>

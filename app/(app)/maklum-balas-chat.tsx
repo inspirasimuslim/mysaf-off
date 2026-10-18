@@ -136,7 +136,7 @@ function ChatContent({ id }: { id?: string }) {
                   {message.body}
                 </Text>
               </View>
-              <Text className="mt-1 px-1 text-[11px] text-ink-muted">{formatChatTime(message.created_at)}</Text>
+              <Text className="mt-1 px-1 text-xs text-ink-muted">{formatChatTime(message.created_at)}</Text>
             </View>
           );
         })}

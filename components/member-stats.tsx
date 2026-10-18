@@ -157,7 +157,7 @@ export function DonutStat({
             centerLabelComponent={() => (
               <View className="items-center">
                 <Text className="text-xl font-bold text-ink">{recorded}</Text>
-                <Text className="text-[10px] text-ink-muted">{centerCaption}</Text>
+                <Text className="text-xs text-ink-muted">{centerCaption}</Text>
               </View>
             )}
           />
@@ -355,7 +355,7 @@ export function GenerationColumns({
         <Text className="flex-1 text-sm text-ink-muted">
           {activeSlice ? activeSlice.count + ' ' + unit : ''}
         </Text>
-        {selected === null ? <Text className="text-[10px] text-ink-faint">terbesar</Text> : null}
+        {selected === null ? <Text className="text-xs text-ink-faint">terbesar</Text> : null}
       </Pressable>
 
       {width > 0 ? (
@@ -373,7 +373,7 @@ export function GenerationColumns({
           barBorderTopRightRadius={3}
           yAxisThickness={0}
           yAxisLabelWidth={Y_LABEL_WIDTH}
-          yAxisTextStyle={{ color: colors.inkFaint, fontSize: 10 }}
+          yAxisTextStyle={{ color: colors.inkFaint, fontSize: 11 }}
           xAxisThickness={1}
           xAxisColor={colors.line}
           labelsExtraHeight={axis.extraHeight}
@@ -387,7 +387,7 @@ export function GenerationColumns({
         <View style={{ height: COLUMN_HEIGHT + 24 + axis.extraHeight }} />
       )}
 
-      <Text className="mt-1 text-center text-[10px] text-ink-faint">Kod generasi · ketuk lajur untuk bilangan tepat</Text>
+      <Text className="mt-1 text-center text-xs text-ink-faint">Kod generasi · ketuk lajur untuk bilangan tepat</Text>
     </View>
   );
 }
