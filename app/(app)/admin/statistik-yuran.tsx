@@ -53,7 +53,7 @@ export default function StatistikYuranScreen() {
       {(stat) => (
         <>
           <Panel title="Kutipan berjaya mengikut bulan" caption={'Jumlah bayaran berjaya, ' + year}>
-            <MonthColumns key={year} values={stat.bulanan.map((row) => row.jumlah)} format={formatRm} axisFormat={compactRm} />
+            <MonthColumns key={year} year={year} values={stat.bulanan.map((row) => row.jumlah)} format={formatRm} axisFormat={compactRm} />
           </Panel>
 
           <Panel title="Tunggakan mengikut generasi" caption={'Termasuk tahun terdahulu hingga ' + year}>

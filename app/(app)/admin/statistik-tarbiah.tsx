@@ -131,6 +131,8 @@ export default function StatistikTarbiahScreen() {
               }>
               <MonthColumns
                 key={kawasan + kawasanMetric + year}
+                year={year}
+                maxValue={kawasanMetric === 'peratus' ? 100 : undefined}
                 values={series(kawasanCells, kawasanMetric)}
                 format={(value) => (kawasanMetric === 'jumlah' ? value + ' hadir' : formatPercent(value))}
                 axisFormat={(value) => (kawasanMetric === 'jumlah' ? String(value) : value + '%')}
@@ -153,6 +155,8 @@ export default function StatistikTarbiahScreen() {
               }>
               <MonthColumns
                 key={generasi + generasiMetric + year}
+                year={year}
+                maxValue={generasiMetric === 'peratus' ? 100 : undefined}
                 values={series(generasiCells, generasiMetric)}
                 format={(value) => (generasiMetric === 'jumlah' ? value + ' hadir' : formatPercent(value))}
                 axisFormat={(value) => (generasiMetric === 'jumlah' ? String(value) : value + '%')}
@@ -167,7 +171,10 @@ export default function StatistikTarbiahScreen() {
                   key: row.kawasan,
                   label: kawasanLabel(row.kawasan),
                   value: row.peratus ?? 0,
-                  note: row.hadir + '/' + row.direkod,
+                  // Bar diskala kepada 100%, bukan kepada kawasan tertinggi; tiada rekod bukan 0%.
+                  fill: (row.peratus ?? 0) / 100,
+                  display: row.peratus === null ? '—' : undefined,
+                  note: row.direkod > 0 ? row.hadir + '/' + row.direkod : 'tiada rekod',
                 }))}
                 format={(value) => formatPercent(value)}
               />
@@ -181,6 +188,7 @@ export default function StatistikTarbiahScreen() {
                 titles={stat.generasi_tahunan.map((row) => generationLabel(row.generasi))}
                 format={(value) => formatPercent(value)}
                 axisFormat={(value) => value + '%'}
+                maxValue={100}
                 detail={(index) => {
                   const row = stat.generasi_tahunan[index];
                   return row ? row.hadir + '/' + row.direkod : null;

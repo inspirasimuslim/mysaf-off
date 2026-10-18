@@ -60,7 +60,7 @@ export default function StatistikPipisScreen() {
         return (
           <>
             <Panel title="Kutipan mengikut bulan" caption={'Jumlah sumbangan berjaya, ' + year}>
-              <MonthColumns key={year} values={stat.bulanan.map((row) => row.jumlah)} format={formatRm} axisFormat={compactRm} />
+              <MonthColumns key={year} year={year} values={stat.bulanan.map((row) => row.jumlah)} format={formatRm} axisFormat={compactRm} />
             </Panel>
 
             <Panel
@@ -75,7 +75,15 @@ export default function StatistikPipisScreen() {
               />
               <View style={{ height: 10 }} />
               <ValueBars
-                rows={[{ key: 'cukup', label: 'Ahli telah cukup sasaran', value: r.ahli_cukup, note: 'daripada ' + r.jumlah_ahli }]}
+                rows={[
+                  {
+                    key: 'cukup',
+                    label: 'Ahli telah cukup sasaran',
+                    value: r.ahli_cukup,
+                    fill: r.jumlah_ahli > 0 ? r.ahli_cukup / r.jumlah_ahli : 0,
+                    note: 'daripada ' + r.jumlah_ahli,
+                  },
+                ]}
                 format={(value) => String(value)}
               />
             </Panel>

@@ -209,7 +209,7 @@ export function Panel({
 /** Tinggi ruang label menegak (px) dan baris teks 9px di dalamnya. */
 const VERTICAL_LABEL_HEIGHT = 24;
 const LABEL_LINE_HEIGHT = 12;
-const CHAR_WIDTH = 5.6;
+const CHAR_WIDTH = 6.1;
 
 /**
  * Label paksi-X yang TIDAK PERNAH digugurkan.
@@ -226,7 +226,7 @@ export function axisLabelProps(labels: string[], slot: number, activeIndex: numb
 
   const labelComponent = (index: number) => () => {
     const active = index === activeIndex;
-    const style = { fontSize: 9, lineHeight: LABEL_LINE_HEIGHT, color: active ? colors.ink : colors.inkMuted, fontWeight: active ? ('700' as const) : ('400' as const) };
+    const style = { fontSize: 10, lineHeight: LABEL_LINE_HEIGHT, color: active ? colors.ink : colors.inkMuted, fontWeight: active ? ('700' as const) : ('400' as const) };
 
     if (!vertical) {
       return (
@@ -276,6 +276,7 @@ export function Columns({
   format,
   axisFormat,
   detail,
+  maxValue,
 }: {
   values: (number | null)[];
   labels: string[];
@@ -283,6 +284,8 @@ export function Columns({
   format: (value: number) => string;
   axisFormat?: (value: number) => string;
   detail?: (index: number) => string | null;
+  /** Had atas paksi tetap — 100 untuk peratus, supaya perbezaan tidak diperbesarkan. */
+  maxValue?: number;
 }) {
   const colors = useColors();
   const desktop = useContext(DesktopContext);
@@ -304,7 +307,7 @@ export function Columns({
 
   const plotWidth = Math.max(0, width - yLabelWidth - 12);
   const barWidth = Math.max(4, Math.floor((plotWidth - spacing * (values.length + 1)) / values.length));
-  const max = niceMax(Math.max(0, ...values.map((v) => v ?? 0)));
+  const max = maxValue ?? niceMax(Math.max(0, ...values.map((v) => v ?? 0)));
 
   const axis = axisLabelProps(labels, barWidth + spacing, active, colors);
   const data = values.map((value, index) => ({
@@ -322,7 +325,7 @@ export function Columns({
           {activeValue === null || activeValue === undefined ? 'Tiada rekod' : format(activeValue)}
         </Text>
         {extra ? <Text className="flex-1 text-xs text-ink-muted">{extra}</Text> : <View className="flex-1" />}
-        {selected === null ? <Text className="text-[10px] text-ink-faint">tertinggi</Text> : null}
+        {selected === null ? <Text className="text-xs text-ink-faint">tertinggi</Text> : null}
       </View>
 
       {width > 0 ? (
@@ -341,7 +344,7 @@ export function Columns({
           barBorderTopRightRadius={3}
           yAxisThickness={0}
           yAxisLabelWidth={yLabelWidth}
-          yAxisTextStyle={{ color: colors.inkFaint, fontSize: 10 }}
+          yAxisTextStyle={{ color: colors.inkFaint, fontSize: 11 }}
           xAxisThickness={1}
           xAxisColor={colors.line}
           labelsExtraHeight={axis.extraHeight}
@@ -364,15 +367,25 @@ export function MonthColumns({
   format,
   axisFormat,
   detail,
+  maxValue,
+  year,
 }: {
   values: (number | null)[];
   format: (value: number) => string;
   axisFormat?: (value: number) => string;
   detail?: (monthIndex: number) => string | null;
+  maxValue?: number;
+  /** Tahun data. Bulan SELEPAS bulan semasa (tahun semasa) dilukis kosong, bukan sifar yang mengelirukan. */
+  year?: number;
 }) {
+  const my = new Date(Date.now() + 8 * 60 * 60 * 1000);
+  const futureFrom = year === my.getUTCFullYear() ? my.getUTCMonth() + 1 : year !== undefined && year > my.getUTCFullYear() ? 0 : 12;
+  const shown = values.map((value, index) => (index >= futureFrom ? null : value));
+
   return (
     <Columns
-      values={values}
+      maxValue={maxValue}
+      values={shown}
       labels={SHORT_MONTH}
       titles={[...MONTH_NAMES]}
       format={format}
@@ -386,7 +399,20 @@ export function MonthColumns({
 // Bar mendatar bernilai
 // =============================================================================
 
-export type BarRow = { key: string; label: string; value: number; note?: string };
+export type BarRow = {
+  key: string;
+  label: string;
+  value: number;
+  note?: string;
+  /**
+   * Panjang bar sebagai pecahan 0–1. Wajib untuk bar "bahagian daripada keseluruhan"
+   * (peratus, x daripada y): tanpa ini bar diskala kepada nilai TERBESAR dan 40% pun
+   * kelihatan penuh bila ia yang tertinggi.
+   */
+  fill?: number;
+  /** Teks nilai menggantikan `format(value)` (cth. '—' bila tiada rekod). */
+  display?: string;
+};
 
 /** Satu baris setiap kategori; panjang bar relatif kepada nilai terbesar. `columns` 2 di desktop sahaja. */
 export function ValueBars({
@@ -412,20 +438,20 @@ export function ValueBars({
         <View
           key={row.key}
           accessible
-          accessibilityLabel={row.label + ': ' + format(row.value)}
+          accessibilityLabel={row.label + ': ' + (row.display ?? format(row.value)) + (row.note ? ', ' + row.note : '')}
           style={{ flexBasis: twoCols ? '47%' : '100%', flexGrow: 1 }}>
           <View className="flex-row items-baseline gap-2">
             <Text className="flex-1 text-sm text-ink" numberOfLines={2}>
               {row.label}
             </Text>
-            <Text className="text-sm font-semibold text-ink">{format(row.value)}</Text>
+            <Text className="text-sm font-semibold text-ink">{row.display ?? format(row.value)}</Text>
             {row.note ? <Text className="min-w-10 text-right text-xs text-ink-muted">{row.note}</Text> : null}
           </View>
           <View
             className={`overflow-hidden rounded-pill ${desktop ? 'mt-1 h-2' : 'mt-1.5 h-2.5'}`}
             style={{ backgroundColor: colors.primaryTint }}>
             <View
-              style={{ height: '100%', borderRadius: 999, backgroundColor: colors.primaryMid, width: `${(row.value / max) * 100}%` }}
+              style={{ height: '100%', borderRadius: 999, backgroundColor: colors.primaryMid, width: `${Math.min(1, Math.max(0, row.fill ?? row.value / max)) * 100}%` }}
             />
           </View>
         </View>

@@ -155,6 +155,7 @@ function Summary({
     key: String(bucket.peratus),
     label: bucket.peratus + '% Lengkap',
     value: bucket.jumlah,
+    fill: total > 0 ? bucket.jumlah / total : 0,
     note: pct(bucket.jumlah, total),
   }));
 
@@ -166,18 +167,20 @@ function Summary({
     { key: 'perniagaan', label: 'Perniagaan', value: kategori.perniagaan },
     { key: 'keluarga', label: 'Keluarga', value: kategori.keluarga },
     { key: 'komitmen', label: 'Komitmen', value: kategori.komitmen },
-  ].map((row) => ({ ...row, note: pct(row.value, total) }));
+  ].map((row) => ({ ...row, fill: total > 0 ? row.value / total : 0, note: pct(row.value, total) }));
 
   const loginRows = (login?.mengikut_generasi ?? []).map((g) => ({
     key: 'login' + (g.generasi ?? 'tiada'),
     label: g.generasi ? generationLabel(g.generasi) : 'Tiada generasi',
     value: g.pernah_login,
+    fill: g.jumlah > 0 ? g.pernah_login / g.jumlah : 0,
     note: g.pernah_login + '/' + g.jumlah + ' · ' + pct(g.pernah_login, g.jumlah),
   }));
   const purataRows = (login?.mengikut_generasi ?? []).map((g) => ({
     key: 'purata' + (g.generasi ?? 'tiada'),
     label: g.generasi ? generationLabel(g.generasi) : 'Tiada generasi',
     value: g.purata_peratus,
+    fill: g.purata_peratus / 100,
     note: g.siap_penuh + ' ahli 100% siap',
   }));
 

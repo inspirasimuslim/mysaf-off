@@ -50,7 +50,7 @@ export default function StatistikPerkaderanScreen() {
       {(stat) => (
         <>
           <Panel title="Kekerapan usrah mengikut bulan" caption={'Bilangan sesi direkod, ' + year}>
-            <MonthColumns key={year} values={stat.sesi_bulanan.map((row) => row.sesi)} format={(value) => value + ' sesi'} />
+            <MonthColumns key={year} year={year} values={stat.sesi_bulanan.map((row) => row.sesi)} format={(value) => value + ' sesi'} />
           </Panel>
 
           <Panel title="Naqib/naqibah mengikut sekolah" caption="Keadaan semasa (tidak bergantung pada tahun)">
