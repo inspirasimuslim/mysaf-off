@@ -526,6 +526,7 @@ export function MemberForm({
         editable={!locked}
         autoCapitalize="characters"
         autoCorrect={false}
+        error={!readOnly && !draft.full_name.trim() ? 'Nama penuh tidak boleh dikosongkan.' : null}
       />
       <TextField
         label="Nama panggilan"
@@ -1128,7 +1129,10 @@ export function MemberForm({
   */
   const saveButton = readOnly || tabs.value === 'kesihatan' ? null : (
     <>
-      {!draft.full_name.trim() ? <Notice tone="negative" message="Nama penuh tidak boleh dikosongkan." /> : null}
+      {/* Pada tab Peribadi ralat dipaparkan terus di bawah medan nama; di tab lain notis ini menerangkan kenapa Simpan dimatikan. */}
+      {!draft.full_name.trim() && tabs.value !== 'peribadi' ? (
+        <Notice tone="negative" message="Nama penuh tidak boleh dikosongkan (tab Peribadi)." />
+      ) : null}
       {/* Suis Sekat dalam panel tindakan jauh dari medan lain — ingatkan ia belum berkuat kuasa. */}
       {actions && draft.disekat !== member.disekat ? (
         <Notice

@@ -13,6 +13,7 @@ import {
 
 import type { ActiveBusinessAd } from '@/lib/business-ads';
 import { useColors } from '@/lib/theme';
+import { useReduceMotion } from '@/lib/use-reduce-motion';
 
 /** Masa setiap poster dipaparkan sebelum bergerak ke yang seterusnya. */
 const SLIDE_MS = 3000;
@@ -46,10 +47,12 @@ function PanningPoster({ uri, width, height, label }: { uri: string; width: numb
   const translateX = useRef(new Animated.Value(0)).current;
   const panWidth = Math.round(width * PAN_ZOOM);
   const offset = panWidth - width;
+  // Kurangkan gerakan: poster statik, tiada gerakan pan.
+  const reduceMotion = useReduceMotion();
 
   useEffect(() => {
     translateX.setValue(0);
-    if (offset <= 0) return undefined;
+    if (offset <= 0 || reduceMotion) return undefined;
     const loop = Animated.loop(
       Animated.sequence([
         Animated.timing(translateX, {
@@ -68,7 +71,7 @@ function PanningPoster({ uri, width, height, label }: { uri: string; width: numb
     );
     loop.start();
     return () => loop.stop();
-  }, [offset, translateX]);
+  }, [offset, translateX, reduceMotion]);
 
   return (
     <View style={{ width, height, overflow: 'hidden' }}>

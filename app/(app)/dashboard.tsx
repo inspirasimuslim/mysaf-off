@@ -20,6 +20,7 @@ import { ToastBanner } from '@/components/ui/toast';
 import { fetchMyActivityRank, type MyActivityRank } from '@/lib/activity-rank';
 import { useAndroidExitPrompt } from '@/lib/android-back';
 import { fetchVisibleAnnouncements } from '@/lib/announcements';
+import { useReduceMotion } from '@/lib/use-reduce-motion';
 import { displayName, useAuth } from '@/lib/auth-context';
 import { fetchActiveBusinessAds, type ActiveBusinessAd } from '@/lib/business-ads';
 import { fetchBirthdaysToday, type BirthdayToday } from '@/lib/birthdays';
@@ -388,8 +389,10 @@ function BirthdayGreeting({ rows, onPress }: { rows: BirthdayToday[]; onPress: (
   const clipRef = useRef<View>(null);
   const trackRef = useRef<View>(null);
   const [offset] = useState(() => new Animated.Value(0));
+  // Pengguna yang meminta kurangkan gerakan: teks tidak menatal sendiri (ketik kad tetap membuka senarai penuh).
+  const reduceMotion = useReduceMotion();
 
-  const moving = viewWidth > 0 && trackWidth > viewWidth;
+  const moving = viewWidth > 0 && trackWidth > viewWidth && !reduceMotion;
 
   /*
     Dua sumber lebar, dan kedua-duanya perlu.
