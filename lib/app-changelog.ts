@@ -131,6 +131,18 @@ export const CHANGELOG: ChangelogEntry[] = [
       'Pembetulan app tersangkut "loading" semasa dibuka dalam rangkaian perlahan.',
     ],
   },
+  {
+    version: '1.3.32',
+    date: '19 Okt 2026',
+    highlights: [
+      'Kehadiran usrah: bulan yang sudah tamat tanpa rekod kini dikira tidak hadir secara automatik (hitam pada jalur), dan ahli baharu dikira bermula bulan menyertai.',
+      'Jalur usrah lebih mudah dibaca: tanda ✓ / ✕, legenda dan teks lebih besar.',
+      'Senarai Ahli, Album dan Sejarah Usrah dimuatkan dengan kerangka, dan boleh ditarik ke bawah untuk muat semula.',
+      'Hub Admin: kotak carian untuk terus ke modul yang dicari.',
+      'Notis untuk menetapkan log masuk biometrik, dan graf statistik yang lebih tepat.',
+      'Bilangan gambar dalam Album dikemas kini serta-merta; senarai Pasangan MBM tidak lagi memaparkan 0 anak.',
+    ],
+  },
 ];
 
 const SEEN_KEY = 'mysaff.whatsnew.seen';
