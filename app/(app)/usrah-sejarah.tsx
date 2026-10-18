@@ -5,7 +5,7 @@ import { Text, View } from 'react-native';
 import { ScreenHeader } from '@/components/screen-header';
 import { UsrahMonthRecordRow } from '@/components/usrah-month-record';
 import { EmptyState } from '@/components/ui/empty-state';
-import { LoadingScreen } from '@/components/ui/loading-screen';
+import { ListSkeleton } from '@/components/ui/skeleton';
 import { Notice } from '@/components/ui/notice';
 import { PickerField } from '@/components/ui/picker-field';
 import { Screen } from '@/components/ui/screen';
@@ -70,7 +70,14 @@ export default function UsrahSejarahScreen() {
     <ScreenHeader eyebrow="Tarbiah" title="Sejarah Kehadiran Usrah" onBackPress={goBack} />
   );
 
-  if (state.step === 'memuat') return <LoadingScreen />;
+  if (state.step === 'memuat') {
+    return (
+      <Screen padTop={false}>
+        {header}
+        <ListSkeleton rows={6} avatar={false} />
+      </Screen>
+    );
+  }
 
   if (state.step === 'tiada-rekod') {
     return (

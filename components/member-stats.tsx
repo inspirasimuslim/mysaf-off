@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { AccessibilityInfo, Animated, Easing, Pressable, Text, View, useWindowDimensions } from 'react-native';
+import { Animated, Easing, Pressable, Text, View, useWindowDimensions } from 'react-native';
 import { BarChart, PieChart } from 'react-native-gifted-charts';
 
 import { axisLabelProps } from '@/components/stat-charts';
+import { useReduceMotion } from '@/lib/use-reduce-motion';
 import { isNoRecord, type StatSlice } from '@/lib/member-statistics';
 import { useColors } from '@/lib/theme';
 
@@ -34,25 +35,6 @@ function percent(count: number, total: number): string {
   if (total <= 0) return '0%';
   const value = (count / total) * 100;
   return (value > 0 && value < 1 ? '<1' : Math.round(value).toString()) + '%';
-}
-
-/** Kurangkan animasi bila pengguna meminta sistem berbuat demikian. */
-function useReduceMotion(): boolean {
-  const [reduce, setReduce] = useState(false);
-
-  useEffect(() => {
-    let active = true;
-    AccessibilityInfo.isReduceMotionEnabled()
-      .then((value) => {
-        if (active) setReduce(value);
-      })
-      .catch(() => {});
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  return reduce;
 }
 
 /** Nombor yang dikira naik dari sifar — ringkas, tanpa perpustakaan animasi. */
@@ -133,7 +115,7 @@ export function DonutStat({
     const noRecord = slices.filter((slice) => isNoRecord(slice.label));
     const head = known.slice(0, CATEGORICAL.length);
     const rest = known.slice(CATEGORICAL.length);
-    const out: Array<StatSlice & { color: string }> = head.map((slice, index) => ({
+    const out: (StatSlice & { color: string })[] = head.map((slice, index) => ({
       ...slice,
       color: CATEGORICAL[index] as string,
     }));

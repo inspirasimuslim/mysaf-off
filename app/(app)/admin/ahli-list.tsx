@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { CellText, DataTable } from '@/components/ui/data-table';
 import { EmptyState } from '@/components/ui/empty-state';
 import { LoadingScreen } from '@/components/ui/loading-screen';
+import { ListSkeleton } from '@/components/ui/skeleton';
 import { Notice } from '@/components/ui/notice';
 import { PickerField } from '@/components/ui/picker-field';
 import { Screen } from '@/components/ui/screen';
@@ -49,6 +50,7 @@ export default function AhliListScreen() {
   const [members, setMembers] = useState<MemberSummary[]>([]);
   const [generations, setGenerations] = useState<Generation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [search, setSearch] = useState('');
@@ -168,7 +170,14 @@ export default function AhliListScreen() {
     );
   }
 
-  if (loading) return <LoadingScreen />;
+  if (loading) {
+    return (
+      <Screen padTop={false} wide>
+        <ScreenHeader title="Senarai Ahli" onBackPress={goBack} />
+        <ListSkeleton rows={9} />
+      </Screen>
+    );
+  }
 
   const visible = filtered.slice(0, limit);
 
@@ -349,7 +358,14 @@ export default function AhliListScreen() {
   }
 
   return (
-    <Screen padTop={false} wide>
+    <Screen
+      padTop={false}
+      wide
+      refreshing={refreshing}
+      onRefresh={() => {
+        setRefreshing(true);
+        void load(true).finally(() => setRefreshing(false));
+      }}>
       {header}
       {body}
     </Screen>

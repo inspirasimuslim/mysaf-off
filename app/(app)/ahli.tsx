@@ -1,11 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, Pressable, ScrollView, Text, View } from 'react-native';
 
 import { ScreenHeader } from '@/components/screen-header';
 import { EmptyState } from '@/components/ui/empty-state';
-import { LoadingScreen } from '@/components/ui/loading-screen';
+import { ListSkeleton } from '@/components/ui/skeleton';
 import { MemberAvatar } from '@/components/ui/member-avatar';
 import { Notice } from '@/components/ui/notice';
 import { Screen } from '@/components/ui/screen';
@@ -54,13 +54,17 @@ export default function AhliScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+  // Tarik-untuk-muat-semula: naikkan `reloadTick` -> kesan di bawah dijalankan semula SENYAP (senarai lama kekal dipapar).
+  const [reloadTick, setReloadTick] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
+  const hasLoadedRef = useRef(false);
 
   useEffect(() => {
     if (accessLoading) return;
     let active = true;
 
     void (async () => {
-      setLoading(true);
+      if (!hasLoadedRef.current) setLoading(true);
       try {
         const directory = await fetchMemberDirectory();
         if (!active) return;
@@ -84,14 +88,18 @@ export default function AhliScreen() {
       } catch (caught) {
         if (active) setError(toMalayError(caught, 'Gagal memuatkan direktori ahli.'));
       } finally {
-        if (active) setLoading(false);
+        if (active) {
+          hasLoadedRef.current = true;
+          setLoading(false);
+          setRefreshing(false);
+        }
       }
     })();
 
     return () => {
       active = false;
     };
-  }, [accessLoading, canView]);
+  }, [accessLoading, canView, reloadTick]);
 
   const groups = useMemo<Group[]>(() => {
     const term = search.trim().toLowerCase();
@@ -145,7 +153,14 @@ export default function AhliScreen() {
     [canView, desktop, idByNumber, router],
   );
 
-  if (accessLoading || loading) return <LoadingScreen />;
+  if (accessLoading || loading) {
+    return (
+      <Screen padTop={false}>
+        <ScreenHeader eyebrow="Direktori" title="Ahli" />
+        <ListSkeleton rows={9} />
+      </Screen>
+    );
+  }
 
   const total = members.length;
   const shown = groups.reduce((sum, group) => sum + group.members.length, 0);
@@ -294,7 +309,13 @@ export default function AhliScreen() {
   }
 
   return (
-    <Screen padTop={false}>
+    <Screen
+      padTop={false}
+      refreshing={refreshing}
+      onRefresh={() => {
+        setRefreshing(true);
+        setReloadTick((tick) => tick + 1);
+      }}>
       {header}
 
       <View className="gap-6 px-gutter pt-6">{controls}</View>

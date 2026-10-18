@@ -1,14 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import { ScreenHeader } from '@/components/screen-header';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { CellText, DataTable, RowIconAction } from '@/components/ui/data-table';
 import { EmptyState } from '@/components/ui/empty-state';
-import { LoadingScreen } from '@/components/ui/loading-screen';
+import { CardListSkeleton } from '@/components/ui/skeleton';
 import { Notice } from '@/components/ui/notice';
 import { Screen } from '@/components/ui/screen';
 import { useProgramAccess, useUsrahAccess } from '@/lib/department-access';
@@ -48,26 +48,37 @@ export default function AlbumScreen() {
     kelihatan masih ada walaupun DB sudah betul). Pattern sama seperti
     `usrah-sejarah.tsx` dan skrin lain yang refresh bila fokus semula.
   */
+  const hasLoadedRef = useRef(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Kali pertama: skeleton. Kali seterusnya (fokus semula / tarik-muat-semula): senyap, senarai lama kekal dipapar.
+  const loadEvents = useCallback(async (isActive: () => boolean = () => true) => {
+    if (!hasLoadedRef.current) setLoading(true);
+    try {
+      const rows = await fetchAllEventsDirectory(true);
+      if (isActive()) {
+        setEvents(rows);
+        setError(null);
+      }
+    } catch (caught) {
+      if (isActive()) setError(toMalayError(caught, 'Gagal memuatkan senarai acara.'));
+    } finally {
+      if (isActive()) {
+        hasLoadedRef.current = true;
+        setLoading(false);
+        setRefreshing(false);
+      }
+    }
+  }, []);
+
   useFocusEffect(
     useCallback(() => {
       let active = true;
-
-      void (async () => {
-        setLoading(true);
-        try {
-          const rows = await fetchAllEventsDirectory(true);
-          if (active) setEvents(rows);
-        } catch (caught) {
-          if (active) setError(toMalayError(caught, 'Gagal memuatkan senarai acara.'));
-        } finally {
-          if (active) setLoading(false);
-        }
-      })();
-
+      void loadEvents(() => active);
       return () => {
         active = false;
       };
-    }, []),
+    }, [loadEvents]),
   );
 
   // --- Padam album terus dari senarai (admin can_edit sahaja) ------------------
@@ -97,11 +108,25 @@ export default function AlbumScreen() {
     }
   }, [deleteBusy, pendingDelete]);
 
-  if (loading) return <LoadingScreen />;
+  if (loading) {
+    return (
+      <Screen padTop={false} wide>
+        <ScreenHeader title="Album" subtitle="Galeri gambar setiap acara" onBackPress={goBack} />
+        <CardListSkeleton rows={4} />
+      </Screen>
+    );
+  }
 
   return (
     <>
-      <Screen padTop={false} wide>
+      <Screen
+        padTop={false}
+        wide
+        refreshing={refreshing}
+        onRefresh={() => {
+          setRefreshing(true);
+          void loadEvents();
+        }}>
         <ScreenHeader title="Album" subtitle="Galeri gambar setiap acara" onBackPress={goBack} />
         <View className="gap-3 px-gutter pb-8 pt-2">
           {error ? <Notice tone="negative" message={error} /> : null}

@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { ScrollView, View, type ViewProps } from 'react-native';
+import { RefreshControl, ScrollView, View, type ViewProps } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useIsDesktop } from '@/lib/use-desktop';
@@ -27,9 +27,12 @@ type Props = ViewProps & {
   scrollEndSignal?: number;
   /** Tatal ke kedudukan `y` (piksel dari atas kandungan) setiap kali `token` berubah — cth. butang yang melompat ke satu bahagian. */
   scrollTarget?: { y: number; token: number };
+  /** Tarik-untuk-muat-semula: bila diberi, skrin boleh ditarik ke bawah. `refreshing` mengawal gelung. */
+  onRefresh?: () => void;
+  refreshing?: boolean;
 };
 
-export function Screen({ scroll = true, padTop = true, wide = false, scrollTopSignal = 0, scrollEndSignal = 0, scrollTarget, className = '', children, ...rest }: Props) {
+export function Screen({ scroll = true, padTop = true, wide = false, scrollTopSignal = 0, scrollEndSignal = 0, scrollTarget, onRefresh, refreshing = false, className = '', children, ...rest }: Props) {
   const insets = useSafeAreaInsets();
   const desktop = useIsDesktop();
   // Dipasang di panel kanan (panel berkembar): isi lebar panel, tanpa padding atas.
@@ -77,6 +80,7 @@ export function Screen({ scroll = true, padTop = true, wide = false, scrollTopSi
         className={`flex-1 bg-background ${className}`}
         contentContainerStyle={{ alignItems: embedded ? 'stretch' : 'center', paddingBottom: 32 + keyboard.inset }}
         keyboardShouldPersistTaps="handled"
+        refreshControl={onRefresh ? <RefreshControl refreshing={refreshing} onRefresh={onRefresh} /> : undefined}
         onScroll={keyboard.onScroll}
         scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}>
