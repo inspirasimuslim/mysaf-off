@@ -95,6 +95,7 @@ export function StatShell<T extends { years: number[] }>({
   error,
   onRetry,
   summary,
+  hideYear = false,
   children,
 }: {
   eyebrow: string;
@@ -108,6 +109,8 @@ export function StatShell<T extends { years: number[] }>({
   onRetry: () => void;
   /** Baris ringkasan padat di sebelah pemilih tahun. */
   summary?: (data: T) => ReactNode;
+  /** Sembunyikan pemilih tahun bila skrin mengurus tempohnya sendiri (cth. paparan tahunan). */
+  hideYear?: boolean;
   children: (data: T) => ReactNode;
 }) {
   const colors = useColors();
@@ -121,7 +124,7 @@ export function StatShell<T extends { years: number[] }>({
       <DesktopContext.Provider value={desktop}>
         <View className={desktop ? 'gap-3 px-1 pb-4 pt-3' : 'gap-4 px-gutter pb-8 pt-5'}>
           <View className={desktop ? 'flex-row flex-wrap items-center justify-between gap-x-6 gap-y-2' : 'gap-3'}>
-            <YearChips years={data?.years ?? [year]} year={year} onYear={onYear} />
+            {hideYear ? <View /> : <YearChips years={data?.years ?? [year]} year={year} onYear={onYear} />}
             {data && summary ? summary(data) : null}
           </View>
 
@@ -277,6 +280,8 @@ export function Columns({
   axisFormat,
   detail,
   maxValue,
+  activeIndex,
+  onSelect,
 }: {
   values: (number | null)[];
   labels: string[];
@@ -286,6 +291,10 @@ export function Columns({
   detail?: (index: number) => string | null;
   /** Had atas paksi tetap — 100 untuk peratus, supaya perbezaan tidak diperbesarkan. */
   maxValue?: number;
+  /** Lajur terpilih dikawal induk (cth. untuk menyenaraikan data bagi lajur itu). Tanpa ini, lalai = tertinggi. */
+  activeIndex?: number;
+  /** Dipanggil bila lajur diketuk. */
+  onSelect?: (index: number) => void;
 }) {
   const colors = useColors();
   const desktop = useContext(DesktopContext);
@@ -301,7 +310,7 @@ export function Columns({
     [values],
   );
   const [selected, setSelected] = useState<number | null>(null);
-  const active = selected ?? largest;
+  const active = Math.min(values.length - 1, Math.max(0, activeIndex ?? selected ?? largest));
   const activeValue = values[active];
   const extra = detail?.(active);
 
@@ -314,7 +323,10 @@ export function Columns({
     value: value ?? 0,
     labelComponent: axis.labelComponent(index),
     frontColor: index === active ? colors.primaryDark : colors.primaryMid,
-    onPress: () => setSelected(index),
+    onPress: () => {
+      setSelected(index);
+      onSelect?.(index);
+    },
   }));
 
   return (
@@ -325,7 +337,7 @@ export function Columns({
           {activeValue === null || activeValue === undefined ? 'Tiada rekod' : format(activeValue)}
         </Text>
         {extra ? <Text className="flex-1 text-xs text-ink-muted">{extra}</Text> : <View className="flex-1" />}
-        {selected === null ? <Text className="text-xs text-ink-faint">tertinggi</Text> : null}
+        {selected === null && activeIndex === undefined ? <Text className="text-xs text-ink-faint">tertinggi</Text> : null}
       </View>
 
       {width > 0 ? (

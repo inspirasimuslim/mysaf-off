@@ -81,6 +81,7 @@ export const FEATURE_GROUPS: FeatureGroup[] = [
       'Pengurusan Tabung Zakat: permohonan bantuan dan rekod infaq (muat turun Excel).',
       'Pelantikan kaunselor dan senarai kaunselor aktif / dibuang bersama bilangan hubungan.',
       'Kehadiran usrah dan imbasan kod.',
+      'Statistik Log Masuk (admin Data & Sumber Manusia): carta interaktif dan log masuk terakhir setiap ahli.',
     ],
   },
   {
@@ -141,6 +142,7 @@ export const CHANGELOG: ChangelogEntry[] = [
       'Hub Admin: kotak carian untuk terus ke modul yang dicari.',
       'Notis untuk menetapkan log masuk biometrik, dan graf statistik yang lebih tepat.',
       'Bilangan gambar dalam Album dikemas kini serta-merta; senarai Pasangan MBM tidak lagi memaparkan 0 anak.',
+      'Admin Data: Statistik Log Masuk (carta harian, mingguan, bulanan, tahunan), senarai siapa log masuk dan log masuk terakhir setiap ahli.',
     ],
   },
 ];

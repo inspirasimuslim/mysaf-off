@@ -699,3 +699,24 @@ bagi bulan yang sudah tamat (waktu Malaysia) sebagai TIDAK HADIR; ahli lama (`cr
 baharu dari bulan menyertai, ahli `disekat` dikecualikan HANYA daripada baris automatik. Rekod sedia ada sentiasa dikira
 (termasuk bulan semasa). Kesan produksi: Ogos 7/100% -> 323/2.2%, September 0/null -> 323/0%. Bentuk jsonb tidak berubah.
 `DonutStat`: kategori ke-4+ digabung menjadi "Lain-lain" (kelabu) — palet 3 warna tidak lagi dikitar.
+
+# Statistik Log Masuk (2026-10-19, migration 161 — BELUM di-push ke produksi)
+
+Rujukan: `supabase/migrations/20261019000161_login_events.sql`, `lib/login-stats.ts`,
+`app/(app)/admin/statistik-login.tsx`, `components/stat-charts.tsx` (`Columns` +`activeIndex`/`onSelect`, `StatShell` +`hideYear`).
+Diuji pada Postgres 16 tempatan (skema tiruan): pencetus, idempotent, kunci akses, ahli disekat dikecualikan.
+
+- **Sebelum ini** hanya `auth.users.last_sign_in_at` (log masuk TERAKHIR) wujud. Table baharu `login_events` (member_id, logged_in_at)
+  diisi oleh pencetus `on_auth_user_login_event` pada `auth.users` (bila `last_sign_in_at` berubah) — merangkumi semua klien, tiada kod klien.
+  Pencetus menelan ralat supaya merekod statistik tidak pernah menggagalkan log masuk.
+- **"Log masuk" = sesi baharu** (kata laluan/OTP). Membuka app dengan sesi tersimpan/biometrik (token disegar semula) TIDAK dikira.
+  Jika perlu "ahli aktif" (buka app), perlu rekod berasingan dari klien — belum dibuat.
+- **Isi semula best-effort** (hanya jika jadual kosong): `auth.audit_log_entries` (action = login), kemudian satu baris `last_sign_in_at`
+  bagi ahli yang belum diwakili. Sejarah sebelum migration hanya sebaik data audit Supabase yang masih ada.
+- **Akses**: table terkunci (RLS tanpa polisi, tiada GRANT). Empat RPC `security definer` dikawal `can_view_members()` (JABATAN DATA & SUMBER
+  MANUSIA): `login_stats_summary`, `login_stats_series(period, year, month)`, `login_period_members(from, to)`, `login_last_seen(search, tapis, limit, offset)`.
+  Hari/minggu (Isnin)/bulan/tahun dikira waktu Malaysia; bucket kosong dikembalikan 0, bucket selepas hari ini tidak. Ahli `disekat` dikecualikan.
+- **Skrin**: Hub Admin -> JDSM -> "Statistik Log Masuk". Tab Harian/Mingguan/Bulanan/Tahunan, toggle Ahli unik / Jumlah log masuk, ketik lajur
+  -> senarai siapa log masuk dalam tempoh itu (ketik nama -> `ahli-detail`), dan senarai log masuk terakhir setiap ahli (cari + tapis + muat lagi).
+- **Privasi**: tarikh/masa log masuk setiap ahli kini disimpan sejarahnya (bukan sekadar yang terakhir). Semak `app/dasar-privasi.tsx` jika perlu dinyatakan.
+- **DEPLOY**: `supabase db push --linked`. Tiada Edge Function berubah.
