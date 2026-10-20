@@ -67,7 +67,7 @@ export const FEATURE_GROUPS: FeatureGroup[] = [
       'Bisnes Ahli: promosi dan carian perniagaan ahli.',
       'Majlis Baitul Muslim.',
       'NGO Rasmi: perihal, tahun penubuhan dan jawatankuasa terkini NGO persatuan.',
-      'Pemegang PhD: galeri gambar dan nama ahli yang berjaya tamat PhD.',
+      'Pencapaian Akademik: dinding kehormatan ahli pemegang PhD dan Sarjana.',
       'Header skrin Utama bertema mengikut perayaan dan hari jadi anda.',
       'Maklum Balas: berbual terus dengan department yang anda pilih.',
       'Ciri-ciri MySAFF: senarai ciri dan catatan versi ini.',
@@ -144,7 +144,7 @@ export const CHANGELOG: ChangelogEntry[] = [
       'Notis untuk menetapkan log masuk biometrik, dan graf statistik yang lebih tepat.',
       'Bilangan gambar dalam Album dikemas kini serta-merta; senarai Pasangan MBM tidak lagi memaparkan 0 anak.',
       'Admin Data: Statistik Log Masuk (carta harian, mingguan, bulanan, tahunan), senarai siapa log masuk dan log masuk terakhir setiap ahli.',
-      'Pemegang PhD: galeri gambar dan nama ahli yang berjaya tamat PhD (jubin baharu di Direktori).',
+      'Pencapaian Akademik: dinding kehormatan ahli pemegang PhD dan Sarjana, lengkap dengan gambar, generasi dan tajuk penyelidikan (jubin baharu di Direktori).',
     ],
   },
 ];

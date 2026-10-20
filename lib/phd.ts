@@ -2,7 +2,7 @@ import { ImageUploadError, readJpegBytes } from './image-upload';
 import { supabase } from './supabase';
 
 /**
- * Pemegang PhD — lihat `20261020000162_phd_graduates.sql`.
+ * Pencapaian Akademik Tertinggi (PhD + Sarjana) — lihat `20261020000162_phd_graduates.sql` dan `20261021000163_academic_honors_peringkat.sql`.
  *
  * Bacaan terbuka kepada semua ahli log masuk; tulisan (table + Storage) hanya diterima
  * RLS bagi admin JABATAN DATA & SUMBER MANUSIA (can_edit) atau Super Admin.
@@ -11,8 +11,16 @@ import { supabase } from './supabase';
 const BUCKET = 'phd-gallery';
 const IMAGE_WIDTH = 1000;
 
+export type Peringkat = 'phd' | 'sarjana';
+
+export const PERINGKAT_OPTIONS: { value: Peringkat; label: string }[] = [
+  { value: 'phd', label: 'PhD' },
+  { value: 'sarjana', label: 'Sarjana' },
+];
+
 export type PhdGraduate = {
   id: string;
+  peringkat: Peringkat;
   nama: string;
   generasi: string | null;
   bidang: string | null;
@@ -23,6 +31,7 @@ export type PhdGraduate = {
 };
 
 export type PhdInput = {
+  peringkat: Peringkat;
   nama: string;
   generasi: string | null;
   bidang: string | null;
@@ -31,7 +40,7 @@ export type PhdInput = {
   tajuk_tesis: string | null;
 };
 
-const COLUMNS = 'id, nama, generasi, bidang, universiti, tahun_tamat, tajuk_tesis, gambar_path';
+const COLUMNS = 'id, peringkat, nama, generasi, bidang, universiti, tahun_tamat, tajuk_tesis, gambar_path';
 
 export function phdImageUrl(path: string): string {
   return supabase.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;

@@ -671,11 +671,11 @@ export default function AdminHubScreen() {
 
             <ActionRow
               icon="school-outline"
-              title="Pemegang PhD"
+              title="Pencapaian Akademik"
               subtitle={
                 memberAccess.canEdit
-                  ? 'Tambah, sunting atau padam ahli yang berjaya tamat PhD (galeri gambar)'
-                  : 'Lihat galeri pemegang PhD (paparan sahaja)'
+                  ? 'Tambah, sunting atau padam ahli pemegang PhD dan Sarjana (dinding kehormatan)'
+                  : 'Lihat dinding kehormatan PhD dan Sarjana (paparan sahaja)'
               }
               onPress={() => router.push('/(app)/phd')}
             />

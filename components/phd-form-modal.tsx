@@ -4,10 +4,11 @@ import { View } from 'react-native';
 import { Button } from '@/components/ui/button';
 import { FormModal } from '@/components/ui/form-modal';
 import { Notice } from '@/components/ui/notice';
+import { Segmented } from '@/components/ui/segmented';
 import { TextField } from '@/components/ui/text-field';
 import { ImageUploadRow } from '@/components/business-ad-image-slot';
 import { ImageUploadError, pickImage } from '@/lib/image-upload';
-import { cleanPhdText, phdImageUrl, type PhdGraduate, type PhdInput } from '@/lib/phd';
+import { cleanPhdText, PERINGKAT_OPTIONS, phdImageUrl, type Peringkat, type PhdGraduate, type PhdInput } from '@/lib/phd';
 import { toMalayError } from '@/lib/errors';
 
 type Props = {
@@ -30,6 +31,7 @@ export function PhdFormModal(props: Props) {
 }
 
 function PhdFormBody({ visible, graduate, busy, error, onClose, onSubmit }: Props) {
+  const [peringkat, setPeringkat] = useState<Peringkat>(graduate?.peringkat ?? 'phd');
   const [nama, setNama] = useState(graduate?.nama ?? '');
   const [generasi, setGenerasi] = useState(graduate?.generasi ?? '');
   const [bidang, setBidang] = useState(graduate?.bidang ?? '');
@@ -73,6 +75,7 @@ function PhdFormBody({ visible, graduate, busy, error, onClose, onSubmit }: Prop
     setLocalError(null);
     onSubmit(
       {
+        peringkat,
         nama: cleanName,
         generasi: cleanPhdText(generasi)?.toLowerCase() ?? null,
         bidang: cleanPhdText(bidang),
@@ -88,18 +91,19 @@ function PhdFormBody({ visible, graduate, busy, error, onClose, onSubmit }: Prop
   return (
     <FormModal
       visible={visible}
-      title={graduate ? 'Sunting Pemegang PhD' : 'Tambah Pemegang PhD'}
+      title={graduate ? 'Sunting Pencapaian' : 'Tambah Pencapaian'}
       dismissable={!busy}
       onClose={onClose}
       footer={<Button label="Simpan" loading={busy} disabled={busy} onPress={submit} />}>
       <View className="gap-3">
         {localError || error ? <Notice tone="negative" message={(localError ?? error) as string} /> : null}
+        <Segmented label="Peringkat" value={peringkat} options={PERINGKAT_OPTIONS} onChange={setPeringkat} disabled={busy} />
         <TextField label="Nama" value={nama} onChangeText={setNama} editable={!busy} />
         <TextField label="Generasi (pilihan)" value={generasi} onChangeText={setGenerasi} placeholder="Contoh: i21" autoCapitalize="none" editable={!busy} />
-        <TextField label="Bidang PhD" value={bidang} onChangeText={setBidang} placeholder="Contoh: Kejuruteraan Awam" editable={!busy} />
+        <TextField label={peringkat === 'phd' ? 'Bidang PhD' : 'Bidang Sarjana'} value={bidang} onChangeText={setBidang} placeholder="Contoh: Kejuruteraan Awam" editable={!busy} />
         <TextField label="Universiti" value={universiti} onChangeText={setUniversiti} editable={!busy} />
         <TextField label="Tahun tamat" value={tahun} onChangeText={setTahun} keyboardType="number-pad" maxLength={4} placeholder="Contoh: 2025" editable={!busy} />
-        <TextField label="Tajuk tesis (pilihan)" value={tajuk} onChangeText={setTajuk} multiline editable={!busy} />
+        <TextField label="Tajuk penyelidikan (pilihan)" value={tajuk} onChangeText={setTajuk} multiline editable={!busy} />
         <ImageUploadRow
           label="Gambar (potret)"
           previewUri={previewUri}

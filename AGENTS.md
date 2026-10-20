@@ -700,7 +700,7 @@ baharu dari bulan menyertai, ahli `disekat` dikecualikan HANYA daripada baris au
 (termasuk bulan semasa). Kesan produksi: Ogos 7/100% -> 323/2.2%, September 0/null -> 323/0%. Bentuk jsonb tidak berubah.
 `DonutStat`: kategori ke-4+ digabung menjadi "Lain-lain" (kelabu) — palet 3 warna tidak lagi dikitar.
 
-# Statistik Log Masuk (2026-10-19, migration 161 — BELUM di-push ke produksi)
+# Statistik Log Masuk (2026-10-19, migration 161, sudah live di produksi 2026-10-21)
 
 Rujukan: `supabase/migrations/20261019000161_login_events.sql`, `lib/login-stats.ts`,
 `app/(app)/admin/statistik-login.tsx`, `components/stat-charts.tsx` (`Columns` +`activeIndex`/`onSelect`, `StatShell` +`hideYear`).
@@ -721,7 +721,7 @@ Diuji pada Postgres 16 tempatan (skema tiruan): pencetus, idempotent, kunci akse
 - **Privasi**: tarikh/masa log masuk setiap ahli kini disimpan sejarahnya (bukan sekadar yang terakhir). Semak `app/dasar-privasi.tsx` jika perlu dinyatakan.
 - **DEPLOY**: `supabase db push --linked`. Tiada Edge Function berubah.
 
-# Pemegang PhD (tile Direktori) — JDSM (2026-10-20, migration 162 — BELUM di-push ke produksi)
+# Pemegang PhD (tile Direktori) — JDSM (2026-10-20, migration 162, sudah live di produksi 2026-10-21)
 
 Rujukan: `supabase/migrations/20261020000162_phd_graduates.sql`, `lib/phd.ts`, `app/(app)/phd.tsx`,
 `components/phd-form-modal.tsx`, tile "Pemegang PhD" di `arkib-hub.tsx`, baris di Hub Admin -> JDSM. Diuji pada Postgres 16
@@ -735,3 +735,13 @@ tempatan (skema tiruan): baca terbuka, tulis ditolak bagi bukan admin, kekangan 
   Gambar baharu dimuat naik DAHULU, baris disimpan kemudian, objek lama dibuang selepas berjaya (cuba-terbaik); padam rekod membuang objek.
 - Skrin tab tersembunyi (`href: null`) -> muat semula dengan `useFocusEffect`. Galeri 2 lajur (telefon) / 4 lajur (desktop); ketik kad -> helaian butiran.
 - Tiada audit trigger Log Aktiviti. **DEPLOY**: `supabase db push --linked`. Tiada Edge Function.
+
+## Pencapaian Akademik Tertinggi — dinding kehormatan (2026-10-21, migration 163, sudah live di produksi)
+
+Rujukan: `supabase/migrations/20261021000163_academic_honors_peringkat.sql`, `lib/phd.ts`, `app/(app)/phd.tsx`, `components/phd-form-modal.tsx`.
+Menggantikan "Pemegang PhD" (tile/tajuk kini "Pencapaian Akademik"; laluan `/phd`, table `phd_graduates`, bucket `phd-gallery` dan
+`can_edit_phd()` KEKAL tidak dinamakan semula).
+- Lajur baharu `peringkat` (`phd`/`sarjana`, lalai `phd`, CHECK). Skrin dua bahagian: PhD di atas (bingkai emas), Sarjana di bawah (bingkai perak),
+  dalam panel hijau gelap "DINDING KEHORMATAN" (palet tetap, tidak ikut tema cerah/gelap). Borang ada `Segmented` Peringkat.
+- `tajuk_tesis` dipaparkan sebagai "Tajuk penyelidikan" (nama lajur tidak berubah). Gambar, nama, generasi, bidang, universiti, tahun: seperti sebelum ini.
+- Akses tidak berubah: baca semua ahli, tulis admin JDSM (can_edit) + Super Admin. Belum diuji secara visual pada peranti — semak reka bentuk selepas build.
