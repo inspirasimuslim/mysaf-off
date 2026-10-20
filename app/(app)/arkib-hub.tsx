@@ -47,7 +47,7 @@ export default function ArkibHubScreen() {
     }, []),
   );
 
-  // Susunan (3 lajur): Zakat · Kaunseling · Baitul Muslim / Bisnes Ahli · NGO Rasmi · Maklum Balas / Ciri-ciri MySAFF · Album · Dokumen.
+  // Susunan (3 lajur): Zakat · Kaunseling · Baitul Muslim / Bisnes Ahli · NGO Rasmi · Pemegang PhD · Maklum Balas / Ciri-ciri MySAFF · Album · Dokumen.
   const tiles: TileProps[] = [
     {
       icon: 'hand-left-outline',
@@ -63,6 +63,7 @@ export default function ArkibHubScreen() {
     },
     { icon: 'storefront-outline', title: 'Bisnes Ahli', onPress: () => router.push('/(app)/bisnes-ahli') },
     { icon: 'people-circle-outline', title: 'NGO Rasmi', onPress: () => router.push('/(app)/ngo') },
+    { icon: 'school-outline', title: 'Pemegang PhD', onPress: () => router.push('/(app)/phd') },
     { icon: 'chatbubble-ellipses-outline', title: 'Maklum Balas', badge: feedbackUnread, onPress: () => router.push('/(app)/maklum-balas') },
     { icon: 'sparkles-outline', title: 'Ciri-ciri MySAFF', onPress: () => router.push('/(app)/features') },
     { icon: 'images-outline', title: 'Album', onPress: () => router.push('/(app)/album') },

@@ -334,6 +334,7 @@ function AppGate() {
       <Tabs.Screen name="features" options={{ href: null }} />
       <Tabs.Screen name="ngo" options={{ href: null }} />
       <Tabs.Screen name="ngo-detail" options={{ href: null }} />
+      <Tabs.Screen name="phd" options={{ href: null }} />
       <Tabs.Screen name="kaunseling" options={{ href: null }} />
       <Tabs.Screen name="kaunseling-chat" options={{ href: null }} />
       <Tabs.Screen name="bantuan-info" options={{ href: null }} />

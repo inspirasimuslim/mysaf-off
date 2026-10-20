@@ -720,3 +720,18 @@ Diuji pada Postgres 16 tempatan (skema tiruan): pencetus, idempotent, kunci akse
   -> senarai siapa log masuk dalam tempoh itu (ketik nama -> `ahli-detail`), dan senarai log masuk terakhir setiap ahli (cari + tapis + muat lagi).
 - **Privasi**: tarikh/masa log masuk setiap ahli kini disimpan sejarahnya (bukan sekadar yang terakhir). Semak `app/dasar-privasi.tsx` jika perlu dinyatakan.
 - **DEPLOY**: `supabase db push --linked`. Tiada Edge Function berubah.
+
+# Pemegang PhD (tile Direktori) — JDSM (2026-10-20, migration 162 — BELUM di-push ke produksi)
+
+Rujukan: `supabase/migrations/20261020000162_phd_graduates.sql`, `lib/phd.ts`, `app/(app)/phd.tsx`,
+`components/phd-form-modal.tsx`, tile "Pemegang PhD" di `arkib-hub.tsx`, baris di Hub Admin -> JDSM. Diuji pada Postgres 16
+tempatan (skema tiruan): baca terbuka, tulis ditolak bagi bukan admin, kekangan laluan gambar, idempotent.
+
+- Table `phd_graduates` (nama, generasi pilihan, bidang, universiti, tahun_tamat, tajuk_tesis, gambar_path). Nama = TEKS, bukan FK `members`
+  (alumni tanpa rekod ahli boleh disenaraikan; tidak bergantung pada data pendidikan ahli yang peribadi). Tiada data awal — admin masukkan sendiri.
+- BACA: semua ahli (`can_read_shared()`). TULIS terus ke table + Storage: `can_edit_phd()` = `has_department_access('JABATAN DATA & SUMBER MANUSIA', true)`
+  (+ Super Admin). Skrin yang sama untuk ahli dan admin; butang Tambah/Sunting/Padam hanya bila `useMemberAccess().canEdit`.
+- Bucket awam `phd-gallery` (JPEG, 2 MB; nama objek `phd-<ms>.jpg`). Gambar dikecilkan ke lebar 1000 dan dimampatkan JPEG di klien (`readJpegBytes`).
+  Gambar baharu dimuat naik DAHULU, baris disimpan kemudian, objek lama dibuang selepas berjaya (cuba-terbaik); padam rekod membuang objek.
+- Skrin tab tersembunyi (`href: null`) -> muat semula dengan `useFocusEffect`. Galeri 2 lajur (telefon) / 4 lajur (desktop); ketik kad -> helaian butiran.
+- Tiada audit trigger Log Aktiviti. **DEPLOY**: `supabase db push --linked`. Tiada Edge Function.

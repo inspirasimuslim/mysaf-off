@@ -642,7 +642,7 @@ export default function AdminHubScreen() {
           <CollapsibleSection
             variant="plain"
             title="Jabatan Data & Sumber Manusia (JDSM)"
-            count={(memberAccess.canEdit ? 4 : 3) + fbCount('JABATAN DATA & SUMBER MANUSIA')} alert={fbUnread('JABATAN DATA & SUMBER MANUSIA')}
+            count={(memberAccess.canEdit ? 5 : 4) + fbCount('JABATAN DATA & SUMBER MANUSIA')} alert={fbUnread('JABATAN DATA & SUMBER MANUSIA')}
             defaultOpen={openByDefault}>
             <ActionRow
               icon="people-outline"
@@ -667,6 +667,17 @@ export default function AdminHubScreen() {
               title="Statistik Log Masuk"
               subtitle="Carta log masuk harian hingga tahunan, siapa log masuk dan log masuk terakhir ahli"
               onPress={() => router.push('/(app)/admin/statistik-login')}
+            />
+
+            <ActionRow
+              icon="school-outline"
+              title="Pemegang PhD"
+              subtitle={
+                memberAccess.canEdit
+                  ? 'Tambah, sunting atau padam ahli yang berjaya tamat PhD (galeri gambar)'
+                  : 'Lihat galeri pemegang PhD (paparan sahaja)'
+              }
+              onPress={() => router.push('/(app)/phd')}
             />
 
             {memberAccess.canEdit ? (
