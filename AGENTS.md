@@ -745,3 +745,7 @@ Menggantikan "Pemegang PhD" (tile/tajuk kini "Pencapaian Akademik"; laluan `/phd
   dalam panel hijau gelap "DINDING KEHORMATAN" (palet tetap, tidak ikut tema cerah/gelap). Borang ada `Segmented` Peringkat.
 - `tajuk_tesis` dipaparkan sebagai "Tajuk penyelidikan" (nama lajur tidak berubah). Gambar, nama, generasi, bidang, universiti, tahun: seperti sebelum ini.
 - Akses tidak berubah: baca semua ahli, tulis admin JDSM (can_edit) + Super Admin. Belum diuji secara visual pada peranti — semak reka bentuk selepas build.
+- 2026-10-21 (tiada migration): Nama + Generasi dalam borang kini dipilih melalui `MemberPickerField` (dropdown carian ahli, `list_members_picker()`),
+  bukan taip bebas. Memilih ahli mengisi `nama` = `full_name` dan `generasi` = kod generasi ahli. Table masih menyimpan teks (tiada `member_id`);
+  rekod sedia ada dipadankan semula ikut nama (+ generasi) semasa borang dibuka. Rekod lama yang tiada dalam senarai ahli dikekalkan dan
+  dipaparkan sebagai "Rekod semasa" sehingga admin memilih ahli lain.
