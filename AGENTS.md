@@ -756,7 +756,7 @@ Rujukan: `supabase/migrations/20261023000164_payment_switches.sql`, `supabase/fu
 - Table `payment_switches` (`kind` pipis/yuran/zakat, `enabled`, `message`) — TERKUNCI (tiada GRANT), ubah melalui SQL sahaja. Pencetus BEFORE INSERT pada
   `yuran_payments`/`pipis_contributions`/`zakat_infaq` menolak baris `method = 'gateway'` bila `enabled = false`. Rekod manual admin dan bil yang sudah pending/dibayar
   TIDAK terjejas (`toyyibpay-callback` hanya UPDATE). Berkesan serta-merta pada SEMUA versi APK/web.
-- **STATUS SEMASA: `yuran` = DIMATIKAN (2026-10-23)**, pipis & zakat hidup. Hidupkan semula: `update payment_switches set enabled = true where kind = 'yuran';`
+- **STATUS SEMASA: `yuran` DAN `pipis` = DIMATIKAN (2026-10-23)**, zakat hidup. Hidupkan semula: `update payment_switches set enabled = true where kind = 'yuran';` (atau `'pipis'`).
   Tukar mesej: `update payment_switches set message = '...' where kind = 'yuran';`
 - Sebelum Edge Function `create-yuran-bill`/`create-pipis-bill`/`create-zakat-bill` di-deploy semula, ahli nampak "Gagal merekod bil bayaran." (mesej generik);
   selepas deploy, mesej ramah daripada `message` dipapar (APK lama pun, kerana klien memaparkan `error` pelayan). Butang "Bayar" tetap kelihatan pada app.
