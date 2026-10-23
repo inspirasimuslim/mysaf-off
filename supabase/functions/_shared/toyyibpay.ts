@@ -254,6 +254,11 @@ export async function serveCreateBill(request: Request, kind: GatewayKind): Prom
       .select('id')
       .single();
 
+    // Suis `payment_switches` (migration 164): pencetus menolak bil baharu bila jenis ini dimatikan.
+    if (insertError?.message?.startsWith('PAYMENT_DISABLED:')) {
+      throw new RequestError(insertError.message.slice('PAYMENT_DISABLED:'.length).trim(), 503);
+    }
+
     if (insertError || !row) {
       console.error('Gagal memasukkan baris pending', kind.table, insertError?.message);
       throw new RequestError('Gagal merekod bil bayaran.', 500);
