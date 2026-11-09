@@ -545,7 +545,7 @@ Rujukan: `supabase/migrations/20261013000154_infaq_tabung_zakat.sql`, `supabase/
 Rujukan: `lib/app-changelog.ts`, `app/(app)/features.tsx`, `components/whats-new-notice.tsx`, tile di `arkib-hub.tsx`.
 - Jubin "Ciri-ciri MySAFF" (dulu "Features MySAFF") di Direktori -> skrin `features` (catatan versi terbaru di atas + senarai ciri BM).
 - **AMALAN WAJIB setiap kali versi dinaikkan**: tambah entri di HUJUNG `CHANGELOG` (versi = `version` app.json) dan kemas kini `FEATURE_GROUPS`.
-- `WhatsNewNotice` (Utama) muncul sekali bagi setiap versi terpasang yang ada entri; versi dilihat disimpan tempatan
+- **2026-11-09: `WhatsNewNotice` DIBUANG daripada Utama** (komponen + logik versi kekal, tidak dipaparkan; skrin Ciri-ciri MySAFF kekal). Notis biometrik kekal. Rujukan lama: `WhatsNewNotice` (Utama) muncul sekali bagi setiap versi terpasang yang ada entri; versi dilihat disimpan tempatan
   (`lib/secure-storage`, kunci `mysaff.whatsnew.seen`) — per peranti, bukan DB. Tiada entri untuk versi semasa = tiada notifikasi.
 - Versi dinaikkan ke 1.3.31 (37) untuk build seterusnya (1.3.30 = 36).
 
