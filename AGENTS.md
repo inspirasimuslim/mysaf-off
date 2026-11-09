@@ -771,3 +771,7 @@ Rujukan: `supabase/migrations/20261109000165_counselor_profiles.sql`, `lib/couns
 - Bucket awam `counselor-photos` (JPEG, 1 MB, `kaunselor-<ms>.jpg`, dimampatkan lebar 800 di klien); tulis hanya admin LK. Gambar baharu dimuat naik dahulu, lama dibuang selepas berjaya.
 - Ahli: kad (gambar, nama, generasi, pekerjaan) -> ketik -> helaian butiran penuh + WhatsApp/Telefon/Mesej dalam app. Privasi kaunseling (bilangan sahaja kepada LK) tidak berubah.
 - Klien serasi sebelum migration dijalankan (medan baharu optional), tetapi Sunting Profil gagal sehingga migration live.
+
+## Kaunselor: "Tidak aktif" + padam (2026-11-09, migration 166)
+- Label "Tidak lagi bertugas"/"Nyahtugas" -> **"Tidak aktif"/"Nyahaktif"** (admin LK dan ahli). Butang **"Padam"** pada SETIAP kaunselor (aktif atau tidak aktif),
+  RPC `counseling_delete()` (LK can_edit): padam KEKAL kaunselor + perbualan/mesej/catatan hubungan (cascade) + objek gambar. Dialog pengesahan memberi amaran.

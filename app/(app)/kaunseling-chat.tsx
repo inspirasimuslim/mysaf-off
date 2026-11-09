@@ -193,7 +193,7 @@ function ChatContent({ id, counselorId }: { id?: string; counselorId?: string })
             <Button label="Hantar" loading={busy} disabled={busy || !draft.trim()} onPress={() => void send()} />
           </View>
         ) : (
-          <Notice tone="info" message="Kaunselor ini tidak lagi bertugas, jadi anda tidak boleh membalas perbualan ini." />
+          <Notice tone="info" message="Kaunselor ini tidak aktif, jadi anda tidak boleh membalas perbualan ini." />
         )}
       </View>
     </Screen>

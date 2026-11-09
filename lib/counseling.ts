@@ -161,6 +161,15 @@ export async function removeCounselor(counselorId: string): Promise<void> {
   if (error) throw error;
 }
 
+/** Padam kekal kaunselor (+ perbualannya). Objek gambar dibuang cuba-terbaik. */
+export async function deleteCounselor(counselorId: string): Promise<void> {
+  const { data, error } = await supabase.rpc('counseling_delete', { p_counselor: counselorId });
+  if (error) throw error;
+  if (typeof data === 'string' && data) {
+    await supabase.storage.from('counselor-photos').remove([data]).catch(() => {});
+  }
+}
+
 /** Mesej ralat RPC (kod 22023/42501/P0001/P0002 membawa teks Melayu yang selamat dipapar). */
 export function counselErrorMessage(error: unknown, fallback: string): string {
   const e = error as { code?: unknown; message?: unknown } | null;

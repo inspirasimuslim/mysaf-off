@@ -18,6 +18,7 @@ import { SectionTitle } from '@/components/ui/section-title';
 import { TextField } from '@/components/ui/text-field';
 import {
   appointCounselor,
+  deleteCounselor,
   counselErrorMessage,
   counselorImageUrl,
   saveCounselorProfile,
@@ -57,6 +58,7 @@ export default function KaunselorScreen() {
   const searchSeq = useRef(0);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [toRemove, setToRemove] = useState<CounselorAdminRow | null>(null);
+  const [toDelete, setToDelete] = useState<CounselorAdminRow | null>(null);
   const [editing, setEditing] = useState<CounselorAdminRow | null>(null);
   const [profileBusy, setProfileBusy] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
@@ -171,12 +173,29 @@ export default function KaunselorScreen() {
     setError(null);
     try {
       await removeCounselor(toRemove.id);
-      setNotice(toRemove.full_name + ' tidak lagi bertugas sebagai kaunselor.');
+      setNotice(toRemove.full_name + ' kini tidak aktif sebagai kaunselor.');
       setToRemove(null);
       await load();
     } catch (caught) {
-      setError(counselErrorMessage(caught, 'Gagal menyahtugas kaunselor.'));
+      setError(counselErrorMessage(caught, 'Gagal menyahaktifkan kaunselor.'));
       setToRemove(null);
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const confirmDelete = async () => {
+    if (!toDelete) return;
+    setBusyId(toDelete.id);
+    setError(null);
+    try {
+      await deleteCounselor(toDelete.id);
+      setNotice(toDelete.full_name + ' dipadam.');
+      setToDelete(null);
+      await load();
+    } catch (caught) {
+      setError(counselErrorMessage(caught, 'Gagal memadam kaunselor.'));
+      setToDelete(null);
     } finally {
       setBusyId(null);
     }
@@ -202,7 +221,7 @@ export default function KaunselorScreen() {
             {row.nama_penuh || row.full_name}
             {row.generasi ? '  ·  ' + row.generasi : ''}
           </Text>
-          <Badge label={row.aktif ? 'Aktif' : 'Tidak lagi bertugas'} tone={row.aktif ? 'positive' : 'neutral'} />
+          <Badge label={row.aktif ? 'Aktif' : 'Tidak aktif'} tone={row.aktif ? 'positive' : 'neutral'} />
         </View>
         {row.pekerjaan || row.pendidikan ? (
           <Text numberOfLines={2} className="text-sm text-ink-muted">
@@ -212,7 +231,7 @@ export default function KaunselorScreen() {
           <Text className="text-sm text-warn">Profil belum diisi</Text>
         ) : null}
         <Text className="text-sm text-ink-muted">
-          {'Dilantik ' + formatTarikh(row.appointed_at) + (row.removed_at ? ' · Tidak lagi bertugas sejak ' + formatTarikh(row.removed_at) : '')}
+          {'Dilantik ' + formatTarikh(row.appointed_at) + (row.removed_at ? ' · Tidak aktif sejak ' + formatTarikh(row.removed_at) : '')}
         </Text>
         <Text className="text-sm font-semibold text-ink">{row.ahli_menghubungi + ' ahli menghubungi'}</Text>
         {access.canEdit ? (
@@ -228,11 +247,20 @@ export default function KaunselorScreen() {
         ) : null}
         {row.aktif && access.canEdit ? (
           <Button
-            label="Nyahtugas"
+            label="Nyahaktif"
             variant="danger"
             size="sm"
             disabled={busyId === row.id}
             onPress={() => setToRemove(row)}
+          />
+        ) : null}
+        {access.canEdit ? (
+          <Button
+            label="Padam"
+            variant="danger"
+            size="sm"
+            disabled={busyId === row.id}
+            onPress={() => setToDelete(row)}
           />
         ) : null}
       </View>
@@ -300,7 +328,7 @@ export default function KaunselorScreen() {
 
         {dibuang.length > 0 ? (
           <>
-            <SectionTitle title={'Pernah Dilantik / Tidak Lagi Bertugas (' + dibuang.length + ')'} />
+            <SectionTitle title={'Kaunselor Tidak Aktif (' + dibuang.length + ')'} />
             {dibuang.map(renderRow)}
           </>
         ) : null}
@@ -316,18 +344,34 @@ export default function KaunselorScreen() {
 
       <ConfirmDialog
         visible={toRemove !== null}
-        title="Nyahtugas kaunselor?"
+        title="Nyahaktifkan kaunselor?"
         message={
           toRemove
             ? toRemove.full_name +
               ' tidak lagi dipaparkan kepada ahli dan kehilangan akses kepada perbualannya. Sejarah dan bilangan kekal.'
             : ''
         }
-        confirmLabel="Nyahtugas"
+        confirmLabel="Nyahaktif"
         destructive
         busy={busyId !== null}
         onConfirm={() => void confirmRemove()}
         onCancel={() => setToRemove(null)}
+      />
+
+      <ConfirmDialog
+        visible={toDelete !== null}
+        title="Padam kaunselor?"
+        message={
+          toDelete
+            ? toDelete.full_name +
+              ' akan dipadam KEKAL bersama semua perbualan kaunselingnya dengan ahli dan catatan bilangan menghubungi. Tindakan ini tidak boleh dibatalkan. Jika hanya mahu berhenti memaparkannya, pilih Nyahaktif.'
+            : ''
+        }
+        confirmLabel="Padam Kekal"
+        destructive
+        busy={busyId !== null}
+        onConfirm={() => void confirmDelete()}
+        onCancel={() => setToDelete(null)}
       />
     </Screen>
   );

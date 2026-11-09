@@ -137,7 +137,7 @@ export default function KaunselingScreen() {
                       {thread.unread ? <View className="h-2.5 w-2.5 rounded-full bg-negative" /> : null}
                     </View>
                     {!thread.counselor_aktif ? (
-                      <Text className="text-xs text-warn">Kaunselor ini tidak lagi bertugas</Text>
+                      <Text className="text-xs text-warn">Kaunselor ini tidak aktif</Text>
                     ) : null}
                   </View>
                 </Card>
