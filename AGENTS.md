@@ -782,3 +782,5 @@ Rujukan: `supabase/migrations/20261109000165_counselor_profiles.sql`, `lib/couns
 - 2026-11-09 (tiada migration): senarai kaunselor DIRINGKASKAN. Ahli: gambar + "Nama · Generasi" satu baris; butiran penuh dalam helaian bila diketik.
   Admin LK: gambar + nama · generasi + "N ahli menghubungi" + butang Sunting Profil sahaja; status, tarikh lantik, Nyahaktif dan Padam kini DI DALAM helaian Sunting Profil
   (helaian ditutup dahulu sebelum dialog pengesahan dibuka).
+- 2026-11-09: skrin Bantuan Kaunseling (ahli) bermula dengan kad pengenalan "Program Sahabat Prihatin IKHWAN — Khidmat Kaunseling dan Bimbingan" (ringkasan teks LK:
+  Kesihatan Mental / Pengajian / Kerjaya + nota privasi). Teks tetap dalam `kaunseling.tsx`; tukar dengan menyunting kad itu (perlu build baharu).

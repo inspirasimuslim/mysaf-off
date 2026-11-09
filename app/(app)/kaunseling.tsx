@@ -86,10 +86,39 @@ export default function KaunselingScreen() {
       <ScreenHeader eyebrow="Lajnah Kebajikan" title="Bantuan Kaunseling" onBackPress={goBack} />
 
       <View className="gap-4 px-gutter pb-10 pt-5">
-        <Notice
-          tone="info"
-          message="Pilih kaunselor untuk menghantar mesej dalam app. Pihak Lajnah Kebajikan hanya mengetahui bilangan ahli yang menghubungi kaunselor, bukan identiti anda. Hanya kaunselor yang anda hubungi mengetahui siapa anda."
-        />
+        <Card>
+          <View className="gap-3">
+            <View className="gap-0.5">
+              <Text className="text-lg font-bold text-ink">Program Sahabat Prihatin IKHWAN</Text>
+              <Text className="text-sm font-semibold text-primary">Khidmat Kaunseling dan Bimbingan</Text>
+            </View>
+            <Text className="text-sm leading-5 text-ink-muted">
+              Inisiatif Lajnah Kebajikan untuk menjaga kebajikan, kesejahteraan dan perkembangan setiap ahli, disokong oleh
+              barisan kaunselor IKHWAN yang terpilih, berpengalaman dan berkelayakan dalam bidang masing-masing.
+            </Text>
+            {[
+              { icon: 'leaf-outline', title: 'Kesihatan Mental', text: 'Sokongan emosi, ruang perkongsian dan bimbingan.' },
+              { icon: 'school-outline', title: 'Pengajian', text: 'Bimbingan akademik dan perancangan pengajian.' },
+              { icon: 'briefcase-outline', title: 'Kerjaya', text: 'Panduan kerjaya dan pembangunan diri.' },
+            ].map((item) => (
+              <View key={item.title} className="flex-row items-start gap-3">
+                <Ionicons name={item.icon as 'leaf-outline'} size={20} color={colors.primary} />
+                <Text className="flex-1 text-sm text-ink">
+                  <Text className="font-bold">{item.title}</Text>
+                  {' – ' + item.text}
+                </Text>
+              </View>
+            ))}
+            <Text className="text-sm italic text-ink-muted">
+              Semoga menjadi ruang untuk kita saling mendengar, memahami dan membantu tanpa menghakimi.
+            </Text>
+            <View className="border-t border-line pt-3">
+              <Text className="text-xs text-ink-muted">
+                Pilih kaunselor untuk menghantar mesej dalam app. Pihak Lajnah Kebajikan hanya mengetahui bilangan ahli yang menghubungi kaunselor, bukan identiti anda. Hanya kaunselor yang anda hubungi mengetahui siapa anda.
+              </Text>
+            </View>
+          </View>
+        </Card>
 
         {error ? <Notice tone="negative" message={error} /> : null}
 
