@@ -779,3 +779,6 @@ Rujukan: `supabase/migrations/20261109000165_counselor_profiles.sql`, `lib/couns
   Sisi ahli (balasan kaunselor) sudah ada sebelum ini: banner Utama + lencana tile. Notifikasi dalam-app sahaja, bukan push.
 - 2026-11-09 (migration 167): **WhatsApp/Telefon DIBUANG** daripada Bantuan Kaunseling — ahli hanya boleh "Mesej dalam app". `counseling_counselors()` memulangkan `no_tel = null`
   (nombor kaunselor tidak didedahkan). Bilangan "ahli menghubungi" kini hanya daripada mesej dalam app (`counseling_log_contact` kekal di DB untuk APK lama, tidak dipanggil lagi).
+- 2026-11-09 (tiada migration): senarai kaunselor DIRINGKASKAN. Ahli: gambar + "Nama · Generasi" satu baris; butiran penuh dalam helaian bila diketik.
+  Admin LK: gambar + nama · generasi + "N ahli menghubungi" + butang Sunting Profil sahaja; status, tarikh lantik, Nyahaktif dan Padam kini DI DALAM helaian Sunting Profil
+  (helaian ditutup dahulu sebelum dialog pengesahan dibuka).

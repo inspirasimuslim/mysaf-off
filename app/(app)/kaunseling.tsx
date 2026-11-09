@@ -148,16 +148,11 @@ export default function KaunselingScreen() {
               className="active:opacity-70">
               <Card>
                 <View className="flex-row items-center gap-3">
-                  <Avatar counselor={counselor} size={56} />
-                  <View className="flex-1">
-                    <Text className="text-base font-bold text-ink">{counselor.full_name}</Text>
-                    {counselor.generasi ? <Text className="text-sm text-ink-muted">{counselor.generasi}</Text> : null}
-                    {counselor.pekerjaan ? (
-                      <Text numberOfLines={1} className="text-xs text-ink-faint">
-                        {counselor.pekerjaan}
-                      </Text>
-                    ) : null}
-                  </View>
+                  <Avatar counselor={counselor} size={48} />
+                  <Text numberOfLines={1} className="flex-1 text-base font-bold text-ink">
+                    {counselor.full_name}
+                    {counselor.generasi ? '  ·  ' + counselor.generasi : ''}
+                  </Text>
                   <Ionicons name="chevron-forward" size={18} color={colors.inkMuted} />
                 </View>
               </Card>

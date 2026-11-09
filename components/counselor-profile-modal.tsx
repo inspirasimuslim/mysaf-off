@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import { ImageUploadRow } from '@/components/business-ad-image-slot';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { FormModal } from '@/components/ui/form-modal';
 import { Notice } from '@/components/ui/notice';
@@ -12,6 +13,7 @@ import {
   type CounselorAdminRow,
   type CounselorProfileInput,
 } from '@/lib/counseling';
+import { formatTarikh } from '@/lib/bantuan';
 import { toMalayError } from '@/lib/errors';
 import { ImageUploadError, pickImage } from '@/lib/image-upload';
 
@@ -22,6 +24,9 @@ type Props = {
   error: string | null;
   onClose: () => void;
   onSubmit: (input: CounselorProfileInput, photoUri: string | null, removePhoto: boolean) => void;
+  /** Tindakan lain: dikendalikan oleh skrin induk (tutup helaian ini dahulu, kemudian sahkan). */
+  onDeactivate: () => void;
+  onDelete: () => void;
 };
 
 /** Dipasang hanya ketika dibuka supaya nilai sentiasa bermula daripada rekod semasa. */
@@ -29,7 +34,7 @@ export function CounselorProfileModal(props: Props) {
   return props.counselor ? <Body key={props.counselor.id} {...props} counselor={props.counselor} /> : null;
 }
 
-function Body({ counselor, busy, error, onClose, onSubmit }: Props & { counselor: CounselorAdminRow }) {
+function Body({ counselor, busy, error, onClose, onSubmit, onDeactivate, onDelete }: Props & { counselor: CounselorAdminRow }) {
   const [nama, setNama] = useState(counselor.nama_penuh ?? '');
   const [pendidikan, setPendidikan] = useState(counselor.pendidikan ?? '');
   const [pekerjaan, setPekerjaan] = useState(counselor.pekerjaan ?? '');
@@ -70,6 +75,15 @@ function Body({ counselor, busy, error, onClose, onSubmit }: Props & { counselor
       onClose={onClose}
       footer={<Button label="Simpan" loading={busy} disabled={busy} onPress={submit} />}>
       <View className="gap-3">
+        <View className="gap-1 rounded-field bg-primary-tint p-3">
+          <View className="flex-row items-center gap-2">
+            <Text className="text-xs font-semibold text-ink-muted">Status</Text>
+            <Badge label={counselor.aktif ? 'Aktif' : 'Tidak aktif'} tone={counselor.aktif ? 'positive' : 'neutral'} />
+          </View>
+          <Text className="text-sm text-ink-muted">
+            {'Dilantik ' + formatTarikh(counselor.appointed_at) + (counselor.removed_at ? ' · Tidak aktif sejak ' + formatTarikh(counselor.removed_at) : '')}
+          </Text>
+        </View>
         {localError || error ? <Notice tone="negative" message={(localError ?? error) as string} /> : null}
         <TextField
           label={'Nama penuh (kosongkan untuk guna nama ahli: ' + counselor.full_name + ')'}
@@ -103,6 +117,11 @@ function Body({ counselor, busy, error, onClose, onSubmit }: Props & { counselor
           }
           disabled={busy}
         />
+        <View className="gap-2 border-t border-line pt-4">
+          <Text className="text-xs font-semibold text-ink-muted">Tindakan lain</Text>
+          {counselor.aktif ? <Button label="Nyahaktif" variant="danger" size="sm" disabled={busy} onPress={onDeactivate} /> : null}
+          <Button label="Padam" variant="danger" size="sm" disabled={busy} onPress={onDelete} />
+        </View>
       </View>
     </FormModal>
   );

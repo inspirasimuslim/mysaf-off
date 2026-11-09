@@ -203,37 +203,28 @@ export default function KaunselorScreen() {
 
   const renderRow = (row: CounselorAdminRow) => (
     <Card key={row.id}>
-      <View className="gap-2">
+      <View className="gap-3">
         <View className="flex-row items-center gap-3">
           {row.gambar_path ? (
             <Image
               source={{ uri: counselorImageUrl(row.gambar_path) }}
-              style={{ width: 44, height: 44, borderRadius: 22 }}
+              style={{ width: 48, height: 48, borderRadius: 24 }}
               contentFit="cover"
               accessibilityLabel={'Gambar ' + row.full_name}
             />
           ) : (
-            <View className="h-11 w-11 items-center justify-center rounded-pill bg-primary-soft">
-              <Ionicons name="person-outline" size={20} color={colors.primary} />
+            <View className="h-12 w-12 items-center justify-center rounded-pill bg-primary-soft">
+              <Ionicons name="person-outline" size={22} color={colors.primary} />
             </View>
           )}
-          <Text numberOfLines={2} className="flex-1 text-base font-bold text-ink">
-            {row.nama_penuh || row.full_name}
-            {row.generasi ? '  ·  ' + row.generasi : ''}
-          </Text>
-          <Badge label={row.aktif ? 'Aktif' : 'Tidak aktif'} tone={row.aktif ? 'positive' : 'neutral'} />
+          <View className="flex-1">
+            <Text numberOfLines={1} className="text-base font-bold text-ink">
+              {row.nama_penuh || row.full_name}
+              {row.generasi ? '  ·  ' + row.generasi : ''}
+            </Text>
+            <Text className="text-sm text-ink-muted">{row.ahli_menghubungi + ' ahli menghubungi'}</Text>
+          </View>
         </View>
-        {row.pekerjaan || row.pendidikan ? (
-          <Text numberOfLines={2} className="text-sm text-ink-muted">
-            {[row.pekerjaan, row.pendidikan?.split('\n')[0]].filter(Boolean).join(' · ')}
-          </Text>
-        ) : access.canEdit ? (
-          <Text className="text-sm text-warn">Profil belum diisi</Text>
-        ) : null}
-        <Text className="text-sm text-ink-muted">
-          {'Dilantik ' + formatTarikh(row.appointed_at) + (row.removed_at ? ' · Tidak aktif sejak ' + formatTarikh(row.removed_at) : '')}
-        </Text>
-        <Text className="text-sm font-semibold text-ink">{row.ahli_menghubungi + ' ahli menghubungi'}</Text>
         {access.canEdit ? (
           <Button
             label="Sunting Profil"
@@ -243,24 +234,6 @@ export default function KaunselorScreen() {
               setProfileError(null);
               setEditing(row);
             }}
-          />
-        ) : null}
-        {row.aktif && access.canEdit ? (
-          <Button
-            label="Nyahaktif"
-            variant="danger"
-            size="sm"
-            disabled={busyId === row.id}
-            onPress={() => setToRemove(row)}
-          />
-        ) : null}
-        {access.canEdit ? (
-          <Button
-            label="Padam"
-            variant="danger"
-            size="sm"
-            disabled={busyId === row.id}
-            onPress={() => setToDelete(row)}
           />
         ) : null}
       </View>
@@ -340,6 +313,16 @@ export default function KaunselorScreen() {
         error={profileError}
         onClose={() => setEditing(null)}
         onSubmit={(input, photoUri, removePhoto) => void saveProfile(input, photoUri, removePhoto)}
+        onDeactivate={() => {
+          const row = editing;
+          setEditing(null);
+          if (row) setToRemove(row);
+        }}
+        onDelete={() => {
+          const row = editing;
+          setEditing(null);
+          if (row) setToDelete(row);
+        }}
       />
 
       <ConfirmDialog
