@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Linking, Pressable, Text, View } from 'react-native';
@@ -7,12 +8,15 @@ import { ScreenHeader } from '@/components/screen-header';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
+import { FormModal } from '@/components/ui/form-modal';
 import { LoadingScreen } from '@/components/ui/loading-screen';
 import { Notice } from '@/components/ui/notice';
 import { Screen } from '@/components/ui/screen';
 import { SectionTitle } from '@/components/ui/section-title';
 import {
   counselErrorMessage,
+  counselorImageUrl,
+  educationLines,
   fetchCounselors,
   fetchMyCounselThreads,
   logCounselingContact,
@@ -23,6 +27,23 @@ import { formatChatTime } from '@/lib/feedback-chat';
 import { useGoBack } from '@/lib/navigation';
 import { toWhatsAppNumber } from '@/lib/phone';
 import { useColors } from '@/lib/theme';
+
+function Avatar({ counselor, size }: { counselor: Counselor; size: number }) {
+  const colors = useColors();
+  return counselor.gambar_path ? (
+    <Image
+      source={{ uri: counselorImageUrl(counselor.gambar_path) }}
+      style={{ width: size, height: size, borderRadius: size / 2 }}
+      contentFit="cover"
+      transition={150}
+      accessibilityLabel={'Gambar ' + counselor.full_name}
+    />
+  ) : (
+    <View style={{ width: size, height: size, borderRadius: size / 2 }} className="items-center justify-center bg-primary-soft">
+      <Ionicons name="person-outline" size={Math.round(size * 0.42)} color={colors.primary} />
+    </View>
+  );
+}
 
 /**
  * Bantuan Kaunseling (migration 153) — senarai kaunselor yang dilantik Lajnah Kebajikan.
@@ -36,7 +57,7 @@ export default function KaunselingScreen() {
 
   const [counselors, setCounselors] = useState<Counselor[] | null>(null);
   const [threads, setThreads] = useState<CounselMyThread[]>([]);
-  const [openId, setOpenId] = useState<string | null>(null);
+  const [selected, setSelected] = useState<Counselor | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useFocusEffect(
@@ -133,56 +154,86 @@ export default function KaunselingScreen() {
             description="Senarai kaunselor akan dipaparkan di sini selepas dilantik oleh Lajnah Kebajikan."
           />
         ) : (
-          counselors.map((counselor) => {
-            const open = openId === counselor.id;
-            const hasPhone = toWhatsAppNumber(counselor.no_tel) !== null;
-            return (
-              <Card key={counselor.id}>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityState={{ expanded: open }}
-                  accessibilityLabel={'Kaunselor ' + counselor.full_name}
-                  onPress={() => setOpenId(open ? null : counselor.id)}
-                  className="flex-row items-center gap-3 active:opacity-70">
-                  <View className="h-11 w-11 items-center justify-center rounded-pill bg-primary-soft">
-                    <Ionicons name="heart-outline" size={20} color={colors.primary} />
-                  </View>
+          counselors.map((counselor) => (
+            <Pressable
+              key={counselor.id}
+              accessibilityRole="button"
+              accessibilityLabel={'Lihat butiran kaunselor ' + counselor.full_name}
+              onPress={() => setSelected(counselor)}
+              className="active:opacity-70">
+              <Card>
+                <View className="flex-row items-center gap-3">
+                  <Avatar counselor={counselor} size={56} />
                   <View className="flex-1">
                     <Text className="text-base font-bold text-ink">{counselor.full_name}</Text>
                     {counselor.generasi ? <Text className="text-sm text-ink-muted">{counselor.generasi}</Text> : null}
+                    {counselor.pekerjaan ? (
+                      <Text numberOfLines={1} className="text-xs text-ink-faint">
+                        {counselor.pekerjaan}
+                      </Text>
+                    ) : null}
                   </View>
-                  <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={18} color={colors.inkMuted} />
-                </Pressable>
-
-                {open ? (
-                  <View className="mt-4 gap-2 border-t border-line pt-4">
-                    {hasPhone ? (
-                      <>
-                        <Text selectable className="text-sm text-ink-muted">
-                          {'No. telefon: ' + counselor.no_tel}
-                        </Text>
-                        <Button label="WhatsApp" variant="ghost" onPress={() => contact(counselor, 'whatsapp')} />
-                        <Button label="Telefon" variant="secondary" onPress={() => contact(counselor, 'telefon')} />
-                      </>
-                    ) : (
-                      <Text className="text-sm text-ink-muted">Nombor telefon kaunselor ini belum direkodkan.</Text>
-                    )}
-                    <Button
-                      label="Mesej dalam app"
-                      onPress={() =>
-                        router.push({
-                          pathname: '/(app)/kaunseling-chat',
-                          params: { counselor: counselor.id, n: String(Date.now()) },
-                        })
-                      }
-                    />
-                  </View>
-                ) : null}
+                  <Ionicons name="chevron-forward" size={18} color={colors.inkMuted} />
+                </View>
               </Card>
-            );
-          })
+            </Pressable>
+          ))
         )}
       </View>
+      <FormModal visible={selected !== null} title="Butiran Kaunselor" onClose={() => setSelected(null)} centerOnDesktop>
+        {selected ? (
+          <View className="gap-4">
+            <View className="items-center gap-3">
+              <Avatar counselor={selected} size={132} />
+              <View className="items-center gap-0.5">
+                <Text className="text-center text-lg font-bold text-ink">{selected.full_name}</Text>
+                {selected.generasi ? <Text className="text-sm text-ink-muted">{selected.generasi}</Text> : null}
+              </View>
+            </View>
+
+            {educationLines(selected.pendidikan).length > 0 ? (
+              <View className="gap-1.5 rounded-field bg-primary-tint p-3">
+                <Text className="text-xs font-semibold text-ink-muted">Latar belakang pendidikan</Text>
+                {educationLines(selected.pendidikan).map((line, index) => (
+                  <View key={index} className="flex-row gap-2">
+                    <Text className="text-sm text-ink-muted">{'•'}</Text>
+                    <Text className="flex-1 text-sm text-ink">{line}</Text>
+                  </View>
+                ))}
+              </View>
+            ) : null}
+
+            {selected.pekerjaan ? (
+              <View className="gap-1 rounded-field bg-primary-tint p-3">
+                <Text className="text-xs font-semibold text-ink-muted">Pekerjaan / jawatan semasa</Text>
+                <Text className="text-sm text-ink">{selected.pekerjaan}</Text>
+              </View>
+            ) : null}
+
+            <View className="gap-2 border-t border-line pt-4">
+              {toWhatsAppNumber(selected.no_tel) !== null ? (
+                <>
+                  <Text selectable className="text-sm text-ink-muted">
+                    {'No. telefon: ' + selected.no_tel}
+                  </Text>
+                  <Button label="WhatsApp" variant="ghost" onPress={() => contact(selected, 'whatsapp')} />
+                  <Button label="Telefon" variant="secondary" onPress={() => contact(selected, 'telefon')} />
+                </>
+              ) : (
+                <Text className="text-sm text-ink-muted">Nombor telefon kaunselor ini belum direkodkan.</Text>
+              )}
+              <Button
+                label="Mesej dalam app"
+                onPress={() => {
+                  const id = selected.id;
+                  setSelected(null);
+                  router.push({ pathname: '/(app)/kaunseling-chat', params: { counselor: id, n: String(Date.now()) } });
+                }}
+              />
+            </View>
+          </View>
+        ) : null}
+      </FormModal>
     </Screen>
   );
 }

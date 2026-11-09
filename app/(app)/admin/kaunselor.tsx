@@ -1,7 +1,10 @@
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { Text, View } from 'react-native';
 
+import { CounselorProfileModal } from '@/components/counselor-profile-modal';
 import { ScreenHeader } from '@/components/screen-header';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -16,6 +19,9 @@ import { TextField } from '@/components/ui/text-field';
 import {
   appointCounselor,
   counselErrorMessage,
+  counselorImageUrl,
+  saveCounselorProfile,
+  type CounselorProfileInput,
   fetchCounselorAdminList,
   removeCounselor,
   searchCounselorCandidates,
@@ -25,6 +31,7 @@ import {
 import { useDepartmentAccess } from '@/lib/department-access';
 import { formatTarikh } from '@/lib/bantuan';
 import { useGoBack } from '@/lib/navigation';
+import { useColors } from '@/lib/theme';
 
 const KEBAJIKAN_DEPARTMENT = 'LAJNAH KEBAJIKAN';
 
@@ -36,6 +43,7 @@ const KEBAJIKAN_DEPARTMENT = 'LAJNAH KEBAJIKAN';
 export default function KaunselorScreen() {
   const goBack = useGoBack();
   const access = useDepartmentAccess(KEBAJIKAN_DEPARTMENT);
+  const colors = useColors();
 
   const [rows, setRows] = useState<CounselorAdminRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -49,6 +57,9 @@ export default function KaunselorScreen() {
   const searchSeq = useRef(0);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [toRemove, setToRemove] = useState<CounselorAdminRow | null>(null);
+  const [editing, setEditing] = useState<CounselorAdminRow | null>(null);
+  const [profileBusy, setProfileBusy] = useState(false);
+  const [profileError, setProfileError] = useState<string | null>(null);
 
   useEffect(
     () => () => {
@@ -138,6 +149,22 @@ export default function KaunselorScreen() {
     }
   };
 
+  const saveProfile = async (input: CounselorProfileInput, photoUri: string | null, removePhoto: boolean) => {
+    if (!editing) return;
+    setProfileBusy(true);
+    setProfileError(null);
+    try {
+      await saveCounselorProfile(editing, input, photoUri, removePhoto);
+      setNotice('Profil ' + editing.full_name + ' disimpan.');
+      setEditing(null);
+      await load();
+    } catch (caught) {
+      setProfileError(counselErrorMessage(caught, 'Gagal menyimpan profil. Sila cuba lagi.'));
+    } finally {
+      setProfileBusy(false);
+    }
+  };
+
   const confirmRemove = async () => {
     if (!toRemove) return;
     setBusyId(toRemove.id);
@@ -158,17 +185,47 @@ export default function KaunselorScreen() {
   const renderRow = (row: CounselorAdminRow) => (
     <Card key={row.id}>
       <View className="gap-2">
-        <View className="flex-row items-center justify-between gap-2">
-          <Text numberOfLines={1} className="flex-1 text-base font-bold text-ink">
-            {row.full_name}
+        <View className="flex-row items-center gap-3">
+          {row.gambar_path ? (
+            <Image
+              source={{ uri: counselorImageUrl(row.gambar_path) }}
+              style={{ width: 44, height: 44, borderRadius: 22 }}
+              contentFit="cover"
+              accessibilityLabel={'Gambar ' + row.full_name}
+            />
+          ) : (
+            <View className="h-11 w-11 items-center justify-center rounded-pill bg-primary-soft">
+              <Ionicons name="person-outline" size={20} color={colors.primary} />
+            </View>
+          )}
+          <Text numberOfLines={2} className="flex-1 text-base font-bold text-ink">
+            {row.nama_penuh || row.full_name}
             {row.generasi ? '  ·  ' + row.generasi : ''}
           </Text>
           <Badge label={row.aktif ? 'Aktif' : 'Tidak lagi bertugas'} tone={row.aktif ? 'positive' : 'neutral'} />
         </View>
+        {row.pekerjaan || row.pendidikan ? (
+          <Text numberOfLines={2} className="text-sm text-ink-muted">
+            {[row.pekerjaan, row.pendidikan?.split('\n')[0]].filter(Boolean).join(' · ')}
+          </Text>
+        ) : access.canEdit ? (
+          <Text className="text-sm text-warn">Profil belum diisi</Text>
+        ) : null}
         <Text className="text-sm text-ink-muted">
           {'Dilantik ' + formatTarikh(row.appointed_at) + (row.removed_at ? ' · Tidak lagi bertugas sejak ' + formatTarikh(row.removed_at) : '')}
         </Text>
         <Text className="text-sm font-semibold text-ink">{row.ahli_menghubungi + ' ahli menghubungi'}</Text>
+        {access.canEdit ? (
+          <Button
+            label="Sunting Profil"
+            variant="secondary"
+            size="sm"
+            onPress={() => {
+              setProfileError(null);
+              setEditing(row);
+            }}
+          />
+        ) : null}
         {row.aktif && access.canEdit ? (
           <Button
             label="Nyahtugas"
@@ -248,6 +305,14 @@ export default function KaunselorScreen() {
           </>
         ) : null}
       </View>
+
+      <CounselorProfileModal
+        counselor={editing}
+        busy={profileBusy}
+        error={profileError}
+        onClose={() => setEditing(null)}
+        onSubmit={(input, photoUri, removePhoto) => void saveProfile(input, photoUri, removePhoto)}
+      />
 
       <ConfirmDialog
         visible={toRemove !== null}

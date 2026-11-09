@@ -761,3 +761,13 @@ Rujukan: `supabase/migrations/20261023000164_payment_switches.sql`, `supabase/fu
 - Sebelum Edge Function `create-yuran-bill`/`create-pipis-bill`/`create-zakat-bill` di-deploy semula, ahli nampak "Gagal merekod bil bayaran." (mesej generik);
   selepas deploy, mesej ramah daripada `message` dipapar (APK lama pun, kerana klien memaparkan `error` pelayan). Butang "Bayar" tetap kelihatan pada app.
 - Belum ada skrin admin untuk suis ini (SQL sahaja).
+
+# Profil Kaunselor (2026-11-09, migration 165 — BELUM dijalankan di produksi)
+
+Rujukan: `supabase/migrations/20261109000165_counselor_profiles.sql`, `lib/counseling.ts` (`saveCounselorProfile`, `counselorImageUrl`, `educationLines`),
+`components/counselor-profile-modal.tsx`, `app/(app)/kaunseling.tsx` (senarai + helaian butiran), `app/(app)/admin/kaunselor.tsx` ("Sunting Profil").
+- `counselors` +`nama_penuh`, `pendidikan` (satu kelayakan setiap baris), `pekerjaan`, `gambar_path`. `counseling_counselors()` dan `counseling_admin_list()` (drop+create)
+  memulangkan medan baharu; `full_name` = `nama_penuh` jika diisi, jika tidak nama ahli. RPC `counseling_update_profile()` — hanya LK can_edit / Super Admin.
+- Bucket awam `counselor-photos` (JPEG, 1 MB, `kaunselor-<ms>.jpg`, dimampatkan lebar 800 di klien); tulis hanya admin LK. Gambar baharu dimuat naik dahulu, lama dibuang selepas berjaya.
+- Ahli: kad (gambar, nama, generasi, pekerjaan) -> ketik -> helaian butiran penuh + WhatsApp/Telefon/Mesej dalam app. Privasi kaunseling (bilangan sahaja kepada LK) tidak berubah.
+- Klien serasi sebelum migration dijalankan (medan baharu optional), tetapi Sunting Profil gagal sehingga migration live.

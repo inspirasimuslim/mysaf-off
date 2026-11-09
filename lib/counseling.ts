@@ -1,12 +1,22 @@
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 
+import { ImageUploadError, readJpegBytes } from './image-upload';
 import { supabase } from './supabase';
 
 /** Mesti sepadan dengan semakan panjang dalam migration 153. */
 export const COUNSEL_MAX_LENGTH = 2000;
 
-export type Counselor = { id: string; full_name: string; generasi: string | null; no_tel: string | null };
+export type Counselor = {
+  id: string;
+  full_name: string;
+  generasi: string | null;
+  no_tel: string | null;
+  /** Profil (migration 165) — `undefined`/null sebelum migration dijalankan. */
+  pendidikan?: string | null;
+  pekerjaan?: string | null;
+  gambar_path?: string | null;
+};
 
 export type CounselMyThread = {
   id: string;
@@ -46,6 +56,10 @@ export type CounselorAdminRow = {
   appointed_at: string;
   removed_at: string | null;
   ahli_menghubungi: number;
+  nama_penuh?: string | null;
+  pendidikan?: string | null;
+  pekerjaan?: string | null;
+  gambar_path?: string | null;
 };
 
 export type CounselorSearchRow = {
@@ -172,4 +186,65 @@ export function useCounselorUnread(enabled: boolean): number {
     }, [enabled]),
   );
   return enabled ? count : 0;
+}
+
+// --- Profil kaunselor (migration 165) ------------------------------------------
+
+const PHOTO_BUCKET = 'counselor-photos';
+const PHOTO_WIDTH = 800;
+
+export const PROFILE_LIMITS = { nama: 120, pendidikan: 800, pekerjaan: 200 } as const;
+
+export type CounselorProfileInput = { nama_penuh: string; pendidikan: string; pekerjaan: string };
+
+export function counselorImageUrl(path: string): string {
+  return supabase.storage.from(PHOTO_BUCKET).getPublicUrl(path).data.publicUrl;
+}
+
+/** Satu kelayakan setiap baris -> senarai (baris kosong dibuang). */
+export function educationLines(value: string | null | undefined): string[] {
+  return (value ?? '')
+    .split(/\r?\n/)
+    .map((line) => line.replace(/^[-•*]\s*/, '').trim())
+    .filter(Boolean);
+}
+
+/**
+ * Simpan profil. Gambar baharu dimuat naik DAHULU (dimampatkan ke lebar 800, JPEG), profil disimpan kemudian,
+ * objek lama dibuang selepas berjaya; jika penyimpanan gagal, objek baharu dibuang (cuba-terbaik).
+ */
+export async function saveCounselorProfile(
+  row: Pick<CounselorAdminRow, 'id' | 'gambar_path'>,
+  input: CounselorProfileInput,
+  photoUri: string | null,
+  removePhotoFlag: boolean,
+): Promise<void> {
+  let newPath: string | null = null;
+  if (photoUri) {
+    const bytes = await readJpegBytes(photoUri, PHOTO_WIDTH);
+    newPath = 'kaunselor-' + Date.now() + '.jpg';
+    const { error } = await supabase.storage
+      .from(PHOTO_BUCKET)
+      .upload(newPath, bytes, { contentType: 'image/jpeg', upsert: false });
+    if (error) throw new ImageUploadError(error.message);
+  }
+
+  const setGambar = newPath !== null || removePhotoFlag;
+  const { error } = await supabase.rpc('counseling_update_profile', {
+    p_counselor: row.id,
+    p_nama_penuh: input.nama_penuh,
+    p_pendidikan: input.pendidikan,
+    p_pekerjaan: input.pekerjaan,
+    p_gambar_path: newPath,
+    p_set_gambar: setGambar,
+  });
+
+  if (error) {
+    if (newPath) await supabase.storage.from(PHOTO_BUCKET).remove([newPath]).catch(() => {});
+    throw error;
+  }
+
+  if (setGambar && row.gambar_path && row.gambar_path !== newPath) {
+    await supabase.storage.from(PHOTO_BUCKET).remove([row.gambar_path]).catch(() => {});
+  }
 }

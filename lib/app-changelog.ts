@@ -145,6 +145,7 @@ export const CHANGELOG: ChangelogEntry[] = [
       'Bilangan gambar dalam Album dikemas kini serta-merta; senarai Pasangan MBM tidak lagi memaparkan 0 anak.',
       'Admin Data: Statistik Log Masuk (carta harian, mingguan, bulanan, tahunan), senarai siapa log masuk dan log masuk terakhir setiap ahli.',
       'Pencapaian Akademik: dinding kehormatan ahli pemegang PhD dan Sarjana, lengkap dengan gambar, generasi dan tajuk penyelidikan (jubin baharu di Direktori).',
+      'Bantuan Kaunseling: senarai kaunselor kini dengan gambar; ketik nama untuk melihat latar belakang pendidikan dan pekerjaan.',
     ],
   },
 ];
