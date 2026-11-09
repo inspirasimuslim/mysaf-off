@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Linking, Pressable, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
 import { ScreenHeader } from '@/components/screen-header';
 import { Button } from '@/components/ui/button';
@@ -19,13 +19,11 @@ import {
   educationLines,
   fetchCounselors,
   fetchMyCounselThreads,
-  logCounselingContact,
   type Counselor,
   type CounselMyThread,
 } from '@/lib/counseling';
 import { formatChatTime } from '@/lib/feedback-chat';
 import { useGoBack } from '@/lib/navigation';
-import { toWhatsAppNumber } from '@/lib/phone';
 import { useColors } from '@/lib/theme';
 
 function Avatar({ counselor, size }: { counselor: Counselor; size: number }) {
@@ -83,19 +81,6 @@ export default function KaunselingScreen() {
 
   if (counselors === null) return <LoadingScreen />;
 
-  const contact = (counselor: Counselor, channel: 'whatsapp' | 'telefon') => {
-    // Catatan senyap: kegagalan tidak menghalang ahli menghubungi kaunselor.
-    void logCounselingContact(counselor.id, channel).catch(() => undefined);
-    if (channel === 'whatsapp') {
-      const number = toWhatsAppNumber(counselor.no_tel);
-      if (number) void Linking.openURL('https://wa.me/' + number).catch(() => setError('WhatsApp tidak dapat dibuka pada peranti ini.'));
-    } else if (counselor.no_tel) {
-      void Linking.openURL('tel:' + counselor.no_tel.replace(/[^\d+]/g, '')).catch(() =>
-        setError('Panggilan telefon tidak dapat dibuat pada peranti ini.'),
-      );
-    }
-  };
-
   return (
     <Screen padTop={false}>
       <ScreenHeader eyebrow="Lajnah Kebajikan" title="Bantuan Kaunseling" onBackPress={goBack} />
@@ -103,7 +88,7 @@ export default function KaunselingScreen() {
       <View className="gap-4 px-gutter pb-10 pt-5">
         <Notice
           tone="info"
-          message="Pilih kaunselor untuk berhubung melalui WhatsApp, telefon atau mesej dalam app. Pihak Lajnah Kebajikan hanya mengetahui bilangan ahli yang menghubungi kaunselor, bukan identiti anda. Hanya kaunselor yang anda hubungi mengetahui siapa anda."
+          message="Pilih kaunselor untuk menghantar mesej dalam app. Pihak Lajnah Kebajikan hanya mengetahui bilangan ahli yang menghubungi kaunselor, bukan identiti anda. Hanya kaunselor yang anda hubungi mengetahui siapa anda."
         />
 
         {error ? <Notice tone="negative" message={error} /> : null}
@@ -211,17 +196,6 @@ export default function KaunselingScreen() {
             ) : null}
 
             <View className="gap-2 border-t border-line pt-4">
-              {toWhatsAppNumber(selected.no_tel) !== null ? (
-                <>
-                  <Text selectable className="text-sm text-ink-muted">
-                    {'No. telefon: ' + selected.no_tel}
-                  </Text>
-                  <Button label="WhatsApp" variant="ghost" onPress={() => contact(selected, 'whatsapp')} />
-                  <Button label="Telefon" variant="secondary" onPress={() => contact(selected, 'telefon')} />
-                </>
-              ) : (
-                <Text className="text-sm text-ink-muted">Nombor telefon kaunselor ini belum direkodkan.</Text>
-              )}
               <Button
                 label="Mesej dalam app"
                 onPress={() => {
