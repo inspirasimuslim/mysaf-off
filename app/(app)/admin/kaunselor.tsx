@@ -30,7 +30,6 @@ import {
   type CounselorSearchRow,
 } from '@/lib/counseling';
 import { useDepartmentAccess } from '@/lib/department-access';
-import { formatTarikh } from '@/lib/bantuan';
 import { useGoBack } from '@/lib/navigation';
 import { useColors } from '@/lib/theme';
 
