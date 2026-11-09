@@ -3,7 +3,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
-import { fetchCounselMemberUnread } from '@/lib/counseling';
+import { fetchCounselMemberUnread, fetchCounselorUnread } from '@/lib/counseling';
 import { fetchFeedbackMemberUnread } from '@/lib/feedback-chat';
 import { useColors } from '@/lib/theme';
 
@@ -17,6 +17,7 @@ export function FeedbackNotice() {
   const colors = useColors();
   const [count, setCount] = useState(0);
   const [counselCount, setCounselCount] = useState(0);
+  const [asCounselorCount, setAsCounselorCount] = useState(0);
 
   useFocusEffect(
     useCallback(() => {
@@ -27,13 +28,17 @@ export function FeedbackNotice() {
       fetchCounselMemberUnread()
         .then((value) => active && setCounselCount(value))
         .catch(() => undefined);
+      // Kaunselor aktif: mesej baharu daripada ahli yang menghubungi (0 untuk bukan kaunselor).
+      fetchCounselorUnread()
+        .then((value) => active && setAsCounselorCount(value))
+        .catch(() => undefined);
       return () => {
         active = false;
       };
     }, []),
   );
 
-  if (count === 0 && counselCount === 0) return null;
+  if (count === 0 && counselCount === 0 && asCounselorCount === 0) return null;
 
   return (
     <>
@@ -65,6 +70,22 @@ export function FeedbackNotice() {
               {counselCount === 1 ? 'Balasan baharu daripada kaunselor' : counselCount + ' balasan baharu daripada kaunselor'}
             </Text>
             <Text className="text-xs text-ink-muted">Ketik untuk membuka Bantuan Kaunseling</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.inkMuted} />
+        </Pressable>
+      ) : null}
+      {asCounselorCount > 0 ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Mesej baharu daripada ahli"
+          onPress={() => router.push('/(app)/admin/kaunseling-peti')}
+          className="flex-row items-center gap-3 rounded-card border border-line bg-surface p-3 active:opacity-70">
+          <Ionicons name="heart-circle" size={24} color={colors.primary} />
+          <View className="flex-1">
+            <Text className="text-sm font-bold text-ink">
+              {asCounselorCount === 1 ? 'Mesej baharu daripada ahli' : asCounselorCount + ' mesej baharu daripada ahli'}
+            </Text>
+            <Text className="text-xs text-ink-muted">Ketik untuk membuka Sesi Kaunseling</Text>
           </View>
           <Ionicons name="chevron-forward" size={18} color={colors.inkMuted} />
         </Pressable>

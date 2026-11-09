@@ -775,3 +775,5 @@ Rujukan: `supabase/migrations/20261109000165_counselor_profiles.sql`, `lib/couns
 ## Kaunselor: "Tidak aktif" + padam (2026-11-09, migration 166)
 - Label "Tidak lagi bertugas"/"Nyahtugas" -> **"Tidak aktif"/"Nyahaktif"** (admin LK dan ahli). Butang **"Padam"** pada SETIAP kaunselor (aktif atau tidak aktif),
   RPC `counseling_delete()` (LK can_edit): padam KEKAL kaunselor + perbualan/mesej/catatan hubungan (cascade) + objek gambar. Dialog pengesahan memberi amaran.
+- 2026-11-09 (tiada migration): `FeedbackNotice` (Utama) kini juga memaparkan banner **kaunselor aktif** "Mesej baharu daripada ahli" (`counseling_counselor_unread()`, 0 untuk bukan kaunselor) -> `admin/kaunseling-peti`.
+  Sisi ahli (balasan kaunselor) sudah ada sebelum ini: banner Utama + lencana tile. Notifikasi dalam-app sahaja, bukan push.
