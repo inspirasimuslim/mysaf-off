@@ -1,3 +1,4 @@
+import { departmentLabel, sortDepartments } from '@/lib/department-labels';
 import { useCallback, useEffect, useState } from 'react';
 import { Switch, Text, View } from 'react-native';
 
@@ -188,13 +189,13 @@ export default function DepartmentsScreen() {
                 beberapa nama lajnah hampir sama di hujungnya.
               */}
               <View className="gap-2">
-                {departments.map((department) => (
+                {sortDepartments(departments).map((department) => (
                   <View
                     key={department.id}
                     className="flex-row items-center gap-3 rounded-card border border-line bg-surface py-2 pl-4 pr-2">
                     <View className="flex-1 flex-row items-center gap-2">
                       <Text className="flex-shrink text-sm font-semibold text-ink" numberOfLines={2}>
-                        {department.name}
+                        {departmentLabel(department.name)}
                       </Text>
                       <View>
                         <Badge
@@ -211,13 +212,13 @@ export default function DepartmentsScreen() {
                       trackColor={{ false: colors.line, true: colors.primaryMid }}
                       thumbColor={colors.white}
                       ios_backgroundColor={colors.line}
-                      accessibilityLabel={'Status aktif ' + department.name}
+                      accessibilityLabel={'Status aktif ' + departmentLabel(department.name)}
                     />
 
                     <IconButton
                       icon="trash-outline"
                       tone="danger"
-                      accessibilityLabel={'Padam ' + department.name}
+                      accessibilityLabel={'Padam ' + departmentLabel(department.name)}
                       onPress={() => setPendingDelete(department)}
                     />
                   </View>

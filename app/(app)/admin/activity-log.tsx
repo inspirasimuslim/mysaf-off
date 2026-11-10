@@ -1,3 +1,4 @@
+import { departmentLabel } from '@/lib/department-labels';
 import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
@@ -108,7 +109,7 @@ export default function ActivityLogScreen() {
         ]);
         if (!active) return;
 
-        const deptName = new Map(departments.map((row) => [row.id, row.name]));
+        const deptName = new Map(departments.map((row) => [row.id, departmentLabel(row.name)]));
         const byUser = new Map<string, string[]>();
         for (const row of assignments) {
           const name = deptName.get(row.department_id);
