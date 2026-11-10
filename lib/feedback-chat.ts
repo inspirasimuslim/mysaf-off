@@ -45,28 +45,7 @@ export type FeedbackMessage = {
 };
 
 /** Nama paparan department (selaras dengan penamaan baharu Hub Admin). Lalai: nama dalam pangkalan data. */
-const DEPARTMENT_LABELS: Record<string, string> = {
-  SETIAUSAHA: 'Setiausaha Agung (SUA)',
-  'JABATAN SETIAUSAHA': 'Jabatan Setiausaha (JSU)',
-  'TIMBALAN SETIAUSAHA': 'Timbalan Setiausaha (TSUA)',
-  BENDAHARI: 'Bendahari Kehormat (BK)',
-  'LAJNAH TARBIAH': 'Lajnah Tarbiah (LT)',
-  'LAJNAH PERKADERAN': 'Lajnah Perkaderan (LP)',
-  'LAJNAH HAL EHWAL SEKOLAH & ALUMNI': 'Lajnah Hal Ehwal Sekolah & Alumni (LHESA)',
-  'LAJNAH PEMBANGUNAN GENERASI': 'Lajnah Pembangunan Generasi (LPG)',
-  'LAJNAH PEMBANGUNAN NGO': 'Lajnah Pembangunan NGO (LPN)',
-  'LAJNAH MUSLIMAT': 'Lajnah Muslimat (LM)',
-  'I-GEM': 'Ikhwan Generasi Muda (I-GEM)',
-  'LAJNAH KEBAJIKAN': 'Lajnah Kebajikan (LK)',
-  'LAJNAH EKONOMI DAN ASET': 'Lajnah Ekonomi & Aset (LEA)',
-  'JABATAN DATA & SUMBER MANUSIA': 'Jabatan Data & Sumber Manusia (JDSM)',
-  'KESIHATAN AHLI': 'Lajnah Kebajikan (LK) — Kesihatan Ahli',
-  'TABUNG ZAKAT': 'Lajnah Kebajikan (LK) — Tabung Zakat',
-};
-
-export function departmentLabel(name: string): string {
-  return DEPARTMENT_LABELS[name] ?? name;
-}
+export { departmentLabel } from './department-labels';
 
 export async function fetchFeedbackDepartments(): Promise<FeedbackDepartment[]> {
   const { data, error } = await supabase.rpc('feedback_departments');

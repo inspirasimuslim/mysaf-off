@@ -16,6 +16,7 @@ import { SectionTitle } from '@/components/ui/section-title';
 import { SelectRow } from '@/components/ui/select-row';
 import { TextField } from '@/components/ui/text-field';
 import { ToastBanner } from '@/components/ui/toast';
+import { departmentLabel, sortDepartments } from '@/lib/department-labels';
 import { fetchAssignments, fetchDepartments, fetchProfiles, removeAdmin, saveAssignments } from '@/lib/admin';
 import { toMalayError } from '@/lib/errors';
 import { useGoBack } from '@/lib/navigation';
@@ -108,7 +109,7 @@ export default function AdminsScreen() {
   }, [load]);
 
   const departmentName = useCallback(
-    (id: string) => departments.find((row) => row.id === id)?.name ?? 'Department dipadam',
+    (id: string) => departmentLabel(departments.find((row) => row.id === id)?.name ?? 'Department dipadam'),
     [departments],
   );
 
@@ -169,7 +170,7 @@ export default function AdminsScreen() {
    */
   const selectableDepartments = useMemo(() => {
     if (!editor) return [];
-    return departments.filter((row) => row.is_active || row.id in editor.selection);
+    return sortDepartments(departments.filter((row) => row.is_active || row.id in editor.selection));
   }, [departments, editor]);
 
   const toggleDepartment = useCallback((departmentId: string) => {
@@ -404,7 +405,7 @@ export default function AdminsScreen() {
                   return (
                     <SelectRow
                       key={department.id}
-                      title={department.name}
+                      title={departmentLabel(department.name)}
                       subtitle={department.is_active ? undefined : 'Department nonaktif'}
                       selected={permission !== undefined}
                       onPress={() => toggleDepartment(department.id)}
