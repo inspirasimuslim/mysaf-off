@@ -9,8 +9,10 @@ import { supabase } from './supabase';
  * Notifikasi admin — migration 145 (`admin_notifications()`).
  *
  * Setiap baris ialah satu JENIS tugasan tertunggak (bukan satu mesej), dikira
- * terus oleh pangkalan data mengikut kebenaran pemanggil. Tiada status "dibaca":
- * penanda merah hanya hilang bila tugasan benar-benar selesai.
+ * terus oleh pangkalan data mengikut kebenaran pemanggil. Migration 169: bagi
+ * iklan/padam akaun/bantuan, setiap admin ada status "dilihat" (disimpan di DB,
+ * kekal selepas log keluar) — disenyapkan sehingga ada permohonan baharu. Chat dan
+ * kaunseling guna status baca sendiri.
  */
 export type AdminNotification = {
   kind: string;
@@ -29,11 +31,16 @@ type Value = {
   open: boolean;
   setOpen: (open: boolean) => void;
   refresh: () => Promise<void>;
+  /** Tandakan jenis notifikasi sudah dilihat (hanya jenis yang menyokongnya ditulis oleh DB). */
+  markSeen: (kinds: string[]) => Promise<void>;
 };
 
-const EMPTY: Value = { items: [], total: 0, open: false, setOpen: () => undefined, refresh: async () => undefined };
+const EMPTY: Value = { items: [], total: 0, open: false, setOpen: () => undefined, refresh: async () => undefined, markSeen: async () => undefined };
 
 const Context = createContext<Value>(EMPTY);
+
+/** Jenis yang menyimpan status dilihat di DB (migration 169). */
+const SEEN_KINDS = new Set(['iklan_menunggu', 'padam_akaun', 'bantuan_menunggu']);
 
 /** Selang semak semula selagi app terbuka (ms). */
 const POLL_MS = 90_000;
@@ -76,6 +83,22 @@ export function AdminNotificationsProvider({ children }: { children: ReactNode }
     }
   }, [enabled]);
 
+  const markSeen = useCallback(
+    async (kinds: string[]) => {
+      if (!enabled || kinds.length === 0) return;
+      // Senyapkan serta-merta (optimistik); jika gagal, muat semula memulihkan paparan sebenar.
+      setItems((current) => current.filter((row) => !kinds.includes(row.kind) || !SEEN_KINDS.has(row.kind)));
+      try {
+        const { error } = await supabase.rpc('admin_notification_mark_seen', { p_kinds: kinds });
+        if (error) throw error;
+      } catch {
+        // Gagal rangkaian: notifikasi muncul semula pada muat semula berikut.
+      }
+      await refresh();
+    },
+    [enabled, refresh],
+  );
+
   useEffect(() => {
     if (!enabled) {
       setItems([]);
@@ -97,8 +120,8 @@ export function AdminNotificationsProvider({ children }: { children: ReactNode }
   }, [enabled, refresh]);
 
   const value = useMemo<Value>(
-    () => ({ items, total: items.reduce((sum, row) => sum + row.jumlah, 0), open, setOpen, refresh }),
-    [items, open, refresh],
+    () => ({ items, total: items.reduce((sum, row) => sum + row.jumlah, 0), open, setOpen, refresh, markSeen }),
+    [items, open, refresh, markSeen],
   );
 
   return <Context.Provider value={value}>{children}</Context.Provider>;

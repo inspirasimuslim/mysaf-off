@@ -40,7 +40,7 @@ export function NotificationBadge({ inline = false }: { inline?: boolean }) {
 export function PendingTasksNotice() {
   const colors = useColors();
   const router = useRouter();
-  const { items, total } = useAdminNotifications();
+  const { items, total, markSeen } = useAdminNotifications();
   if (items.length === 0) return null;
 
   return (
@@ -54,7 +54,10 @@ export function PendingTasksNotice() {
           key={item.kind}
           accessibilityRole="button"
           accessibilityLabel={item.title}
-          onPress={() => router.push(item.route as Href)}
+          onPress={() => {
+            void markSeen([item.kind]);
+            router.push(item.route as Href);
+          }}
           className="flex-row items-center gap-3 rounded-xl bg-surface p-3 active:opacity-70">
           <View className="flex-1">
             <Text className="text-sm font-semibold text-ink">{item.title}</Text>
@@ -82,9 +85,13 @@ export function NotificationPopover({ sidebarWidth }: { sidebarWidth: number }) 
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const desktop = useIsDesktop();
-  const { items, total, open, setOpen } = useAdminNotifications();
+  const { items, total, open, setOpen, markSeen } = useAdminNotifications();
 
-  const close = () => setOpen(false);
+  // Menutup dialog = notifikasi sudah dilihat (disenyapkan sehingga ada yang baharu).
+  const close = () => {
+    setOpen(false);
+    void markSeen(items.map((item) => item.kind));
+  };
   const go = (route: string) => {
     close();
     router.navigate(route as Href);
