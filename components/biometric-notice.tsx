@@ -49,13 +49,13 @@ export function BiometricNotice() {
   };
 
   const title = unsupported
-    ? 'Peranti ini tiada biometrik'
+    ? 'Peranti ini tiada cap jari / pengecaman wajah'
     : 'Tetapkan log masuk ' + support.label;
   const body = unsupported
-    ? 'Log masuk biometrik tidak tersedia pada peranti ini. Anda masih boleh log masuk dengan kata laluan.'
+    ? 'Log masuk cap jari / pengecaman wajah tidak tersedia pada peranti ini. Anda masih boleh log masuk dengan kata laluan.'
     : support.isEnrolled
       ? 'Aktifkan sekarang supaya tidak perlu taip kata laluan setiap kali. Ketik untuk tetapkan.'
-      : 'Daftarkan ' + support.label.toLowerCase() + ' dalam tetapan peranti dahulu, kemudian aktifkan di Tetapan.';
+      : 'Daftarkan cap jari atau pengecaman wajah dalam tetapan peranti dahulu, kemudian aktifkan di Tetapan.';
 
   return (
     <Pressable

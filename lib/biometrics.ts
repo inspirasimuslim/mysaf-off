@@ -11,7 +11,7 @@ export type BiometricSupport = {
   usable: boolean;
   hasHardware: boolean;
   isEnrolled: boolean;
-  /** Contoh: "Face ID", "Cap Jari", "Biometrik". */
+  /** Contoh: "Face ID", "Touch ID", "Cap Jari / Pengecaman Wajah". */
   label: string;
 };
 
@@ -32,13 +32,14 @@ export async function getBiometricSupport(): Promise<BiometricSupport> {
       LocalAuthentication.supportedAuthenticationTypesAsync(),
     ]);
 
-    let label = 'Biometrik';
-    if (types.includes(LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION)) {
-      label = Platform.OS === 'ios' ? 'Face ID' : 'Pengecaman Wajah';
-    } else if (types.includes(LocalAuthentication.AuthenticationType.FINGERPRINT)) {
-      label = Platform.OS === 'ios' ? 'Touch ID' : 'Cap Jari';
-    } else if (types.includes(LocalAuthentication.AuthenticationType.IRIS)) {
-      label = 'Imbasan Iris';
+    // Android: BiometricPrompt menerima apa sahaja yang didaftarkan (cap jari, wajah, iris) dan
+    // supportedAuthenticationTypes tidak boleh dipercayai untuk membezakannya, jadi sebut kedua-duanya.
+    // iOS hanya ada satu sahaja pada satu peranti (Face ID ATAU Touch ID).
+    let label = 'Cap Jari / Pengecaman Wajah';
+    if (Platform.OS === 'ios') {
+      if (types.includes(LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION)) label = 'Face ID';
+      else if (types.includes(LocalAuthentication.AuthenticationType.FINGERPRINT)) label = 'Touch ID';
+      else label = 'Biometrik';
     }
 
     return { usable: hasHardware && isEnrolled, hasHardware, isEnrolled, label };

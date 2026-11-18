@@ -35,6 +35,7 @@ export default function LoginScreen() {
   const [busy, setBusy] = useState(false);
   const [biometricBusy, setBiometricBusy] = useState(false);
   const [biometricAvailable, setBiometricAvailable] = useState(false);
+  const [biometricLabel, setBiometricLabel] = useState('Cap Jari / Pengecaman Wajah');
   const [forgotOpen, setForgotOpen] = useState(false);
   const [recentEmails, setRecentEmails] = useState<string[]>([]);
   const passwordRef = useRef<TextInput>(null);
@@ -67,6 +68,7 @@ export default function LoginScreen() {
       const [support, available] = await Promise.all([getBiometricSupport(), hasBiometricLogin()]);
       if (!active) return;
       setBiometricAvailable(support.usable && available);
+      setBiometricLabel(support.label);
     })();
 
     return () => {
@@ -107,7 +109,7 @@ export default function LoginScreen() {
 
     const token = await getStoredRefreshToken();
     if (!token) {
-      setError('Sesi biometrik tidak ditemui. Sila log masuk dengan kata laluan.');
+      setError('Sesi cap jari / wajah tidak ditemui. Sila log masuk dengan kata laluan.');
       return;
     }
 
@@ -122,7 +124,7 @@ export default function LoginScreen() {
     // tersimpan supaya butang ini masih ada selepas log masuk kata laluan; hanya
     // pengguna yang boleh OFF-kan ciri ini melalui toggle di Dashboard.
     if (refreshError) {
-      setError('Gagal memulihkan sesi biometrik. Sila log masuk dengan kata laluan kali ini.');
+      setError('Gagal memulihkan sesi cap jari / wajah. Sila log masuk dengan kata laluan kali ini.');
     }
   }, []);
 
@@ -217,7 +219,7 @@ export default function LoginScreen() {
           {biometricAvailable ? (
             <View className="mt-5">
               <Button
-                label="Fingerprint / Face ID"
+                label={biometricLabel}
                 variant="ghost"
                 loading={biometricBusy}
                 disabled={busy}

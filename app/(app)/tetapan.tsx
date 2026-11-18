@@ -150,14 +150,14 @@ export default function TetapanScreen() {
       if (!next) {
         await disableBiometric();
         setBiometricOn(false);
-        setBanner({ tone: 'info', message: 'Log masuk biometrik telah dimatikan.' });
+        setBanner({ tone: 'info', message: 'Log masuk cap jari / wajah telah dimatikan.' });
         return;
       }
 
       // Sahkan identiti dahulu sebelum mengaktifkan.
-      const approved = await promptBiometric('Sahkan identiti anda untuk aktifkan log masuk biometrik');
+      const approved = await promptBiometric('Sahkan identiti anda (cap jari atau wajah) untuk aktifkan log masuk');
       if (!approved) {
-        setBanner({ tone: 'negative', message: 'Pengesahan biometrik dibatalkan.' });
+        setBanner({ tone: 'negative', message: 'Pengesahan cap jari / wajah dibatalkan.' });
         return;
       }
 
@@ -170,9 +170,9 @@ export default function TetapanScreen() {
 
       await enableBiometric(refreshToken);
       setBiometricOn(true);
-      setBanner({ tone: 'positive', message: 'Log masuk biometrik telah diaktifkan.' });
+      setBanner({ tone: 'positive', message: 'Log masuk cap jari / wajah telah diaktifkan.' });
     } catch (caught) {
-      setBanner({ tone: 'negative', message: toMalayError(caught, 'Gagal mengemas kini tetapan biometrik.') });
+      setBanner({ tone: 'negative', message: toMalayError(caught, 'Gagal mengemas kini tetapan cap jari / wajah.') });
     } finally {
       setBiometricBusy(false);
     }
@@ -369,9 +369,9 @@ export default function TetapanScreen() {
   const biometricSubtitle = !support
     ? 'Menyemak sokongan peranti...'
     : !support.hasHardware
-      ? 'Peranti ini tiada pengimbas biometrik.'
+      ? 'Peranti ini tiada pengimbas cap jari atau pengecaman wajah.'
       : !support.isEnrolled
-        ? 'Daftarkan biometrik dalam tetapan peranti dahulu.'
+        ? 'Daftarkan cap jari atau pengecaman wajah dalam tetapan peranti dahulu.'
         : 'Guna ' + support.label + ' untuk log masuk seterusnya.';
 
   return (
@@ -387,7 +387,7 @@ export default function TetapanScreen() {
             <View className="gap-4">
               <ToggleRow
                 icon={support && !support.hasHardware ? 'close-circle' : 'finger-print'}
-                title="Log Masuk Biometrik"
+                title="Log Masuk Cap Jari / Wajah"
                 subtitle={biometricSubtitle}
                 value={biometricOn}
                 onValueChange={(next) => void toggleBiometric(next)}
