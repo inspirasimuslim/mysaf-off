@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useState, type ReactNode } from 'react';
+import { useCallback, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import type { ThemeColors } from '@/constants/theme';
@@ -96,15 +96,6 @@ function MonthDot({ month }: { month: UsrahMonthDetail | undefined }) {
   );
 }
 
-function LegendItem({ children, label }: { children: ReactNode; label: string }) {
-  return (
-    <View className="flex-row items-center gap-1.5">
-      {children}
-      <Text className="text-xs text-ink-muted">{label}</Text>
-    </View>
-  );
-}
-
 export function UsrahStrip({ userId }: { userId: string | null }) {
   const colors = useColors();
   const router = useRouter();
@@ -190,18 +181,6 @@ export function UsrahStrip({ userId }: { userId: string | null }) {
             </View>
           </View>
         ))}
-      </View>
-
-      <View className="mt-2 flex-row flex-wrap gap-x-4 gap-y-1">
-        <LegendItem label="Hadir">
-          <MonthDot month={{ attended: true, source: 'usrah', autoAbsent: false }} />
-        </LegendItem>
-        <LegendItem label="Tidak hadir">
-          <MonthDot month={{ attended: false, source: null, autoAbsent: false }} />
-        </LegendItem>
-        <LegendItem label="Belum direkod">
-          <MonthDot month={undefined} />
-        </LegendItem>
       </View>
     </Pressable>
   );
