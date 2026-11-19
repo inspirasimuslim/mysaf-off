@@ -148,6 +148,18 @@ export const CHANGELOG: ChangelogEntry[] = [
       'Bantuan Kaunseling: senarai kaunselor kini dengan gambar; ketik nama untuk melihat latar belakang pendidikan dan pekerjaan.',
     ],
   },
+  {
+    version: '1.3.33',
+    date: '19 Nov 2026',
+    highlights: [
+      'Log masuk kini menyebut cap jari dan pengecaman wajah (notis Utama, Tetapan dan skrin log masuk).',
+      'Eksport Excel kehadiran usrah dan transaksi kini lengkap untuk semua ahli (sebelum ini terpotong pada 1,000 baris).',
+      'Kad Kehadiran Usrah di Utama lebih padat, tanpa petunjuk warna.',
+      'Notifikasi admin: selepas dibuka atau ditutup, ia disenyapkan sehingga ada permohonan baharu.',
+      'Lantik admin: nama dan susunan department sama dengan Hub Admin.',
+      'Poster tambahan program dan usrah kini boleh disimpan.',
+    ],
+  },
 ];
 
 const SEEN_KEY = 'mysaff.whatsnew.seen';
