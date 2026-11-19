@@ -148,13 +148,13 @@ export function UsrahStrip({ userId }: { userId: string | null }) {
       accessibilityRole="button"
       accessibilityLabel={'Kehadiran Usrah ' + year + '. Ketik untuk lihat sejarah kehadiran.'}
       onPress={() => router.push('/(app)/usrah-sejarah')}
-      className={`rounded-card border border-line p-card active:opacity-70 ${desktop ? 'bg-surface' : ''}`}>
+      className={`rounded-card border border-line px-4 py-3 active:opacity-70 ${desktop ? 'bg-surface' : ''}`}>
       <View className="flex-row items-center">
         <Text className="flex-1 text-sm font-semibold text-ink">Kehadiran Usrah {year}</Text>
         <Ionicons name="chevron-forward" size={16} color={colors.inkFaint} />
       </View>
 
-      <View className="mt-3 flex-row items-start justify-between">
+      <View className="mt-2 flex-row items-start justify-between">
         {MONTH_LABELS.map((label, index) => (
           <View key={label} className="items-center">
             <MonthDot month={state.months[index]} />
