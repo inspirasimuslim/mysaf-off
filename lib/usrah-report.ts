@@ -4,7 +4,7 @@ import { generationLabel } from '@/types/database';
 
 import { UserError } from './errors';
 import type { DeliveryMode, DeliveryResult } from './file-delivery';
-import { supabase } from './supabase';
+import { rpcAll } from './rpc-all';
 import { MONTH_LABELS } from './usrah-import';
 import type { UsrahAttendanceSource, UsrahRecordedBy } from './usrah';
 import { deliverWorkbook } from './xlsx-download';
@@ -78,9 +78,8 @@ export type UsrahReport = {
 };
 
 export async function fetchUsrahReportRows(year: number): Promise<ReportRow[]> {
-  const { data, error } = await supabase.rpc('usrah_year_report', { target_year: year });
-  if (error) throw error;
-  return (data as ReportRow[] | null) ?? [];
+  // Satu baris setiap ahli setiap bulan — melebihi 1000 baris, jadi mesti diambil berhalaman.
+  return rpcAll<ReportRow>('usrah_year_report', { target_year: year });
 }
 
 /**

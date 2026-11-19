@@ -4,7 +4,7 @@ import { generationLabel } from '@/types/database';
 
 import { UserError } from './errors';
 import type { DeliveryMode, DeliveryResult } from './file-delivery';
-import { supabase } from './supabase';
+import { rpcAll } from './rpc-all';
 import { deliverWorkbook } from './xlsx-download';
 
 /**
@@ -124,10 +124,7 @@ export async function downloadYuranTransactions(
   year: number | null,
   mode: DeliveryMode,
 ): Promise<TransactionsReport> {
-  const { data, error } = await supabase.rpc('yuran_transactions_export', { p_year: year });
-  if (error) throw error;
-
-  const rows = (data as TransactionRow[] | null) ?? [];
+  const rows = await rpcAll<TransactionRow>('yuran_transactions_export', { p_year: year });
   if (!rows.length) {
     throw new UserError(
       year === null ? 'Tiada transaksi yuran direkodkan.' : 'Tiada transaksi yuran untuk tahun ' + year + '.',
@@ -145,10 +142,7 @@ export async function downloadYuranTransactions(
 
 /** Transaksi PIPIS — tiada parameter tahun, PIPIS ialah sumbangan sekali seumur hidup. */
 export async function downloadPipisTransactions(mode: DeliveryMode): Promise<TransactionsReport> {
-  const { data, error } = await supabase.rpc('pipis_transactions_export');
-  if (error) throw error;
-
-  const rows = (data as TransactionRow[] | null) ?? [];
+  const rows = await rpcAll<TransactionRow>('pipis_transactions_export');
   if (!rows.length) throw new UserError('Tiada transaksi PIPIS direkodkan.');
 
   return download(rows, 'Transaksi PIPIS', 'transaksi-pipis.xlsx', 'Transaksi PIPIS', mode);
