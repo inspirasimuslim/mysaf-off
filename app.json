@@ -120,7 +120,8 @@
           }
         }
       ],
-      "./plugins/with-arm64-only.js"
+      "./plugins/with-arm64-only.js",
+      "./plugins/with-release-signing.js"
     ],
     "experiments": {
       "typedRoutes": true,
