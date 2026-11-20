@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Switch, Text, View } from 'react-native';
 
@@ -16,8 +17,9 @@ import { SectionTitle } from '@/components/ui/section-title';
 import { SelectRow } from '@/components/ui/select-row';
 import { TextField } from '@/components/ui/text-field';
 import { ToastBanner } from '@/components/ui/toast';
-import { departmentLabel, sortDepartments } from '@/lib/department-labels';
-import { fetchAssignments, fetchDepartments, fetchProfiles, removeAdmin, saveAssignments } from '@/lib/admin';
+import { COUNSELOR_LABEL, departmentLabel, sortDepartments } from '@/lib/department-labels';
+import { fetchCounselorAdminList, type CounselorAdminRow } from '@/lib/counseling';
+import { fetchAssignments, fetchDepartments, fetchProfiles, removeDepartmentAdmin, saveAssignments } from '@/lib/admin';
 import { toMalayError } from '@/lib/errors';
 import { useGoBack } from '@/lib/navigation';
 import { usePermissions } from '@/lib/permissions';
@@ -26,11 +28,12 @@ import { useColors } from '@/lib/theme';
 
 type Banner = { tone: 'positive' | 'info' | 'negative'; message: string } | null;
 
-/** Keadaan borang lantikan. `picking` benar semasa langkah pilih ahli. */
+/** Borang tambah/ubah admin bagi SATU department. */
 type Editor = {
-  profile: Profile | null;
-  picking: boolean;
-  selection: Record<string, Permission>;
+  department: Department;
+  profile: Profile | null; // null = langkah pilih ahli
+  permission: Permission;
+  existing: boolean;
 };
 
 /** Dua suis kebenaran bagi satu department yang dipilih. */
@@ -79,24 +82,28 @@ function PermissionToggles({
 
 export default function AdminsScreen() {
   const goBack = useGoBack();
+  const router = useRouter();
   const { refresh: refreshPermissions, profile: me, isSuperAdmin } = usePermissions();
 
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [assignments, setAssignments] = useState<AdminAssignment[]>([]);
+  const [counselors, setCounselors] = useState<CounselorAdminRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [banner, setBanner] = useState<Banner>(null);
 
   const load = useCallback(async () => {
     try {
-      const [nextProfiles, nextDepartments, nextAssignments] = await Promise.all([
+      const [nextProfiles, nextDepartments, nextAssignments, nextCounselors] = await Promise.all([
         fetchProfiles(),
         fetchDepartments(),
         fetchAssignments(),
+        fetchCounselorAdminList().catch(() => [] as CounselorAdminRow[]),
       ]);
       setProfiles(nextProfiles);
       setDepartments(nextDepartments);
       setAssignments(nextAssignments);
+      setCounselors(nextCounselors.filter((row) => row.aktif));
     } catch (caught) {
       setBanner({ tone: 'negative', message: toMalayError(caught, 'Gagal memuatkan data admin.') });
     } finally {
@@ -108,134 +115,113 @@ export default function AdminsScreen() {
     void load();
   }, [load]);
 
-  const departmentName = useCallback(
-    (id: string) => departmentLabel(departments.find((row) => row.id === id)?.name ?? 'Department dipadam'),
-    [departments],
+  const profileById = useMemo(() => new Map(profiles.map((row) => [row.id, row])), [profiles]);
+
+  const sections = useMemo(
+    () =>
+      sortDepartments(departments.filter((row) => row.is_active || assignments.some((a) => a.department_id === row.id))).map(
+        (department) => ({
+          department,
+          rows: assignments
+            .filter((row) => row.department_id === department.id)
+            .map((row) => ({ row, profile: profileById.get(row.user_id) }))
+            .filter((item): item is { row: AdminAssignment; profile: Profile } => item.profile !== undefined)
+            .sort((a, b) => profileName(a.profile).localeCompare(profileName(b.profile))),
+        }),
+      ),
+    [departments, assignments, profileById],
   );
 
-  const admins = useMemo(() => profiles.filter((row) => row.role === 'admin'), [profiles]);
-
-  const assignmentsOf = useCallback(
-    (userId: string) => assignments.filter((row) => row.user_id === userId),
-    [assignments],
-  );
-
-  // --- Borang lantikan ------------------------------------------------------
+  // --- Tambah / ubah ---------------------------------------------------------
   const [editor, setEditor] = useState<Editor | null>(null);
   const [search, setSearch] = useState('');
   const [saveBusy, setSaveBusy] = useState(false);
   const [editorNotice, setEditorNotice] = useState<string | null>(null);
 
-  const openNew = useCallback(() => {
+  const openAdd = useCallback((department: Department) => {
     setBanner(null);
     setSearch('');
     setEditorNotice(null);
     setSaveBusy(false);
-    setEditor({ profile: null, picking: true, selection: {} });
+    setEditor({ department, profile: null, permission: { can_view: true, can_edit: false }, existing: false });
   }, []);
 
-  const openEdit = useCallback(
-    (profile: Profile) => {
-      setBanner(null);
-      setEditorNotice(null);
-      setSaveBusy(false);
+  const openEdit = useCallback((department: Department, profile: Profile, permission: Permission) => {
+    setBanner(null);
+    setEditorNotice(null);
+    setSaveBusy(false);
+    setEditor({ department, profile, permission, existing: true });
+  }, []);
 
-      const selection: Record<string, Permission> = {};
-      for (const row of assignmentsOf(profile.id)) {
-        selection[row.department_id] = { can_view: row.can_view, can_edit: row.can_edit };
-      }
-
-      setEditor({ profile, picking: false, selection });
-    },
-    [assignmentsOf],
-  );
-
-  /** Calon lantikan: semua kecuali Super Admin (mereka sudah ada akses penuh). */
   const candidates = useMemo(() => {
+    if (!editor) return [];
     const term = search.trim().toLowerCase();
+    const already = new Set(
+      assignments.filter((row) => row.department_id === editor.department.id).map((row) => row.user_id),
+    );
     return profiles
-      .filter((row) => row.role !== 'super_admin' && row.role !== 'owner')
+      .filter((row) => row.role !== 'super_admin' && row.role !== 'owner' && !already.has(row.id))
       .filter(
         (row) =>
           !term ||
           profileName(row).toLowerCase().includes(term) ||
           (row.email ?? '').toLowerCase().includes(term),
-      );
-  }, [profiles, search]);
-
-  /**
-   * Department yang boleh dipilih: yang aktif, ditambah yang nonaktif tetapi
-   * masih dipegang — supaya menyunting seorang admin tidak diam-diam
-   * menanggalkan lantikan lamanya.
-   */
-  const selectableDepartments = useMemo(() => {
-    if (!editor) return [];
-    return sortDepartments(departments.filter((row) => row.is_active || row.id in editor.selection));
-  }, [departments, editor]);
-
-  const toggleDepartment = useCallback((departmentId: string) => {
-    setEditorNotice(null);
-    setEditor((current) => {
-      if (!current) return current;
-
-      const selection = { ...current.selection };
-      if (departmentId in selection) delete selection[departmentId];
-      else selection[departmentId] = { can_view: true, can_edit: false };
-
-      return { ...current, selection };
-    });
-  }, []);
-
-  const changePermission = useCallback((departmentId: string, next: Permission) => {
-    setEditor((current) => {
-      if (!current) return current;
-      return { ...current, selection: { ...current.selection, [departmentId]: next } };
-    });
-  }, []);
+      )
+      .slice(0, 50);
+  }, [profiles, assignments, search, editor]);
 
   const submitEditor = useCallback(async () => {
     if (!editor?.profile || saveBusy) return;
 
     const target = editor.profile;
-    const count = Object.keys(editor.selection).length;
+    const selection: Record<string, Permission> = {};
+    for (const row of assignments.filter((a) => a.user_id === target.id)) {
+      selection[row.department_id] = { can_view: row.can_view, can_edit: row.can_edit };
+    }
+    selection[editor.department.id] = editor.permission;
 
     setSaveBusy(true);
     setEditorNotice(null);
     try {
-      await saveAssignments(target.id, editor.selection, target.role);
+      await saveAssignments(target.id, selection, target.role);
       setEditor(null);
       await load();
-      // Peranan sendiri mungkin berubah — segarkan context supaya UI ikut sama.
       if (target.id === me?.id) await refreshPermissions();
-
       setBanner({
         tone: 'positive',
-        message: count
-          ? profileName(target) + ' kini admin bagi ' + count + ' department.'
-          : profileName(target) + ' telah ditanggalkan daripada semua department dan kembali menjadi Ahli.',
+        message: profileName(target) + ' kini admin ' + departmentLabel(editor.department.name) + '.',
       });
     } catch (caught) {
       setEditorNotice(toMalayError(caught, 'Gagal menyimpan lantikan.'));
     } finally {
       setSaveBusy(false);
     }
-  }, [editor, load, me?.id, refreshPermissions, saveBusy]);
+  }, [assignments, editor, load, me?.id, refreshPermissions, saveBusy]);
 
-  // --- Buang admin ----------------------------------------------------------
-  const [pendingRemove, setPendingRemove] = useState<Profile | null>(null);
+  // --- Buang (dua pengesahan) -------------------------------------------------
+  const [pendingRemove, setPendingRemove] = useState<{ profile: Profile; department: Department } | null>(null);
+  const [removeStep, setRemoveStep] = useState<1 | 2>(1);
   const [removeBusy, setRemoveBusy] = useState(false);
+
+  const askRemove = useCallback((profile: Profile, department: Department) => {
+    setBanner(null);
+    setRemoveStep(1);
+    setPendingRemove({ profile, department });
+  }, []);
 
   const confirmRemove = useCallback(async () => {
     if (!pendingRemove || removeBusy) return;
-
-    const target = pendingRemove;
+    const { profile, department } = pendingRemove;
     setRemoveBusy(true);
     try {
-      await removeAdmin(target.id);
+      await removeDepartmentAdmin(profile.id, department.id, profile.role);
       setPendingRemove(null);
       await load();
-      if (target.id === me?.id) await refreshPermissions();
-      setBanner({ tone: 'positive', message: profileName(target) + ' bukan lagi admin.' });
+      if (profile.id === me?.id) await refreshPermissions();
+      setBanner({
+        tone: 'positive',
+        message: profileName(profile) + ' bukan lagi admin ' + departmentLabel(department.name) + '.',
+      });
     } catch (caught) {
       setPendingRemove(null);
       setBanner({ tone: 'negative', message: toMalayError(caught, 'Gagal membuang admin.') });
@@ -247,7 +233,9 @@ export default function AdminsScreen() {
   if (loading) return <LoadingScreen />;
   if (!isSuperAdmin()) return <NoAccessScreen title="Panel Super Admin" description={SUPER_ADMIN_ONLY} />;
 
-  const editorTitle = editor?.picking ? 'Pilih Ahli' : editor?.profile ? profileName(editor.profile) : 'Lantik Admin';
+  const adminCount = new Set(assignments.map((row) => row.user_id)).size;
+  const removeName = pendingRemove ? profileName(pendingRemove.profile) : '';
+  const removeDept = pendingRemove ? departmentLabel(pendingRemove.department.name) : '';
 
   return (
     <>
@@ -255,97 +243,96 @@ export default function AdminsScreen() {
         <ScreenHeader
           eyebrow="Panel Super Admin"
           title="Admin"
-          subtitle={admins.length + ' admin dilantik'}
+          subtitle={sections.length + ' department · ' + adminCount + ' admin'}
           onBackPress={goBack}
         />
 
-        <View className="gap-6 px-gutter pt-6">
+        <View className="gap-4 px-gutter pt-6">
           {banner ? <ToastBanner tone={banner.tone} message={banner.message} /> : null}
 
-          <Button label="Lantik Admin Baru" onPress={openNew} />
+          {sections.map(({ department, rows }) => (
+            <View key={department.id} className="rounded-card border border-line bg-surface p-card">
+              <View className="flex-row items-center gap-3">
+                <Text className="flex-1 text-base font-bold text-ink">{departmentLabel(department.name)}</Text>
+                <Badge label={String(rows.length)} tone={rows.length ? 'primary' : 'neutral'} />
+              </View>
 
-          {admins.length === 0 ? (
-            <EmptyState
-              icon="shield-outline"
-              title="Tiada admin lagi"
-              description="Lantik ahli sebagai admin dan tetapkan department serta kebenaran mereka."
-            />
-          ) : (
-            <View>
-              <SectionTitle title="Senarai Admin" caption="Ketuk ikon pensel untuk mengubah department & kebenaran." />
-              <View className="gap-4">
-                {admins.map((admin) => {
-                  const rows = assignmentsOf(admin.id);
-
-                  return (
-                    <View key={admin.id} className="rounded-card border border-line bg-surface p-card">
-                      <View className="flex-row items-start gap-3">
-                        <View className="flex-1">
-                          <Text className="text-base font-semibold text-ink">{profileName(admin)}</Text>
-                          {admin.email ? (
-                            <Text className="mt-0.5 text-sm text-ink-muted">{admin.email}</Text>
-                          ) : null}
-                        </View>
-
-                        <IconButton
-                          icon="create-outline"
-                          accessibilityLabel={'Ubah lantikan ' + profileName(admin)}
-                          onPress={() => openEdit(admin)}
-                        />
-                        <IconButton
-                          icon="person-remove-outline"
-                          tone="danger"
-                          accessibilityLabel={'Buang ' + profileName(admin) + ' daripada semua department'}
-                          onPress={() => setPendingRemove(admin)}
-                        />
+              <View className="mt-3 gap-2">
+                {rows.length === 0 ? (
+                  <Text className="text-sm text-ink-faint">Belum ada admin.</Text>
+                ) : (
+                  rows.map(({ row, profile }) => (
+                    <View key={row.id} className="flex-row items-center gap-2">
+                      <View className="flex-1">
+                        <Text className="text-sm font-semibold text-ink" numberOfLines={1}>
+                          {profileName(profile)}
+                        </Text>
+                        <Text className="text-xs text-ink-muted">
+                          {row.can_edit ? 'Lihat & Edit' : row.can_view ? 'Lihat sahaja' : 'Tiada akses'}
+                        </Text>
                       </View>
-
-                      <View className="mt-4 gap-2">
-                        {rows.length === 0 ? (
-                          <Text className="text-sm text-ink-faint">
-                            Belum ada department — akses admin ini masih kosong.
-                          </Text>
-                        ) : (
-                          rows.map((row) => (
-                            <View key={row.id} className="flex-row items-center gap-3">
-                              <Text className="flex-1 text-sm text-ink" numberOfLines={1}>
-                                {departmentName(row.department_id)}
-                              </Text>
-                              <Badge
-                                label={row.can_edit ? 'Lihat & Edit' : row.can_view ? 'Lihat' : 'Tiada akses'}
-                                tone={row.can_edit ? 'primary' : row.can_view ? 'info' : 'neutral'}
-                              />
-                            </View>
-                          ))
-                        )}
-                      </View>
+                      <IconButton
+                        icon="create-outline"
+                        accessibilityLabel={'Ubah kebenaran ' + profileName(profile)}
+                        onPress={() => openEdit(department, profile, { can_view: row.can_view, can_edit: row.can_edit })}
+                      />
+                      <IconButton
+                        icon="person-remove-outline"
+                        tone="danger"
+                        accessibilityLabel={'Buang ' + profileName(profile)}
+                        onPress={() => askRemove(profile, department)}
+                      />
                     </View>
-                  );
-                })}
+                  ))
+                )}
+              </View>
+
+              <View className="mt-4">
+                <Button label="Tambah Admin" variant="secondary" onPress={() => openAdd(department)} />
               </View>
             </View>
-          )}
+          ))}
+
+          <View className="rounded-card border border-line bg-surface p-card">
+            <View className="flex-row items-center gap-3">
+              <Text className="flex-1 text-base font-bold text-ink">{COUNSELOR_LABEL}</Text>
+              <Badge label={String(counselors.length)} tone={counselors.length ? 'primary' : 'neutral'} />
+            </View>
+            <View className="mt-3 gap-2">
+              {counselors.length === 0 ? (
+                <Text className="text-sm text-ink-faint">Belum ada kaunselor aktif.</Text>
+              ) : (
+                counselors.map((row) => (
+                  <Text key={row.id} className="text-sm font-semibold text-ink" numberOfLines={1}>
+                    {row.nama_penuh || row.full_name}
+                  </Text>
+                ))
+              )}
+            </View>
+            <Text className="mt-3 text-xs text-ink-muted">
+              Kaunselor dilantik oleh admin Lajnah Kebajikan dan disimpan berasingan daripada admin department.
+            </Text>
+            <View className="mt-4">
+              <Button
+                label="Urus Kaunselor"
+                variant="secondary"
+                onPress={() => router.push('/(app)/admin/kaunselor')}
+              />
+            </View>
+          </View>
         </View>
       </Screen>
 
       <FormModal
         visible={editor !== null}
-        title={editorTitle}
-        description={
-          editor?.picking
-            ? 'Pilih seorang ahli untuk dilantik sebagai admin.'
-            : 'Pilih department yang dikendalikan dan tetapkan kebenaran setiap satu. Tanpa sebarang department, peranan akan kembali kepada Ahli.'
-        }
+        title={editor?.profile ? profileName(editor.profile) : 'Pilih Ahli'}
+        description={editor ? departmentLabel(editor.department.name) : undefined}
         dismissable={!saveBusy}
         onClose={() => setEditor(null)}
-        /*
-          Butang di footer dan bukan di hujung senarai: dengan banyak department
-          dan suis kebenaran, hujung senarai boleh jauh di bawah skrin.
-        */
         footer={
-          editor && !editor.picking ? (
+          editor?.profile ? (
             <Button
-              label="Simpan Lantikan"
+              label="Simpan"
               loading={saveBusy}
               disabled={saveBusy}
               onPress={() => void submitEditor()}
@@ -354,7 +341,7 @@ export default function AdminsScreen() {
         }>
         {editorNotice ? <Notice tone="negative" message={editorNotice} /> : null}
 
-        {editor?.picking ? (
+        {editor && !editor.profile ? (
           <>
             <TextField
               label="Cari ahli"
@@ -365,7 +352,6 @@ export default function AdminsScreen() {
               autoCorrect={false}
               topAnchored
             />
-
             {candidates.length === 0 ? (
               <Text className="py-6 text-center text-sm text-ink-muted">Tiada ahli sepadan.</Text>
             ) : (
@@ -374,66 +360,39 @@ export default function AdminsScreen() {
                   <SelectRow
                     key={candidate.id}
                     title={profileName(candidate)}
-                    subtitle={
-                      (candidate.email ?? 'Tiada emel') + (candidate.role === 'admin' ? ' · sudah jadi admin' : '')
-                    }
+                    subtitle={candidate.email ?? 'Tiada emel'}
                     selected={false}
-                    onPress={() => {
-                      const selection: Record<string, Permission> = {};
-                      for (const row of assignmentsOf(candidate.id)) {
-                        selection[row.department_id] = { can_view: row.can_view, can_edit: row.can_edit };
-                      }
-                      setEditor({ profile: candidate, picking: false, selection });
-                    }}
+                    onPress={() => setEditor({ ...editor, profile: candidate })}
                   />
                 ))}
               </View>
             )}
           </>
-        ) : (
-          <>
-            {selectableDepartments.length === 0 ? (
-              <Notice
-                tone="warn"
-                message="Tiada department aktif. Tambah atau aktifkan department dahulu sebelum melantik admin."
-              />
-            ) : (
-              <View className="gap-3">
-                {selectableDepartments.map((department) => {
-                  const permission = editor ? editor.selection[department.id] : undefined;
-
-                  return (
-                    <SelectRow
-                      key={department.id}
-                      title={departmentLabel(department.name)}
-                      subtitle={department.is_active ? undefined : 'Department nonaktif'}
-                      selected={permission !== undefined}
-                      onPress={() => toggleDepartment(department.id)}
-                      disabled={saveBusy}>
-                      {permission ? (
-                        <PermissionToggles
-                          permission={permission}
-                          onChange={(next) => changePermission(department.id, next)}
-                          disabled={saveBusy}
-                        />
-                      ) : null}
-                    </SelectRow>
-                  );
-                })}
-              </View>
-            )}
-          </>
-        )}
+        ) : editor ? (
+          <PermissionToggles
+            permission={editor.permission}
+            onChange={(next) => setEditor({ ...editor, permission: next })}
+            disabled={saveBusy}
+          />
+        ) : null}
       </FormModal>
 
       <ConfirmDialog
-        visible={pendingRemove !== null}
+        visible={pendingRemove !== null && removeStep === 1}
         title="Buang admin?"
+        message={removeName + ' akan dibuang daripada ' + removeDept + '.'}
+        confirmLabel="Teruskan"
+        destructive
+        onConfirm={() => setRemoveStep(2)}
+        onCancel={() => setPendingRemove(null)}
+      />
+      <ConfirmDialog
+        visible={pendingRemove !== null && removeStep === 2}
+        title="Pasti buang?"
         message={
-          (pendingRemove ? profileName(pendingRemove) : '') +
-          ' akan ditanggalkan daripada semua department dan peranannya kembali kepada Ahli.'
+          'Pengesahan terakhir: ' + removeName + ' akan hilang akses ' + removeDept + ' dengan serta-merta.'
         }
-        confirmLabel="Buang Admin"
+        confirmLabel="Ya, Buang Admin"
         destructive
         busy={removeBusy}
         onConfirm={() => void confirmRemove()}

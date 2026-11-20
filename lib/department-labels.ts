@@ -23,23 +23,26 @@ export const DEPARTMENT_ORDER: readonly string[] = [
 ];
 
 const DEPARTMENT_LABELS: Record<string, string> = {
-  SETIAUSAHA: 'Setiausaha Agung (SUA)',
-  'TIMBALAN SETIAUSAHA': 'Timbalan Setiausaha (TSUA)',
-  'JABATAN SETIAUSAHA': 'Jabatan Setiausaha (JSU)',
-  BENDAHARI: 'Bendahari Kehormat (BK)',
-  'LAJNAH TARBIAH': 'Lajnah Tarbiah (LT)',
-  'LAJNAH PERKADERAN': 'Lajnah Perkaderan (LP)',
-  'LAJNAH HAL EHWAL SEKOLAH & ALUMNI': 'Lajnah Hal Ehwal Sekolah & Alumni (LHESA)',
-  'LAJNAH PEMBANGUNAN GENERASI': 'Lajnah Pembangunan Generasi (LPG)',
-  'LAJNAH PEMBANGUNAN NGO': 'Lajnah Pembangunan NGO (LPN)',
-  'LAJNAH KEBAJIKAN': 'Lajnah Kebajikan (LK)',
-  'KESIHATAN AHLI': 'Lajnah Kebajikan (LK) — Kesihatan Ahli',
-  'TABUNG ZAKAT': 'Lajnah Kebajikan (LK) — Tabung Zakat',
-  'LAJNAH MUSLIMAT': 'Lajnah Muslimat (LM)',
-  'LAJNAH EKONOMI DAN ASET': 'Lajnah Ekonomi & Aset (LEA)',
-  'JABATAN DATA & SUMBER MANUSIA': 'Jabatan Data & Sumber Manusia (JDSM)',
-  'I-GEM': 'Ikhwan Generasi Muda (I-GEM)',
+  SETIAUSAHA: 'SETIAUSAHA AGUNG (SUA)',
+  'TIMBALAN SETIAUSAHA': 'TIMBALAN SETIAUSAHA AGUNG (TSUA)',
+  'JABATAN SETIAUSAHA': 'JABATAN SETIAUSAHA (JSU)',
+  BENDAHARI: 'BENDAHARI KEHORMAT (BK)',
+  'LAJNAH TARBIAH': 'LAJNAH TARBIAH (LT)',
+  'LAJNAH PERKADERAN': 'LAJNAH PERKADERAN (LP)',
+  'LAJNAH HAL EHWAL SEKOLAH & ALUMNI': 'LAJNAH HAL EHWAL SEKOLAH & ALUMNI (LHESA)',
+  'LAJNAH PEMBANGUNAN GENERASI': 'LAJNAH PEMBANGUNAN GENERASI (LPG)',
+  'LAJNAH PEMBANGUNAN NGO': 'LAJNAH PEMBANGUNAN NGO (LPN)',
+  'LAJNAH KEBAJIKAN': 'LAJNAH KEBAJIKAN (LK)',
+  'KESIHATAN AHLI': 'LAJNAH KEBAJIKAN - KESIHATAN',
+  'TABUNG ZAKAT': 'LAJNAH KEBAJIKAN - BANTUAN ZAKAT',
+  'LAJNAH MUSLIMAT': 'LAJNAH MUSLIMAT (LM)',
+  'LAJNAH EKONOMI DAN ASET': 'LAJNAH EKONOMI & ASET (LEA)',
+  'JABATAN DATA & SUMBER MANUSIA': 'JABATAN DATA & SUMBER MANUSIA (JDSM)',
+  'I-GEM': 'IKHWAN GENERASI MUDA (I-GEM)',
 };
+
+/** Label bagi kaunselor (bukan department dalam DB — jadual `counselors` berasingan). */
+export const COUNSELOR_LABEL = 'LAJNAH KEBAJIKAN - KAUNSELOR';
 
 export function departmentLabel(name: string): string {
   return DEPARTMENT_LABELS[name] ?? name;

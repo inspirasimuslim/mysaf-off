@@ -118,3 +118,24 @@ export async function removeAdmin(userId: string): Promise<void> {
 export async function demoteSuperAdmin(userId: string, hasAssignments: boolean): Promise<void> {
   await setRole(userId, hasAssignments ? 'admin' : 'ahli');
 }
+
+/**
+ * Tanggalkan seseorang daripada SATU department sahaja. Jika itu department
+ * terakhirnya, peranan `admin` kembali kepada `ahli`.
+ */
+export async function removeDepartmentAdmin(userId: string, departmentId: string, currentRole: UserRole): Promise<void> {
+  const { error } = await supabase
+    .from('admin_assignments')
+    .delete()
+    .eq('user_id', userId)
+    .eq('department_id', departmentId);
+  if (error) throw error;
+
+  if (currentRole !== 'admin') return;
+  const { count, error: countError } = await supabase
+    .from('admin_assignments')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', userId);
+  if (countError) throw countError;
+  if (!count) await setRole(userId, 'ahli');
+}
