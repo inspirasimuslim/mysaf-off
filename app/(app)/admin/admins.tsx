@@ -1,6 +1,7 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Switch, Text, View } from 'react-native';
+import { Pressable, Switch, Text, View } from 'react-native';
 
 import { NoAccessScreen, SUPER_ADMIN_ONLY } from '@/components/no-access';
 import { ScreenHeader } from '@/components/screen-header';
@@ -82,6 +83,7 @@ function PermissionToggles({
 
 export default function AdminsScreen() {
   const goBack = useGoBack();
+  const colors = useColors();
   const router = useRouter();
   const { refresh: refreshPermissions, profile: me, isSuperAdmin } = usePermissions();
 
@@ -91,6 +93,7 @@ export default function AdminsScreen() {
   const [counselors, setCounselors] = useState<CounselorAdminRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [banner, setBanner] = useState<Banner>(null);
+  const [open, setOpen] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -242,7 +245,7 @@ export default function AdminsScreen() {
       <Screen padTop={false}>
         <ScreenHeader
           eyebrow="Panel Super Admin"
-          title="Admin"
+          title="Urus Admin"
           subtitle={sections.length + ' department · ' + adminCount + ' admin'}
           onBackPress={goBack}
         />
@@ -250,48 +253,58 @@ export default function AdminsScreen() {
         <View className="gap-4 px-gutter pt-6">
           {banner ? <ToastBanner tone={banner.tone} message={banner.message} /> : null}
 
-          {sections.map(({ department, rows }) => (
-            <View key={department.id} className="rounded-card border border-line bg-surface p-card">
-              <View className="flex-row items-center gap-3">
-                <Text className="flex-1 text-base font-bold text-ink">{departmentLabel(department.name)}</Text>
-                <Badge label={String(rows.length)} tone={rows.length ? 'primary' : 'neutral'} />
-              </View>
+          {sections.map(({ department, rows }) => {
+            const expanded = open === department.id;
+            return (
+              <View key={department.id} className="rounded-card border border-line bg-surface">
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => setOpen(expanded ? null : department.id)}
+                  className="flex-row items-center gap-3 px-card py-3">
+                  <Text className="flex-1 text-sm font-bold text-ink" numberOfLines={1}>
+                    {departmentLabel(department.name)}
+                  </Text>
+                  <Badge label={String(rows.length)} tone={rows.length ? 'primary' : 'neutral'} />
+                  <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={18} color={colors.inkMuted} />
+                </Pressable>
 
-              <View className="mt-3 gap-2">
-                {rows.length === 0 ? (
-                  <Text className="text-sm text-ink-faint">Belum ada admin.</Text>
-                ) : (
-                  rows.map(({ row, profile }) => (
-                    <View key={row.id} className="flex-row items-center gap-2">
-                      <View className="flex-1">
-                        <Text className="text-sm font-semibold text-ink" numberOfLines={1}>
-                          {profileName(profile)}
-                        </Text>
-                        <Text className="text-xs text-ink-muted">
-                          {row.can_edit ? 'Lihat & Edit' : row.can_view ? 'Lihat sahaja' : 'Tiada akses'}
-                        </Text>
-                      </View>
-                      <IconButton
-                        icon="create-outline"
-                        accessibilityLabel={'Ubah kebenaran ' + profileName(profile)}
-                        onPress={() => openEdit(department, profile, { can_view: row.can_view, can_edit: row.can_edit })}
-                      />
-                      <IconButton
-                        icon="person-remove-outline"
-                        tone="danger"
-                        accessibilityLabel={'Buang ' + profileName(profile)}
-                        onPress={() => askRemove(profile, department)}
-                      />
+                {expanded ? (
+                  <View className="gap-2 border-t border-line px-card pb-card pt-3">
+                    {rows.length === 0 ? (
+                      <Text className="text-sm text-ink-faint">Belum ada admin.</Text>
+                    ) : (
+                      rows.map(({ row, profile }) => (
+                        <View key={row.id} className="flex-row items-center gap-2">
+                          <View className="flex-1">
+                            <Text className="text-sm font-semibold text-ink" numberOfLines={1}>
+                              {profileName(profile)}
+                            </Text>
+                            <Text className="text-xs text-ink-muted">
+                              {row.can_edit ? 'Lihat & Edit' : row.can_view ? 'Lihat sahaja' : 'Tiada akses'}
+                            </Text>
+                          </View>
+                          <IconButton
+                            icon="create-outline"
+                            accessibilityLabel={'Ubah kebenaran ' + profileName(profile)}
+                            onPress={() => openEdit(department, profile, { can_view: row.can_view, can_edit: row.can_edit })}
+                          />
+                          <IconButton
+                            icon="person-remove-outline"
+                            tone="danger"
+                            accessibilityLabel={'Buang ' + profileName(profile)}
+                            onPress={() => askRemove(profile, department)}
+                          />
+                        </View>
+                      ))
+                    )}
+                    <View className="mt-2">
+                      <Button label="Tambah Admin" variant="secondary" onPress={() => openAdd(department)} />
                     </View>
-                  ))
-                )}
+                  </View>
+                ) : null}
               </View>
-
-              <View className="mt-4">
-                <Button label="Tambah Admin" variant="secondary" onPress={() => openAdd(department)} />
-              </View>
-            </View>
-          ))}
+            );
+          })}
 
           <View className="rounded-card border border-line bg-surface p-card">
             <View className="flex-row items-center gap-3">

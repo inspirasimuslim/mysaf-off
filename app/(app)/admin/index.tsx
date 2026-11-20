@@ -737,7 +737,7 @@ export default function AdminHubScreen() {
 
             <ActionRow
               icon="shield-outline"
-              title="Lantik Admin"
+              title="Urus Admin"
               subtitle="Lantik admin dan tetapkan kebenaran department"
               onPress={() => router.push('/(app)/admin/admins')}
             />
