@@ -1,3 +1,4 @@
+import { Asset } from 'expo-asset';
 import { Ionicons } from '@expo/vector-icons';
 import type { ReactNode } from 'react';
 import { Image, ImageBackground, Platform, Pressable, Text, useWindowDimensions, View, type ImageSourcePropType } from 'react-native';
@@ -28,7 +29,7 @@ const CORAK = require('@/assets/images/mbm-corak.png');
  */
 export function MbmGreen({ children, className }: { children: ReactNode; className?: string }) {
   if (Platform.OS === 'web') {
-    const uri = Image.resolveAssetSource(CORAK)?.uri;
+    const uri = Asset.fromModule(CORAK).uri;
     const webStyle = {
       backgroundColor: MBM.emerald,
       backgroundImage: uri ? 'url(' + uri + ')' : undefined,
