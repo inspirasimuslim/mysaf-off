@@ -163,6 +163,10 @@ export default function BaitulMuslimDaftarScreen() {
               })}
             </View>
 
+            <Text style={{ color: MBM.ink, fontSize: 12.5, lineHeight: 19, textAlign: 'center', fontStyle: 'italic' }}>
+              Demi menjaga kerahsiaan, permohonan ini hanya akan diterima oleh panel yang dipilih.
+            </Text>
+
             <MbmGoldButton label={busy ? 'Menghantar…' : 'Submit'} disabled={busy || panels.length === 0} onPress={() => void submit()} />
           </>
         )}
