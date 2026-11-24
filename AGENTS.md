@@ -784,3 +784,21 @@ Rujukan: `supabase/migrations/20261109000165_counselor_profiles.sql`, `lib/couns
   (helaian ditutup dahulu sebelum dialog pengesahan dibuka).
 - 2026-11-09: skrin Bantuan Kaunseling (ahli) bermula dengan kad pengenalan "Program Sahabat Prihatin IKHWAN — Khidmat Kaunseling dan Bimbingan" (ringkasan teks LK:
   Kesihatan Mental / Pengajian / Kerjaya + nota privasi). Teks tetap dalam `kaunseling.tsx`; tukar dengan menyunting kad itu (perlu build baharu).
+
+# Panel MBM + Notifikasi Push (2026-11-24/25, migration 171–173, sudah live di produksi)
+
+Rujukan: `20261125000171_mbm_permohonan.sql`, `...172_push_notifications.sql`, `...173_mbm_panel.sql`,
+`lib/mbm-borang.ts`, `lib/push.ts`, `supabase/functions/send-push/`, `app/(app)/baitul-muslim*.tsx`, `app/(app)/admin/mbm*.tsx`.
+- **MBM dalam app**: tiga halaman (utama, Big Rock, Daftar) menggantikan pautan Canva; teks disalin 100% daripada PDF. Borang
+  `mbm_submit` -> `mbm_applications` (table terkunci). Admin MAJLIS BAITUL MUSLIM nampak SEMUA permohonan + Excel (`mbm_admin_list`).
+- **Panel (173)**: `mbm_panels` = ahli yang dilantik admin MBM (`mbm_panel_add/remove`, soft `aktif`). Borang ahli memilih panel daripada
+  `mbm_panel_options()`; permohonan menyimpan `panel_id` + nama snapshot. Panel hanya nampak permohonan yang memilihnya
+  (`mbm_panel_inbox`, `my_mbm_panel_id()`); panel lain TIDAK nampak. Seksyen Hub "Majlis Baitul Muslim (MBM) - Panel" untuk panel aktif
+  (`isMbmPanel()` dalam permissions, dibenarkan melepasi guard `admin/_layout` seperti kaunselor). Notifikasi `mbm_panel` + push hanya kepada panel dipilih.
+  Tiada seed panel — admin MBM melantik (Hub -> MBM -> Lantik Panel). APK/web lama masih memanggil `mbm_submit` bertanda tangan lama -> gagal sehingga dikemas kini.
+- **Push (172)**: `push_tokens`, `push_outbox` (terkunci). Pencetus pada `feedback_messages`, `counseling_messages` (teks umum, tanpa nama/isi),
+  `bantuan_applications.status`, `mbm_applications` -> `push_enqueue` -> `pg_net` memanggil Edge Function `send-push` (rahsia dalam Vault `push_webhook_secret`,
+  disemak melalui `push_check_secret`) -> Expo Push -> FCM. App mendaftar token selepas log masuk (`usePushNotifications` dalam `app/(app)/_layout.tsx`),
+  membuang token semasa log keluar. Firebase projek `mysaff-official` (`google-services.json` dalam repo); kunci FCM V1 dimuat naik ke EAS oleh pemilik.
+  Belum: loceng admin lain (yuran/PIPIS/usrah dsb.), iOS (perlu kunci APNs). Function di-deploy melalui Management API (token perlu `edge_functions_write`).
+- Sementara: penarafan Yuran Lunas termasuk ahli tanpa ledger (migration 170) — gantikan bila ledger sebenar siap.

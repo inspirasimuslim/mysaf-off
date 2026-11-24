@@ -51,6 +51,8 @@ export type PermissionsState = {
   isKawasanAdmin: () => boolean;
   /** Kaunselor AKTIF (`counselors`, migration 153) — perlu Hub Admin untuk Sesi Kaunseling, walaupun bukan admin. */
   isCounselor: () => boolean;
+  /** Panel MBM AKTIF (`mbm_panels`, migration 173) — perlu Hub Admin untuk permohonan yang memilihnya, walaupun bukan admin. */
+  isMbmPanel: () => boolean;
 };
 
 const EMPTY: PermissionsState = {
@@ -69,6 +71,7 @@ const EMPTY: PermissionsState = {
   kawasanAreas: [],
   isKawasanAdmin: () => false,
   isCounselor: () => false,
+  isMbmPanel: () => false,
 };
 
 const PermissionsContext = createContext<PermissionsState>(EMPTY);
@@ -82,6 +85,7 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
   const [activeNaqib, setActiveNaqib] = useState(false);
   const [kawasanAreas, setKawasanAreas] = useState<string[]>([]);
   const [counselor, setCounselor] = useState(false);
+  const [mbmPanel, setMbmPanel] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -104,7 +108,7 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
 
     setLoading(true);
     try {
-      const [profileResult, assignmentResult, naqibResult, kawasanResult, counselorResult] = await Promise.all([
+      const [profileResult, assignmentResult, naqibResult, kawasanResult, counselorResult, mbmPanelResult] = await Promise.all([
         // Bacaan asas: tanpa jawapan dalam 15 saat -> ralat + cuba semula, bukan loading kekal.
         withTimeout(
           supabase.from('profiles').select('id, email, full_name, role').eq('id', uid).maybeSingle(),
@@ -132,6 +136,11 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
           (result) => result,
           () => ({ data: false, error: null }),
         ),
+        // Kegagalan = "bukan panel MBM" (migration 173 mungkin belum dijalankan).
+        withTimeout(supabase.rpc('is_active_mbm_panel'), OPTIONAL_TIMEOUT_MS).then(
+          (result) => result,
+          () => ({ data: false, error: null }),
+        ),
       ]);
 
       // Sesi sudah bertukar semasa query berjalan — abaikan hasil lapuk ini.
@@ -145,6 +154,7 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
       setActiveNaqib(Boolean(naqibResult.data));
       setKawasanAreas(Array.isArray(kawasanResult.data) ? (kawasanResult.data as string[]) : []);
       setCounselor(counselorResult.data === true);
+      setMbmPanel(mbmPanelResult.data === true);
       setError(null);
     } catch (caught) {
       if (activeUser.current !== uid) return;
@@ -192,8 +202,9 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
       kawasanAreas,
       isKawasanAdmin: () => kawasanAreas.length > 0,
       isCounselor: () => counselor,
+      isMbmPanel: () => mbmPanel,
     };
-  }, [activeNaqib, counselor, kawasanAreas, assignments, error, loading, profile, refresh]);
+  }, [activeNaqib, counselor, mbmPanel, kawasanAreas, assignments, error, loading, profile, refresh]);
 
   return <PermissionsContext.Provider value={value}>{children}</PermissionsContext.Provider>;
 }

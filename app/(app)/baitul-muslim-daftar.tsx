@@ -11,7 +11,7 @@ import { Screen } from '@/components/ui/screen';
 import { TextField } from '@/components/ui/text-field';
 import { useAuth } from '@/lib/auth-context';
 import { toMalayError } from '@/lib/errors';
-import { fetchMyMbmApplication, MBM_PANEL, submitMbm, type MbmMyApplication } from '@/lib/mbm-borang';
+import { fetchMbmPanelOptions, fetchMyMbmApplication, submitMbm, type MbmMyApplication, type MbmPanelOption } from '@/lib/mbm-borang';
 import { fetchMyMemberLinked } from '@/lib/members';
 import { useGoBack } from '@/lib/navigation';
 
@@ -31,7 +31,8 @@ export default function BaitulMuslimDaftarScreen() {
   const [nama, setNama] = useState('');
   const [generasi, setGenerasi] = useState('');
   const [telefon, setTelefon] = useState('');
-  const [panel, setPanel] = useState<string | null>(null);
+  const [panels, setPanels] = useState<MbmPanelOption[]>([]);
+  const [panelId, setPanelId] = useState<string | null>(null);
   const [existing, setExisting] = useState<MbmMyApplication | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -42,7 +43,11 @@ export default function BaitulMuslimDaftarScreen() {
     let active = true;
     void (async () => {
       try {
-        const [member, mine] = await Promise.all([fetchMyMemberLinked(userId), fetchMyMbmApplication()]);
+        const [member, mine, options] = await Promise.all([
+          fetchMyMemberLinked(userId),
+          fetchMyMbmApplication(),
+          fetchMbmPanelOptions(),
+        ]);
         if (!active) return;
         if (!member) {
           setNoMember(true);
@@ -52,7 +57,10 @@ export default function BaitulMuslimDaftarScreen() {
         setGenerasi(member.generasi ?? '');
         setTelefon(member.no_tel ?? '');
         setExisting(mine);
-        if (mine?.status === 'baharu') setPanel(mine.panel_pilihan);
+        setPanels(options);
+        if (mine?.status === 'baharu' && mine.panel_id && options.some((option) => option.id === mine.panel_id)) {
+          setPanelId(mine.panel_id);
+        }
       } catch (caught) {
         if (active) setError(toMalayError(caught, 'Gagal memuatkan borang.'));
       } finally {
@@ -66,14 +74,14 @@ export default function BaitulMuslimDaftarScreen() {
 
   const submit = async () => {
     if (busy) return;
-    if (!nama.trim() || !telefon.trim() || !panel) {
+    if (!nama.trim() || !telefon.trim() || !panelId) {
       setError('Sila isi Nama, No Telefon dan pilih Panel Pilihan.');
       return;
     }
     setBusy(true);
     setError(null);
     try {
-      await submitMbm({ nama, generasi, no_telefon: telefon, panel });
+      await submitMbm({ nama, generasi, no_telefon: telefon, panelId });
       setDone(true);
     } catch (caught) {
       setError(toMalayError(caught, 'Gagal menghantar borang.'));
@@ -107,7 +115,7 @@ export default function BaitulMuslimDaftarScreen() {
             <Ionicons name="checkmark-circle" size={44} color={MBM.emerald} />
             <Text style={{ fontFamily: MBM_SERIF, fontSize: 20, color: MBM.emerald, textAlign: 'center' }}>Borang telah dihantar</Text>
             <Text style={{ color: MBM.ink, fontSize: 14, textAlign: 'center', lineHeight: 21 }}>
-              {'Panel pilihan anda: ' + panel}
+              {'Panel pilihan anda: ' + (panels.find((option) => option.id === panelId)?.nama ?? '')}
             </Text>
             <View style={{ alignSelf: 'stretch', marginTop: 8 }}>
               <MbmGoldButton label="Kembali" onPress={() => router.replace('/(app)/baitul-muslim')} />
@@ -126,15 +134,18 @@ export default function BaitulMuslimDaftarScreen() {
 
             <View accessibilityRole="radiogroup" className="gap-2">
               <Text style={{ color: MBM.emerald, fontWeight: '700', fontSize: 13.5 }}>Panel Pilihan</Text>
-              {MBM_PANEL.map((name) => {
-                const selected = panel === name;
+              {panels.length === 0 ? (
+                <Notice tone="warn" message="Belum ada panel yang dilantik. Sila cuba lagi kemudian." />
+              ) : null}
+              {panels.map((option) => {
+                const selected = panelId === option.id;
                 return (
                   <Pressable
-                    key={name}
+                    key={option.id}
                     accessibilityRole="radio"
                     accessibilityState={{ selected, disabled: busy }}
                     disabled={busy}
-                    onPress={() => setPanel(name)}
+                    onPress={() => setPanelId(option.id)}
                     style={{
                       flexDirection: 'row',
                       alignItems: 'center',
@@ -146,13 +157,13 @@ export default function BaitulMuslimDaftarScreen() {
                       backgroundColor: selected ? '#E6F1ED' : '#fff',
                     }}>
                     <Ionicons name={selected ? 'radio-button-on' : 'radio-button-off'} size={20} color={MBM.emerald} />
-                    <Text style={{ flex: 1, color: MBM.ink, fontSize: 14, fontWeight: selected ? '700' : '400' }}>{name}</Text>
+                    <Text style={{ flex: 1, color: MBM.ink, fontSize: 14, fontWeight: selected ? '700' : '400' }}>{option.nama}</Text>
                   </Pressable>
                 );
               })}
             </View>
 
-            <MbmGoldButton label={busy ? 'Menghantar…' : 'Submit'} disabled={busy} onPress={() => void submit()} />
+            <MbmGoldButton label={busy ? 'Menghantar…' : 'Submit'} disabled={busy || panels.length === 0} onPress={() => void submit()} />
           </>
         )}
       </View>

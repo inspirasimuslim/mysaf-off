@@ -53,7 +53,7 @@ export default function AdminHubScreen() {
   const router = useRouter();
   const goBack = useGoBack();
   const [hubSearch, setHubSearch] = useState('');
-  const { isSuperAdmin, isActiveNaqib, isCounselor, kawasanAreas, loading: permissionsLoading } = usePermissions();
+  const { isSuperAdmin, isActiveNaqib, isCounselor, isMbmPanel, kawasanAreas, loading: permissionsLoading } = usePermissions();
   const memberAccess = useMemberAccess();
   const usrahAccess = useUsrahAccess();
   const programAccess = useProgramAccess();
@@ -99,6 +99,7 @@ export default function AdminHubScreen() {
       </CollapsibleSection>
     ) : null;
 
+  const mbmPanel = isMbmPanel();
   const counselor = isCounselor();
   const counselorUnread = useCounselorUnread(counselor);
   const superAdmin = isSuperAdmin();
@@ -147,6 +148,7 @@ export default function AdminHubScreen() {
     naqib,
     kawasanOnly,
     counselor,
+    mbmPanel,
     Object.keys(feedback.byName).length > 0,
   ].filter(Boolean).length;
   const nothingAvailable = visibleSections === 0;
@@ -536,6 +538,14 @@ export default function AdminHubScreen() {
                 onPress={() => router.push('/(app)/admin/mbm')}
               />
             ) : null}
+            {mbmAccess.canView ? (
+              <ActionRow
+                icon="people-outline"
+                title="Lantik Panel"
+                subtitle="Lantik atau nyahaktif panel — hanya panel yang dipilih ahli menerima permohonan"
+                onPress={() => router.push('/(app)/admin/mbm-panel-urus')}
+              />
+            ) : null}
 
             {feedbackRow('MAJLIS BAITUL MUSLIM')}
           </CollapsibleSection>
@@ -556,6 +566,18 @@ export default function AdminHubScreen() {
               onPress={() => router.push('/(app)/admin/kaunselor')}
             />
             {feedbackRow('LAJNAH KEBAJIKAN')}
+          </CollapsibleSection>
+        ) : null}
+
+        {/* Panel MBM aktif — hanya permohonan yang memilih panel itu (migration 173). */}
+        {mbmPanel ? (
+          <CollapsibleSection variant="plain" title="Majlis Baitul Muslim (MBM) - Panel" count={1} defaultOpen={openByDefault}>
+            <ActionRow
+              icon="heart-outline"
+              title="Permohonan untuk Anda"
+              subtitle="Permohonan ahli yang memilih anda sebagai panel — panel lain tidak melihatnya"
+              onPress={() => router.push('/(app)/admin/mbm-panel')}
+            />
           </CollapsibleSection>
         ) : null}
 

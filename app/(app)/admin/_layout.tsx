@@ -51,7 +51,7 @@ function NoAccess() {
  */
 export default function AdminLayout() {
   const colors = useColors();
-  const { loading, isAdmin, isActiveNaqib, isKawasanAdmin, isCounselor, isOwner } = usePermissions();
+  const { loading, isAdmin, isActiveNaqib, isKawasanAdmin, isCounselor, isMbmPanel, isOwner } = usePermissions();
   const pathname = usePathname();
 
   if (loading) return <LoadingScreen />;
@@ -59,7 +59,7 @@ export default function AdminLayout() {
   if (isOwner() && !isAdmin() && (pathname.endsWith('/owner-recovery') || pathname.endsWith('/activity-log'))) {
     return <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }} />;
   }
-  if (!isAdmin() && !isActiveNaqib() && !isKawasanAdmin() && !isCounselor()) return <NoAccess />;
+  if (!isAdmin() && !isActiveNaqib() && !isKawasanAdmin() && !isCounselor() && !isMbmPanel()) return <NoAccess />;
 
   return <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }} />;
 }

@@ -40,7 +40,7 @@ const EMPTY: Value = { items: [], total: 0, open: false, setOpen: () => undefine
 const Context = createContext<Value>(EMPTY);
 
 /** Jenis yang menyimpan status dilihat di DB (migration 169). */
-const SEEN_KINDS = new Set(['iklan_menunggu', 'padam_akaun', 'bantuan_menunggu', 'mbm_permohonan']);
+const SEEN_KINDS = new Set(['iklan_menunggu', 'padam_akaun', 'bantuan_menunggu', 'mbm_permohonan', 'mbm_panel']);
 
 /** Selang semak semula selagi app terbuka (ms). */
 const POLL_MS = 90_000;
@@ -61,9 +61,9 @@ async function fetchAdminNotifications(): Promise<AdminNotification[]> {
  * ada sesuatu untuk dilihat — bukan pada setiap muat semula.
  */
 export function AdminNotificationsProvider({ children }: { children: ReactNode }) {
-  const { loading, isAdmin, isCounselor } = usePermissions();
+  const { loading, isAdmin, isCounselor, isMbmPanel } = usePermissions();
   const pathname = usePathname();
-  const enabled = !loading && (isAdmin() || isCounselor());
+  const enabled = !loading && (isAdmin() || isCounselor() || isMbmPanel());
 
   const [items, setItems] = useState<AdminNotification[]>([]);
   const [open, setOpen] = useState(false);

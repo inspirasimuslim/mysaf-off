@@ -14,20 +14,6 @@ import { deliverWorkbook } from './xlsx-download';
  * Table terkunci; kebenaran disemak semula di pelayan.
  */
 
-/** Senarai panel pilihan — salinan borang asal (susunan sama). */
-export const MBM_PANEL: readonly string[] = [
-  'Nik Mohd Kamal bin Ibrahim@Nik Hanafi',
-  'Ahmad Fatihi b Makhtar',
-  'Mohd Ridhuwan b Che Musa',
-  'Mohd Aidil Hanan b Jusoh',
-  'Muhamad Zarif b Ilias',
-  'Nurul Khairani bt Ismail',
-  'Nurul Farihah bt Mad Rozali',
-  'Nur Farhana bt Mohd Razali',
-  'Nur Farah Syazwani bt Mohd Zurhan',
-  'Nurul Jannah bt Mohd A’seri',
-];
-
 export const MBM_CONTACTS: readonly { name: string; phone: string }[] = [
   { name: 'KAMAL', phone: '013-4058718' },
   { name: 'RIDHUWAN', phone: '016-5279390' },
@@ -39,7 +25,30 @@ export const MBM_CONTACTS: readonly { name: string; phone: string }[] = [
 
 export type MbmStatus = 'baharu' | 'selesai';
 
-export type MbmMyApplication = { id: string; panel_pilihan: string; status: MbmStatus; created_at: string };
+export type MbmMyApplication = {
+  id: string;
+  panel_pilihan: string;
+  panel_id: string | null;
+  status: MbmStatus;
+  created_at: string;
+};
+
+/** Panel aktif yang boleh dipilih ahli (migration 173). */
+export type MbmPanelOption = { id: string; nama: string; generasi: string | null };
+
+/** Panel dalam skrin lantik (admin MBM). */
+export type MbmPanel = {
+  id: string;
+  member_id: string;
+  nama: string;
+  generasi: string | null;
+  aktif: boolean;
+  baharu: number;
+  jumlah: number;
+};
+
+/** Permohonan yang dilihat panel — hanya yang memilihnya. */
+export type MbmPanelRow = Omit<MbmAdminRow, 'panel_pilihan' | 'panel_id'>;
 
 export type MbmAdminRow = {
   id: string;
@@ -48,6 +57,7 @@ export type MbmAdminRow = {
   generasi: string | null;
   no_telefon: string;
   panel_pilihan: string;
+  panel_id: string | null;
   status: MbmStatus;
   created_at: string;
 };
@@ -56,14 +66,45 @@ export async function submitMbm(input: {
   nama: string;
   generasi: string;
   no_telefon: string;
-  panel: string;
+  panelId: string;
 }): Promise<void> {
   const { error } = await supabase.rpc('mbm_submit', {
     p_nama: input.nama,
     p_generasi: input.generasi,
     p_no_telefon: input.no_telefon,
-    p_panel: input.panel,
+    p_panel_id: input.panelId,
   });
+  if (error) throw error;
+}
+
+export async function fetchMbmPanelOptions(): Promise<MbmPanelOption[]> {
+  const { data, error } = await supabase.rpc('mbm_panel_options');
+  if (error) throw error;
+  return (data as MbmPanelOption[] | null) ?? [];
+}
+
+export async function fetchMbmPanels(): Promise<MbmPanel[]> {
+  const { data, error } = await supabase.rpc('mbm_panel_list');
+  if (error) throw error;
+  return (data as MbmPanel[] | null) ?? [];
+}
+
+export async function addMbmPanel(memberId: string): Promise<void> {
+  const { error } = await supabase.rpc('mbm_panel_add', { p_member: memberId });
+  if (error) throw error;
+}
+
+export async function removeMbmPanel(id: string): Promise<void> {
+  const { error } = await supabase.rpc('mbm_panel_remove', { p_id: id });
+  if (error) throw error;
+}
+
+export function fetchMbmPanelInbox(): Promise<MbmPanelRow[]> {
+  return fetchAllRpcRows<MbmPanelRow>('mbm_panel_inbox');
+}
+
+export async function setMbmPanelStatus(id: string, status: MbmStatus): Promise<void> {
+  const { error } = await supabase.rpc('mbm_panel_set_status', { p_id: id, p_status: status });
   if (error) throw error;
 }
 
