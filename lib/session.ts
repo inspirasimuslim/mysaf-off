@@ -1,6 +1,7 @@
 import type { AuthError } from '@supabase/supabase-js';
 
 import { disableBiometric, isBiometricEnabled, saveRefreshToken } from './biometrics';
+import { unregisterPushToken } from './push';
 import { SecureStorageAdapter } from './secure-storage';
 import { AUTH_STORAGE_KEY, supabase } from './supabase';
 
@@ -30,6 +31,7 @@ export async function clearLocalSession(): Promise<{ error: AuthError | null }> 
  * Dashboard, atau `signOutEverywhere()`, yang boleh memadamnya.
  */
 export async function signOutFromDevice(): Promise<{ error: AuthError | null }> {
+  await unregisterPushToken();
   if (!(await isBiometricEnabled())) {
     // Tiada biometrik: tamatkan sesi peranti ini di pelayan seperti biasa.
     return supabase.auth.signOut({ scope: 'local' });
@@ -50,6 +52,7 @@ export async function signOutFromDevice(): Promise<{ error: AuthError | null }> 
  * Ini satu-satunya laluan log keluar yang dibenarkan memadam data biometrik.
  */
 export async function signOutEverywhere(): Promise<{ error: AuthError | null }> {
+  await unregisterPushToken();
   await disableBiometric();
   return supabase.auth.signOut({ scope: 'global' });
 }

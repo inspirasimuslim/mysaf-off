@@ -121,7 +121,14 @@
         }
       ],
       "./plugins/with-arm64-only.js",
-      "./plugins/with-release-signing.js"
+      "./plugins/with-release-signing.js",
+      [
+        "expo-notifications",
+        {
+          "color": "#0E4A43",
+          "defaultChannel": "default"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

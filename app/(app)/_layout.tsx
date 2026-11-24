@@ -15,6 +15,7 @@ import { LoadingScreen } from '@/components/ui/loading-screen';
 import { AdminNotificationsProvider } from '@/lib/admin-notifications';
 import { useAndroidBackNavigation } from '@/lib/android-back';
 import { useAuth } from '@/lib/auth-context';
+import { usePushNotifications } from '@/lib/push';
 import { activityCaptureProps, useIdleTimeout } from '@/lib/idle-timer';
 import { useReturnToHome } from '@/lib/return-to-home';
 import { signOutEverywhere } from '@/lib/session';
@@ -169,6 +170,8 @@ function AppGate() {
 
   const userId = user?.id ?? null;
   const { status, recheck } = useAccountStatus(userId);
+  // Akaun disekat / belum disahkan tidak mendaftar token push.
+  usePushNotifications(status === 'active' && userId ? userId : undefined);
 
   /*
     Keadaan kata laluan disemak SELEPAS sekatan dan hanya apabila sekatan lulus.
