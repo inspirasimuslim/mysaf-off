@@ -790,7 +790,7 @@ Rujukan: `supabase/migrations/20261109000165_counselor_profiles.sql`, `lib/couns
 Rujukan: `20261125000171_mbm_permohonan.sql`, `...172_push_notifications.sql`, `...173_mbm_panel.sql`,
 `lib/mbm-borang.ts`, `lib/push.ts`, `supabase/functions/send-push/`, `app/(app)/baitul-muslim*.tsx`, `app/(app)/admin/mbm*.tsx`.
 - **MBM dalam app**: tiga halaman (utama, Big Rock, Daftar) menggantikan pautan Canva; teks disalin 100% daripada PDF. Borang
-  `mbm_submit` -> `mbm_applications` (table terkunci). Admin MAJLIS BAITUL MUSLIM nampak SEMUA permohonan + Excel (`mbm_admin_list`).
+  `mbm_submit` -> `mbm_applications` (table terkunci). **Sejak migration 174 admin MBM / Super Admin HANYA nampak bilangan** (`mbm_panel_list`); `mbm_admin_list`/`mbm_admin_set_status` dan skrin `admin/mbm` DIBUANG. Panel mengeksport Excel permohonan sendiri.
 - **Panel (173)**: `mbm_panels` = ahli yang dilantik admin MBM (`mbm_panel_add/remove`, soft `aktif`). Borang ahli memilih panel daripada
   `mbm_panel_options()`; permohonan menyimpan `panel_id` + nama snapshot. Panel hanya nampak permohonan yang memilihnya
   (`mbm_panel_inbox`, `my_mbm_panel_id()`); panel lain TIDAK nampak. Seksyen Hub "Majlis Baitul Muslim (MBM) - Panel" untuk panel aktif

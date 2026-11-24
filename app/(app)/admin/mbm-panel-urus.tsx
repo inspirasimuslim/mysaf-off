@@ -4,7 +4,6 @@ import { Text, View } from 'react-native';
 
 import { NoAccessScreen } from '@/components/no-access';
 import { ScreenHeader } from '@/components/screen-header';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -96,7 +95,7 @@ export default function MbmPanelUrusScreen() {
       <ScreenHeader
         eyebrow="Majlis Baitul Muslim (MBM)"
         title="Lantik Panel"
-        subtitle="Hanya panel yang dipilih ahli menerima permohonan itu"
+        subtitle="Butiran permohonan hanya untuk panel; admin nampak bilangan sahaja"
         onBackPress={goBack}
       />
 
@@ -121,21 +120,18 @@ export default function MbmPanelUrusScreen() {
         ) : (
           <View className="gap-2">
             {(panels ?? []).map((panel) => (
-              <View key={panel.id} className="rounded-field border border-line bg-surface p-4">
-                <View className="flex-row items-center gap-2">
-                  <Text numberOfLines={2} className="flex-1 text-base font-bold text-ink">
+              <View key={panel.id} className="flex-row items-center gap-2 rounded-field border border-line bg-surface px-3 py-2.5">
+                <View className="flex-1">
+                  <Text numberOfLines={1} className="text-sm font-bold text-ink">
                     {panel.nama}
                     {panel.generasi ? '  ·  ' + generationLabel(panel.generasi) : ''}
                   </Text>
-                  <Badge label={panel.aktif ? 'Aktif' : 'Tidak aktif'} tone={panel.aktif ? 'positive' : 'neutral'} />
+                  <Text className="text-xs text-ink-muted">
+                    {panel.jumlah + ' permohonan' + (panel.aktif ? '' : ' · Tidak aktif')}
+                  </Text>
                 </View>
-                <Text className="mt-1 text-sm text-ink-muted">
-                  {panel.baharu + ' baharu · ' + panel.jumlah + ' jumlah permohonan'}
-                </Text>
                 {access.canEdit && panel.aktif ? (
-                  <View className="mt-3">
-                    <Button label="Nyahaktif" variant="secondary" size="sm" disabled={busy} onPress={() => setToRemove(panel)} />
-                  </View>
+                  <Button label="Nyahaktif" variant="secondary" size="sm" disabled={busy} onPress={() => setToRemove(panel)} />
                 ) : null}
               </View>
             ))}

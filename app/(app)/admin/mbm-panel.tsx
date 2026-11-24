@@ -3,6 +3,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import { NoAccessScreen } from '@/components/no-access';
+import { SaveShareButtons } from '@/components/save-share-buttons';
 import { ScreenHeader } from '@/components/screen-header';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -14,7 +15,8 @@ import { TextField } from '@/components/ui/text-field';
 import { ToastBanner } from '@/components/ui/toast';
 import { usePermissions } from '@/lib/permissions';
 import { toMalayError } from '@/lib/errors';
-import { fetchMbmPanelInbox, mbmStatusLabel, setMbmPanelStatus, type MbmPanelRow, type MbmStatus } from '@/lib/mbm-borang';
+import { deliveryMessage, type DeliveryMode } from '@/lib/file-delivery';
+import { downloadMbmExport, fetchMbmPanelInbox, mbmStatusLabel, setMbmPanelStatus, type MbmPanelRow, type MbmStatus } from '@/lib/mbm-borang';
 import { useGoBack } from '@/lib/navigation';
 
 const PAGE = 100;
@@ -39,6 +41,7 @@ export default function MbmPanelInboxScreen() {
   const [filter, setFilter] = useState<Filter>('semua');
   const [query, setQuery] = useState('');
   const [shown, setShown] = useState(PAGE);
+  const [exporting, setExporting] = useState<DeliveryMode | null>(null);
   const [updating, setUpdating] = useState<string | null>(null);
   const [banner, setBanner] = useState<{ tone: 'positive' | 'info' | 'negative'; message: string } | null>(null);
 
@@ -70,6 +73,26 @@ export default function MbmPanelInboxScreen() {
   }, [rows, filter, query]);
 
   const baharu = (rows ?? []).filter((row) => row.status === 'baharu').length;
+
+  const exportAll = useCallback(
+    async (mode: DeliveryMode) => {
+      if (exporting) return;
+      setBanner(null);
+      setExporting(mode);
+      try {
+        const report = await downloadMbmExport(mode);
+        setBanner({
+          tone: report.result === 'cancelled' ? 'info' : 'positive',
+          message: deliveryMessage(report.result, report.fileName, report.rows + ' permohonan'),
+        });
+      } catch (caught) {
+        setBanner({ tone: 'negative', message: toMalayError(caught, 'Gagal memuat turun permohonan MBM.') });
+      } finally {
+        setExporting(null);
+      }
+    },
+    [exporting],
+  );
 
   const changeStatus = useCallback(
     async (row: MbmPanelRow, status: MbmStatus) => {
@@ -111,6 +134,15 @@ export default function MbmPanelInboxScreen() {
       <View className="gap-4 px-gutter pb-10 pt-5">
         {banner ? <ToastBanner tone={banner.tone} message={banner.message} /> : null}
         {error ? <Notice tone="negative" message={error} /> : null}
+
+        <SaveShareButtons
+          kind="file"
+          variant="secondary"
+          webLabel="Muat Turun Excel"
+          nativeCaption="Permohonan MBM (.xlsx)"
+          busy={exporting}
+          onPress={(mode) => void exportAll(mode)}
+        />
 
         <TextField
           label="Cari"

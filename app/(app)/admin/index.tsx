@@ -532,17 +532,9 @@ export default function AdminHubScreen() {
             defaultOpen={openByDefault}>
             {mbmAccess.canView ? (
               <ActionRow
-                icon="heart-outline"
-                title="Permohonan MBM"
-                subtitle="Senarai ahli yang berminat berMBM, tandakan selesai dan muat turun Excel"
-                onPress={() => router.push('/(app)/admin/mbm')}
-              />
-            ) : null}
-            {mbmAccess.canView ? (
-              <ActionRow
                 icon="people-outline"
                 title="Lantik Panel"
-                subtitle="Lantik atau nyahaktif panel — hanya panel yang dipilih ahli menerima permohonan"
+                subtitle="Lantik atau nyahaktif panel dan lihat bilangan permohonan — butiran hanya untuk panel"
                 onPress={() => router.push('/(app)/admin/mbm-panel-urus')}
               />
             ) : null}

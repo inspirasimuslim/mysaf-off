@@ -10,7 +10,7 @@ import { deliverWorkbook } from './xlsx-download';
 /**
  * Majlis Baitul Muslim (MBM) — borang kecenderungan awal (migration 171).
  * Menggantikan Google Form. Ahli menghantar melalui RPC `mbm_submit`; admin
- * department MAJLIS BAITUL MUSLIM (+ Super Admin) menyemak melalui `mbm_admin_*`.
+ * department MAJLIS BAITUL MUSLIM (+ Super Admin) melantik panel (`mbm_panel_*`) dan hanya nampak bilangan; butiran permohonan hanya untuk panel (migration 174).
  * Table terkunci; kebenaran disemak semula di pelayan.
  */
 
@@ -48,16 +48,12 @@ export type MbmPanel = {
 };
 
 /** Permohonan yang dilihat panel — hanya yang memilihnya. */
-export type MbmPanelRow = Omit<MbmAdminRow, 'panel_pilihan' | 'panel_id'>;
-
-export type MbmAdminRow = {
+export type MbmPanelRow = {
   id: string;
   nombor_ahli: string | null;
   nama: string;
   generasi: string | null;
   no_telefon: string;
-  panel_pilihan: string;
-  panel_id: string | null;
   status: MbmStatus;
   created_at: string;
 };
@@ -114,22 +110,13 @@ export async function fetchMyMbmApplication(): Promise<MbmMyApplication | null> 
   return ((data as MbmMyApplication[] | null) ?? [])[0] ?? null;
 }
 
-export function fetchMbmAdminRows(): Promise<MbmAdminRow[]> {
-  return fetchAllRpcRows<MbmAdminRow>('mbm_admin_list');
-}
-
-export async function setMbmStatus(id: string, status: MbmStatus): Promise<void> {
-  const { error } = await supabase.rpc('mbm_admin_set_status', { p_id: id, p_status: status });
-  if (error) throw error;
-}
-
 export function mbmStatusLabel(status: MbmStatus): string {
   return status === 'selesai' ? 'Selesai' : 'Baharu';
 }
 
-const EXPORT_HEADER = ['Tarikh', 'Masa', 'Nombor Ahli', 'Nama', 'Generasi', 'No Telefon', 'Panel Pilihan', 'Status'];
+const EXPORT_HEADER = ['Tarikh', 'Masa', 'Nombor Ahli', 'Nama', 'Generasi', 'No Telefon', 'Status'];
 
-function exportSheet(rows: MbmAdminRow[]): ExportSheet {
+function exportSheet(rows: MbmPanelRow[]): ExportSheet {
   return {
     name: 'Permohonan MBM',
     header: EXPORT_HEADER,
@@ -142,7 +129,6 @@ function exportSheet(rows: MbmAdminRow[]): ExportSheet {
         Nama: row.nama,
         Generasi: row.generasi ?? '',
         'No Telefon': row.no_telefon,
-        'Panel Pilihan': row.panel_pilihan,
         Status: mbmStatusLabel(row.status),
       };
     }),
@@ -151,9 +137,9 @@ function exportSheet(rows: MbmAdminRow[]): ExportSheet {
 
 export type MbmExportResult = { rows: number; fileName: string; result: DeliveryResult };
 
-/** Eksport SEMUA permohonan MBM ke Excel — pelayan menyemak kebenaran admin MBM. */
+/** Eksport permohonan yang memilih panel ini sahaja — pelayan hanya memulangkan baris panel itu. */
 export async function downloadMbmExport(mode: DeliveryMode): Promise<MbmExportResult> {
-  const rows = await fetchMbmAdminRows();
+  const rows = await fetchMbmPanelInbox();
   if (!rows.length) throw new UserError('Tiada permohonan MBM untuk dieksport.');
 
   const book = XLSX.utils.book_new();
