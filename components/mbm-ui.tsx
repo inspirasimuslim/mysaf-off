@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import type { ReactNode } from 'react';
-import { ImageBackground, Platform, Pressable, Text, View } from 'react-native';
+import { Image, ImageBackground, Platform, Pressable, Text, useWindowDimensions, View, type ImageSourcePropType } from 'react-native';
 
 /**
  * Elemen visual halaman Majlis Baitul Muslim — tema dewan akad nikah (zamrud + emas + merah jambu pudar).
@@ -73,5 +73,42 @@ export function MbmGoldButton({ label, onPress, disabled }: { label: string; onP
       }}>
       <Text style={{ color: MBM.emeraldDeep, fontWeight: '700', fontSize: 16 }}>{label}</Text>
     </Pressable>
+  );
+}
+
+/**
+ * Gambar berbingkai emas dengan nisbah asal gambar (tiada crop). Saiz dikira dalam piksel
+ * kerana `aspectRatio` dengan lebar peratus tidak boleh dipercayai dalam bekas yang
+ * dipusatkan (hasilnya bingkai tinggi dan sempit di web).
+ */
+export function MbmFramedImage({
+  source,
+  ratio,
+  label,
+  maxWidth = 300,
+  radius = 28,
+}: {
+  source: ImageSourcePropType;
+  ratio: number;
+  label: string;
+  maxWidth?: number;
+  radius?: number;
+}) {
+  const { width: windowWidth } = useWindowDimensions();
+  const width = Math.max(160, Math.min(maxWidth, windowWidth - 120));
+  const height = Math.round(width / ratio);
+  return (
+    <View
+      style={{
+        width,
+        height,
+        borderRadius: radius,
+        borderWidth: 3,
+        borderColor: MBM.gold,
+        overflow: 'hidden',
+        backgroundColor: MBM.ivory,
+      }}>
+      <Image source={source} accessibilityLabel={label} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+    </View>
   );
 }

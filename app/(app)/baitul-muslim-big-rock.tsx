@@ -1,6 +1,6 @@
-import { Image, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 
-import { MBM, MBM_SERIF, MbmDivider, MbmGreen, MbmHeading } from '@/components/mbm-ui';
+import { MBM, MBM_SERIF, MbmDivider, MbmFramedImage, MbmGreen, MbmHeading } from '@/components/mbm-ui';
 import { ScreenHeader } from '@/components/screen-header';
 import { Screen } from '@/components/ui/screen';
 import { useGoBack } from '@/lib/navigation';
@@ -43,24 +43,12 @@ export default function BaitulMuslimBigRockScreen() {
             style={{ fontFamily: MBM_SERIF, fontSize: 22, lineHeight: 28, color: '#fff', textAlign: 'center', marginBottom: 14 }}>
             Memahami Konsep Taaruf dan The Big Rock dalam Proses Taaruf
           </Text>
-          <View
-            style={{
-              width: '100%',
-              maxWidth: 330,
-              aspectRatio: 762 / 805,
-              borderRadius: 28,
-              borderWidth: 3,
-              borderColor: MBM.gold,
-              overflow: 'hidden',
-              backgroundColor: MBM.ivory,
-            }}>
-            <Image
-              source={require('@/assets/images/mbm-bigrock.jpg')}
-              accessibilityLabel="Balang berisi Big Rocks, Small Rocks dan Sand"
-              style={{ width: '100%', height: '100%' }}
-              resizeMode="contain"
-            />
-          </View>
+          <MbmFramedImage
+            source={require('@/assets/images/mbm-bigrock.jpg')}
+            ratio={762 / 805}
+            label="Balang berisi Big Rocks, Small Rocks dan Sand"
+            maxWidth={330}
+          />
         </View>
       </MbmGreen>
 
