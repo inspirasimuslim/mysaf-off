@@ -24,7 +24,7 @@ export const FEATURE_GROUPS: FeatureGroup[] = [
     items: [
       'Ringkasan yuran dan PIPIS dalam satu paparan.',
       'Pengumuman dan acara terkini persatuan.',
-      'Notifikasi dalam app untuk balasan, permohonan dan perkara yang perlu tindakan.',
+      'Notifikasi dalam app dan push ke telefon untuk balasan, permohonan dan perkara yang perlu tindakan.',
       'Hari jadi ahli pada bulan semasa.',
     ],
   },
@@ -158,6 +158,16 @@ export const CHANGELOG: ChangelogEntry[] = [
       'Notifikasi admin: selepas dibuka atau ditutup, ia disenyapkan sehingga ada permohonan baharu.',
       'Lantik admin: nama dan susunan department sama dengan Hub Admin.',
       'Poster tambahan program dan usrah kini boleh disimpan.',
+    ],
+  },
+  {
+    version: '1.3.34',
+    date: '25 Nov 2026',
+    highlights: [
+      'Majlis Baitul Muslim kini dalam app: maklumat MBM, artikel Konsep The Big Rock dan borang kecenderungan awal ahli untuk berMBM.',
+      'Hanya panel yang dipilih menerima permohonan; panel lain dan admin tidak melihat butiran pemohon.',
+      'Notifikasi push ke telefon untuk maklum balas, kaunseling, permohonan bantuan dan permohonan MBM.',
+      'Lantik panel MBM dalam Hub Admin.',
     ],
   },
 ];
