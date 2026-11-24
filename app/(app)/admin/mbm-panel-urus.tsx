@@ -36,7 +36,7 @@ export default function MbmPanelUrusScreen() {
   const load = useCallback(async () => {
     try {
       const [list, members] = await Promise.all([fetchMbmPanels(), fetchMembersForPicker()]);
-      setPanels(list);
+      setPanels(list.filter((panel) => panel.aktif));
       setCandidates(members);
       setError(null);
     } catch (caught) {
@@ -127,7 +127,7 @@ export default function MbmPanelUrusScreen() {
                     {panel.generasi ? '  ·  ' + generationLabel(panel.generasi) : ''}
                   </Text>
                   <Text className="text-xs text-ink-muted">
-                    {panel.jumlah + ' permohonan' + (panel.aktif ? '' : ' · Tidak aktif')}
+                    {panel.jumlah + ' permohonan'}
                   </Text>
                 </View>
                 {access.canEdit && panel.aktif ? (
