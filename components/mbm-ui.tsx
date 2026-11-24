@@ -20,14 +20,28 @@ export const MBM = {
 export const MBM_SERIF = Platform.select({ ios: 'Georgia', android: 'serif', default: 'Georgia, serif' });
 
 /** Latar zamrud dengan corak geometri emas yang samar. */
+const CORAK = require('@/assets/images/mbm-corak.png');
+
+/**
+ * Latar hijau bercorak. Web: `resizeMode="repeat"` tidak mengubin gambar (hanya satu salinan di
+ * penjuru, selebihnya hijau kosong), jadi guna CSS background yang diulang. Native: ImageBackground.
+ */
 export function MbmGreen({ children, className }: { children: ReactNode; className?: string }) {
+  if (Platform.OS === 'web') {
+    const uri = Image.resolveAssetSource(CORAK)?.uri;
+    const webStyle = {
+      backgroundColor: MBM.emerald,
+      backgroundImage: uri ? 'url(' + uri + ')' : undefined,
+      backgroundRepeat: 'repeat',
+    } as unknown as object;
+    return (
+      <View style={webStyle} className={className}>
+        {children}
+      </View>
+    );
+  }
   return (
-    <ImageBackground
-      source={require('@/assets/images/mbm-corak.png')}
-      resizeMode="repeat"
-      style={{ backgroundColor: MBM.emerald }}
-      imageStyle={{ opacity: 1 }}
-      className={className}>
+    <ImageBackground source={CORAK} resizeMode="repeat" style={{ backgroundColor: MBM.emerald }} className={className}>
       {children}
     </ImageBackground>
   );
