@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "901129971434",
+    "project_id": "mysaff-official",
+    "storage_bucket": "mysaff-official.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:901129971434:android:ee484828be8f8ee1fa1993",
+        "android_client_info": {
+          "package_name": "com.sakuradigital.mysafoff"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC-nbTIwLGhAS4EPSovwZK1bbbYFt79xuE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
