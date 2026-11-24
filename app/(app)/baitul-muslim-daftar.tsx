@@ -94,7 +94,7 @@ export default function BaitulMuslimDaftarScreen() {
             Majlis Baitul Muslim Ikhwan
           </Text>
           <Text style={{ color: '#DDEDE8', fontSize: 13, marginTop: 4, textAlign: 'center' }}>
-            Borang Kecenderungan awal Ahli untuk berMBM
+            Borang kecenderungan awal ahli untuk berMBM
           </Text>
         </View>
       </MbmGreen>
