@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Linking, Pressable, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
 import { ScreenHeader } from '@/components/screen-header';
 import { Screen } from '@/components/ui/screen';
@@ -9,9 +9,6 @@ import { fetchBantuanPerluTindakan } from '@/lib/bantuan';
 import { fetchCounselMemberUnread } from '@/lib/counseling';
 import { fetchFeedbackMemberUnread } from '@/lib/feedback-chat';
 import { useColors } from '@/lib/theme';
-
-/** Halaman luar (Canva) untuk Majlis Baitul Muslim. */
-const BAITUL_MUSLIM_URL = 'https://senadappda.my.canva.site/mbmikhwan';
 
 type IconName = keyof typeof Ionicons.glyphMap;
 
@@ -59,7 +56,7 @@ export default function ArkibHubScreen() {
     {
       icon: 'heart-outline',
       title: 'Majlis Baitul Muslim',
-      onPress: () => void Linking.openURL(BAITUL_MUSLIM_URL).catch(() => undefined),
+      onPress: () => router.push('/(app)/baitul-muslim'),
     },
     { icon: 'storefront-outline', title: 'Bisnes Ahli', onPress: () => router.push('/(app)/bisnes-ahli') },
     { icon: 'people-circle-outline', title: 'NGO Rasmi', onPress: () => router.push('/(app)/ngo') },

@@ -12,6 +12,7 @@ import { Screen } from '@/components/ui/screen';
 import { TextField } from '@/components/ui/text-field';
 import {
   useDepartmentAccess,
+  useMbmAccess,
   useNgoAccess,
   useGenerasiAccess,
   useKesihatanAccess,
@@ -67,6 +68,8 @@ export default function AdminHubScreen() {
   const zakatAccess = useZakatAccess();
   // LAJNAH PEMBANGUNAN NGO — memiliki modul NGO Rasmi (migration 157).
   const ngoAccess = useNgoAccess();
+  // MAJLIS BAITUL MUSLIM — permohonan MBM (migration 171).
+  const mbmAccess = useMbmAccess();
 
   // Maklum Balas Ahli (migration 151/152): SETIAP department ada butang sendiri; peta ini mengandungi
   // department yang pemanggil boleh lihat (Super Admin: semua aktif) beserta bilangan belum dibaca.
@@ -125,6 +128,7 @@ export default function AdminHubScreen() {
       kesihatanAccess,
       zakatAccess,
       ngoAccess,
+      mbmAccess,
     ].some((access) => access.loading);
   const visibleSections = [
     superAdmin,
@@ -139,6 +143,7 @@ export default function AdminHubScreen() {
     kesihatanAccess.canView,
     zakatAccess.canView,
     ngoAccess.canView,
+    mbmAccess.canView,
     naqib,
     kawasanOnly,
     counselor,
@@ -513,6 +518,26 @@ export default function AdminHubScreen() {
             ) : null}
 
             {feedbackRow('LAJNAH PEMBANGUNAN NGO')}
+          </CollapsibleSection>
+        ) : null}
+
+        {mbmAccess.canView || feedback.byName['MAJLIS BAITUL MUSLIM'] ? (
+          <CollapsibleSection
+            variant="plain"
+            title="Majlis Baitul Muslim (MBM)"
+            count={(mbmAccess.canView ? 1 : 0) + fbCount('MAJLIS BAITUL MUSLIM')}
+            alert={fbUnread('MAJLIS BAITUL MUSLIM')}
+            defaultOpen={openByDefault}>
+            {mbmAccess.canView ? (
+              <ActionRow
+                icon="heart-outline"
+                title="Permohonan MBM"
+                subtitle="Senarai ahli yang berminat berMBM, tandakan selesai dan muat turun Excel"
+                onPress={() => router.push('/(app)/admin/mbm')}
+              />
+            ) : null}
+
+            {feedbackRow('MAJLIS BAITUL MUSLIM')}
           </CollapsibleSection>
         ) : null}
 

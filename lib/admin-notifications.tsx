@@ -40,7 +40,7 @@ const EMPTY: Value = { items: [], total: 0, open: false, setOpen: () => undefine
 const Context = createContext<Value>(EMPTY);
 
 /** Jenis yang menyimpan status dilihat di DB (migration 169). */
-const SEEN_KINDS = new Set(['iklan_menunggu', 'padam_akaun', 'bantuan_menunggu']);
+const SEEN_KINDS = new Set(['iklan_menunggu', 'padam_akaun', 'bantuan_menunggu', 'mbm_permohonan']);
 
 /** Selang semak semula selagi app terbuka (ms). */
 const POLL_MS = 90_000;

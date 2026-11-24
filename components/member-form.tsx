@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { ActivityIndicator, Pressable, Switch, Text, View } from 'react-native';
 
@@ -266,6 +267,7 @@ export function MemberForm({
   actions,
   onSave,
 }: Props) {
+  const router = useRouter();
   const colors = useColors();
   const [draft, setDraft] = useState<Member>(member);
   const [businessesDraft, setBusinessesDraft] = useState<MemberBusinessDraft[]>(() => businesses.map(toDraft));
@@ -1007,6 +1009,10 @@ export function MemberForm({
           onChange={(next) => set('cenderung_baitul_muslim', next === null ? null : next === 'ya')}
           disabled={locked}
         />
+      ) : null}
+
+      {draft.status_perkahwinan === 'bujang' && (ageFromNric(draft.nric) ?? 0) > 22 && draft.cenderung_baitul_muslim === true ? (
+        <Button label="Majlis Baitul Muslim" variant="secondary" onPress={() => router.push('/(app)/baitul-muslim')} />
       ) : null}
 
       {married ? (

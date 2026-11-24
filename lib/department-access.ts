@@ -230,3 +230,10 @@ export function useUsrahKawasanAccess() {
 export function useNgoAccess(): DepartmentAccess {
   return useDepartmentAccess(NGO_DEPARTMENT);
 }
+
+/** Department pemilik permohonan Majlis Baitul Muslim (MBM) — mesti sepadan dengan `can_view_mbm_admin()` (migration 171). */
+export const MBM_DEPARTMENT = 'MAJLIS BAITUL MUSLIM';
+
+export function useMbmAccess(): DepartmentAccess {
+  return useDepartmentAccess(MBM_DEPARTMENT);
+}
