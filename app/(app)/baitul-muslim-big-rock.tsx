@@ -43,12 +43,24 @@ export default function BaitulMuslimBigRockScreen() {
             style={{ fontFamily: MBM_SERIF, fontSize: 22, lineHeight: 28, color: '#fff', textAlign: 'center', marginBottom: 14 }}>
             Memahami Konsep Taaruf dan The Big Rock dalam Proses Taaruf
           </Text>
-          <Image
-            source={require('@/assets/images/mbm-bigrock.jpg')}
-            accessibilityLabel="Balang berisi Big Rocks, Small Rocks dan Sand"
-            style={{ width: '100%', maxWidth: 330, aspectRatio: 762 / 805, borderRadius: 28, borderWidth: 3, borderColor: MBM.gold }}
-            resizeMode="cover"
-          />
+          <View
+            style={{
+              width: '100%',
+              maxWidth: 330,
+              aspectRatio: 762 / 805,
+              borderRadius: 28,
+              borderWidth: 3,
+              borderColor: MBM.gold,
+              overflow: 'hidden',
+              backgroundColor: MBM.ivory,
+            }}>
+            <Image
+              source={require('@/assets/images/mbm-bigrock.jpg')}
+              accessibilityLabel="Balang berisi Big Rocks, Small Rocks dan Sand"
+              style={{ width: '100%', height: '100%' }}
+              resizeMode="contain"
+            />
+          </View>
         </View>
       </MbmGreen>
 

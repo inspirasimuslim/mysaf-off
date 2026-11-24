@@ -19,10 +19,12 @@ const STEPS: { icon: IconName; text: string }[] = [
 const TESTIMONI = [
   {
     image: require('@/assets/images/mbm-keluarga1.jpg'),
+    ratio: 700 / 685,
     text: 'Anak-anak sangat bahagia apabila berjumpa dengan ‘circle usrah’ dari anak kawan baba dan mama. Peluang untuk izinkan salah seorang untuk lebih aktif bersama jemaah juga lebih terbuka luas atas asbab faham tujuan dan matlamat jemaah',
   },
   {
     image: require('@/assets/images/mbm-keluarga2.jpg'),
+    ratio: 669 / 700,
     text: 'Secara individu, berkahwin dengan ahli ikhwan, saya merasakan saya berkahwin dengan orang yang sentiasa berusaha menjadi orang yg bertanggungjawab dan berakhlak.',
   },
 ];
@@ -134,12 +136,24 @@ export default function BaitulMuslimScreen() {
           <View className="mt-3 gap-5">
             {TESTIMONI.map((item) => (
               <View key={item.text.slice(0, 20)} style={{ backgroundColor: MBM.rose, borderRadius: 40, borderWidth: 1.5, borderColor: MBM.gold, padding: 16, alignItems: 'center' }}>
-                <Image
-                  source={item.image}
-                  accessibilityLabel="Gambar keluarga"
-                  style={{ width: 230, maxWidth: '100%', aspectRatio: 1, borderRadius: 28, borderWidth: 3, borderColor: MBM.gold }}
-                  resizeMode="cover"
-                />
+                <View
+                  style={{
+                    width: '100%',
+                    maxWidth: 300,
+                    aspectRatio: item.ratio,
+                    borderRadius: 28,
+                    borderWidth: 3,
+                    borderColor: MBM.gold,
+                    overflow: 'hidden',
+                    backgroundColor: MBM.ivory,
+                  }}>
+                  <Image
+                    source={item.image}
+                    accessibilityLabel="Gambar keluarga"
+                    style={{ width: '100%', height: '100%' }}
+                    resizeMode="contain"
+                  />
+                </View>
                 <Text style={{ color: MBM.ink, fontSize: 13, lineHeight: 20, fontStyle: 'italic', textAlign: 'center', marginTop: 14 }}>{item.text}</Text>
               </View>
             ))}
