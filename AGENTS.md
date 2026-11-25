@@ -851,3 +851,6 @@ Rujukan: `supabase/migrations/20261125000179_laporan_usrah_silibus.sql`, `app/(a
 - NAQIB SETARAF: `is_own_naqib_group` + polisi SELECT kumpulan menerima `default_partner_naqib_member_id`. Polisi UPDATE/DELETE kumpulan TIDAK diubah (naqib utama + admin sahaja). `fetchMyGroups` guna `.or(...)`.
 - Borang sesi: togol "Semua hadir" (tanda semua, nyahtanda yang tidak hadir).
 - BELUM: skrin analisa usrah, kelayakan 3K (ambang "cukup penyertaan" belum ditetapkan pengguna), import kumpulan/mad'u daripada sheet.
+
+## Analisa Usrah (2026-11-25, migration 180, sudah live di produksi)
+`perkaderan_analisa_usrah(p_dari, p_hingga)` — admin Lajnah/Super Admin sahaja (42501 selainnya). Liputan = bulan ada sesi / bulan sepatutnya (sebulan sekali; dikira dari bulan kumpulan dicipta); kehadiran = hadir / peluang (mad'u AKTIF yang sudah ditambah pada tarikh sesi); `unit_silibus` = Fikrah diliputi (sesi dengan 2 silibus = 2). Skrin `admin/perkaderan-analisa.tsx`. Diuji dengan data tiruan dalam transaksi (3/4 hadir, 2 bulan daripada 10). Kelayakan 3K masih BELUM (ambang belum ditetapkan).

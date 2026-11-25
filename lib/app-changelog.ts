@@ -182,6 +182,7 @@ export const CHANGELOG: ChangelogEntry[] = [
       'Lajnah Perkaderan: tetapkan program dan tarikh tamrin, rekod kehadiran tamrin, serta lihat prestasi mad\'u dengan carta (admin Lajnah dan Super Admin sahaja).',
       'Ujian pra-keahlian: admin tetapkan ujian dan markah lulus, naqib masukkan markah mad\'u.',
       'Laporan usrah: pilih jenis sesi (Fikrah/Bonding), silibus Fikrah (boleh lebih satu), ulasan naqib, dan butang "Semua hadir".',
+      'Analisa Usrah (admin Lajnah): liputan bulan dan kehadiran mad\'u setiap kumpulan, serta bulan tanpa sesi.',
       'Dua naqib kumpulan setaraf — kedua-duanya boleh merekod sesi dan kehadiran.',
       'Jenis tamrin (TAQ, Tampenor, QTC, Kuiz 3K, Tamrin 3K) dan skrin Silibus Fikrah untuk admin Lajnah.',
     ],

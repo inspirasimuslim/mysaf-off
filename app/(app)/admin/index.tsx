@@ -441,7 +441,7 @@ export default function AdminHubScreen() {
           <CollapsibleSection
             variant="plain"
             title="Lajnah Perkaderan (LP)"
-            count={(perkaderanAccess.canEdit ? 6 : 4) + fbCount('LAJNAH PERKADERAN')} alert={fbUnread('LAJNAH PERKADERAN')}
+            count={(perkaderanAccess.canEdit ? 7 : 5) + fbCount('LAJNAH PERKADERAN')} alert={fbUnread('LAJNAH PERKADERAN')}
             defaultOpen={openByDefault}>
             {perkaderanAccess.canEdit ? (
               <ActionRow
@@ -476,6 +476,12 @@ export default function AdminHubScreen() {
                 onPress={() => router.push('/(app)/admin/perkaderan-silibus')}
               />
             ) : null}
+            <ActionRow
+              icon="analytics-outline"
+              title="Analisa Usrah"
+              subtitle="Liputan bulan dan kehadiran setiap kumpulan"
+              onPress={() => router.push('/(app)/admin/perkaderan-analisa')}
+            />
             <ActionRow
               icon="trending-up-outline"
               title="Prestasi Pra-Keahlian"

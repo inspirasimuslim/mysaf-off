@@ -199,3 +199,32 @@ export async function deleteSilibus(id: string): Promise<void> {
   const { error } = await supabase.from('perkaderan_silibus').delete().eq('id', id);
   if (error) throw error;
 }
+
+// ----- Analisa usrah (migration 180) -----
+export type AnalisaKumpulan = {
+  group_id: string;
+  sekolah: string;
+  group_name: string | null;
+  madu: number;
+  sesi: number;
+  sesi_bonding: number;
+  unit_silibus: number;
+  bulan_ada: number;
+  bulan_sepatutnya: number;
+  hadir: number;
+  peluang: number;
+  sesi_terakhir: string | null;
+  bulan_tiada: string[];
+};
+export type AnalisaUsrah = {
+  dari: string;
+  hingga: string;
+  kumpulan: AnalisaKumpulan[];
+  bulanan: { bulan: string; kumpulan_ada: number; kumpulan_sepatutnya: number }[];
+};
+
+export async function fetchAnalisaUsrah(dari: string | null, hingga: string | null): Promise<AnalisaUsrah> {
+  const { data, error } = await supabase.rpc('perkaderan_analisa_usrah', { p_dari: dari, p_hingga: hingga });
+  if (error) throw error;
+  return data as AnalisaUsrah;
+}
