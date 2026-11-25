@@ -92,7 +92,7 @@ export default function UsrahSessionFormScreen() {
       setCanEdit(
         isSuperAdmin() ||
           departmentCanEdit ||
-          Boolean(group && myMemberId && (group.naqib_member_id === myMemberId || group.default_partner_naqib_member_id === myMemberId)),
+          Boolean(group && myMemberId && (group.naqib_member_id === myMemberId || group.default_partner_naqib_member_id === myMemberId || (group.naqib_tambahan ?? []).includes(myMemberId))),
       );
 
       if (session) {

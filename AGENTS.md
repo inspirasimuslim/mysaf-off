@@ -873,3 +873,12 @@ Rujukan: `supabase/migrations/20261125000179_laporan_usrah_silibus.sql`, `app/(a
 Rujukan: `lib/hub-focus.tsx`, `components/ui/collapsible-section.tsx`, `app/(app)/admin/index.tsx`. `Screen` menatal ke atas setiap kali difokus
 (`useResetScrollOnFocus`), jadi back dari fungsi dalam lajnah melompat ke atas Hub. Kini `CollapsibleSection` melaporkan buka/tutup + kedudukan Y kepada
 `HubFocusProvider`; Hub menatal ke seksyen dibuka (`scrollTarget`) dan menatal semula ke situ selepas fokus (`useFocusEffect`, 60ms). Tutup seksyen = lepas fokus.
+
+# Kuota naqib 4 setiap kumpulan + semakan padanan naqib (2026-11-25, migration 184, sudah live di produksi)
+Rujukan: `supabase/migrations/20261125000184_naqib_hingga_4.sql`, `app/(app)/admin/naqib-assignments.tsx`, `lib/perkaderan.ts`.
+- `sekolah_usrah_groups.naqib_tambahan uuid[]` (maks 2, CHECK) = naqib ke-3 dan ke-4; naqib utama + `default_partner_naqib_member_id` kekal. Naqib tambahan setaraf (nampak kumpulan,
+  `is_own_naqib_group`, boleh isi laporan sesi; UPDATE/DELETE kumpulan tetap naqib utama + admin). `perkaderan_slot_assign(..., p_tambahan uuid[])`, `perkaderan_slots` +`tambahan_ids/nama`.
+  Analisa: `naqib2` kini = naqib kedua + tambahan dipisah " & ".
+- Data: Ahmad Nuruddin (F4 Falahiah K3) dan Siti Nurhakimah (K4) dimasukkan sebagai naqib ke-3; kumpulan T5 K6 Falahiah (Nurul Hidayah i26, tiada mad'u — naqibah isi sendiri) dicipta.
+- Semakan padanan 33 naqib terhadap `members` (nama + generasi): semua padan. Perhatian: "Aqwa" = MUHAMAD AMIR AQWA i27 (sheet hanya tulis AQWA); "Wadhihah" = FARAH WADIHAH i16 (ejaan DB);
+  `MUHAMMADIMANUL SYAHID` dalam `members` tiada ruang (ralat data asal). Migration 184 belum direkod dalam sejarah CLI (dijalankan melalui Management API).

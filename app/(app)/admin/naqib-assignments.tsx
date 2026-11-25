@@ -77,6 +77,8 @@ export default function NaqibAssignmentsScreen() {
   const [noKump, setNoKump] = useState<string | null>('1');
   const [naqibId, setNaqibId] = useState<string | null>(null);
   const [partnerId, setPartnerId] = useState<string | null>(null);
+  const [naqib3Id, setNaqib3Id] = useState<string | null>(null);
+  const [naqib4Id, setNaqib4Id] = useState<string | null>(null);
   const [slots, setSlots] = useState<PerkaderanSlot[]>([]);
   const [slotBusy, setSlotBusy] = useState(false);
   const [managingSekolah, setManagingSekolah] = useState(false);
@@ -129,6 +131,8 @@ export default function NaqibAssignmentsScreen() {
   useEffect(() => {
     setNaqibId(currentSlot?.naqib_id ?? null);
     setPartnerId(currentSlot?.partner_id ?? null);
+    setNaqib3Id(currentSlot?.tambahan_ids?.[0] ?? null);
+    setNaqib4Id(currentSlot?.tambahan_ids?.[1] ?? null);
   }, [currentSlot]);
 
   const submitSlot = useCallback(async () => {
@@ -136,7 +140,7 @@ export default function NaqibAssignmentsScreen() {
     setSlotBusy(true);
     setBanner(null);
     try {
-      await assignSlot({ sekolah, tingkatan, no: Number(noKump), naqibId, partnerId });
+      await assignSlot({ sekolah, tingkatan, no: Number(noKump), naqibId, partnerId, tambahanIds: [naqib3Id, naqib4Id].filter((x): x is string => Boolean(x)) });
       const fresh = await fetchSlots(sekolah);
       setSlots(fresh);
       await load();
@@ -152,7 +156,7 @@ export default function NaqibAssignmentsScreen() {
     } finally {
       setSlotBusy(false);
     }
-  }, [currentSlot, load, naqibId, noKump, partnerId, sekolah, slotBusy, tingkatan]);
+  }, [currentSlot, load, naqib3Id, naqib4Id, naqibId, noKump, partnerId, sekolah, slotBusy, tingkatan]);
 
   const submitSekolah = useCallback(async () => {
     const nama = newSekolah.trim();
@@ -306,6 +310,22 @@ export default function NaqibAssignmentsScreen() {
               placeholder="Tiada"
               disabled={slotBusy}
             />
+            <MemberPickerField
+              label="Naqib ketiga (setaraf, pilihan)"
+              value={naqib3Id}
+              candidates={candidates}
+              onChange={setNaqib3Id}
+              placeholder="Tiada"
+              disabled={slotBusy}
+            />
+            <MemberPickerField
+              label="Naqib keempat (setaraf, pilihan)"
+              value={naqib4Id}
+              candidates={candidates}
+              onChange={setNaqib4Id}
+              placeholder="Tiada"
+              disabled={slotBusy}
+            />
             <Button
               label={currentSlot ? 'Tukar Naqib Kumpulan Ini' : 'Lantik Naqib'}
               loading={slotBusy}
@@ -329,7 +349,8 @@ export default function NaqibAssignmentsScreen() {
                     </Text>
                     <Text className="text-xs text-ink-muted">
                       {x.naqib_nama}
-                      {x.partner_nama ? ' & ' + x.partner_nama : ''} · {x.madu} mad'u
+                      {x.partner_nama ? ' & ' + x.partner_nama : ''}
+                      {x.tambahan_nama ? ' & ' + x.tambahan_nama : ''} · {x.madu} mad'u
                     </Text>
                   </Pressable>
                 ))}

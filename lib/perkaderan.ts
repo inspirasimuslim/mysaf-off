@@ -79,7 +79,7 @@ export async function fetchMyGroups(): Promise<UsrahGroup[]> {
   const { data, error } = await supabase
     .from('sekolah_usrah_groups')
     .select('*')
-    .or('naqib_member_id.eq.' + memberId + ',default_partner_naqib_member_id.eq.' + memberId)
+    .or('naqib_member_id.eq.' + memberId + ',default_partner_naqib_member_id.eq.' + memberId + ',naqib_tambahan.cs.{' + memberId + '}')
     .eq('is_active', true)
     .order('created_at', { ascending: true });
   if (error) throw error;
@@ -491,6 +491,8 @@ export type PerkaderanSlot = {
   naqib_nama: string;
   partner_id: string | null;
   partner_nama: string | null;
+  tambahan_ids: string[];
+  tambahan_nama: string | null;
   madu: number;
 };
 
@@ -522,6 +524,7 @@ export async function assignSlot(args: {
   no: number;
   naqibId: string;
   partnerId: string | null;
+  tambahanIds?: string[];
 }): Promise<void> {
   const { error } = await supabase.rpc('perkaderan_slot_assign', {
     p_sekolah: args.sekolah,
@@ -529,6 +532,7 @@ export async function assignSlot(args: {
     p_no: args.no,
     p_naqib: args.naqibId,
     p_partner: args.partnerId,
+    p_tambahan: args.tambahanIds ?? [],
   });
   if (error) throw error;
 }
