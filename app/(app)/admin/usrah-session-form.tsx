@@ -7,9 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DateTimeField } from '@/components/ui/date-time-field';
 import { EmptyState } from '@/components/ui/empty-state';
-import { FormModal } from '@/components/ui/form-modal';
 import { LoadingScreen } from '@/components/ui/loading-screen';
-import { MemberPickerField } from '@/components/ui/member-picker-field';
 import { PickerField } from '@/components/ui/picker-field';
 import { Screen } from '@/components/ui/screen';
 import { Segmented } from '@/components/ui/segmented';
@@ -20,11 +18,9 @@ import { ToggleRow } from '@/components/ui/toggle-row';
 import { ToastBanner } from '@/components/ui/toast';
 import { usePerkaderanAccess } from '@/lib/department-access';
 import { toMalayErrorVerbose } from '@/lib/errors';
-import { fetchMembersForPicker } from '@/lib/members';
 import { fetchSilibus, type SilibusRow } from '@/lib/perkaderan-program';
 import { useGoBack } from '@/lib/navigation';
 import {
-  addMadU,
   createSession,
   fetchAttendanceCandidates,
   fetchGroup,
@@ -35,19 +31,13 @@ import {
   type AttendanceCandidate,
 } from '@/lib/perkaderan';
 import { usePermissions } from '@/lib/permissions';
-import { TINGKATAN_OPTIONS, type MemberPickerRow, type Option } from '@/types/database';
+import { TINGKATAN_OPTIONS, type Option } from '@/types/database';
 
 type Banner = { tone: 'positive' | 'info' | 'negative'; message: string } | null;
 
 function today(): string {
   const now = new Date();
   return now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
-}
-
-/** Pilihan rasmi, ditambah nilai semasa sebagai "(tidak dikenali)" jika ia di luar senarai. */
-function withUnrecognised(options: Option<string>[], current: string | null): Option<string>[] {
-  if (!current || options.some((option) => option.value === current)) return options;
-  return [...options, { value: current, label: current + ' (tidak dikenali)' }];
 }
 
 export default function UsrahSessionFormScreen() {
@@ -73,7 +63,6 @@ export default function UsrahSessionFormScreen() {
   const [partnerHadir, setPartnerHadir] = useState(true);
   const [candidates, setCandidates] = useState<AttendanceCandidate[]>([]);
   const [present, setPresent] = useState<Set<string>>(new Set());
-  const [memberCandidates, setMemberCandidates] = useState<MemberPickerRow[]>([]);
 
   const [saving, setSaving] = useState(false);
 
@@ -81,12 +70,11 @@ export default function UsrahSessionFormScreen() {
     if (!groupId) return;
     setLoading(true);
     try {
-      const [group, myMemberId, session, attendanceCandidates, pickerRows] = await Promise.all([
+      const [group, myMemberId, session, attendanceCandidates] = await Promise.all([
         fetchGroup(groupId),
         fetchMyMemberId(),
         id ? fetchSession(id) : Promise.resolve(null),
         fetchAttendanceCandidates(groupId, id ?? null),
-        fetchMembersForPicker(),
       ]);
 
       setCanEdit(
@@ -105,8 +93,8 @@ export default function UsrahSessionFormScreen() {
         setPartnerNaqibId(session.partner_naqib_member_id);
         setPartnerHadir(session.partner_naqib_hadir);
       } else {
-        // Sesi BAHARU — pra-isi partner dengan cadangan kumpulan, bukan sesi tertentu.
-        setPartnerNaqibId(group?.default_partner_naqib_member_id ?? null);
+        // Sesi BAHARU — partner tidak lagi dipilih daripada borang (ditetapkan Lajnah pada kumpulan).
+        setPartnerNaqibId(null);
         setPartnerHadir(true);
       }
 
@@ -114,7 +102,6 @@ export default function UsrahSessionFormScreen() {
       const sedia = attendanceCandidates.map((c) => c.tingkatan).find(Boolean) ?? null;
       setSilibusTingkatan((current) => current ?? sedia);
       setPresent(new Set(attendanceCandidates.filter((c) => c.hadir).map((c) => c.mad_u_id)));
-      setMemberCandidates(pickerRows);
     } catch (caught) {
       setBanner({ tone: 'negative', message: toMalayErrorVerbose(caught, 'Gagal memuatkan sesi.') });
     } finally {
@@ -170,36 +157,6 @@ export default function UsrahSessionFormScreen() {
       setSaving(false);
     }
   }, [groupId, id, jenis, locationText, partnerHadir, partnerNaqibId, present, refleksi, router, saving, sessionDate, silibusIds, topik]);
-
-  // --- Tambah mad'u baharu terus dalam borang sesi ----------------------------
-  const [addingMadU, setAddingMadU] = useState(false);
-  const [madUNama, setMadUNama] = useState('');
-  const [madUTingkatan, setMadUTingkatan] = useState<string | null>(null);
-  const [madUBusy, setMadUBusy] = useState(false);
-
-  const submitMadU = useCallback(async () => {
-    if (!groupId || !madUNama.trim() || madUBusy) return;
-
-    setMadUBusy(true);
-    try {
-      const created = await addMadU(groupId, madUNama, madUTingkatan);
-      setCandidates((current) =>
-        [...current, { mad_u_id: created.id, nama: created.nama, tingkatan: created.tingkatan, removed: false, hadir: true }].sort(
-          (a, b) => a.nama.localeCompare(b.nama, 'ms', { sensitivity: 'base' }),
-        ),
-      );
-      // Mad'u yang baru ditambah semasa sesi berlangsung — anggap hadir secara lalai, naqib boleh nyahtanda.
-      setPresent((current) => new Set(current).add(created.id));
-      setAddingMadU(false);
-      setMadUNama('');
-      setMadUTingkatan(null);
-      setBanner({ tone: 'positive', message: created.nama + " berjaya ditambah ke senarai mad'u." });
-    } catch (caught) {
-      setBanner({ tone: 'negative', message: toMalayErrorVerbose(caught, "Gagal menambah mad'u.") });
-    } finally {
-      setMadUBusy(false);
-    }
-  }, [groupId, madUBusy, madUNama, madUTingkatan]);
 
   useEffect(() => {
     if (!silibusTingkatan) return;
@@ -299,30 +256,6 @@ export default function UsrahSessionFormScreen() {
             />
           </View>
 
-          <View>
-            <SectionTitle title="Partner Naqib" caption="Untuk sesi ini sahaja — tidak menjejaskan sesi lain atau cadangan kumpulan." />
-            <View className="gap-3">
-              <MemberPickerField
-                label="Partner Naqib"
-                value={partnerNaqibId}
-                candidates={memberCandidates}
-                onChange={setPartnerNaqibId}
-                placeholder="Tiada partner untuk sesi ini"
-                disabled={saving}
-              />
-              {partnerNaqibId ? (
-                <ToggleRow
-                  icon="person-outline"
-                  title="Partner Hadir"
-                  subtitle="Matikan jika partner tidak hadir pada sesi ini."
-                  value={partnerHadir}
-                  onValueChange={setPartnerHadir}
-                  disabled={saving}
-                />
-              ) : null}
-            </View>
-          </View>
-
           <View className="pb-8">
             <View className="mb-3 flex-row items-center justify-between gap-3">
               <SectionTitle
@@ -330,24 +263,11 @@ export default function UsrahSessionFormScreen() {
                 caption={
                   id
                     ? "Mad'u yang sudah dibuang tetapi ada rekod hadir pada sesi ini kekal dipapar."
-                    : "Mad'u aktif kumpulan ini. Tambah mad'u dahulu jika senarai kosong."
+                    : "Mad'u aktif kumpulan ini."
                 }
               />
             </View>
 
-            <View className="pb-3">
-              <Button
-                label="+ Tambah Mad'u Baharu"
-                variant="secondary"
-                disabled={saving}
-                onPress={() => {
-                  setBanner(null);
-                  setMadUNama('');
-                  setMadUTingkatan(null);
-                  setAddingMadU(true);
-                }}
-              />
-            </View>
 
             {candidates.length > 0 ? (
               <View className="pb-3">
@@ -363,7 +283,7 @@ export default function UsrahSessionFormScreen() {
             ) : null}
 
             {candidates.length === 0 ? (
-              <EmptyState icon="people-outline" title="Tiada mad'u" description="Tambah mad'u menggunakan butang di atas." />
+              <EmptyState icon="people-outline" title="Tiada mad'u" description="Lajnah Perkaderan akan menetapkan mad'u kumpulan ini." />
             ) : (
               <View className="gap-2">
                 {candidates.map((candidate) => (
@@ -387,23 +307,6 @@ export default function UsrahSessionFormScreen() {
         </View>
       </Screen>
 
-      <FormModal
-        visible={addingMadU}
-        title="Tambah Mad'u"
-        dismissable={!madUBusy}
-        onClose={() => setAddingMadU(false)}
-        footer={
-          <Button label="Tambah" loading={madUBusy} disabled={madUBusy || !madUNama.trim()} onPress={() => void submitMadU()} />
-        }>
-        <TextField label="Nama" value={madUNama} onChangeText={setMadUNama} editable={!madUBusy} autoCapitalize="words" />
-        <PickerField
-          label="Tingkatan"
-          value={madUTingkatan}
-          options={withUnrecognised(TINGKATAN_OPTIONS, madUTingkatan)}
-          onChange={setMadUTingkatan}
-          disabled={madUBusy}
-        />
-      </FormModal>
     </>
   );
 }

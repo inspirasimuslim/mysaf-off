@@ -903,3 +903,10 @@ Ketuk baris -> `naqib-session-history` seperti dulu; bahagian muat turun laporan
   Excel "Muat Turun Ringkasan (.xlsx)" = susun atur SAMA dokumen Google Doc "LAPORAN USRAH 2026 (General)": satu jadual setiap tingkatan (CALON I28 = T5, I29 = T4, I30 = T3), baris Sek (Falahiah dulu, kemudian Naim),
   baris "Nama/Bulan" + "Group N: nama pendek gen" (N berjalan merentas sekolah dalam satu tingkatan), baris Jan–Dis; sel = FF1 / NB1 (awalan F/N + F=Fikrah/B=Bonding + nombor; bonding dinomborkan ikut tarikh) atau X; bulan akan datang kosong.
   Nama pendek = nama sebelum BIN/BINTI (BUKAN nama panggilan seperti dalam doc). Format T3 doc asal (Tarikh/Tajuk/Naqib) TIDAK ditiru — T3 guna jadual yang sama. KUIZ 3K tiada dalam eksport (bukan sesi usrah).
+
+# Naqib tidak lagi urus kumpulan/partner/mad'u (2026-11-25, migration 185, sudah live di produksi)
+Rujukan: `20261125000185_perkaderan_naqib_tak_urus_kumpulan.sql`. Lajnah Perkaderan/Super Admin SAHAJA menetapkan kumpulan, naqib/partner dan mad'u
+(RLS INSERT/UPDATE/DELETE `sekolah_usrah_groups` dan INSERT/UPDATE `sekolah_usrah_mad_u` tidak lagi merangkumi naqib). Naqib kekal: laporan sesi + kehadiran,
+tamrin, markah ujian. UI: skrin `usrah-group-create` DIBUANG; Hub naqib tiada butang Cipta/Kumpulan Baru (ketik kumpulan terus ke `perkaderan-group-detail`);
+partner + tambah/nyahaktif mad'u dalam `perkaderan-group-detail` hanya untuk admin (`canPurge`); borang sesi tiada pilihan Partner Naqib dan tiada "+ Tambah Mad'u".
+Lajur `partner_naqib_*` pada sesi lama kekal di DB (tidak dipaparkan lagi untuk sesi baharu).

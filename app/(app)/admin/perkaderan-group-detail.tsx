@@ -125,7 +125,7 @@ export default function PerkaderanGroupDetailScreen() {
   }, [created, router]);
 
   const canEdit = isSuperAdmin() || departmentCanEdit || isOwner;
-  /** Padam kekal rekod mad'u: admin Lajnah Perkaderan / Super Admin sahaja (bukan naqib). */
+  /** Tetapan kumpulan (partner, mad'u): admin Lajnah Perkaderan / Super Admin sahaja — naqib tidak boleh. */
   const canPurge = isSuperAdmin() || departmentCanEdit;
 
   const partnerName = useCallback(
@@ -325,7 +325,7 @@ export default function PerkaderanGroupDetailScreen() {
             <Card>
               <View className="gap-3">
                 <Line label="Sekolah" value={group.sekolah} />
-                {canEdit ? (
+                {canPurge ? (
                   <MemberPickerField
                     label="Partner Naqib (cadangan)"
                     value={group.default_partner_naqib_member_id}
@@ -345,17 +345,17 @@ export default function PerkaderanGroupDetailScreen() {
           <View>
             <SectionTitle
               title={"Mad'u (" + madU.length + ')'}
-              caption="Ahli usrah dalam kumpulan ini. Mad'u yang dibuang dipadam kekal automatik selepas 6 bulan."
+              caption="Ahli usrah dalam kumpulan ini, ditetapkan oleh Lajnah Perkaderan. Mad'u yang dibuang dipadam kekal automatik selepas 6 bulan."
             />
 
-            {canEdit ? (
+            {canPurge ? (
               <View className="pb-3">
                 <Button label="+ Tambah Mad'u" variant="secondary" onPress={openAddMadU} />
               </View>
             ) : null}
 
             {madU.length === 0 ? (
-              <EmptyState icon="people-outline" title="Belum ada mad'u" description="Tambah mad'u pertama kumpulan ini." />
+              <EmptyState icon="people-outline" title="Belum ada mad'u" description={canPurge ? "Tambah mad'u pertama kumpulan ini." : "Lajnah Perkaderan akan menetapkan mad'u kumpulan ini."} />
             ) : (
               <View className="gap-2">
                 {madU.map((mu) => (
@@ -367,7 +367,7 @@ export default function PerkaderanGroupDetailScreen() {
                       ) : null}
                       {mu.no_tel ? <Text className="mt-0.5 text-sm text-ink-muted">{mu.no_tel}</Text> : null}
                     </View>
-                    {canEdit ? (
+                    {canPurge ? (
                       <IconButton
                         icon="person-remove-outline"
                         tone="danger"

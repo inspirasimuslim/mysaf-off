@@ -10,7 +10,6 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { FormModal } from '@/components/ui/form-modal';
 import { LoadingScreen } from '@/components/ui/loading-screen';
 import { Notice } from '@/components/ui/notice';
-import { SelectRow } from '@/components/ui/select-row';
 import { toMalayErrorVerbose } from '@/lib/errors';
 import { fetchMembersForPicker } from '@/lib/members';
 import { deleteSession, fetchMyGroups, fetchMySessionsAcrossGroups, fetchSessionViewDetail } from '@/lib/perkaderan';
@@ -74,24 +73,6 @@ export function NaqibHubSection({ defaultOpen }: { defaultOpen: boolean }) {
     [memberCandidates],
   );
 
-  // --- "Kumpulan Sedia Ada" — pilih kumpulan (jika >1), kemudian Urus/Tambah Sesi ---
-  const [pickingGroup, setPickingGroup] = useState(false);
-  const [manageGroupId, setManageGroupId] = useState<string | null>(null);
-
-  const openManageFlow = useCallback(() => {
-    const onlyGroup = myGroups.length === 1 ? myGroups[0] : undefined;
-    if (onlyGroup) {
-      setManageGroupId(onlyGroup.id);
-      return;
-    }
-    setPickingGroup(true);
-  }, [myGroups]);
-
-  const pickGroupForManage = useCallback((groupId: string) => {
-    setPickingGroup(false);
-    setManageGroupId(groupId);
-  }, []);
-
   // --- Butiran sesi lampau (VIEW-ONLY, + Padam Sesi) --------------------------
   const [viewingSessionId, setViewingSessionId] = useState<string | null>(null);
   const [viewDetail, setViewDetail] = useState<SessionViewDetail | null>(null);
@@ -140,7 +121,6 @@ export function NaqibHubSection({ defaultOpen }: { defaultOpen: boolean }) {
   if (loading) return null;
 
   const hasGroups = myGroups.length > 0;
-  const manageGroup = myGroups.find((group) => group.id === manageGroupId) ?? null;
 
   return (
     <>
@@ -174,33 +154,12 @@ export function NaqibHubSection({ defaultOpen }: { defaultOpen: boolean }) {
         ) : null}
 
         {!hasGroups ? (
-          // Naqib baharu — tiada apa untuk diurus pun, terus ke Cipta.
-          <ActionRow
-            icon="add-circle-outline"
-            title="Cipta Kumpulan Usrah"
-            subtitle="Pilih sekolah dan tambah mad'u"
-            onPress={() => router.push('/(app)/admin/usrah-group-create')}
+          <Notice
+            tone="info"
+            message="Anda belum ditetapkan kepada mana-mana kumpulan. Kumpulan, partner dan mad'u ditetapkan oleh Lajnah Perkaderan."
           />
         ) : (
           <View className="gap-3">
-            <View className="flex-row gap-2">
-              <View className="flex-1">
-                <Button
-                  label="Kumpulan Sedia Ada"
-                  size="sm"
-                  onPress={openManageFlow}
-                />
-              </View>
-              <View className="flex-1">
-                <Button
-                  label="+ Kumpulan Baru"
-                  size="sm"
-                  variant="secondary"
-                  onPress={() => router.push('/(app)/admin/usrah-group-create')}
-                />
-              </View>
-            </View>
-
             <View className="gap-1.5">
               {myGroups.map((group) => (
                 <Pressable
@@ -244,56 +203,10 @@ export function NaqibHubSection({ defaultOpen }: { defaultOpen: boolean }) {
         )}
       </CollapsibleSection>
 
-      {/* Langkah 1 (hanya jika >1 kumpulan): pilih kumpulan mana yang diurus. */}
-      <FormModal
-        visible={pickingGroup}
-        title="Pilih Kumpulan"
-        description="Kumpulan mana yang mahu diurus?"
-        onClose={() => setPickingGroup(false)}>
-        <View className="gap-3">
-          {myGroups.map((group) => (
-            <SelectRow
-              key={group.id}
-              title={group.group_name}
-              subtitle={group.sekolah}
-              selected={false}
-              onPress={() => pickGroupForManage(group.id)}
-            />
-          ))}
-        </View>
-      </FormModal>
-
-      {/* Langkah 2: kumpulan sudah ditentukan (auto jika cuma satu) — dua pilihan. */}
-      <FormModal
-        visible={manageGroupId !== null}
-        title={manageGroup?.group_name ?? 'Kumpulan'}
-        description="Apa yang mahu dilakukan untuk kumpulan ini?"
-        onClose={() => setManageGroupId(null)}>
-        <View className="gap-3">
-          <Button
-            label="Urus Kumpulan"
-            onPress={() => {
-              const id = manageGroupId;
-              setManageGroupId(null);
-              if (id) router.push({ pathname: '/(app)/admin/perkaderan-group-detail', params: { id } });
-            }}
-          />
-          <Button
-            label="Tambah Sesi Baharu"
-            variant="secondary"
-            onPress={() => {
-              const id = manageGroupId;
-              setManageGroupId(null);
-              if (id) router.push({ pathname: '/(app)/admin/usrah-session-form', params: { groupId: id } });
-            }}
-          />
-        </View>
-      </FormModal>
-
       {/*
         VIEW-ONLY — tiada butang sunting/simpan sengaja, kecuali Padam Sesi
         (memadam, bukan menyunting). Menyunting sesi lampau kekal melalui
-        laluan sedia ada: "Kumpulan Sedia Ada" -> Urus/Tambah Sesi.
+        laluan sedia ada: ketik kumpulan -> Sesi.
       */}
       <FormModal
         visible={viewingSessionId !== null}
