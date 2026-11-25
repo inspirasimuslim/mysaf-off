@@ -12,7 +12,7 @@ import { Screen } from '@/components/ui/screen';
 import { usePerkaderanAccess } from '@/lib/department-access';
 import { toMalayErrorVerbose } from '@/lib/errors';
 import { useGoBack } from '@/lib/navigation';
-import { fetchPrestasiDetail, pct, type PrestasiDetail } from '@/lib/perkaderan-program';
+import { fetchPrestasiDetail, fetchPrestasiUjianMadU, pct, type PrestasiDetail, type PrestasiUjianMadU } from '@/lib/perkaderan-program';
 import { usePermissions } from '@/lib/permissions';
 import { useColors } from '@/lib/theme';
 
@@ -31,13 +31,17 @@ export default function PerkaderanPrestasiMaduScreen() {
   const allowed = isSuperAdmin() || canView;
 
   const [detail, setDetail] = useState<PrestasiDetail>(null);
+  const [ujian, setUjian] = useState<PrestasiUjianMadU[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (permLoading || accessLoading || !allowed || !id) return;
-    fetchPrestasiDetail(id)
-      .then(setDetail)
+    Promise.all([fetchPrestasiDetail(id), fetchPrestasiUjianMadU(id)])
+      .then(([d, u]) => {
+        setDetail(d);
+        setUjian(u);
+      })
       .catch((caught) => setError(toMalayErrorVerbose(caught, 'Gagal memuatkan prestasi.')))
       .finally(() => setLoading(false));
   }, [accessLoading, allowed, id, permLoading]);
@@ -102,6 +106,16 @@ export default function PerkaderanPrestasiMaduScreen() {
                 {detail.tamrin.map((t) => (
                   <Text key={t.tarikh + t.nama} className="text-sm text-ink">
                     {t.hadir ? '✓' : '✗'} {dateLabel(t.tarikh)} — {t.nama}
+                  </Text>
+                ))}
+              </View>
+            </Panel>
+            <Panel title="Ujian" caption="Markah setiap ujian; lulus ikut markah lulus yang ditetapkan" full>
+              {ujian.length === 0 ? <Text className="text-sm text-ink-muted">Belum ada ujian.</Text> : null}
+              <View className="gap-1">
+                {ujian.map((u) => (
+                  <Text key={u.tarikh + u.nama} className="text-sm text-ink">
+                    {u.markah == null ? '–' : u.lulus ? '✓' : '✗'} {u.nama} — {u.markah == null ? 'belum ada markah' : u.markah + '/' + u.penuh + (u.lulus ? ' (lulus)' : ' (belum lulus; lulus ' + u.lulus_markah + ')')}
                   </Text>
                 ))}
               </View>

@@ -16,6 +16,8 @@ import { useGoBack } from '@/lib/navigation';
 import {
   fetchPrestasiMadU,
   fetchPrestasiRingkasan,
+  fetchPrestasiUjian,
+  type PrestasiUjian,
   pct,
   type PrestasiMadU,
   type PrestasiRingkasan,
@@ -40,6 +42,7 @@ export default function PerkaderanPrestasiScreen() {
 
   const [ringkasan, setRingkasan] = useState<PrestasiRingkasan | null>(null);
   const [madU, setMadU] = useState<PrestasiMadU[]>([]);
+  const [ujian, setUjian] = useState<PrestasiUjian[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
@@ -48,7 +51,8 @@ export default function PerkaderanPrestasiScreen() {
     setLoading(true);
     setError(null);
     try {
-      const [r, m] = await Promise.all([fetchPrestasiRingkasan(null), fetchPrestasiMadU(null)]);
+      const [r, m, uj] = await Promise.all([fetchPrestasiRingkasan(null), fetchPrestasiMadU(null), fetchPrestasiUjian(null)]);
+      setUjian(uj);
       setRingkasan(r);
       setMadU(m);
     } catch (caught) {
@@ -116,6 +120,24 @@ export default function PerkaderanPrestasiScreen() {
                     fill: (pct(t.hadir, t.jumlah) ?? 0) / 100,
                     display: fmt(pct(t.hadir, t.jumlah)),
                     note: t.hadir + '/' + t.jumlah,
+                  }))}
+                />
+              )}
+            </Panel>
+
+            <Panel title="Ujian" caption="Purata markah (% daripada markah penuh); lulus = bilangan mencapai markah lulus" full>
+              {ujian.length === 0 ? (
+                <Text className="text-sm text-ink-muted">Belum ada ujian.</Text>
+              ) : (
+                <ValueBars
+                  format={(v) => Math.round(v) + '%'}
+                  rows={ujian.map((u) => ({
+                    key: u.id,
+                    label: u.nama,
+                    value: u.purata == null ? 0 : (100 * u.purata) / u.penuh,
+                    fill: u.purata == null ? 0 : u.purata / u.penuh,
+                    display: u.purata == null ? '—' : u.purata + '/' + u.penuh,
+                    note: 'lulus ' + u.bil_lulus + '/' + u.dinilai,
                   }))}
                 />
               )}

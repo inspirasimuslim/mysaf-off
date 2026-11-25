@@ -180,6 +180,7 @@ export const CHANGELOG: ChangelogEntry[] = [
       'Latar bahagian Majlis Baitul Muslim dimudahkan.',
       'Usrah Sekolah: kelas dan no. telefon mad\'u (pilihan); mad\'u yang dinyahaktifkan dipadam kekal automatik selepas 6 bulan.',
       'Lajnah Perkaderan: tetapkan program dan tarikh tamrin, rekod kehadiran tamrin, serta lihat prestasi mad\'u dengan carta (admin Lajnah dan Super Admin sahaja).',
+      'Ujian pra-keahlian: admin tetapkan ujian dan markah lulus, naqib masukkan markah mad\'u.',
     ],
   },
 ];

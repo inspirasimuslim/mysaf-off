@@ -115,3 +115,55 @@ export async function fetchPrestasiDetail(madUId: string): Promise<PrestasiDetai
 export function pct(hadir: number, jumlah: number): number | null {
   return jumlah > 0 ? Math.round((100 * hadir) / jumlah) : null;
 }
+
+// ----- Ujian (migration 178) -----
+export type PerkaderanUjian = { id: string; program_id: string; nama: string; tarikh: string; markah_penuh: number; markah_lulus: number };
+export type UjianRosterRow = { mad_u_id: string; nama: string; tingkatan: string; sekolah: string; group_name: string; markah: number | null };
+export type PrestasiUjian = { id: string; nama: string; tarikh: string; penuh: number; lulus: number; dinilai: number; bil_lulus: number; purata: number | null; aktif: number };
+export type PrestasiUjianMadU = { nama: string; tarikh: string; penuh: number; lulus_markah: number; markah: number | null; lulus: boolean | null };
+
+export async function fetchUjian(programId: string): Promise<PerkaderanUjian[]> {
+  const { data, error } = await supabase
+    .from('perkaderan_ujian')
+    .select('id, program_id, nama, tarikh, markah_penuh, markah_lulus')
+    .eq('program_id', programId)
+    .order('tarikh', { ascending: true });
+  if (error) throw error;
+  return ((data as PerkaderanUjian[] | null) ?? []).map((u) => ({ ...u, markah_penuh: Number(u.markah_penuh), markah_lulus: Number(u.markah_lulus) }));
+}
+
+export async function saveUjian(input: { id?: string; program_id: string; nama: string; tarikh: string; markah_penuh: number; markah_lulus: number }): Promise<void> {
+  const row = { program_id: input.program_id, nama: input.nama.trim(), tarikh: input.tarikh, markah_penuh: input.markah_penuh, markah_lulus: input.markah_lulus };
+  const { error } = input.id
+    ? await supabase.from('perkaderan_ujian').update(row).eq('id', input.id)
+    : await supabase.from('perkaderan_ujian').insert(row);
+  if (error) throw error;
+}
+
+export async function deleteUjian(id: string): Promise<void> {
+  const { error } = await supabase.from('perkaderan_ujian').delete().eq('id', id);
+  if (error) throw error;
+}
+
+export async function fetchUjianRoster(ujianId: string): Promise<UjianRosterRow[]> {
+  const { data, error } = await supabase.rpc('perkaderan_ujian_roster', { p_ujian: ujianId });
+  if (error) throw error;
+  return ((data as UjianRosterRow[] | null) ?? []).map((r) => ({ ...r, markah: r.markah == null ? null : Number(r.markah) }));
+}
+
+export async function setUjianMarkah(ujianId: string, ids: string[], markah: (number | null)[]): Promise<void> {
+  const { error } = await supabase.rpc('perkaderan_ujian_set', { p_ujian: ujianId, p_ids: ids, p_markah: markah });
+  if (error) throw error;
+}
+
+export async function fetchPrestasiUjian(programId: string | null): Promise<PrestasiUjian[]> {
+  const { data, error } = await supabase.rpc('perkaderan_prestasi_ujian', { p_program: programId });
+  if (error) throw error;
+  return ((data as PrestasiUjian[] | null) ?? []).map((u) => ({ ...u, penuh: Number(u.penuh), lulus: Number(u.lulus), purata: u.purata == null ? null : Number(u.purata) }));
+}
+
+export async function fetchPrestasiUjianMadU(madUId: string): Promise<PrestasiUjianMadU[]> {
+  const { data, error } = await supabase.rpc('perkaderan_prestasi_ujian_madu', { p_mad_u: madUId });
+  if (error) throw error;
+  return ((data as PrestasiUjianMadU[] | null) ?? []).map((u) => ({ ...u, penuh: Number(u.penuh), lulus_markah: Number(u.lulus_markah), markah: u.markah == null ? null : Number(u.markah) }));
+}

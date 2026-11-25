@@ -21,6 +21,10 @@ import { toMalayErrorVerbose } from '@/lib/errors';
 import { useGoBack } from '@/lib/navigation';
 import {
   deleteTamrin,
+  deleteUjian,
+  fetchUjian,
+  saveUjian,
+  type PerkaderanUjian,
   fetchPrograms,
   fetchTamrin,
   saveProgram,
@@ -55,6 +59,7 @@ export default function PerkaderanProgramScreen() {
 
   const [programs, setPrograms] = useState<PerkaderanProgram[]>([]);
   const [tamrin, setTamrin] = useState<PerkaderanTamrin[]>([]);
+  const [ujian, setUjian] = useState<PerkaderanUjian[]>([]);
   const [loading, setLoading] = useState(true);
   const [banner, setBanner] = useState<Banner>(null);
 
@@ -67,6 +72,7 @@ export default function PerkaderanProgramScreen() {
       setPrograms(list);
       const current = list.find((p) => p.aktif) ?? list[0];
       setTamrin(current ? await fetchTamrin(current.id) : []);
+      setUjian(current ? await fetchUjian(current.id) : []);
     } catch (caught) {
       setBanner({ tone: 'negative', message: toMalayErrorVerbose(caught, 'Gagal memuatkan program.') });
     } finally {
@@ -142,6 +148,60 @@ export default function PerkaderanProgramScreen() {
       await load();
     } catch (caught) {
       setBanner({ tone: 'negative', message: toMalayErrorVerbose(caught, 'Gagal menyimpan tamrin.') });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // --- Ujian ---
+  const [uOpen, setUOpen] = useState(false);
+  const [uId, setUId] = useState<string | undefined>();
+  const [uNama, setUNama] = useState('');
+  const [uTarikh, setUTarikh] = useState(todayIso());
+  const [uPenuh, setUPenuh] = useState('100');
+  const [uLulus, setULulus] = useState('50');
+  const [pendingDeleteUjian, setPendingDeleteUjian] = useState<PerkaderanUjian | null>(null);
+
+  const openUjian = (u: PerkaderanUjian | null) => {
+    setUId(u?.id);
+    setUNama(u?.nama ?? '');
+    setUTarikh(u?.tarikh ?? todayIso());
+    setUPenuh(u ? String(u.markah_penuh) : '100');
+    setULulus(u ? String(u.markah_lulus) : '50');
+    setUOpen(true);
+  };
+
+  const submitUjian = async () => {
+    const penuh = Number(uPenuh.replace(',', '.'));
+    const lulus = Number(uLulus.replace(',', '.'));
+    if (!program || !uNama.trim() || !(penuh > 0 && penuh <= 1000) || !(lulus >= 0 && lulus <= penuh)) {
+      setBanner({ tone: 'negative', message: 'Isi nama ujian; markah penuh 1–1000 dan markah lulus tidak melebihi markah penuh.' });
+      return;
+    }
+    setBusy(true);
+    try {
+      await saveUjian({ id: uId, program_id: program.id, nama: uNama, tarikh: uTarikh, markah_penuh: penuh, markah_lulus: lulus });
+      setUOpen(false);
+      setBanner({ tone: 'positive', message: 'Ujian disimpan.' });
+      await load();
+    } catch (caught) {
+      setBanner({ tone: 'negative', message: toMalayErrorVerbose(caught, 'Gagal menyimpan ujian.') });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const confirmDeleteUjian = async () => {
+    if (!pendingDeleteUjian) return;
+    setBusy(true);
+    try {
+      await deleteUjian(pendingDeleteUjian.id);
+      setPendingDeleteUjian(null);
+      setBanner({ tone: 'positive', message: 'Ujian dipadam beserta markahnya.' });
+      await load();
+    } catch (caught) {
+      setPendingDeleteUjian(null);
+      setBanner({ tone: 'negative', message: toMalayErrorVerbose(caught, 'Gagal memadam ujian.') });
     } finally {
       setBusy(false);
     }
@@ -227,6 +287,38 @@ export default function PerkaderanProgramScreen() {
               {mayEdit ? <Button label="Tambah Tamrin" onPress={() => openTamrin(null)} /> : null}
             </View>
           ) : null}
+          {program ? (
+            <View className="gap-3">
+              <SectionTitle title="Ujian" caption="Markah dimasukkan oleh naqib; markah lulus ditetapkan di sini." />
+              {ujian.length === 0 ? <Text className="text-sm text-ink-muted">Belum ada ujian.</Text> : null}
+              {ujian.map((u) => (
+                <Card key={u.id}>
+                  <View className="flex-row items-center gap-3">
+                    <View className="flex-1">
+                      <Text className="text-base font-semibold text-ink">{u.nama}</Text>
+                      <Text className="text-xs text-ink-muted">
+                        {dateLabel(u.tarikh)} · penuh {u.markah_penuh} · lulus {u.markah_lulus}
+                      </Text>
+                    </View>
+                    {mayEdit ? (
+                      <>
+                        <IconButton icon="create-outline" accessibilityLabel="Sunting ujian" onPress={() => openUjian(u)} />
+                        <IconButton icon="trash-outline" accessibilityLabel="Padam ujian" onPress={() => setPendingDeleteUjian(u)} />
+                      </>
+                    ) : null}
+                  </View>
+                  <View className="mt-3">
+                    <Button
+                      label="Masukkan Markah"
+                      variant="secondary"
+                      onPress={() => router.push({ pathname: '/(app)/admin/perkaderan-ujian', params: { id: u.id, program: program.id } })}
+                    />
+                  </View>
+                </Card>
+              ))}
+              {mayEdit ? <Button label="Tambah Ujian" onPress={() => openUjian(null)} /> : null}
+            </View>
+          ) : null}
         </View>
       </Screen>
 
@@ -251,6 +343,29 @@ export default function PerkaderanProgramScreen() {
         <DateTimeField label="Tarikh" mode="date" value={tTarikh} onChange={setTTarikh} />
         <TextField label="Lokasi (pilihan)" value={tLokasi} onChangeText={setTLokasi} editable={!busy} />
       </FormModal>
+
+      <FormModal
+        visible={uOpen}
+        title={uId ? 'Sunting Ujian' : 'Tambah Ujian'}
+        dismissable={!busy}
+        onClose={() => setUOpen(false)}
+        footer={<Button label="Simpan" loading={busy} disabled={busy || !uNama.trim()} onPress={() => void submitUjian()} />}>
+        <TextField label="Nama ujian" value={uNama} onChangeText={setUNama} editable={!busy} />
+        <DateTimeField label="Tarikh" mode="date" value={uTarikh} onChange={setUTarikh} />
+        <TextField label="Markah penuh" value={uPenuh} onChangeText={setUPenuh} keyboardType="decimal-pad" editable={!busy} />
+        <TextField label="Markah lulus" value={uLulus} onChangeText={setULulus} keyboardType="decimal-pad" editable={!busy} />
+      </FormModal>
+
+      <ConfirmDialog
+        visible={pendingDeleteUjian !== null}
+        title="Padam ujian?"
+        message={(pendingDeleteUjian?.nama ?? '') + ' dan semua markahnya akan dipadam.'}
+        confirmLabel="Padam"
+        destructive
+        busy={busy}
+        onConfirm={() => void confirmDeleteUjian()}
+        onCancel={() => setPendingDeleteUjian(null)}
+      />
 
       <ConfirmDialog
         visible={pendingDelete !== null}

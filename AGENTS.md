@@ -838,4 +838,7 @@ Rujukan: `supabase/migrations/20261125000177_perkaderan_program_tamrin_prestasi.
 - Kehadiran tamrin: naqib untuk mad'u kumpulan SENDIRI, admin untuk semua (`perkaderan_tamrin_roster/set`). Naqib masuk melalui seksyen "Kumpulan Usrah Saya" -> Tamrin.
 - PRESTASI = RPC `perkaderan_prestasi_ringkasan/madu/detail`: HANYA Super Admin / can_view_perkaderan (42501 untuk orang lain, diuji). Naqib TIDAK nampak peratus/carta.
   Peratus = hadir / sesi atau tamrin yang telah berlangsung SELEPAS mad'u ditambah (bukan pemeringkatan antara pelajar).
-- UJIAN: BELUM dibina (menunggu mekanisme daripada pemilik). Simpan fakta (markah/kehadiran) sahaja, tiada catatan subjektif tentang pelajar.
+- UJIAN (migration 178, live): `perkaderan_ujian` (banyak ujian bagi satu program; `markah_penuh`, `markah_lulus` ditetapkan ADMIN per ujian) + `perkaderan_ujian_markah`
+  (table terkunci, akses melalui RPC `perkaderan_ujian_roster/set`). Naqib memasukkan markah mad'u kumpulan SENDIRI (angka, kosong = belum ada); admin boleh semua. Markah > markah_penuh ditolak.
+  Prestasi ujian (`perkaderan_prestasi_ujian`, `..._ujian_madu`) admin Lajnah/Super Admin sahaja. Skrin: `admin/perkaderan-ujian.tsx`, bahagian Ujian dalam `perkaderan-program.tsx`.
+  Naqib nampak markah yang dia masukkan sendiri (perlu untuk sunting) tetapi bukan purata/carta/lulus-gagal. Simpan fakta sahaja, tiada catatan subjektif tentang pelajar.
