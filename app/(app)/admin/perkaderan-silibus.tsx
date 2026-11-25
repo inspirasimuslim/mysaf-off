@@ -5,14 +5,12 @@ import { Text, View } from 'react-native';
 import { NoAccessScreen } from '@/components/no-access';
 import { ScreenHeader } from '@/components/screen-header';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { FormModal } from '@/components/ui/form-modal';
 import { IconButton } from '@/components/ui/icon-button';
 import { LoadingScreen } from '@/components/ui/loading-screen';
 import { Notice } from '@/components/ui/notice';
 import { Screen } from '@/components/ui/screen';
-import { SectionTitle } from '@/components/ui/section-title';
 import { Segmented } from '@/components/ui/segmented';
 import { TextField } from '@/components/ui/text-field';
 import { usePerkaderanAccess } from '@/lib/department-access';
@@ -107,24 +105,25 @@ export default function PerkaderanSilibusScreen() {
     <>
       <Screen padTop={false}>
         <ScreenHeader title="Silibus Fikrah" onBackPress={goBack} />
-        <View className="gap-4 px-gutter pb-10">
+        <View className="gap-3 px-gutter pb-10">
           {banner ? <Notice tone={banner.tone} message={banner.message} /> : null}
           <Segmented label="Tingkatan" value={tingkatan} options={TINGKATAN_OPTIONS} onChange={setTingkatan} />
-          <SectionTitle title="Senarai Fikrah" caption="Naqib memilih daripada senarai ini apabila merekod sesi." />
           {loading ? <LoadingScreen /> : null}
           {!loading && rows.length === 0 ? <Text className="text-sm text-ink-muted">Belum ada Fikrah untuk tingkatan ini.</Text> : null}
-          {rows.map((row) => (
-            <Card key={row.id}>
-              <View className="flex-row items-center gap-3">
-                <Text className="flex-1 text-base text-ink">
-                  F{row.urutan} · {row.tajuk}
-                </Text>
-                <IconButton icon="create-outline" accessibilityLabel="Sunting Fikrah" onPress={() => openForm(row)} />
-                <IconButton icon="trash-outline" accessibilityLabel="Padam Fikrah" onPress={() => setPendingDelete(row)} />
-              </View>
-            </Card>
-          ))}
-          <Button label="Tambah Fikrah" onPress={() => openForm(null)} />
+          {rows.length > 0 ? (
+            <View className="overflow-hidden rounded-xl border border-line bg-surface">
+              {rows.map((row, i) => (
+                <View key={row.id} className={'flex-row items-center gap-2 px-3 py-1.5 ' + (i > 0 ? 'border-t border-line' : '')}>
+                  <Text className="flex-1 text-sm text-ink">
+                    F{row.urutan} · {row.tajuk}
+                  </Text>
+                  <IconButton icon="create-outline" accessibilityLabel="Sunting Fikrah" onPress={() => openForm(row)} />
+                  <IconButton icon="trash-outline" accessibilityLabel="Padam Fikrah" onPress={() => setPendingDelete(row)} />
+                </View>
+              ))}
+            </View>
+          ) : null}
+          <Button label="+ Tambah Fikrah" onPress={() => openForm(null)} />
         </View>
       </Screen>
 
