@@ -33,7 +33,7 @@ const NO_OPTIONS = Array.from({ length: 10 }, (_, i) => ({ value: String(i + 1),
 type Banner = { tone: 'positive' | 'info' | 'negative'; message: string } | null;
 type Group = PerkaderanSlot & { sekolah: string };
 
-const naqibLine = (g: PerkaderanSlot) => [g.naqib_nama, g.partner_nama, g.tambahan_nama].filter(Boolean).join(' & ');
+const naqibNames = (g: PerkaderanSlot): string[] => [g.naqib_nama, g.partner_nama, ...(g.tambahan_nama ? g.tambahan_nama.split(' & ') : [])].filter((n): n is string => Boolean(n));
 
 export default function NaqibAssignmentsScreen() {
   const goBack = useGoBack();
@@ -247,7 +247,11 @@ export default function NaqibAssignmentsScreen() {
                       <Text className="text-sm font-semibold text-ink">
                         T{g.tingkatan.replace('Tingkatan ', '')} · K{g.no_kumpulan} · {g.madu} mad'u
                       </Text>
-                      <Text className="text-xs text-ink-muted">{naqibLine(g)}</Text>
+                      {naqibNames(g).map((n, k) => (
+                        <Text key={k} className="text-xs text-ink-muted">
+                          {n}
+                        </Text>
+                      ))}
                     </View>
                     <IconButton icon="create-outline" accessibilityLabel={'Edit kumpulan ' + g.no_kumpulan} onPress={() => openEdit(g)} />
                   </View>
