@@ -536,3 +536,13 @@ export async function assignSlot(args: {
   });
   if (error) throw error;
 }
+
+/** Bilangan mad'u hadir bagi setiap sesi (satu pertanyaan) — untuk sejarah sesi naqib. */
+export async function fetchAttendanceCounts(sessionIds: string[]): Promise<Record<string, number>> {
+  if (sessionIds.length === 0) return {};
+  const { data, error } = await supabase.from('sekolah_usrah_attendance').select('session_id').in('session_id', sessionIds);
+  if (error) throw error;
+  const counts: Record<string, number> = {};
+  for (const row of (data as { session_id: string }[] | null) ?? []) counts[row.session_id] = (counts[row.session_id] ?? 0) + 1;
+  return counts;
+}

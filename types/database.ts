@@ -1067,6 +1067,8 @@ export type UsrahGroup = {
   default_partner_naqib_member_id: string | null;
   /** Naqib ke-3 dan ke-4 (maks 2) — kuota 4 naqib setiap kumpulan (migration 184). */
   naqib_tambahan: string[];
+  tingkatan: string | null;
+  no_kumpulan: number | null;
   /** `false` = diarkibkan (ada sejarah sesi, tidak boleh dipadam terus) — tidak muncul dalam senarai aktif. */
   is_active: boolean;
   created_at: string;
@@ -1100,6 +1102,9 @@ export type UsrahSession = {
   jenis: 'fikrah' | 'bonding';
   silibus_ids: string[];
   refleksi: string | null;
+  /** Bilangan ringkas daripada laporan Google Form lama (tiada nama mad'u). */
+  hadir_rekod?: number | null;
+  jumlah_rekod?: number | null;
   recorded_by: string | null;
   created_at: string;
   updated_at: string;

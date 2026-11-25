@@ -915,3 +915,9 @@ Lajur `partner_naqib_*` pada sesi lama kekal di DB (tidak dipaparkan lagi untuk 
 Rujukan: `20261125000186_perkaderan_tamrin_ujian_lp_sahaja.sql`. Panel naqib (`components/naqib-hub-section.tsx`) kini HANYA: senarai kumpulan sendiri dengan butang "+ Sesi Baharu"
 (terus ke `usrah-session-form`) dan "Sesi Lampau" (helaian view-only + senarai mad'u hadir; tiada padam/sunting). Tiada lagi pautan Urus Kumpulan atau Tamrin.
 DB: `perkaderan_tamrin_roster/set` dan `perkaderan_ujian_roster/set` kini admin Lajnah/Super Admin sahaja (naqib 42501) — kehadiran tamrin dan markah ujian diurus LP.
+
+## Panel naqib: dua pilihan sahaja (2026-11-25, tiada migration)
+`components/naqib-hub-section.tsx` kini cuma dua `ActionRow`: **Sejarah Sesi Usrah** (`admin/naqib-sejarah-sesi.tsx`, view-only: tarikh, tempat, jenis Fikrah/Bonding, silibus F#, tajuk, ulasan,
+"Kehadiran: hadir/jumlah" -> helaian hadir/tidak hadir; dropdown kumpulan bila >1; sesi import lama guna `hadir_rekod/jumlah_rekod` tanpa senarai nama) dan **Rekod Sesi Baharu**
+(`admin/usrah-session-form` tanpa param `groupId` -> kumpulan sendiri, dropdown bila >1, sekolah/tingkatan/kumpulan dipapar, silibus ikut tingkatan kumpulan).
+Naqib tiada akses ke `perkaderan-group-detail`/tamrin. `UsrahGroup` +`tingkatan`/`no_kumpulan`; `fetchAttendanceCounts()` dalam `lib/perkaderan.ts`.

@@ -24,6 +24,7 @@ import {
   createSession,
   fetchAttendanceCandidates,
   fetchGroup,
+  fetchMyGroups,
   fetchMyMemberId,
   fetchSession,
   saveAttendance,
@@ -31,7 +32,7 @@ import {
   type AttendanceCandidate,
 } from '@/lib/perkaderan';
 import { usePermissions } from '@/lib/permissions';
-import { TINGKATAN_OPTIONS, type Option } from '@/types/database';
+import { TINGKATAN_OPTIONS, type UsrahGroup } from '@/types/database';
 
 type Banner = { tone: 'positive' | 'info' | 'negative'; message: string } | null;
 
@@ -43,13 +44,17 @@ function today(): string {
 export default function UsrahSessionFormScreen() {
   const goBack = useGoBack();
   const router = useRouter();
-  const { groupId, id } = useLocalSearchParams<{ groupId: string; id?: string }>();
+  const { groupId: groupIdParam, id } = useLocalSearchParams<{ groupId?: string; id?: string }>();
   const { loading: permissionsLoading, isSuperAdmin } = usePermissions();
   const { loading: accessLoading, canEdit: departmentCanEdit } = usePerkaderanAccess();
 
   const [loading, setLoading] = useState(true);
   const [banner, setBanner] = useState<Banner>(null);
   const [canEdit, setCanEdit] = useState(false);
+  /** Kumpulan dipilih. Tanpa param `groupId` (naqib dari Hub), kumpulan dipilih daripada kumpulan sendiri. */
+  const [groupId, setGroupId] = useState<string | undefined>(groupIdParam);
+  const [myGroups, setMyGroups] = useState<UsrahGroup[]>([]);
+  const [currentGroup, setCurrentGroup] = useState<UsrahGroup | null>(null);
 
   const [sessionDate, setSessionDate] = useState(today());
   const [locationText, setLocationText] = useState('');
@@ -67,9 +72,21 @@ export default function UsrahSessionFormScreen() {
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
-    if (!groupId) return;
+    if (!groupId) {
+      try {
+        const mine = await fetchMyGroups();
+        setMyGroups(mine);
+        if (mine[0]) setGroupId(mine[0].id);
+        else setLoading(false);
+      } catch (caught) {
+        setBanner({ tone: 'negative', message: toMalayErrorVerbose(caught, 'Gagal memuatkan kumpulan.') });
+        setLoading(false);
+      }
+      return;
+    }
     setLoading(true);
     try {
+      if (!id && myGroups.length === 0) setMyGroups(await fetchMyGroups());
       const [group, myMemberId, session, attendanceCandidates] = await Promise.all([
         fetchGroup(groupId),
         fetchMyMemberId(),
@@ -77,6 +94,7 @@ export default function UsrahSessionFormScreen() {
         fetchAttendanceCandidates(groupId, id ?? null),
       ]);
 
+      setCurrentGroup(group);
       setCanEdit(
         isSuperAdmin() ||
           departmentCanEdit ||
@@ -100,13 +118,14 @@ export default function UsrahSessionFormScreen() {
 
       setCandidates(attendanceCandidates);
       const sedia = attendanceCandidates.map((c) => c.tingkatan).find(Boolean) ?? null;
-      setSilibusTingkatan((current) => current ?? sedia);
+      setSilibusTingkatan(group?.tingkatan ?? sedia);
       setPresent(new Set(attendanceCandidates.filter((c) => c.hadir).map((c) => c.mad_u_id)));
     } catch (caught) {
       setBanner({ tone: 'negative', message: toMalayErrorVerbose(caught, 'Gagal memuatkan sesi.') });
     } finally {
       setLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [departmentCanEdit, groupId, id, isSuperAdmin]);
 
   useEffect(() => {
@@ -206,6 +225,36 @@ export default function UsrahSessionFormScreen() {
 
         <View className="gap-6 px-gutter pt-6">
           {banner ? <ToastBanner tone={banner.tone} message={banner.message} /> : null}
+
+          {currentGroup ? (
+            <View className="gap-3">
+              {!id && myGroups.length > 1 ? (
+                <PickerField
+                  label="Kumpulan"
+                  value={groupId ?? null}
+                  options={myGroups.map((g) => ({
+                    value: g.id,
+                    label: [g.sekolah, g.tingkatan ? g.tingkatan.replace('Tingkatan ', 'T') : null, g.no_kumpulan ? 'K' + g.no_kumpulan : null]
+                      .filter(Boolean)
+                      .join(' · '),
+                  }))}
+                  onChange={(next) => {
+                    if (next && next !== groupId) {
+                      setPresent(new Set());
+                      setSilibusIds([]);
+                      setGroupId(next);
+                    }
+                  }}
+                  disabled={saving}
+                />
+              ) : null}
+              <View className="flex-row flex-wrap gap-x-6 gap-y-1 rounded-card border border-line bg-surface p-card">
+                <Text className="text-sm text-ink-muted">Sekolah: <Text className="font-semibold text-ink">{currentGroup.sekolah}</Text></Text>
+                <Text className="text-sm text-ink-muted">Tingkatan: <Text className="font-semibold text-ink">{currentGroup.tingkatan ?? '-'}</Text></Text>
+                <Text className="text-sm text-ink-muted">Kumpulan: <Text className="font-semibold text-ink">{currentGroup.no_kumpulan ?? '-'}</Text></Text>
+              </View>
+            </View>
+          ) : null}
 
           <View className="gap-3">
             <DateTimeField label="Tarikh sesi" mode="date" value={sessionDate} onChange={setSessionDate} disabled={saving} />
