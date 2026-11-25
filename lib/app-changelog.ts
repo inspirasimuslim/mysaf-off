@@ -178,6 +178,7 @@ export const CHANGELOG: ChangelogEntry[] = [
       'Loceng Notifikasi di bahagian atas setiap skrin dengan peti masuk 60 hari.',
       'Admin boleh menghidupkan atau mematikan setiap jenis notifikasi bagi setiap program, usrah dan pengumuman.',
       'Latar bahagian Majlis Baitul Muslim dimudahkan.',
+      'Usrah Sekolah: kelas dan no. telefon mad\'u (pilihan); mad\'u yang dinyahaktifkan dipadam kekal automatik selepas 6 bulan.',
     ],
   },
 ];

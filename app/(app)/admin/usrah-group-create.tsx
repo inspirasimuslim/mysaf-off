@@ -17,7 +17,7 @@ import { useGoBack } from '@/lib/navigation';
 import { createGroupWithMadU } from '@/lib/perkaderan';
 import { TINGKATAN_OPTIONS, type Option, type MemberPickerRow } from '@/types/database';
 
-type PendingMadU = { nama: string; tingkatan: string | null };
+type PendingMadU = { nama: string; tingkatan: string | null; kelas: string | null; no_tel: string | null };
 
 /**
  * Senarai sekolah TETAP untuk kumpulan usrah sekolah (Perkaderan) — TIDAK
@@ -69,13 +69,17 @@ export default function UsrahGroupCreateScreen() {
   const [pendingMadU, setPendingMadU] = useState<PendingMadU[]>([]);
   const [draftNama, setDraftNama] = useState('');
   const [draftTingkatan, setDraftTingkatan] = useState<string | null>(null);
+  const [draftKelas, setDraftKelas] = useState('');
+  const [draftTel, setDraftTel] = useState('');
 
   const addDraftMadU = useCallback(() => {
     if (!draftNama.trim()) return;
-    setPendingMadU((current) => [...current, { nama: draftNama.trim(), tingkatan: draftTingkatan }]);
+    setPendingMadU((current) => [...current, { nama: draftNama.trim(), tingkatan: draftTingkatan, kelas: draftKelas.trim() || null, no_tel: draftTel.trim() || null }]);
     setDraftNama('');
     setDraftTingkatan(null);
-  }, [draftNama, draftTingkatan]);
+    setDraftKelas('');
+    setDraftTel('');
+  }, [draftKelas, draftNama, draftTel, draftTingkatan]);
 
   const removeDraftMadU = useCallback((index: number) => {
     setPendingMadU((current) => current.filter((_, i) => i !== index));
@@ -131,6 +135,8 @@ export default function UsrahGroupCreateScreen() {
           <View className="gap-3 rounded-card border border-line bg-surface p-card">
             <TextField label="Nama" value={draftNama} onChangeText={setDraftNama} editable={!busy} autoCapitalize="words" />
             <PickerField label="Tingkatan" value={draftTingkatan} options={TINGKATAN_OPTIONS} onChange={setDraftTingkatan} disabled={busy} />
+            <TextField label="Kelas (pilihan)" value={draftKelas} onChangeText={setDraftKelas} editable={!busy} autoCapitalize="words" />
+            <TextField label="No. telefon (pilihan)" value={draftTel} onChangeText={setDraftTel} editable={!busy} keyboardType="phone-pad" />
             <Button label="+ Tambah ke Senarai" variant="secondary" disabled={busy || !draftNama.trim()} onPress={addDraftMadU} />
           </View>
 
@@ -140,7 +146,9 @@ export default function UsrahGroupCreateScreen() {
                 <View key={index} className="flex-row items-center gap-3 rounded-field border border-line bg-surface px-3 py-2.5">
                   <View className="flex-1">
                     <Text className="text-sm font-semibold text-ink">{mu.nama}</Text>
-                    {mu.tingkatan ? <Text className="text-xs text-ink-muted">{mu.tingkatan}</Text> : null}
+                    {mu.tingkatan || mu.kelas ? (
+                      <Text className="text-xs text-ink-muted">{[mu.tingkatan, mu.kelas].filter(Boolean).join(' · ')}</Text>
+                    ) : null}
                   </View>
                   <IconButton
                     icon="close-outline"

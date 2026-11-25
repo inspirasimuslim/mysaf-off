@@ -29,6 +29,7 @@ import {
   fetchMadU,
   fetchMyMemberId,
   fetchSessions,
+  padamMadUKekal,
   removeMadU,
   updateGroupDefaultPartner,
 } from '@/lib/perkaderan';
@@ -50,6 +51,14 @@ function withUnrecognised(options: Option<string>[], current: string | null): Op
   return [...options, { value: current, label: current + ' (tidak dikenali)' }];
 }
 
+/** Tarikh padam automatik = 6 bulan selepas dinyahaktifkan (DD/MM/YYYY). */
+function purgeDateLabel(inactiveIso: string): string {
+  const d = new Date(inactiveIso);
+  d.setMonth(d.getMonth() + 6);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return pad(d.getDate()) + '/' + pad(d.getMonth() + 1) + '/' + d.getFullYear();
+}
+
 export default function PerkaderanGroupDetailScreen() {
   const router = useRouter();
   const goBack = useGoBack();
@@ -59,6 +68,7 @@ export default function PerkaderanGroupDetailScreen() {
 
   const [group, setGroup] = useState<UsrahGroup | null>(null);
   const [madU, setMadU] = useState<UsrahMadU[]>([]);
+  const [madUInactive, setMadUInactive] = useState<UsrahMadU[]>([]);
   const [sessions, setSessions] = useState<UsrahSession[]>([]);
   const [memberCandidates, setMemberCandidates] = useState<MemberPickerRow[]>([]);
   const [isOwner, setIsOwner] = useState(false);
@@ -71,13 +81,14 @@ export default function PerkaderanGroupDetailScreen() {
     try {
       const [groupRow, madURows, sessionRows, myMemberId, pickerRows] = await Promise.all([
         fetchGroup(id),
-        fetchMadU(id),
+        fetchMadU(id, true),
         fetchSessions(id),
         fetchMyMemberId(),
         fetchMembersForPicker(),
       ]);
       setGroup(groupRow);
-      setMadU(madURows);
+      setMadU(madURows.filter((mu) => mu.is_active));
+      setMadUInactive(madURows.filter((mu) => !mu.is_active));
       setSessions(sessionRows);
       setMemberCandidates(pickerRows);
       setIsOwner(Boolean(groupRow && myMemberId && groupRow.naqib_member_id === myMemberId));
@@ -114,6 +125,8 @@ export default function PerkaderanGroupDetailScreen() {
   }, [created, router]);
 
   const canEdit = isSuperAdmin() || departmentCanEdit || isOwner;
+  /** Padam kekal rekod mad'u: admin Lajnah Perkaderan / Super Admin sahaja (bukan naqib). */
+  const canPurge = isSuperAdmin() || departmentCanEdit;
 
   const partnerName = useCallback(
     (memberId: string | null) => (memberId ? memberCandidates.find((row) => row.id === memberId)?.full_name ?? 'Ahli' : null),
@@ -145,12 +158,16 @@ export default function PerkaderanGroupDetailScreen() {
   const [addingMadU, setAddingMadU] = useState(false);
   const [madUNama, setMadUNama] = useState('');
   const [madUTingkatan, setMadUTingkatan] = useState<string | null>(null);
+  const [madUKelas, setMadUKelas] = useState('');
+  const [madUTel, setMadUTel] = useState('');
   const [madUBusy, setMadUBusy] = useState(false);
 
   const openAddMadU = useCallback(() => {
     setBanner(null);
     setMadUNama('');
     setMadUTingkatan(null);
+    setMadUKelas('');
+    setMadUTel('');
     setAddingMadU(true);
   }, []);
 
@@ -159,7 +176,7 @@ export default function PerkaderanGroupDetailScreen() {
 
     setMadUBusy(true);
     try {
-      await addMadU(group.id, madUNama, madUTingkatan);
+      await addMadU(group.id, madUNama, madUTingkatan, madUKelas, madUTel);
       setAddingMadU(false);
       await load();
       setBanner({ tone: 'positive', message: madUNama.trim() + " berjaya ditambah ke senarai mad'u." });
@@ -168,7 +185,7 @@ export default function PerkaderanGroupDetailScreen() {
     } finally {
       setMadUBusy(false);
     }
-  }, [group, load, madUBusy, madUNama, madUTingkatan]);
+  }, [group, load, madUBusy, madUKelas, madUNama, madUTel, madUTingkatan]);
 
   const [pendingRemoveMadU, setPendingRemoveMadU] = useState<UsrahMadU | null>(null);
   const [removeMadUBusy, setRemoveMadUBusy] = useState(false);
@@ -190,6 +207,28 @@ export default function PerkaderanGroupDetailScreen() {
       setRemoveMadUBusy(false);
     }
   }, [load, pendingRemoveMadU, removeMadUBusy]);
+
+  // --- Padam kekal mad'u (admin) ---------------------------------------------
+  const [pendingPurge, setPendingPurge] = useState<UsrahMadU | null>(null);
+  const [purgeBusy, setPurgeBusy] = useState(false);
+
+  const confirmPurge = useCallback(async () => {
+    if (!pendingPurge || purgeBusy) return;
+
+    const target = pendingPurge;
+    setPurgeBusy(true);
+    try {
+      await padamMadUKekal(target.id);
+      setPendingPurge(null);
+      await load();
+      setBanner({ tone: 'positive', message: "Rekod " + target.nama + " dipadam kekal." });
+    } catch (caught) {
+      setPendingPurge(null);
+      setBanner({ tone: 'negative', message: toMalayErrorVerbose(caught, "Gagal memadam rekod mad'u.") });
+    } finally {
+      setPurgeBusy(false);
+    }
+  }, [load, pendingPurge, purgeBusy]);
 
   // --- Padam sesi ------------------------------------------------------------
   const [pendingRemoveSession, setPendingRemoveSession] = useState<UsrahSession | null>(null);
@@ -306,7 +345,7 @@ export default function PerkaderanGroupDetailScreen() {
           <View>
             <SectionTitle
               title={"Mad'u (" + madU.length + ')'}
-              caption="Ahli usrah dalam kumpulan ini. Buang hanya menyembunyikan daripada senarai aktif — sejarah kehadiran kekal."
+              caption="Ahli usrah dalam kumpulan ini. Mad'u yang dibuang dipadam kekal automatik selepas 6 bulan."
             />
 
             {canEdit ? (
@@ -323,7 +362,10 @@ export default function PerkaderanGroupDetailScreen() {
                   <View key={mu.id} className="flex-row items-center gap-3 rounded-card border border-line bg-surface p-card">
                     <View className="flex-1">
                       <Text className="text-base font-semibold text-ink">{mu.nama}</Text>
-                      {mu.tingkatan ? <Text className="mt-0.5 text-sm text-ink-muted">{mu.tingkatan}</Text> : null}
+                      {mu.tingkatan || mu.kelas ? (
+                        <Text className="mt-0.5 text-sm text-ink-muted">{[mu.tingkatan, mu.kelas].filter(Boolean).join(' · ')}</Text>
+                      ) : null}
+                      {mu.no_tel ? <Text className="mt-0.5 text-sm text-ink-muted">{mu.no_tel}</Text> : null}
                     </View>
                     {canEdit ? (
                       <IconButton
@@ -338,6 +380,33 @@ export default function PerkaderanGroupDetailScreen() {
               </View>
             )}
           </View>
+
+          {canPurge && madUInactive.length > 0 ? (
+            <View>
+              <SectionTitle
+                title={"Tidak aktif (" + madUInactive.length + ')'}
+                caption="Dipadam kekal automatik 6 bulan selepas dinyahaktifkan. Anda boleh memadamnya serta-merta."
+              />
+              <View className="gap-2">
+                {madUInactive.map((mu) => (
+                  <View key={mu.id} className="flex-row items-center gap-3 rounded-card border border-line bg-surface p-card">
+                    <View className="flex-1">
+                      <Text className="text-base font-semibold text-ink">{mu.nama}</Text>
+                      <Text className="mt-0.5 text-sm text-ink-muted">
+                        {mu.nyahaktif_at ? 'Dipadam automatik ' + purgeDateLabel(mu.nyahaktif_at) : 'Tidak aktif'}
+                      </Text>
+                    </View>
+                    <IconButton
+                      icon="trash-outline"
+                      tone="danger"
+                      accessibilityLabel={'Padam kekal ' + mu.nama}
+                      onPress={() => setPendingPurge(mu)}
+                    />
+                  </View>
+                ))}
+              </View>
+            </View>
+          ) : null}
 
           {/* --- Sesi ---------------------------------------------------------- */}
           <View className="pb-8">
@@ -428,17 +497,30 @@ export default function PerkaderanGroupDetailScreen() {
           onChange={setMadUTingkatan}
           disabled={madUBusy}
         />
+        <TextField label="Kelas (pilihan)" value={madUKelas} onChangeText={setMadUKelas} editable={!madUBusy} autoCapitalize="words" />
+        <TextField label="No. telefon (pilihan)" value={madUTel} onChangeText={setMadUTel} editable={!madUBusy} keyboardType="phone-pad" />
       </FormModal>
 
       <ConfirmDialog
         visible={pendingRemoveMadU !== null}
         title="Buang mad'u?"
-        message={(pendingRemoveMadU?.nama ?? '') + ' akan disembunyikan daripada senarai aktif. Sejarah kehadiran lampau KEKAL wujud.'}
+        message={(pendingRemoveMadU?.nama ?? '') + ' akan dinyahaktifkan dan dipadam kekal secara automatik selepas 6 bulan, termasuk rekod kehadirannya.'}
         confirmLabel="Buang"
         destructive
         busy={removeMadUBusy}
         onConfirm={() => void confirmRemoveMadU()}
         onCancel={() => setPendingRemoveMadU(null)}
+      />
+
+      <ConfirmDialog
+        visible={pendingPurge !== null}
+        title="Padam kekal?"
+        message={(pendingPurge?.nama ?? '') + " akan dipadam KEKAL beserta rekod kehadirannya. Tindakan ini tidak boleh dibatalkan."}
+        confirmLabel="Padam Kekal"
+        destructive
+        busy={purgeBusy}
+        onConfirm={() => void confirmPurge()}
+        onCancel={() => setPendingPurge(null)}
       />
 
       <ConfirmDialog

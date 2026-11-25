@@ -817,3 +817,14 @@ Rujukan: `supabase/migrations/20261125000175_event_notifikasi.sql`, `components/
   `ScreenHeader`, stor kongsi + tinjauan 60 saat dalam `lib/notifications.ts`. Peti masuk memaparkan SEMUA push (termasuk maklum balas/kaunseling) 60 hari.
 - Diuji pada produksi dalam transaksi yang di-rollback: baharu/kemas kini/2 jam/batal masing-masing 323 penerima.
 - Versi 1.3.35 (versionCode 43). Pengumuman dengan `start_date` masa depan tetap memberi noti semasa dicipta (belum dipaparkan sehingga tarikh mula).
+
+# Perkaderan Usrah Sekolah — privasi mad'u (2026-11-25, migration 176, sudah live di produksi)
+
+Rujukan: `supabase/migrations/20261125000176_perkaderan_mad_u_privasi.sql`, `lib/perkaderan.ts` (`padamMadUKekal`), `app/(app)/admin/perkaderan-group-detail.tsx`.
+Konteks: mad'u ialah PELAJAR (Tingkatan 3-5, kebanyakannya bawah 18 tahun) dalam saringan pra-keahlian — TIADA akaun, hanya direkod oleh naqib. Keputusan
+2026-11-25: JANGAN bina app berasingan; guna modul sedia ada. Tiada chat sesama pelajar. Jangan simpan catatan subjektif tentang kelayakan.
+- `sekolah_usrah_mad_u` +`kelas`, `no_tel` (pilihan; naqib kumpulan + admin Lajnah Perkaderan melihat melalui RLS baris sedia ada), `nyahaktif_at` (pencetus).
+- Simpanan: nyahaktif -> dipadam KEKAL 6 bulan kemudian oleh `perkaderan_purge_expired()` (pg_cron `perkaderan-purge`, 03:15 MYT); mad'u dalam kumpulan diarkibkan >6 bulan turut dipadam.
+  Kehadiran ikut padam (FK cascade). Admin Lajnah Perkaderan/Super Admin boleh padam kekal serta-merta (`perkaderan_padam_mad_u`); naqib hanya nyahaktif. Bahagian "Tidak aktif" hanya kelihatan kepada admin.
+- Hak TRUNCATE/REFERENCES/TRIGGER ditarik daripada `authenticated` pada 5 table perkaderan. Eksport Excel tidak diubah (tidak membawa no_tel).
+- BELUM (Fasa 2-3): aktiviti pra-keahlian (tamrin), ujian + markah, carta prestasi, status kemajuan, skrin utama naqib, carian admin untuk ratusan pelajar.

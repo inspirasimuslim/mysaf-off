@@ -109,7 +109,7 @@ export async function updateGroupDefaultPartner(groupId: string, partnerNaqibMem
 export async function createGroupWithMadU(
   sekolah: string,
   defaultPartnerNaqibMemberId: string | null,
-  madUList: { nama: string; tingkatan: string | null }[],
+  madUList: { nama: string; tingkatan: string | null; kelas?: string | null; no_tel?: string | null }[],
 ): Promise<UsrahGroup> {
   const memberId = await fetchMyMemberId();
   if (!memberId) {
@@ -132,6 +132,8 @@ export async function createGroupWithMadU(
         group_id: (group as UsrahGroup).id,
         nama: m.nama.trim(),
         tingkatan: m.tingkatan,
+        kelas: m.kelas?.trim() || null,
+        no_tel: m.no_tel?.trim() || null,
       })),
     );
     if (madUError) throw madUError;
@@ -184,17 +186,35 @@ export async function fetchMadU(groupId: string, includeInactive = false): Promi
   return (data as UsrahMadU[] | null) ?? [];
 }
 
-export async function addMadU(groupId: string, nama: string, tingkatan: string | null): Promise<UsrahMadU> {
+export async function addMadU(
+  groupId: string,
+  nama: string,
+  tingkatan: string | null,
+  kelas: string | null = null,
+  noTel: string | null = null,
+): Promise<UsrahMadU> {
   const { data, error } = await supabase
     .from('sekolah_usrah_mad_u')
-    .insert({ group_id: groupId, nama: nama.trim(), tingkatan: tingkatan?.trim() || null })
+    .insert({
+      group_id: groupId,
+      nama: nama.trim(),
+      tingkatan: tingkatan?.trim() || null,
+      kelas: kelas?.trim() || null,
+      no_tel: noTel?.trim() || null,
+    })
     .select('*')
     .single();
   if (error) throw error;
   return data as UsrahMadU;
 }
 
-/** Soft-remove sahaja — JANGAN hard delete, ia memusnahkan sejarah kehadiran lampau. */
+/** Padam kekal (admin LAJNAH PERKADERAN sahaja) — rekod kehadiran mad'u itu turut hilang. */
+export async function padamMadUKekal(id: string): Promise<void> {
+  const { error } = await supabase.rpc('perkaderan_padam_mad_u', { p_id: id });
+  if (error) throw error;
+}
+
+/** Nyahaktif oleh naqib; dipadam kekal automatik 6 bulan kemudian. */
 export async function removeMadU(id: string): Promise<void> {
   const { error } = await supabase.from('sekolah_usrah_mad_u').update({ is_active: false }).eq('id', id);
   if (error) throw error;

@@ -1076,8 +1076,13 @@ export type UsrahMadU = {
   group_id: string;
   nama: string;
   tingkatan: string | null;
-  /** Soft-remove sahaja — JANGAN hard delete (RLS pun tidak membenarkannya). */
+  /** Kelas (pilihan), cth "3 Amanah". */
+  kelas: string | null;
+  /** Nombor telefon (pilihan) — naqib kumpulan dan admin Lajnah Perkaderan sahaja. */
+  no_tel: string | null;
+  /** Soft-remove oleh naqib; padam kekal oleh admin atau automatik 6 bulan selepas `nyahaktif_at` (migration 176). */
   is_active: boolean;
+  nyahaktif_at: string | null;
   added_at: string;
 };
 
