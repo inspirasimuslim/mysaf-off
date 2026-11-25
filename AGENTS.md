@@ -921,3 +921,11 @@ DB: `perkaderan_tamrin_roster/set` dan `perkaderan_ujian_roster/set` kini admin 
 "Kehadiran: hadir/jumlah" -> helaian hadir/tidak hadir; dropdown kumpulan bila >1; sesi import lama guna `hadir_rekod/jumlah_rekod` tanpa senarai nama) dan **Rekod Sesi Baharu**
 (`admin/usrah-session-form` tanpa param `groupId` -> kumpulan sendiri, dropdown bila >1, sekolah/tingkatan/kumpulan dipapar, silibus ikut tingkatan kumpulan).
 Naqib tiada akses ke `perkaderan-group-detail`/tamrin. `UsrahGroup` +`tingkatan`/`no_kumpulan`; `fetchAttendanceCounts()` dalam `lib/perkaderan.ts`.
+
+## Ujian hujung-ke-hujung naqib -> Lajnah + pembetulan prestasi (2026-11-25, migration 187, sudah live di produksi)
+Diuji pada produksi dalam transaksi yang di-rollback (impersonasi JWT naqib kemudian Super Admin): sesi + kehadiran naqib muncul serta-merta dalam `perkaderan_analisa_usrah`,
+`perkaderan_prestasi_madu`, `perkaderan_naqib_sessions`, `perkaderan_export` dan bacaan terus Pantauan; naqib ditolak (RLS/42501) menambah mad'u, ubah kumpulan, atau memanggil analisa.
+- **PEPIJAT dibetulkan (187)**: `perkaderan_prestasi_madu/detail/ringkasan` mengira 110 sesi import Google Form (hanya bilangan, tiada nama) sebagai peluang hadir setiap mad'u -> peratus terlalu rendah.
+  Kini sesi `sumber = 'import_google_form'` tanpa baris kehadiran dikecualikan daripada prestasi PER MAD'U; ringkasan bulanan guna `hadir_rekod/jumlah_rekod` untuk sesi import.
+- **Perhatian**: `my_member_id(uid)` memulangkan NULL bagi akaun `must_change_password` atau `disekat` -> RLS menolak naqib itu merekod sesi sehingga kata laluan sementara ditukar
+  (2026-11-25: 18 daripada 34 naqib aktif belum tukar). Ini by design.
