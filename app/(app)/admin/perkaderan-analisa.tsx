@@ -7,12 +7,14 @@ import { Panel, SummaryStrip, ValueBars } from '@/components/stat-charts';
 import { EmptyState } from '@/components/ui/empty-state';
 import { LoadingScreen } from '@/components/ui/loading-screen';
 import { Notice } from '@/components/ui/notice';
+import { SaveShareButtons } from '@/components/save-share-buttons';
 import { Screen } from '@/components/ui/screen';
 import { Segmented } from '@/components/ui/segmented';
 import { usePerkaderanAccess } from '@/lib/department-access';
 import { toMalayErrorVerbose } from '@/lib/errors';
+import { deliveryMessage, type DeliveryMode } from '@/lib/file-delivery';
 import { useGoBack } from '@/lib/navigation';
-import { type AnalisaUsrah, fetchAnalisaUsrah, pct } from '@/lib/perkaderan-program';
+import { type AnalisaUsrah, downloadAnalisaUsrah, fetchAnalisaUsrah, pct } from '@/lib/perkaderan-program';
 import { usePermissions } from '@/lib/permissions';
 
 const fmt = (v: number | null) => (v == null ? '—' : Math.round(v) + '%');
@@ -32,6 +34,8 @@ export default function PerkaderanAnalisaScreen() {
   const [data, setData] = useState<AnalisaUsrah | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<{ tone: 'positive' | 'info' | 'negative'; message: string } | null>(null);
+  const [exporting, setExporting] = useState<DeliveryMode | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -50,6 +54,23 @@ export default function PerkaderanAnalisaScreen() {
     if (!permLoading && !accessLoading && allowed) void load();
   }, [accessLoading, allowed, load, permLoading]);
 
+  const exportReport = async (mode: DeliveryMode) => {
+    if (!data || exporting) return;
+    setNotice(null);
+    setExporting(mode);
+    try {
+      const report = await downloadAnalisaUsrah(data, mode);
+      setNotice({
+        tone: report.result === 'cancelled' ? 'info' : 'positive',
+        message: deliveryMessage(report.result, report.fileName, report.rows + ' kumpulan'),
+      });
+    } catch (caught) {
+      setNotice({ tone: 'negative', message: toMalayErrorVerbose(caught, 'Gagal menjana laporan.') });
+    } finally {
+      setExporting(null);
+    }
+  };
+
   if (permLoading || accessLoading) return <LoadingScreen />;
   if (!allowed) return <NoAccessScreen title="Analisa Usrah" description="Hanya untuk admin Lajnah Perkaderan dan Super Admin." />;
 
@@ -63,6 +84,7 @@ export default function PerkaderanAnalisaScreen() {
       <ScreenHeader title="Analisa Usrah" onBackPress={goBack} />
       <View className="gap-4 px-gutter pb-10">
         {error ? <Notice tone="negative" message={error} /> : null}
+        {notice ? <Notice tone={notice.tone} message={notice.message} /> : null}
         <Segmented
           label="Tempoh"
           value={tempoh}
@@ -89,6 +111,15 @@ export default function PerkaderanAnalisaScreen() {
             <Text className="text-xs text-ink-muted">
               Liputan = bulan yang ada sesi daripada bulan sepatutnya (sasaran sebulan sekali, dikira dari bulan kumpulan dicipta). Kehadiran = mad'u hadir daripada peluang hadir.
             </Text>
+
+            <SaveShareButtons
+              kind="file"
+              variant="secondary"
+              webLabel="Muat Turun Laporan (Excel)"
+              nativeCaption="Analisa Usrah (.xlsx)"
+              busy={exporting}
+              onPress={(mode) => void exportReport(mode)}
+            />
 
             <Panel title="Kumpulan yang ada sesi setiap bulan" caption="Berapa kumpulan melapor pada bulan itu" full>
               <ValueBars

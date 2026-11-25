@@ -854,3 +854,10 @@ Rujukan: `supabase/migrations/20261125000179_laporan_usrah_silibus.sql`, `app/(a
 
 ## Analisa Usrah (2026-11-25, migration 180, sudah live di produksi)
 `perkaderan_analisa_usrah(p_dari, p_hingga)` — admin Lajnah/Super Admin sahaja (42501 selainnya). Liputan = bulan ada sesi / bulan sepatutnya (sebulan sekali; dikira dari bulan kumpulan dicipta); kehadiran = hadir / peluang (mad'u AKTIF yang sudah ditambah pada tarikh sesi); `unit_silibus` = Fikrah diliputi (sesi dengan 2 silibus = 2). Skrin `admin/perkaderan-analisa.tsx`. Diuji dengan data tiruan dalam transaksi (3/4 hadir, 2 bulan daripada 10). Kelayakan 3K masih BELUM (ambang belum ditetapkan).
+
+## Import data usrah 2026 (2026-11-25, migration 181 + import sekali jalan)
+- Migration 181: `sekolah_usrah_sessions` +`hadir_rekod`/`jumlah_rekod`/`sumber` (bilangan ringkas laporan Google Form lama; tiada nama mad'u hadir). Analisa guna bilangan rekod jika ada, jika tidak baris kehadiran; sesi tanpa kedua-duanya TIDAK dikira dalam peratus (bukan 0).
+- Diimport daripada KEHADIRAN_USRAH_2026.xlsx (sheet F5 2026 & F4 2026) + LAPORAN_USRAH_2026_RAW_DATA.xlsx: 20 kumpulan, 161 mad'u (nama + tingkatan sahaja), 32 naqib dilantik (`perkaderan_naqib_assignments`), 110 sesi (`sumber = 'import_google_form'`). Kumpulan dicipta 2026-02-01 (laporan pertama Feb), mad'u `added_at` sama.
+- Padanan naqib: nama pertama + generasi dalam `members`, padanan unik sahaja (+ alias ejaan: Aliff→Alif Fahmi, Shaafy→Shafy, Iman→Imanul, Hakimah→Nurhakimah, Wadhihah→Wadihah).
+- DILANGKAU/ditandakan: kumpulan 3 naqib (hanya 2 pertama disimpan), kumpulan Hidayah I26 (tiada mad'u), Tingkatan 3 (tiada senarai), 7 laporan berganda (kekal yang pertama), tahun salah dibetulkan ke 2026, 'penuh/semua hadir' tanpa bilangan = semua mad'u kumpulan. Sheet 2025 dan TL (tamat) TIDAK diimport.
+- Skrin Analisa Usrah ada butang muat turun Excel (`downloadAnalisaUsrah`).

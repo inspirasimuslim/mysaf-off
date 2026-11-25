@@ -228,3 +228,40 @@ export async function fetchAnalisaUsrah(dari: string | null, hingga: string | nu
   if (error) throw error;
   return data as AnalisaUsrah;
 }
+
+// ----- Muat turun laporan analisa usrah (Excel) -----
+export async function downloadAnalisaUsrah(
+  data: AnalisaUsrah,
+  mode: import('./file-delivery').DeliveryMode,
+): Promise<{ rows: number; fileName: string; result: import('./file-delivery').DeliveryResult }> {
+  const XLSX = await import('xlsx');
+  const { deliverWorkbook } = await import('./xlsx-download');
+  const book = XLSX.utils.book_new();
+  const ringkas = data.kumpulan.map((x) => ({
+    Sekolah: x.sekolah,
+    Kumpulan: x.group_name ?? '',
+    "Bil. Mad'u": x.madu,
+    'Bil. Sesi': x.sesi,
+    'Sesi Bonding': x.sesi_bonding,
+    'Fikrah Diliputi': x.unit_silibus,
+    'Bulan Ada Sesi': x.bulan_ada,
+    'Bulan Sepatutnya': x.bulan_sepatutnya,
+    'Liputan (%)': pct(x.bulan_ada, x.bulan_sepatutnya) ?? '',
+    Hadir: x.hadir,
+    'Peluang Hadir': x.peluang,
+    'Kehadiran (%)': pct(x.hadir, x.peluang) ?? '',
+    'Sesi Terakhir': x.sesi_terakhir ?? '',
+    'Bulan Tiada Sesi': x.bulan_tiada.join(', '),
+  }));
+  const bulanan = data.bulanan.map((b) => ({
+    Bulan: b.bulan,
+    'Kumpulan Ada Sesi': b.kumpulan_ada,
+    'Kumpulan Sepatutnya': b.kumpulan_sepatutnya,
+    'Liputan (%)': pct(b.kumpulan_ada, b.kumpulan_sepatutnya) ?? '',
+  }));
+  XLSX.utils.book_append_sheet(book, XLSX.utils.json_to_sheet(ringkas), 'Setiap Kumpulan');
+  XLSX.utils.book_append_sheet(book, XLSX.utils.json_to_sheet(bulanan), 'Mengikut Bulan');
+  const fileName = 'analisa-usrah-' + data.dari + '-hingga-' + data.hingga + '.xlsx';
+  const result = await deliverWorkbook(book, fileName, 'Analisa Usrah', mode);
+  return { rows: ringkas.length, fileName, result };
+}
