@@ -162,6 +162,17 @@ export function NaqibHubSection({ defaultOpen }: { defaultOpen: boolean }) {
           </View>
         ) : null}
 
+        {hasGroups ? (
+          <View className="mb-3">
+            <ActionRow
+              icon="calendar-outline"
+              title="Tamrin"
+              subtitle="Lihat jadual tamrin dan rekod kehadiran mad'u anda"
+              onPress={() => router.push('/(app)/admin/perkaderan-program')}
+            />
+          </View>
+        ) : null}
+
         {!hasGroups ? (
           // Naqib baharu — tiada apa untuk diurus pun, terus ke Cipta.
           <ActionRow

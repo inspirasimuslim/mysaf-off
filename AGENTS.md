@@ -828,3 +828,14 @@ Konteks: mad'u ialah PELAJAR (Tingkatan 3-5, kebanyakannya bawah 18 tahun) dalam
   Kehadiran ikut padam (FK cascade). Admin Lajnah Perkaderan/Super Admin boleh padam kekal serta-merta (`perkaderan_padam_mad_u`); naqib hanya nyahaktif. Bahagian "Tidak aktif" hanya kelihatan kepada admin.
 - Hak TRUNCATE/REFERENCES/TRIGGER ditarik daripada `authenticated` pada 5 table perkaderan. Eksport Excel tidak diubah (tidak membawa no_tel).
 - BELUM (Fasa 2-3): aktiviti pra-keahlian (tamrin), ujian + markah, carta prestasi, status kemajuan, skrin utama naqib, carian admin untuk ratusan pelajar.
+
+# Perkaderan: program, tamrin, prestasi (2026-11-25, migration 177, sudah live di produksi)
+
+Rujukan: `supabase/migrations/20261125000177_perkaderan_program_tamrin_prestasi.sql`, `lib/perkaderan-program.ts`,
+`app/(app)/admin/perkaderan-program.tsx` (program + jadual tamrin), `perkaderan-tamrin.tsx` (kehadiran), `perkaderan-prestasi.tsx` + `perkaderan-prestasi-madu.tsx` (carta).
+- Table `perkaderan_program` (nama, sasaran_usrah, aktif), `perkaderan_tamrin` (tarikh tetap untuk SEMUA mad'u program), `perkaderan_tamrin_attendance` (baris wujud = hadir);
+  `sekolah_usrah_groups.program_id` (trigger: lalai program aktif terkini). Struktur: admin LAJNAH PERKADERAN can_edit / Super Admin; naqib baca sahaja.
+- Kehadiran tamrin: naqib untuk mad'u kumpulan SENDIRI, admin untuk semua (`perkaderan_tamrin_roster/set`). Naqib masuk melalui seksyen "Kumpulan Usrah Saya" -> Tamrin.
+- PRESTASI = RPC `perkaderan_prestasi_ringkasan/madu/detail`: HANYA Super Admin / can_view_perkaderan (42501 untuk orang lain, diuji). Naqib TIDAK nampak peratus/carta.
+  Peratus = hadir / sesi atau tamrin yang telah berlangsung SELEPAS mad'u ditambah (bukan pemeringkatan antara pelajar).
+- UJIAN: BELUM dibina (menunggu mekanisme daripada pemilik). Simpan fakta (markah/kehadiran) sahaja, tiada catatan subjektif tentang pelajar.
