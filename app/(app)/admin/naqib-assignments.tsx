@@ -45,6 +45,9 @@ const TINGKATAN_WARNA: Record<string, string> = {
 
 const sekolahRank = (nama: string) => (nama.includes('FALAHIAH') ? 0 : nama.includes('NAIM') ? 1 : 2);
 
+const sortSekolah = (list: PerkaderanSekolah[]) =>
+  [...list].sort((x, y) => sekolahRank(x.nama) - sekolahRank(y.nama) || x.nama.localeCompare(y.nama));
+
 const naqibNames = (g: PerkaderanSlot): string[] => [g.naqib_nama, g.partner_nama, ...(g.tambahan_nama ? g.tambahan_nama.split(' & ') : [])].filter((n): n is string => Boolean(n));
 
 export default function NaqibAssignmentsScreen() {
@@ -81,7 +84,7 @@ export default function NaqibAssignmentsScreen() {
       setSekolahList(list);
       setCandidates(members);
       setGroups(perSekolah.flatMap((slots, i) => slots.map((x) => ({ ...x, sekolah: list[i]!.nama }))));
-      setSekolah((cur) => (cur && list.some((x) => x.nama === cur) ? cur : (list[0]?.nama ?? null)));
+      setSekolah((cur) => (cur && list.some((x) => x.nama === cur) ? cur : (sortSekolah(list)[0]?.nama ?? null)));
     } catch (caught) {
       setBanner({ tone: 'negative', message: toMalayErrorVerbose(caught, 'Gagal memuatkan kumpulan.') });
     } finally {
@@ -123,11 +126,14 @@ export default function NaqibAssignmentsScreen() {
     setEditing(false);
     setNaqibCount(1);
     setMadUText('');
+    // Borang baharu: sekolah lalai = paling atas senarai (SMKA FALAHIAH).
+    const top = sortSekolah(sekolahList)[0]?.nama ?? null;
+    setSekolah(top);
     // Cadang kumpulan kosong pertama dalam sekolah + tingkatan semasa.
-    const used = new Set(groups.filter((x) => x.sekolah === sekolah && x.tingkatan === tingkatan).map((x) => String(x.no_kumpulan)));
+    const used = new Set(groups.filter((x) => x.sekolah === top && x.tingkatan === tingkatan).map((x) => String(x.no_kumpulan)));
     setNoKump(NO_OPTIONS.find((o) => !used.has(o.value))?.value ?? '1');
     setFormOpen(true);
-  }, [groups, sekolah, tingkatan]);
+  }, [groups, sekolahList, tingkatan]);
 
   const openEdit = useCallback((g: Group) => {
     setBanner(null);
@@ -252,7 +258,7 @@ export default function NaqibAssignmentsScreen() {
               <PickerField
                 label="Sekolah"
                 value={sekolah}
-                options={[...sekolahList].sort((x, y) => sekolahRank(x.nama) - sekolahRank(y.nama) || x.nama.localeCompare(y.nama)).map((x) => ({ value: x.nama, label: x.nama }))}
+                options={sortSekolah(sekolahList).map((x) => ({ value: x.nama, label: x.nama }))}
                 onChange={setSekolah}
                 clearable={false}
                 disabled={busy || editing}
