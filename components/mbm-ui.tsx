@@ -27,7 +27,17 @@ const CORAK = require('@/assets/images/mbm-corak.png');
  * Latar hijau bercorak. Web: `resizeMode="repeat"` tidak mengubin gambar (hanya satu salinan di
  * penjuru, selebihnya hijau kosong), jadi guna CSS background yang diulang. Native: ImageBackground.
  */
+/** Percubaan minimalis: `false` = hijau rata tanpa corak. Tukar ke `true` untuk memulihkan corak. */
+const GUNA_CORAK = false;
+
 export function MbmGreen({ children, className }: { children: ReactNode; className?: string }) {
+  if (!GUNA_CORAK) {
+    return (
+      <View style={{ backgroundColor: MBM.emerald }} className={className}>
+        {children}
+      </View>
+    );
+  }
   if (Platform.OS === 'web') {
     const uri = Asset.fromModule(CORAK).uri;
     const webStyle = {
