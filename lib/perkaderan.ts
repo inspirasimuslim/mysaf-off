@@ -79,7 +79,7 @@ export async function fetchMyGroups(): Promise<UsrahGroup[]> {
   const { data, error } = await supabase
     .from('sekolah_usrah_groups')
     .select('*')
-    .eq('naqib_member_id', memberId)
+    .or('naqib_member_id.eq.' + memberId + ',default_partner_naqib_member_id.eq.' + memberId)
     .eq('is_active', true)
     .order('created_at', { ascending: true });
   if (error) throw error;
@@ -248,6 +248,9 @@ export type SessionInput = {
   partner_naqib_member_id: string | null;
   /** Diabaikan bila `partner_naqib_member_id` null — DB kekalkan `true` sebagai lalai. */
   partner_naqib_hadir: boolean;
+  jenis: 'fikrah' | 'bonding';
+  silibus_ids: string[];
+  refleksi: string | null;
 };
 
 export async function createSession(groupId: string, input: SessionInput): Promise<UsrahSession> {

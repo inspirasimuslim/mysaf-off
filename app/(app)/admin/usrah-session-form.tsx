@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import { ScreenHeader } from '@/components/screen-header';
 import { Badge } from '@/components/ui/badge';
@@ -12,6 +12,7 @@ import { LoadingScreen } from '@/components/ui/loading-screen';
 import { MemberPickerField } from '@/components/ui/member-picker-field';
 import { PickerField } from '@/components/ui/picker-field';
 import { Screen } from '@/components/ui/screen';
+import { Segmented } from '@/components/ui/segmented';
 import { SectionTitle } from '@/components/ui/section-title';
 import { SelectRow } from '@/components/ui/select-row';
 import { TextField } from '@/components/ui/text-field';
@@ -20,6 +21,7 @@ import { ToastBanner } from '@/components/ui/toast';
 import { usePerkaderanAccess } from '@/lib/department-access';
 import { toMalayErrorVerbose } from '@/lib/errors';
 import { fetchMembersForPicker } from '@/lib/members';
+import { fetchSilibus, type SilibusRow } from '@/lib/perkaderan-program';
 import { useGoBack } from '@/lib/navigation';
 import {
   addMadU,
@@ -62,6 +64,11 @@ export default function UsrahSessionFormScreen() {
   const [sessionDate, setSessionDate] = useState(today());
   const [locationText, setLocationText] = useState('');
   const [topik, setTopik] = useState('');
+  const [jenis, setJenis] = useState<'fikrah' | 'bonding'>('fikrah');
+  const [silibusIds, setSilibusIds] = useState<string[]>([]);
+  const [silibusTingkatan, setSilibusTingkatan] = useState<string | null>(null);
+  const [silibus, setSilibus] = useState<SilibusRow[]>([]);
+  const [refleksi, setRefleksi] = useState('');
   const [partnerNaqibId, setPartnerNaqibId] = useState<string | null>(null);
   const [partnerHadir, setPartnerHadir] = useState(true);
   const [candidates, setCandidates] = useState<AttendanceCandidate[]>([]);
@@ -82,12 +89,19 @@ export default function UsrahSessionFormScreen() {
         fetchMembersForPicker(),
       ]);
 
-      setCanEdit(isSuperAdmin() || departmentCanEdit || Boolean(group && myMemberId && group.naqib_member_id === myMemberId));
+      setCanEdit(
+        isSuperAdmin() ||
+          departmentCanEdit ||
+          Boolean(group && myMemberId && (group.naqib_member_id === myMemberId || group.default_partner_naqib_member_id === myMemberId)),
+      );
 
       if (session) {
         setSessionDate(session.session_date);
         setLocationText(session.location_text ?? '');
         setTopik(session.topik ?? '');
+        setJenis(session.jenis ?? 'fikrah');
+        setSilibusIds(session.silibus_ids ?? []);
+        setRefleksi(session.refleksi ?? '');
         setPartnerNaqibId(session.partner_naqib_member_id);
         setPartnerHadir(session.partner_naqib_hadir);
       } else {
@@ -97,6 +111,8 @@ export default function UsrahSessionFormScreen() {
       }
 
       setCandidates(attendanceCandidates);
+      const sedia = attendanceCandidates.map((c) => c.tingkatan).find(Boolean) ?? null;
+      setSilibusTingkatan((current) => current ?? sedia);
       setPresent(new Set(attendanceCandidates.filter((c) => c.hadir).map((c) => c.mad_u_id)));
       setMemberCandidates(pickerRows);
     } catch (caught) {
@@ -137,6 +153,9 @@ export default function UsrahSessionFormScreen() {
         session_date: sessionDate,
         location_text: locationText.trim() || null,
         topik: topik.trim() || null,
+        jenis,
+        silibus_ids: jenis === 'fikrah' ? silibusIds : [],
+        refleksi: refleksi.trim() || null,
         partner_naqib_member_id: partnerNaqibId,
         partner_naqib_hadir: partnerHadir,
       };
@@ -150,7 +169,7 @@ export default function UsrahSessionFormScreen() {
     } finally {
       setSaving(false);
     }
-  }, [groupId, id, locationText, partnerHadir, partnerNaqibId, present, router, saving, sessionDate, topik]);
+  }, [groupId, id, jenis, locationText, partnerHadir, partnerNaqibId, present, refleksi, router, saving, sessionDate, silibusIds, topik]);
 
   // --- Tambah mad'u baharu terus dalam borang sesi ----------------------------
   const [addingMadU, setAddingMadU] = useState(false);
@@ -181,6 +200,27 @@ export default function UsrahSessionFormScreen() {
       setMadUBusy(false);
     }
   }, [groupId, madUBusy, madUNama, madUTingkatan]);
+
+  useEffect(() => {
+    if (!silibusTingkatan) return;
+    let active = true;
+    fetchSilibus(silibusTingkatan)
+      .then((rows) => active && setSilibus(rows))
+      .catch(() => active && setSilibus([]));
+    return () => {
+      active = false;
+    };
+  }, [silibusTingkatan]);
+
+  const toggleSilibus = useCallback((silibusId: string) => {
+    setSilibusIds((current) => (current.includes(silibusId) ? current.filter((x) => x !== silibusId) : [...current, silibusId]));
+  }, []);
+
+  const semuaHadir = candidates.length > 0 && candidates.every((c) => present.has(c.mad_u_id));
+  const setSemuaHadir = useCallback(
+    (next: boolean) => setPresent(next ? new Set(candidates.map((c) => c.mad_u_id)) : new Set()),
+    [candidates],
+  );
 
   const hadirCount = present.size;
   const title = useMemo(() => (id ? 'Sunting Sesi' : 'Sesi Baharu'), [id]);
@@ -213,7 +253,50 @@ export default function UsrahSessionFormScreen() {
           <View className="gap-3">
             <DateTimeField label="Tarikh sesi" mode="date" value={sessionDate} onChange={setSessionDate} disabled={saving} />
             <TextField label="Lokasi" value={locationText} onChangeText={setLocationText} editable={!saving} autoCapitalize="sentences" />
-            <TextField label="Topik" value={topik} onChangeText={setTopik} editable={!saving} autoCapitalize="sentences" />
+            <Segmented
+              label="Jenis sesi"
+              value={jenis}
+              options={[
+                { value: 'fikrah', label: 'Fikrah' },
+                { value: 'bonding', label: 'Bonding' },
+              ]}
+              onChange={setJenis}
+              disabled={saving}
+            />
+            {jenis === 'fikrah' ? (
+              <View className="gap-2">
+                <PickerField
+                  label="Silibus Fikrah (tingkatan)"
+                  value={silibusTingkatan}
+                  options={TINGKATAN_OPTIONS}
+                  onChange={setSilibusTingkatan}
+                  disabled={saving}
+                />
+                {silibus.length === 0 ? (
+                  <Text className="text-xs text-ink-muted">Senarai silibus belum ditetapkan. Tulis topik di bawah, atau minta admin Lajnah isi silibus.</Text>
+                ) : (
+                  silibus.map((row) => (
+                    <SelectRow
+                      key={row.id}
+                      title={'F' + row.urutan + ' · ' + row.tajuk}
+                      selected={silibusIds.includes(row.id)}
+                      disabled={saving}
+                      onPress={() => toggleSilibus(row.id)}
+                    />
+                  ))
+                )}
+                <Text className="text-xs text-ink-muted">Pilih lebih daripada satu jika dua silibus digabungkan dalam satu sesi.</Text>
+              </View>
+            ) : null}
+            <TextField label="Topik / catatan tajuk (pilihan)" value={topik} onChangeText={setTopik} editable={!saving} autoCapitalize="sentences" />
+            <TextField
+              label="Ulasan / refleksi naqib"
+              value={refleksi}
+              onChangeText={setRefleksi}
+              editable={!saving}
+              multiline
+              autoCapitalize="sentences"
+            />
           </View>
 
           <View>
@@ -265,6 +348,19 @@ export default function UsrahSessionFormScreen() {
                 }}
               />
             </View>
+
+            {candidates.length > 0 ? (
+              <View className="pb-3">
+                <ToggleRow
+                  icon="checkmark-done-outline"
+                  title="Semua hadir"
+                  subtitle="Hidupkan untuk tanda semua. Kemudian nyahtanda nama yang tidak hadir."
+                  value={semuaHadir}
+                  onValueChange={setSemuaHadir}
+                  disabled={saving}
+                />
+              </View>
+            ) : null}
 
             {candidates.length === 0 ? (
               <EmptyState icon="people-outline" title="Tiada mad'u" description="Tambah mad'u menggunakan butang di atas." />

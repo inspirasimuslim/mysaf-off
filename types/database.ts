@@ -1095,6 +1095,9 @@ export type UsrahSession = {
   /** Untuk SESI INI sahaja — menukarnya tidak menjejaskan kumpulan atau sesi lain. */
   partner_naqib_member_id: string | null;
   partner_naqib_hadir: boolean;
+  jenis: 'fikrah' | 'bonding';
+  silibus_ids: string[];
+  refleksi: string | null;
   recorded_by: string | null;
   created_at: string;
   updated_at: string;

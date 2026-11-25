@@ -441,7 +441,7 @@ export default function AdminHubScreen() {
           <CollapsibleSection
             variant="plain"
             title="Lajnah Perkaderan (LP)"
-            count={(perkaderanAccess.canEdit ? 5 : 4) + fbCount('LAJNAH PERKADERAN')} alert={fbUnread('LAJNAH PERKADERAN')}
+            count={(perkaderanAccess.canEdit ? 6 : 4) + fbCount('LAJNAH PERKADERAN')} alert={fbUnread('LAJNAH PERKADERAN')}
             defaultOpen={openByDefault}>
             {perkaderanAccess.canEdit ? (
               <ActionRow
@@ -468,6 +468,14 @@ export default function AdminHubScreen() {
               subtitle={perkaderanAccess.canEdit ? 'Tetapkan program pra-keahlian dan tarikh tamrin' : 'Lihat jadual tamrin dan rekod kehadiran'}
               onPress={() => router.push('/(app)/admin/perkaderan-program')}
             />
+            {perkaderanAccess.canEdit ? (
+              <ActionRow
+                icon="library-outline"
+                title="Silibus Fikrah"
+                subtitle="Tetapkan senarai Fikrah setiap tingkatan"
+                onPress={() => router.push('/(app)/admin/perkaderan-silibus')}
+              />
+            ) : null}
             <ActionRow
               icon="trending-up-outline"
               title="Prestasi Pra-Keahlian"

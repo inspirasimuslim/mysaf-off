@@ -7,7 +7,15 @@ import { supabase } from './supabase';
  */
 
 export type PerkaderanProgram = { id: string; nama: string; sasaran_usrah: number; aktif: boolean };
-export type PerkaderanTamrin = { id: string; program_id: string; nama: string; tarikh: string; lokasi: string | null };
+export const TAMRIN_JENIS_OPTIONS = [
+  { value: 'taq', label: 'TAQ — Tamrin Asas Qiadi' },
+  { value: 'tampenor', label: 'Tampenor — Tamrin Pengurusan Organisasi' },
+  { value: 'qtc', label: 'QTC — Qiadi Training Course' },
+  { value: 'kuiz_3k', label: 'Kuiz 3K' },
+  { value: 'tamrin_3k', label: 'Tamrin 3K' },
+  { value: 'lain', label: 'Lain-lain' },
+];
+export type PerkaderanTamrin = { id: string; program_id: string; nama: string; tarikh: string; lokasi: string | null; jenis: string; tingkatan: string | null };
 export type TamrinRosterRow = { mad_u_id: string; nama: string; tingkatan: string; sekolah: string; group_name: string; hadir: boolean };
 
 export type PrestasiMadU = {
@@ -62,15 +70,15 @@ export async function saveProgram(input: { id?: string; nama: string; sasaran_us
 export async function fetchTamrin(programId: string): Promise<PerkaderanTamrin[]> {
   const { data, error } = await supabase
     .from('perkaderan_tamrin')
-    .select('id, program_id, nama, tarikh, lokasi')
+    .select('id, program_id, nama, tarikh, lokasi, jenis, tingkatan')
     .eq('program_id', programId)
     .order('tarikh', { ascending: true });
   if (error) throw error;
   return (data as PerkaderanTamrin[] | null) ?? [];
 }
 
-export async function saveTamrin(input: { id?: string; program_id: string; nama: string; tarikh: string; lokasi: string }): Promise<void> {
-  const row = { program_id: input.program_id, nama: input.nama.trim(), tarikh: input.tarikh, lokasi: input.lokasi.trim() || null };
+export async function saveTamrin(input: { id?: string; program_id: string; nama: string; tarikh: string; lokasi: string; jenis: string; tingkatan: string | null }): Promise<void> {
+  const row = { program_id: input.program_id, nama: input.nama.trim(), tarikh: input.tarikh, lokasi: input.lokasi.trim() || null, jenis: input.jenis, tingkatan: input.tingkatan };
   const { error } = input.id
     ? await supabase.from('perkaderan_tamrin').update(row).eq('id', input.id)
     : await supabase.from('perkaderan_tamrin').insert(row);
@@ -166,4 +174,28 @@ export async function fetchPrestasiUjianMadU(madUId: string): Promise<PrestasiUj
   const { data, error } = await supabase.rpc('perkaderan_prestasi_ujian_madu', { p_mad_u: madUId });
   if (error) throw error;
   return ((data as PrestasiUjianMadU[] | null) ?? []).map((u) => ({ ...u, penuh: Number(u.penuh), lulus_markah: Number(u.lulus_markah), markah: u.markah == null ? null : Number(u.markah) }));
+}
+
+// ----- Silibus (migration 179) -----
+export type SilibusRow = { id: string; tingkatan: string; urutan: number; tajuk: string };
+
+export async function fetchSilibus(tingkatan?: string | null): Promise<SilibusRow[]> {
+  let query = supabase.from('perkaderan_silibus').select('id, tingkatan, urutan, tajuk').order('tingkatan').order('urutan');
+  if (tingkatan) query = query.eq('tingkatan', tingkatan);
+  const { data, error } = await query;
+  if (error) throw error;
+  return (data as SilibusRow[] | null) ?? [];
+}
+
+export async function saveSilibus(input: { id?: string; tingkatan: string; urutan: number; tajuk: string }): Promise<void> {
+  const row = { tingkatan: input.tingkatan, urutan: input.urutan, tajuk: input.tajuk.trim() };
+  const { error } = input.id
+    ? await supabase.from('perkaderan_silibus').update(row).eq('id', input.id)
+    : await supabase.from('perkaderan_silibus').insert(row);
+  if (error) throw error;
+}
+
+export async function deleteSilibus(id: string): Promise<void> {
+  const { error } = await supabase.from('perkaderan_silibus').delete().eq('id', id);
+  if (error) throw error;
 }

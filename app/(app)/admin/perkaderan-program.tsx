@@ -16,11 +16,14 @@ import { SectionTitle } from '@/components/ui/section-title';
 import { TextField } from '@/components/ui/text-field';
 import { DateTimeField } from '@/components/ui/date-time-field';
 import { ToggleRow } from '@/components/ui/toggle-row';
+import { PickerField } from '@/components/ui/picker-field';
+import { TINGKATAN_OPTIONS } from '@/types/database';
 import { usePerkaderanAccess } from '@/lib/department-access';
 import { toMalayErrorVerbose } from '@/lib/errors';
 import { useGoBack } from '@/lib/navigation';
 import {
   deleteTamrin,
+  TAMRIN_JENIS_OPTIONS,
   deleteUjian,
   fetchUjian,
   saveUjian,
@@ -128,6 +131,8 @@ export default function PerkaderanProgramScreen() {
   const [tNama, setTNama] = useState('');
   const [tTarikh, setTTarikh] = useState(todayIso());
   const [tLokasi, setTLokasi] = useState('');
+  const [tJenis, setTJenis] = useState('lain');
+  const [tTingkatan, setTTingkatan] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<PerkaderanTamrin | null>(null);
 
   const openTamrin = (t: PerkaderanTamrin | null) => {
@@ -135,6 +140,8 @@ export default function PerkaderanProgramScreen() {
     setTNama(t?.nama ?? '');
     setTTarikh(t?.tarikh ?? todayIso());
     setTLokasi(t?.lokasi ?? '');
+    setTJenis(t?.jenis ?? 'lain');
+    setTTingkatan(t?.tingkatan ?? null);
     setTOpen(true);
   };
 
@@ -142,7 +149,7 @@ export default function PerkaderanProgramScreen() {
     if (!program || !tNama.trim()) return;
     setBusy(true);
     try {
-      await saveTamrin({ id: tId, program_id: program.id, nama: tNama, tarikh: tTarikh, lokasi: tLokasi });
+      await saveTamrin({ id: tId, program_id: program.id, nama: tNama, tarikh: tTarikh, lokasi: tLokasi, jenis: tJenis, tingkatan: tTingkatan });
       setTOpen(false);
       setBanner({ tone: 'positive', message: 'Tamrin disimpan.' });
       await load();
@@ -264,7 +271,8 @@ export default function PerkaderanProgramScreen() {
                     <View className="flex-1">
                       <Text className="text-base font-semibold text-ink">{t.nama}</Text>
                       <Text className="text-xs text-ink-muted">
-                        {dateLabel(t.tarikh)}
+                        {TAMRIN_JENIS_OPTIONS.find((o) => o.value === t.jenis)?.label.split(' — ')[0] ?? 'Tamrin'}
+                        {t.tingkatan ? ' · ' + t.tingkatan : ''} · {dateLabel(t.tarikh)}
                         {t.lokasi ? ' · ' + t.lokasi : ''}
                       </Text>
                     </View>
@@ -341,6 +349,8 @@ export default function PerkaderanProgramScreen() {
         footer={<Button label="Simpan" loading={busy} disabled={busy || !tNama.trim()} onPress={() => void submitTamrin()} />}>
         <TextField label="Nama tamrin" value={tNama} onChangeText={setTNama} editable={!busy} />
         <DateTimeField label="Tarikh" mode="date" value={tTarikh} onChange={setTTarikh} />
+        <PickerField label="Jenis tamrin" value={tJenis} options={TAMRIN_JENIS_OPTIONS} onChange={(v) => setTJenis(v ?? "lain")} disabled={busy} />
+        <PickerField label="Tingkatan (pilihan)" value={tTingkatan} options={TINGKATAN_OPTIONS} onChange={setTTingkatan} disabled={busy} />
         <TextField label="Lokasi (pilihan)" value={tLokasi} onChangeText={setTLokasi} editable={!busy} />
       </FormModal>
 

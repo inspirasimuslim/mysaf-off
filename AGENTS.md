@@ -842,3 +842,12 @@ Rujukan: `supabase/migrations/20261125000177_perkaderan_program_tamrin_prestasi.
   (table terkunci, akses melalui RPC `perkaderan_ujian_roster/set`). Naqib memasukkan markah mad'u kumpulan SENDIRI (angka, kosong = belum ada); admin boleh semua. Markah > markah_penuh ditolak.
   Prestasi ujian (`perkaderan_prestasi_ujian`, `..._ujian_madu`) admin Lajnah/Super Admin sahaja. Skrin: `admin/perkaderan-ujian.tsx`, bahagian Ujian dalam `perkaderan-program.tsx`.
   Naqib nampak markah yang dia masukkan sendiri (perlu untuk sunting) tetapi bukan purata/carta/lulus-gagal. Simpan fakta sahaja, tiada catatan subjektif tentang pelajar.
+
+# Laporan usrah: silibus, jenis sesi, naqib setaraf (2026-11-25, migration 179, sudah live di produksi)
+
+Rujukan: `supabase/migrations/20261125000179_laporan_usrah_silibus.sql`, `app/(app)/admin/usrah-session-form.tsx`, `perkaderan-silibus.tsx`, `lib/perkaderan-program.ts`.
+- `perkaderan_silibus` (tingkatan, urutan, tajuk) diurus admin Lajnah/Super Admin; TIADA data awal — admin isi senarai Fikrah rasmi. Naqib membaca.
+- `sekolah_usrah_sessions` +`jenis` (fikrah/bonding), `silibus_ids uuid[]` (lebih satu bila dua silibus digabung), `refleksi`. `perkaderan_tamrin` +`jenis` (taq/tampenor/qtc/kuiz_3k/tamrin_3k/lain), `tingkatan`.
+- NAQIB SETARAF: `is_own_naqib_group` + polisi SELECT kumpulan menerima `default_partner_naqib_member_id`. Polisi UPDATE/DELETE kumpulan TIDAK diubah (naqib utama + admin sahaja). `fetchMyGroups` guna `.or(...)`.
+- Borang sesi: togol "Semua hadir" (tanda semua, nyahtanda yang tidak hadir).
+- BELUM: skrin analisa usrah, kelayakan 3K (ambang "cukup penyertaan" belum ditetapkan pengguna), import kumpulan/mad'u daripada sheet.
