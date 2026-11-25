@@ -39,6 +39,12 @@ type GroupRow = {
   bulan: (SelBulan[] | null)[];
 };
 
+// Warna pudar setiap tingkatan (lut sinar, jadi sesuai tema cerah/gelap) untuk senang dirujuk.
+const TINGKATAN_WARNA: Record<string, string> = {
+  '3': 'rgba(245, 158, 11, 0.16)',
+  '4': 'rgba(59, 130, 246, 0.14)',
+  '5': 'rgba(16, 185, 129, 0.16)',
+};
 const W_GRUP = 64;
 const W_BLN = 66;
 const TABLE_W = W_GRUP + W_BLN * 12 + 16;
@@ -222,6 +228,14 @@ export default function PerkaderanGroupsScreen() {
                 title={'Usrah Setiap Bulan ' + tahun}
                 caption="Fikrah yang dibuat, atau Tiada. Ketuk nombor kumpulan untuk lihat naqib."
               />
+              <View className="mb-2 flex-row gap-3">
+                {Object.entries(TINGKATAN_WARNA).map(([t, c]) => (
+                  <View key={t} className="flex-row items-center gap-1.5">
+                    <View style={{ backgroundColor: c }} className="h-3 w-3 rounded-sm border border-line" />
+                    <Text className="text-xs text-ink-muted">{'Tingkatan ' + t}</Text>
+                  </View>
+                ))}
+              </View>
               <View className="overflow-hidden rounded-card border border-line bg-surface">
                 <ScrollView horizontal showsHorizontalScrollIndicator nestedScrollEnabled>
                   <View style={{ width: TABLE_W }}>
@@ -241,7 +255,9 @@ export default function PerkaderanGroupsScreen() {
                           {i === 0 || groups[i - 1]!.sekolah !== g.sekolah ? (
                             <Text className="bg-surface-muted px-2 py-1 text-xs font-bold text-ink">{g.sekolah}</Text>
                           ) : null}
-                          <View className="flex-row items-center border-t border-line px-2 py-1">
+                          <View
+                            style={{ backgroundColor: TINGKATAN_WARNA[g.tingkatan] }}
+                            className="flex-row items-center border-t border-line px-2 py-1">
                             <Pressable
                               accessibilityRole="button"
                               onPress={() => setDetail(g)}

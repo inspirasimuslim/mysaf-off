@@ -159,24 +159,35 @@ export default function AdminHubScreen() {
   const containerY = useRef(0);
   const focused = useRef<{ title: string; y: number } | null>(null);
   const [scrollTarget, setScrollTarget] = useState<{ y: number; token: number } | undefined>(undefined);
+  const [activeSection, setActiveSection] = useState<string | null>(null);
   const scrollToFocused = useCallback(() => {
     const f = focused.current;
     if (f) setScrollTarget({ y: Math.max(0, containerY.current + f.y - 8), token: Date.now() });
   }, []);
   const hubFocus = useMemo(
     () => ({
+      active: activeSection,
       opened: (title: string, y: number) => {
         focused.current = { title, y };
+        setActiveSection(title);
         scrollToFocused();
       },
       closed: (title: string) => {
-        if (focused.current?.title === title) focused.current = null;
+        if (focused.current?.title === title) {
+          focused.current = null;
+          setActiveSection(null);
+        }
       },
       moved: (title: string, y: number) => {
-        if (focused.current?.title === title) focused.current.y = y;
+        const f = focused.current;
+        if (f && f.title === title && Math.abs(f.y - y) > 1) {
+          // Seksyen sebelumnya tutup -> kedudukan berubah; tatal semula ke seksyen yang baru dibuka.
+          f.y = y;
+          scrollToFocused();
+        }
       },
     }),
-    [scrollToFocused],
+    [activeSection, scrollToFocused],
   );
   // Screen menatal ke atas bila difokus semula; kesan ini berjalan selepasnya dan memulihkan seksyen yang dibuka.
   useFocusEffect(

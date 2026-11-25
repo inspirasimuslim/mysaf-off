@@ -49,6 +49,13 @@ export function CollapsibleSection({
   const plain = variant === 'plain';
   const hubFocus = useHubFocus();
   const yRef = useRef(0);
+  // Hub Admin: bila seksyen lain dibuka, seksyen ini tutup (fokus satu department pada satu masa).
+  const activeTitle = hubFocus?.active ?? null;
+  const [seenActive, setSeenActive] = useState<string | null>(activeTitle);
+  if (seenActive !== activeTitle) {
+    setSeenActive(activeTitle);
+    if (activeTitle !== null && activeTitle !== title && open) setOpen(false);
+  }
   const toggle = () => {
     const next = !open;
     setOpen(next);

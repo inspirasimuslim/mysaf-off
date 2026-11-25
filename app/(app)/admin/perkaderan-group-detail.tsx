@@ -23,6 +23,7 @@ import { fetchMembersForPicker } from '@/lib/members';
 import { useGoBack } from '@/lib/navigation';
 import {
   addMadU,
+  updateMadU,
   deleteOrArchiveGroup,
   deleteSession,
   fetchGroup,
@@ -161,13 +162,25 @@ export default function PerkaderanGroupDetailScreen() {
   const [madUKelas, setMadUKelas] = useState('');
   const [madUTel, setMadUTel] = useState('');
   const [madUBusy, setMadUBusy] = useState(false);
+  const [editingMadUId, setEditingMadUId] = useState<string | null>(null);
 
   const openAddMadU = useCallback(() => {
     setBanner(null);
+    setEditingMadUId(null);
     setMadUNama('');
     setMadUTingkatan(null);
     setMadUKelas('');
     setMadUTel('');
+    setAddingMadU(true);
+  }, []);
+
+  const openEditMadU = useCallback((mu: UsrahMadU) => {
+    setBanner(null);
+    setEditingMadUId(mu.id);
+    setMadUNama(mu.nama);
+    setMadUTingkatan(mu.tingkatan);
+    setMadUKelas(mu.kelas ?? '');
+    setMadUTel(mu.no_tel ?? '');
     setAddingMadU(true);
   }, []);
 
@@ -176,16 +189,17 @@ export default function PerkaderanGroupDetailScreen() {
 
     setMadUBusy(true);
     try {
-      await addMadU(group.id, madUNama, madUTingkatan, madUKelas, madUTel);
+      if (editingMadUId) await updateMadU(editingMadUId, madUNama, madUTingkatan, madUKelas, madUTel);
+      else await addMadU(group.id, madUNama, madUTingkatan, madUKelas, madUTel);
       setAddingMadU(false);
       await load();
-      setBanner({ tone: 'positive', message: madUNama.trim() + " berjaya ditambah ke senarai mad'u." });
+      setBanner({ tone: 'positive', message: editingMadUId ? 'Butiran ' + madUNama.trim() + ' dikemas kini.' : madUNama.trim() + " berjaya ditambah ke senarai mad'u." });
     } catch (caught) {
       setBanner({ tone: 'negative', message: toMalayErrorVerbose(caught, "Gagal menambah mad'u.") });
     } finally {
       setMadUBusy(false);
     }
-  }, [group, load, madUBusy, madUKelas, madUNama, madUTel, madUTingkatan]);
+  }, [editingMadUId, group, load, madUBusy, madUKelas, madUNama, madUTel, madUTingkatan]);
 
   const [pendingRemoveMadU, setPendingRemoveMadU] = useState<UsrahMadU | null>(null);
   const [removeMadUBusy, setRemoveMadUBusy] = useState(false);
@@ -368,6 +382,9 @@ export default function PerkaderanGroupDetailScreen() {
                       {mu.no_tel ? <Text className="mt-0.5 text-sm text-ink-muted">{mu.no_tel}</Text> : null}
                     </View>
                     {canPurge ? (
+                      <IconButton icon="create-outline" accessibilityLabel={'Sunting ' + mu.nama} onPress={() => openEditMadU(mu)} />
+                    ) : null}
+                    {canPurge ? (
                       <IconButton
                         icon="person-remove-outline"
                         tone="danger"
@@ -483,11 +500,11 @@ export default function PerkaderanGroupDetailScreen() {
 
       <FormModal
         visible={addingMadU}
-        title="Tambah Mad'u"
+        title={editingMadUId ? "Sunting Mad'u" : "Tambah Mad'u"}
         dismissable={!madUBusy}
         onClose={() => setAddingMadU(false)}
         footer={
-          <Button label="Tambah" loading={madUBusy} disabled={madUBusy || !madUNama.trim()} onPress={() => void submitMadU()} />
+          <Button label={editingMadUId ? 'Simpan' : 'Tambah'} loading={madUBusy} disabled={madUBusy || !madUNama.trim()} onPress={() => void submitMadU()} />
         }>
         <TextField label="Nama" value={madUNama} onChangeText={setMadUNama} editable={!madUBusy} autoCapitalize="words" />
         <PickerField

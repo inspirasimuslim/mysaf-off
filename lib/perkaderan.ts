@@ -208,6 +208,21 @@ export async function addMadU(
   return data as UsrahMadU;
 }
 
+/** Sunting butiran mad'u (admin Lajnah Perkaderan; RLS UPDATE). */
+export async function updateMadU(
+  id: string,
+  nama: string,
+  tingkatan: string | null,
+  kelas: string | null,
+  noTel: string | null,
+): Promise<void> {
+  const { error } = await supabase
+    .from('sekolah_usrah_mad_u')
+    .update({ nama: nama.trim(), tingkatan: tingkatan?.trim() || null, kelas: kelas?.trim() || null, no_tel: noTel?.trim() || null })
+    .eq('id', id);
+  if (error) throw error;
+}
+
 /** Padam kekal (admin LAJNAH PERKADERAN sahaja) — rekod kehadiran mad'u itu turut hilang. */
 export async function padamMadUKekal(id: string): Promise<void> {
   const { error } = await supabase.rpc('perkaderan_padam_mad_u', { p_id: id });

@@ -1,5 +1,5 @@
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Text, View } from 'react-native';
 
 import { ScreenHeader } from '@/components/screen-header';
@@ -33,6 +33,8 @@ const NO_OPTIONS = Array.from({ length: 10 }, (_, i) => ({ value: String(i + 1),
 type Banner = { tone: 'positive' | 'info' | 'negative'; message: string } | null;
 type Group = PerkaderanSlot & { sekolah: string };
 
+const sekolahRank = (nama: string) => (nama.includes('FALAHIAH') ? 0 : nama.includes('NAIM') ? 1 : 2);
+
 const naqibNames = (g: PerkaderanSlot): string[] => [g.naqib_nama, g.partner_nama, ...(g.tambahan_nama ? g.tambahan_nama.split(' & ') : [])].filter((n): n is string => Boolean(n));
 
 export default function NaqibAssignmentsScreen() {
@@ -54,8 +56,11 @@ export default function NaqibAssignmentsScreen() {
   const [naqibId, setNaqibId] = useState<string | null>(null);
   const [partnerId, setPartnerId] = useState<string | null>(null);
   const [naqib3Id, setNaqib3Id] = useState<string | null>(null);
-  const [naqib4Id, setNaqib4Id] = useState<string | null>(null);
+  const [, setNaqib4Id] = useState<string | null>(null);
+  const [naqibCount, setNaqibCount] = useState(1);
   const [busy, setBusy] = useState(false);
+  const formY = useRef(0);
+  const [scrollTarget, setScrollTarget] = useState<{ y: number; token: number } | undefined>(undefined);
 
   const load = useCallback(async () => {
     try {
@@ -88,6 +93,8 @@ export default function NaqibAssignmentsScreen() {
     setPartnerId(currentSlot?.partner_id ?? null);
     setNaqib3Id(currentSlot?.tambahan_ids?.[0] ?? null);
     setNaqib4Id(currentSlot?.tambahan_ids?.[1] ?? null);
+    // Maks 3 naqib pada borang: tunjuk medan sebanyak yang sudah diisi.
+    setNaqibCount(currentSlot?.partner_id ? (currentSlot.tambahan_ids?.[0] ? 3 : 2) : 1);
   }, [currentSlot]);
 
   const noOptions = useMemo(
@@ -102,6 +109,7 @@ export default function NaqibAssignmentsScreen() {
   const openNew = useCallback(() => {
     setBanner(null);
     setEditing(false);
+    setNaqibCount(1);
     // Cadang kumpulan kosong pertama dalam sekolah + tingkatan semasa.
     const used = new Set(groups.filter((x) => x.sekolah === sekolah && x.tingkatan === tingkatan).map((x) => String(x.no_kumpulan)));
     setNoKump(NO_OPTIONS.find((o) => !used.has(o.value))?.value ?? '1');
@@ -115,6 +123,8 @@ export default function NaqibAssignmentsScreen() {
     setTingkatan(g.tingkatan);
     setNoKump(String(g.no_kumpulan));
     setFormOpen(true);
+    // Terus ke ruang edit di atas (borang berada di bahagian atas halaman).
+    setScrollTarget({ y: Math.max(0, formY.current - 8), token: Date.now() });
   }, []);
 
   const submit = useCallback(async () => {
@@ -127,8 +137,8 @@ export default function NaqibAssignmentsScreen() {
         tingkatan,
         no: Number(noKump),
         naqibId,
-        partnerId,
-        tambahanIds: [naqib3Id, naqib4Id].filter((x): x is string => Boolean(x)),
+        partnerId: naqibCount >= 2 ? partnerId : null,
+        tambahanIds: naqibCount >= 3 && naqib3Id ? [naqib3Id] : [],
       });
       await load();
       setBanner({ tone: 'positive', message: 'Disimpan: ' + sekolah + ', ' + tingkatan + ', Kumpulan ' + noKump + '.' });
@@ -138,7 +148,7 @@ export default function NaqibAssignmentsScreen() {
     } finally {
       setBusy(false);
     }
-  }, [busy, load, naqib3Id, naqib4Id, naqibId, noKump, partnerId, sekolah, tingkatan]);
+  }, [busy, load, naqib3Id, naqibCount, naqibId, noKump, partnerId, sekolah, tingkatan]);
 
   // --- Urus senarai sekolah ---
   const [managingSekolah, setManagingSekolah] = useState(false);
@@ -198,30 +208,44 @@ export default function NaqibAssignmentsScreen() {
 
   return (
     <>
-      <Screen padTop={false} wide>
+      <Screen padTop={false} wide scrollTarget={scrollTarget}>
         <ScreenHeader eyebrow="Panel Admin" title="Naqib/Naqibah" subtitle={groups.length + ' kumpulan'} onBackPress={goBack} />
 
         <View className="gap-4 px-gutter pt-6">
           {banner ? <ToastBanner tone={banner.tone} message={banner.message} /> : null}
 
           {formOpen ? (
-            <View className="gap-3 rounded-card border border-line bg-surface p-card">
+            <View
+              onLayout={(e) => {
+                formY.current = e.nativeEvent.layout.y;
+              }}
+              className="gap-3 rounded-card border border-line bg-surface p-card">
               <Text className="text-base font-semibold text-ink">{editing ? 'Edit Kumpulan' : 'Tambah Kumpulan'}</Text>
               <PickerField
                 label="Sekolah"
                 value={sekolah}
-                options={sekolahList.map((x) => ({ value: x.nama, label: x.nama }))}
+                options={[...sekolahList].sort((x, y) => sekolahRank(x.nama) - sekolahRank(y.nama) || x.nama.localeCompare(y.nama)).map((x) => ({ value: x.nama, label: x.nama }))}
                 onChange={setSekolah}
                 clearable={false}
                 disabled={busy || editing}
               />
+              <View className="flex-row gap-3">
+                <View className="flex-1">
+                  <PickerField label="Tingkatan" value={tingkatan} options={TINGKATAN_OPTIONS} onChange={setTingkatan} clearable={false} disabled={busy || editing} />
+                </View>
+                <View className="flex-1">
+                  <PickerField label="Kumpulan" value={noKump} options={noOptions} onChange={setNoKump} clearable={false} disabled={busy || editing} />
+                </View>
+              </View>
+              <MemberPickerField label="Naqib/Naqibah 1" value={naqibId} candidates={candidates} onChange={setNaqibId} placeholder="Pilih naqib" disabled={busy} />
+              {naqibCount >= 2 ? (
+                <MemberPickerField label="Naqib/Naqibah 2" value={partnerId} candidates={candidates} onChange={setPartnerId} placeholder="Pilih naqib" disabled={busy} />
+              ) : null}
+              {naqibCount >= 3 ? (
+                <MemberPickerField label="Naqib/Naqibah 3" value={naqib3Id} candidates={candidates} onChange={setNaqib3Id} placeholder="Pilih naqib" disabled={busy} />
+              ) : null}
+              {naqibCount < 3 ? <Button label="+ Tambah Naqib" variant="secondary" disabled={busy} onPress={() => setNaqibCount((n) => Math.min(3, n + 1))} /> : null}
               {editing ? null : <Button label="Urus Senarai Sekolah" variant="secondary" onPress={() => setManagingSekolah(true)} />}
-              <PickerField label="Tingkatan" value={tingkatan} options={TINGKATAN_OPTIONS} onChange={setTingkatan} clearable={false} disabled={busy || editing} />
-              <PickerField label="Kumpulan" value={noKump} options={noOptions} onChange={setNoKump} clearable={false} disabled={busy || editing} />
-              <MemberPickerField label="Naqib/Naqibah" value={naqibId} candidates={candidates} onChange={setNaqibId} placeholder="Pilih naqib" disabled={busy} />
-              <MemberPickerField label="Naqib kedua (pilihan)" value={partnerId} candidates={candidates} onChange={setPartnerId} placeholder="Tiada" disabled={busy} />
-              <MemberPickerField label="Naqib ketiga (pilihan)" value={naqib3Id} candidates={candidates} onChange={setNaqib3Id} placeholder="Tiada" disabled={busy} />
-              <MemberPickerField label="Naqib keempat (pilihan)" value={naqib4Id} candidates={candidates} onChange={setNaqib4Id} placeholder="Tiada" disabled={busy} />
               <View className="flex-row gap-3">
                 <View className="flex-1">
                   <Button label="Batal" variant="secondary" disabled={busy} onPress={() => setFormOpen(false)} />

@@ -6,6 +6,8 @@ import { createContext, useContext } from 'react';
  * Lalai `null` supaya `CollapsibleSection` di luar Hub (borang ahli) tidak terkesan.
  */
 export type HubFocusApi = {
+  /** Seksyen yang sedang difokus; seksyen lain menutup sendiri (satu seksyen terbuka pada satu masa). */
+  active: string | null;
   opened: (title: string, y: number) => void;
   closed: (title: string) => void;
   moved: (title: string, y: number) => void;
