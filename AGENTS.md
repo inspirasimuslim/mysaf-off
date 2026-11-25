@@ -892,3 +892,7 @@ buang naqib DIBUANG daripada skrin ini (fungsi `assignNaqib`/`removeNaqib` dalam
 `admin/perkaderan-groups.tsx`: senarai naqib rata diganti satu jadual setiap sekolah (`DataTable fill`), disusun tingkatan > kumpulan, SATU BARIS SETIAP NAQIB
 (Ting./Kump./Mad'u pada baris pertama kumpulan sahaja, lajur Sesi = jumlah sesi naqib itu). Data: `fetchSlots` setiap sekolah + `fetchNaqibOverview` (nama/sesi).
 Ketuk baris -> `naqib-session-history` seperti dulu; bahagian muat turun laporan tidak berubah. Naqib dalam >1 kumpulan muncul di setiap kumpulannya.
+
+- 2026-11-25 (susulan): jadual Pantauan kini SATU jadual untuk semua sekolah (Falahiah/Naim dll, T4+T5) yang boleh diskrol ke bawah DAN ke kanan (ScrollView mendatar + menegak, kepala tetap),
+  teks `text-xs` padat. Lajur: Sekolah, Ting., Kump., Naqib, Gen., Sesi Naqib, Mad'u, Sesi Kump., Liputan Bulan, Kehadiran, Fikrah, Sesi Terakhir. Statistik kumpulan dari
+  `fetchAnalisaUsrah` (tahun semasa; jika gagal, lajur itu kosong sahaja). Sekolah hanya pada baris pertama sekolah, butiran kumpulan hanya pada baris pertama kumpulan.
