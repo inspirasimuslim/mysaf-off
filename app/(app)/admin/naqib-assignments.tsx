@@ -17,6 +17,7 @@ import { usePerkaderanAccess } from '@/lib/department-access';
 import { toMalayErrorVerbose } from '@/lib/errors';
 import { fetchMembersForPicker } from '@/lib/members';
 import { useGoBack } from '@/lib/navigation';
+import { useIsDesktop } from '@/lib/use-desktop';
 import {
   addMadU,
   addSekolah,
@@ -35,6 +36,13 @@ const NO_OPTIONS = Array.from({ length: 10 }, (_, i) => ({ value: String(i + 1),
 type Banner = { tone: 'positive' | 'info' | 'negative'; message: string } | null;
 type Group = PerkaderanSlot & { sekolah: string };
 
+// Warna pudar setiap tingkatan (lut sinar, sesuai tema cerah/gelap) — sama dengan Pantauan Usrah Sekolah.
+const TINGKATAN_WARNA: Record<string, string> = {
+  'Tingkatan 3': 'rgba(245, 158, 11, 0.16)',
+  'Tingkatan 4': 'rgba(59, 130, 246, 0.14)',
+  'Tingkatan 5': 'rgba(16, 185, 129, 0.16)',
+};
+
 const sekolahRank = (nama: string) => (nama.includes('FALAHIAH') ? 0 : nama.includes('NAIM') ? 1 : 2);
 
 const naqibNames = (g: PerkaderanSlot): string[] => [g.naqib_nama, g.partner_nama, ...(g.tambahan_nama ? g.tambahan_nama.split(' & ') : [])].filter((n): n is string => Boolean(n));
@@ -42,6 +50,7 @@ const naqibNames = (g: PerkaderanSlot): string[] => [g.naqib_nama, g.partner_nam
 export default function NaqibAssignmentsScreen() {
   const goBack = useGoBack();
   const { loading: accessLoading, canEdit } = usePerkaderanAccess();
+  const desktop = useIsDesktop();
 
   const [sekolahList, setSekolahList] = useState<PerkaderanSekolah[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
@@ -290,26 +299,40 @@ export default function NaqibAssignmentsScreen() {
           {bySekolah.length === 0 ? (
             <EmptyState icon="school-outline" title="Tiada kumpulan lagi" description="Tekan Tambah Kumpulan untuk melantik naqib bagi kumpulan usrah sekolah." />
           ) : (
-            bySekolah.map((s) => (
-              <View key={s.nama} className="gap-2">
-                <Text className="text-sm font-semibold text-ink">{s.nama}</Text>
-                {s.rows.map((g) => (
-                  <View key={g.group_id} className="flex-row items-center gap-3 rounded-card border border-line bg-surface px-3 py-2">
-                    <View className="flex-1">
-                      <Text className="text-sm font-semibold text-ink">
-                        T{g.tingkatan.replace('Tingkatan ', '')} · K{g.no_kumpulan} · {g.madu} mad'u
+            bySekolah.map((s) => {
+              const card = (g: Group, desktopCard: boolean) => (
+                <View
+                  key={g.group_id}
+                  style={{ backgroundColor: TINGKATAN_WARNA[g.tingkatan], ...(desktopCard ? { width: 230 } : null) }}
+                  className="flex-row items-center gap-3 rounded-card border border-line bg-surface px-3 py-2">
+                  <View className="flex-1">
+                    <Text className="text-sm font-semibold text-ink">
+                      T{g.tingkatan.replace('Tingkatan ', '')} · K{g.no_kumpulan} · {g.madu} mad'u
+                    </Text>
+                    {naqibNames(g).map((n, k) => (
+                      <Text key={k} className="text-xs text-ink-muted" numberOfLines={1}>
+                        {n}
                       </Text>
-                      {naqibNames(g).map((n, k) => (
-                        <Text key={k} className="text-xs text-ink-muted">
-                          {n}
-                        </Text>
-                      ))}
-                    </View>
-                    <IconButton icon="create-outline" accessibilityLabel={'Edit kumpulan ' + g.no_kumpulan} onPress={() => openEdit(g)} />
+                    ))}
                   </View>
-                ))}
-              </View>
-            ))
+                  <IconButton icon="create-outline" accessibilityLabel={'Edit kumpulan ' + g.no_kumpulan} onPress={() => openEdit(g)} />
+                </View>
+              );
+              // Desktop: satu baris setiap tingkatan (T4 baris 1, T5 baris 2). Mobile: senarai menegak seperti biasa.
+              const tingkatanList = [...new Set(s.rows.map((g) => g.tingkatan))].sort();
+              return (
+                <View key={s.nama} className="gap-2">
+                  <Text className="text-sm font-semibold text-ink">{s.nama}</Text>
+                  {desktop
+                    ? tingkatanList.map((t) => (
+                        <View key={t} className="flex-row flex-wrap gap-2">
+                          {s.rows.filter((g) => g.tingkatan === t).map((g) => card(g, true))}
+                        </View>
+                      ))
+                    : s.rows.map((g) => card(g, false))}
+                </View>
+              );
+            })
           )}
         </View>
       </Screen>
