@@ -23,6 +23,7 @@ import { Segmented } from '@/components/ui/segmented';
 import { StepperField } from '@/components/ui/stepper-field';
 import { TextField } from '@/components/ui/text-field';
 import { ToggleRow } from '@/components/ui/toggle-row';
+import { EventNotificationToggles, EVENT_NOTI_DEFAULT, type EventNotiValue } from '@/components/event-notification-toggles';
 import { ToastBanner } from '@/components/ui/toast';
 import { useProgramAccess, useUsrahKawasanAccess } from '@/lib/department-access';
 import { toMalayError } from '@/lib/errors';
@@ -99,6 +100,7 @@ export default function UsrahEventDetailScreen() {
   const [eventMode, setEventMode] = useState<EventMode>('bersemuka');
   const [gantiUsrah, setGantiUsrah] = useState(false);
   const [bermalam, setBermalam] = useState(false);
+  const [noti, setNoti] = useState<EventNotiValue>(EVENT_NOTI_DEFAULT);
   const [gantiYear, setGantiYear] = useState('');
   const [gantiMonth, setGantiMonth] = useState<string | null>(null);
 
@@ -115,6 +117,7 @@ export default function UsrahEventDetailScreen() {
     setEventMode(row.event_mode);
     setGantiUsrah(row.ganti_usrah);
     setBermalam(row.bermalam);
+    setNoti({ baharu: row.noti_baharu, peringatan: row.noti_peringatan, perubahan: row.noti_perubahan });
     setGantiYear(row.ganti_usrah_year ? String(row.ganti_usrah_year) : '');
     setGantiMonth(row.ganti_usrah_month ? String(row.ganti_usrah_month) : null);
   }, []);
@@ -161,6 +164,9 @@ export default function UsrahEventDetailScreen() {
           // Pelayan membaca nilai TERKINI pada setiap imbasan — tukar berkesan serta-merta.
           event_mode: eventMode,
           bermalam,
+          noti_baharu: noti.baharu,
+          noti_peringatan: noti.peringatan,
+          noti_perubahan: noti.perubahan,
           // Program sahaja. Kehadiran yang SUDAH direkod tidak berubah bila ini ditukar.
           ...(event.event_type === 'program'
             ? {
@@ -189,6 +195,7 @@ export default function UsrahEventDetailScreen() {
     gantiUsrah,
     gantiYear,
     bermalam,
+    noti,
     hydrate,
     locationText,
     name,
@@ -628,6 +635,7 @@ export default function UsrahEventDetailScreen() {
                     ? 'Imbasan dari luar radius geofence ditolak.'
                     : 'Imbasan dari mana-mana lokasi diterima; luar radius dilabel Online.'}
                 </Text>
+                <EventNotificationToggles value={noti} onChange={setNoti} disabled={busy} showNew={false} />
                 {actionButtons}
                 <Button
                   label="Simpan Perubahan"

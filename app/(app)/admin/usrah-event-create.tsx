@@ -17,6 +17,7 @@ import { Segmented } from '@/components/ui/segmented';
 import { StepperField } from '@/components/ui/stepper-field';
 import { TextField } from '@/components/ui/text-field';
 import { ToggleRow } from '@/components/ui/toggle-row';
+import { EventNotificationToggles, EVENT_NOTI_DEFAULT, type EventNotiValue } from '@/components/event-notification-toggles';
 import { ToastBanner } from '@/components/ui/toast';
 import { useProgramAccess, useUsrahKawasanAccess } from '@/lib/department-access';
 import { toMalayError } from '@/lib/errors';
@@ -95,6 +96,7 @@ export default function UsrahEventCreateScreen() {
   /** Program sahaja. Lalai OFF — admin sengaja menandanya. */
   const [gantiUsrah, setGantiUsrah] = useState(false);
   const [bermalam, setBermalam] = useState(false);
+  const [noti, setNoti] = useState<EventNotiValue>(EVENT_NOTI_DEFAULT);
   /** Bulan usrah yang diganti — dipilih eksplisit, kosong sehingga admin memilih. */
   const [gantiYear, setGantiYear] = useState('');
   const [gantiMonth, setGantiMonth] = useState<string | null>(null);
@@ -162,6 +164,9 @@ export default function UsrahEventCreateScreen() {
         event_mode: eventMode,
         // Usrah sendiri memang usrah — penanda ini bermakna untuk program sahaja.
         bermalam,
+        noti_baharu: noti.baharu,
+        noti_peringatan: noti.peringatan,
+        noti_perubahan: noti.perubahan,
         ganti_usrah: eventType === 'program' && gantiUsrah,
         // Bulan yang diganti dipilih admin — tiada kaitan dengan tarikh mula program.
         ganti_usrah_year: eventType === 'program' && gantiUsrah ? parsedGantiYear : null,
@@ -221,6 +226,7 @@ export default function UsrahEventCreateScreen() {
     gantiMonth,
     gantiUsrah,
     bermalam,
+    noti,
     kawasan,
     parsedGantiYear,
     locationText,
@@ -531,6 +537,8 @@ export default function UsrahEventCreateScreen() {
               />
             </View>
           ) : null}
+
+          <EventNotificationToggles value={noti} onChange={setNoti} disabled={saving} />
 
           <Button
             label={eventType === 'usrah' ? 'Cipta Usrah' : 'Cipta Program'}

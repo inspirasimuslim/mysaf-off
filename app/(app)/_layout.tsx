@@ -335,6 +335,7 @@ function AppGate() {
       <Tabs.Screen name="bantuan-borang" options={{ href: null }} />
       <Tabs.Screen name="maklum-balas-chat" options={{ href: null }} />
       <Tabs.Screen name="features" options={{ href: null }} />
+      <Tabs.Screen name="notifikasi" options={{ href: null }} />
       <Tabs.Screen name="baitul-muslim" options={{ href: null }} />
       <Tabs.Screen name="baitul-muslim-big-rock" options={{ href: null }} />
       <Tabs.Screen name="baitul-muslim-daftar" options={{ href: null }} />

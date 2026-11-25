@@ -94,6 +94,16 @@ export const FEATURE_GROUPS: FeatureGroup[] = [
       'Data sensitif (kesihatan, kaunseling) dilindungi dengan akses terhad.',
     ],
   },
+  {
+    version: '1.3.35',
+    date: '25 Nov 2026',
+    highlights: [
+      'Notifikasi program, usrah dan pengumuman: program baharu, peringatan 24 jam dan 2 jam sebelum bermula, serta perubahan atau pembatalan.',
+      'Loceng Notifikasi di bahagian atas setiap skrin dengan peti masuk 60 hari.',
+      'Admin boleh menghidupkan atau mematikan setiap jenis notifikasi bagi setiap program, usrah dan pengumuman.',
+      'Latar bahagian Majlis Baitul Muslim dimudahkan.',
+    ],
+  },
 ];
 
 export type ChangelogEntry = {

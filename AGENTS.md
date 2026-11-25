@@ -802,3 +802,18 @@ Rujukan: `20261125000171_mbm_permohonan.sql`, `...172_push_notifications.sql`, `
   membuang token semasa log keluar. Firebase projek `mysaff-official` (`google-services.json` dalam repo); kunci FCM V1 dimuat naik ke EAS oleh pemilik.
   Belum: loceng admin lain (yuran/PIPIS/usrah dsb.), iOS (perlu kunci APNs). Function di-deploy melalui Management API (token perlu `edge_functions_write`).
 - Sementara: penarafan Yuran Lunas termasuk ahli tanpa ledger (migration 170) — gantikan bila ledger sebenar siap.
+
+# Notifikasi Program / Usrah / Pengumuman (2026-11-25, migration 175, sudah live di produksi)
+
+Rujukan: `supabase/migrations/20261125000175_event_notifikasi.sql`, `components/event-notification-toggles.tsx`,
+`lib/notifications.ts`, `app/(app)/notifikasi.tsx`, loceng dalam `components/screen-header.tsx`.
+- Suis per item (admin): `usrah_events.noti_baharu/noti_peringatan/noti_perubahan`, `announcements.noti_baharu/noti_perubahan`
+  (lalai ON). Borang cipta ada semua suis; borang sunting menyorok "bila dicipta". Pengumuman tiada peringatan (tiada masa mula).
+- Penerima: semua ahli aktif (`not disekat`, ada `user_id`); usrah dengan `kawasan_usrah` -> ahli kawasan itu sahaja. Pencipta dikecualikan.
+- Pencetus: baru (after insert), kemas kini (masa/lokasi/nama) dan batal (`archived_at` atau `is_active` -> false) HANYA jika belum bermula;
+  menukar masa mula menetapkan semula tanda peringatan (`peringatan_1_at/2_at`). Semua menelan ralat — tidak boleh menggagalkan simpan.
+- Peringatan: `pg_cron` setiap 10 minit -> `event_send_reminders()` (2 jam dan 24 jam; 24 jam dilangkau jika dicipta <24 jam sebelum mula).
+- Peti masuk: `push_outbox.read_at`; RPC `my_notifications`, `my_notifications_unread`, `my_notifications_mark_read`. Loceng (lencana angka) pada setiap
+  `ScreenHeader`, stor kongsi + tinjauan 60 saat dalam `lib/notifications.ts`. Peti masuk memaparkan SEMUA push (termasuk maklum balas/kaunseling) 60 hari.
+- Diuji pada produksi dalam transaksi yang di-rollback: baharu/kemas kini/2 jam/batal masing-masing 323 penerima.
+- Versi 1.3.35 (versionCode 43). Pengumuman dengan `start_date` masa depan tetap memberi noti semasa dicipta (belum dipaparkan sehingga tarikh mula).

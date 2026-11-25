@@ -786,6 +786,10 @@ export type UsrahEvent = {
    */
   /** Program/usrah bermalam — ahli yang hadir diwajibkan bermalam (trigger RSVP). */
   bermalam: boolean;
+  /** Suis notifikasi (lihat 20261125000175_event_notifikasi.sql). */
+  noti_baharu: boolean;
+  noti_peringatan: boolean;
+  noti_perubahan: boolean;
   ganti_usrah: boolean;
   /** Bulan usrah yang diganti — dipilih admin, wajib bila `ganti_usrah`. Bukan dari start_date. */
   ganti_usrah_year: number | null;
@@ -982,6 +986,8 @@ export type Announcement = {
   description: string | null;
   poster_url: string;
   is_active: boolean;
+  noti_baharu: boolean;
+  noti_perubahan: boolean;
 
   /**
    * Tetingkap paparan, 'YYYY-MM-DD'. Tarikh sahaja, tanpa masa — pengumuman

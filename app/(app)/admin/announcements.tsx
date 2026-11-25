@@ -1,3 +1,4 @@
+import { EventNotificationToggles, EVENT_NOTI_DEFAULT, type EventNotiValue } from '@/components/event-notification-toggles';
 import { Image } from 'expo-image';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
@@ -59,6 +60,7 @@ export default function AnnouncementsScreen() {
   const [draftDescription, setDraftDescription] = useState('');
   const [draftStart, setDraftStart] = useState('');
   const [draftEnd, setDraftEnd] = useState('');
+  const [draftNoti, setDraftNoti] = useState<EventNotiValue>(EVENT_NOTI_DEFAULT);
   const [pendingDelete, setPendingDelete] = useState<Announcement | null>(null);
 
   const load = useCallback(async () => {
@@ -153,6 +155,7 @@ export default function AnnouncementsScreen() {
     setDraftDescription(row.description ?? '');
     setDraftStart(row.start_date ?? '');
     setDraftEnd(row.end_date ?? '');
+    setDraftNoti({ baharu: row.noti_baharu, peringatan: true, perubahan: row.noti_perubahan });
   }, []);
 
   const saveEdit = useCallback(async () => {
@@ -164,11 +167,13 @@ export default function AnnouncementsScreen() {
         description: draftDescription.trim() || null,
         start_date: draftStart || null,
         end_date: draftEnd || null,
+        noti_baharu: draftNoti.baharu,
+        noti_perubahan: draftNoti.perubahan,
       },
       'Pengumuman telah dikemas kini.',
     );
     setEditing(null);
-  }, [draftDescription, draftEnd, draftStart, draftTitle, editing, patch]);
+  }, [draftDescription, draftEnd, draftNoti, draftStart, draftTitle, editing, patch]);
 
   if (accessLoading || loading) return <LoadingScreen />;
 
@@ -292,6 +297,7 @@ export default function AnnouncementsScreen() {
                           onChange={setDraftEnd}
                           disabled={busy}
                         />
+                        <EventNotificationToggles value={draftNoti} onChange={setDraftNoti} disabled={busy} withReminder={false} showNew={false} />
                         <Button
                           label="Simpan"
                           loading={busy}

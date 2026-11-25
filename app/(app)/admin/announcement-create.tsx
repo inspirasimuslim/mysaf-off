@@ -13,6 +13,7 @@ import { Screen } from '@/components/ui/screen';
 import { SectionTitle } from '@/components/ui/section-title';
 import { TextField } from '@/components/ui/text-field';
 import { ToggleRow } from '@/components/ui/toggle-row';
+import { EventNotificationToggles, EVENT_NOTI_DEFAULT, type EventNotiValue } from '@/components/event-notification-toggles';
 import { ToastBanner } from '@/components/ui/toast';
 import { useProgramAccess } from '@/lib/department-access';
 import { createAnnouncement, uploadAnnouncementPoster } from '@/lib/announcements';
@@ -35,6 +36,7 @@ export default function AnnouncementCreateScreen() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [isActive, setIsActive] = useState(true);
+  const [noti, setNoti] = useState<EventNotiValue>(EVENT_NOTI_DEFAULT);
   const [posterUri, setPosterUri] = useState<string | null>(null);
 
   /*
@@ -84,6 +86,8 @@ export default function AnnouncementCreateScreen() {
         description: description.trim() || null,
         poster_url: posterUrl,
         is_active: isActive,
+        noti_baharu: noti.baharu,
+        noti_perubahan: noti.perubahan,
         start_date: startDate || null,
         end_date: endDate || null,
       });
@@ -96,7 +100,7 @@ export default function AnnouncementCreateScreen() {
     } finally {
       setSaving(false);
     }
-  }, [description, endDate, isActive, posterUri, ready, router, saving, startDate, title]);
+  }, [description, endDate, isActive, noti, posterUri, ready, router, saving, startDate, title]);
 
   if (accessLoading) return <LoadingScreen />;
 
@@ -197,6 +201,8 @@ export default function AnnouncementCreateScreen() {
             onValueChange={setIsActive}
             disabled={saving}
           />
+
+          <EventNotificationToggles value={noti} onChange={setNoti} disabled={saving} withReminder={false} newLabel="Beritahu ahli bila diterbitkan" />
 
           {!ready ? <Notice tone="negative" message="Poster dan tajuk diperlukan sebelum pengumuman boleh dicipta." /> : null}
 

@@ -22,6 +22,8 @@ export type CreateAnnouncementInput = {
   description: string | null;
   poster_url: string;
   is_active: boolean;
+  noti_baharu: boolean;
+  noti_perubahan: boolean;
   /** 'YYYY-MM-DD' atau `null` untuk "tiada had pada hujung itu". */
   start_date: string | null;
   end_date: string | null;

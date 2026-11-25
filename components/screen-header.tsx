@@ -6,6 +6,7 @@ import { Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { NotificationBadge } from '@/components/admin-notifications-ui';
+import { useUnreadNotificationCount } from '@/lib/notifications';
 import { usePermissions } from '@/lib/permissions';
 import { useEmbedded } from '@/components/ui/split-pane';
 import { useIsDesktop } from '@/lib/use-desktop';
@@ -50,6 +51,7 @@ export function ScreenHeader({ title, eyebrow, subtitle, leading, onBackPress, b
   const desktop = useIsDesktop();
   // Panel kanan: kepala padat, tiada anak panah kembali (panel kiri ialah senarainya).
   const embedded = useEmbedded();
+  const unreadNoti = useUnreadNotificationCount();
 
   return (
     <View
@@ -85,6 +87,16 @@ export function ScreenHeader({ title, eyebrow, subtitle, leading, onBackPress, b
           ) : null}
         </View>
 
+        {/* Loceng notifikasi ahli (program, peringatan, pengumuman) — ada pada mobile dan desktop. */}
+        {embedded ? null : (
+          <HeaderIcon
+            icon="notifications-outline"
+            label={unreadNoti > 0 ? 'Notifikasi, ' + unreadNoti + ' belum dibaca' : 'Notifikasi'}
+            onPress={() => router.navigate('/(app)/notifikasi')}
+            count={unreadNoti}
+          />
+        )}
+
         {/* Mod desktop: Admin & Tetapan tinggal di sidebar. */}
         {desktop ? null : (
         <View className="flex-row items-center gap-2">
@@ -113,6 +125,7 @@ function HeaderIcon({
   label,
   onPress,
   badge = false,
+  count = 0,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
   /** Label pembaca skrin — ikon sahaja tidak mencukupi. */
@@ -120,6 +133,8 @@ function HeaderIcon({
   onPress: () => void;
   /** Penanda tugasan tertunggak (notifikasi admin) di penjuru ikon. */
   badge?: boolean;
+  /** Bilangan belum dibaca (notifikasi ahli) — lencana angka. */
+  count?: number;
 }) {
   const colors = useColors();
   return (
@@ -131,6 +146,11 @@ function HeaderIcon({
       className="h-11 w-11 items-center justify-center rounded-pill bg-white/10 active:opacity-70">
       <Ionicons name={icon} size={20} color={colors.white} />
       {badge ? <NotificationBadge /> : null}
+      {count > 0 ? (
+        <View className="absolute -right-1 -top-1 min-w-[18px] items-center rounded-pill bg-negative px-1">
+          <Text className="text-[11px] font-bold text-white">{count > 9 ? '9+' : count}</Text>
+        </View>
+      ) : null}
     </Pressable>
   );
 }
