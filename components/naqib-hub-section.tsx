@@ -2,17 +2,15 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
-import { ActionRow } from '@/components/ui/action-row';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { CollapsibleSection } from '@/components/ui/collapsible-section';
-import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { FormModal } from '@/components/ui/form-modal';
 import { LoadingScreen } from '@/components/ui/loading-screen';
 import { Notice } from '@/components/ui/notice';
 import { toMalayErrorVerbose } from '@/lib/errors';
 import { fetchMembersForPicker } from '@/lib/members';
-import { deleteSession, fetchMyGroups, fetchMySessionsAcrossGroups, fetchSessionViewDetail } from '@/lib/perkaderan';
+import { fetchMyGroups, fetchMySessionsAcrossGroups, fetchSessionViewDetail } from '@/lib/perkaderan';
 import type { MemberPickerRow, MySessionRow, SessionViewDetail, UsrahGroup } from '@/types/database';
 
 /** 'YYYY-MM-DD' → '12 Sep 2026'. */
@@ -93,31 +91,6 @@ export function NaqibHubSection({ defaultOpen }: { defaultOpen: boolean }) {
     }
   }, []);
 
-  const [confirmingDeleteSession, setConfirmingDeleteSession] = useState(false);
-  const [deleteSessionBusy, setDeleteSessionBusy] = useState(false);
-  const [deleteSessionError, setDeleteSessionError] = useState<string | null>(null);
-
-  /** Notis seksyen ini sendiri — modal butiran sesi tertutup selepas padam, jadi notis ralatnya sendiri tidak lagi kelihatan. */
-  const [sectionBanner, setSectionBanner] = useState<{ tone: 'positive' | 'negative'; message: string } | null>(null);
-
-  const confirmDeleteSession = useCallback(async () => {
-    if (!viewingSessionId || deleteSessionBusy) return;
-
-    setDeleteSessionBusy(true);
-    setDeleteSessionError(null);
-    try {
-      await deleteSession(viewingSessionId);
-      setConfirmingDeleteSession(false);
-      setViewingSessionId(null);
-      setSectionBanner({ tone: 'positive', message: 'Sesi berjaya dipadam.' });
-      load();
-    } catch (caught) {
-      setDeleteSessionError(toMalayErrorVerbose(caught, 'Gagal memadam sesi.'));
-    } finally {
-      setDeleteSessionBusy(false);
-    }
-  }, [deleteSessionBusy, load, viewingSessionId]);
-
   if (loading) return null;
 
   const hasGroups = myGroups.length > 0;
@@ -136,23 +109,6 @@ export function NaqibHubSection({ defaultOpen }: { defaultOpen: boolean }) {
         caption="Kumpulan usrah sekolah yang anda naqibkan."
         count={hasGroups ? myGroups.length : 1}
         defaultOpen={defaultOpen}>
-        {sectionBanner ? (
-          <View className="mb-3">
-            <Notice tone={sectionBanner.tone} message={sectionBanner.message} />
-          </View>
-        ) : null}
-
-        {hasGroups ? (
-          <View className="mb-3">
-            <ActionRow
-              icon="calendar-outline"
-              title="Tamrin"
-              subtitle="Lihat jadual tamrin dan rekod kehadiran mad'u anda"
-              onPress={() => router.push('/(app)/admin/perkaderan-program')}
-            />
-          </View>
-        ) : null}
-
         {!hasGroups ? (
           <Notice
             tone="info"
@@ -162,16 +118,18 @@ export function NaqibHubSection({ defaultOpen }: { defaultOpen: boolean }) {
           <View className="gap-3">
             <View className="gap-1.5">
               {myGroups.map((group) => (
-                <Pressable
+                <View
                   key={group.id}
-                  accessibilityRole="button"
-                  onPress={() => router.push({ pathname: '/(app)/admin/perkaderan-group-detail', params: { id: group.id } })}
-                  className="flex-row items-center justify-between gap-2 rounded-field border border-line bg-surface px-3 py-2.5 active:opacity-70">
+                  className="flex-row items-center justify-between gap-2 rounded-field border border-line bg-surface px-3 py-2.5">
                   <Text className="flex-1 text-sm font-semibold text-ink" numberOfLines={1}>
-                    {group.sekolah}
+                    {group.group_name}
                   </Text>
-                  <Text className="text-xs text-ink-faint">Urus →</Text>
-                </Pressable>
+                  <Button
+                    label="+ Sesi Baharu"
+                    size="sm"
+                    onPress={() => router.push({ pathname: '/(app)/admin/usrah-session-form', params: { groupId: group.id } })}
+                  />
+                </View>
               ))}
             </View>
 
@@ -213,26 +171,13 @@ export function NaqibHubSection({ defaultOpen }: { defaultOpen: boolean }) {
         title={viewDetail ? dateLabel(viewDetail.session.session_date) : 'Butiran Sesi'}
         description={viewDetail ? viewDetail.sekolah + (viewDetail.session.location_text ? ' · ' + viewDetail.session.location_text : '') : undefined}
         onClose={() => setViewingSessionId(null)}
-        footer={
-          viewDetail ? (
-            <Button
-              label="Padam Sesi Ini"
-              variant="danger"
-              onPress={() => {
-                setDeleteSessionError(null);
-                setConfirmingDeleteSession(true);
-              }}
-            />
-          ) : undefined
-        }>
+>
         {viewLoading ? (
           <LoadingScreen />
         ) : viewError ? (
           <Text className="text-sm text-negative">{viewError}</Text>
         ) : viewDetail ? (
           <View className="gap-4">
-            {deleteSessionError ? <Notice tone="negative" message={deleteSessionError} /> : null}
-
             {viewDetail.session.topik ? (
               <View>
                 <Text className="text-xs font-semibold uppercase text-ink-faint">Topik</Text>
@@ -273,17 +218,6 @@ export function NaqibHubSection({ defaultOpen }: { defaultOpen: boolean }) {
           </View>
         ) : null}
       </FormModal>
-
-      <ConfirmDialog
-        visible={confirmingDeleteSession}
-        title="Padam sesi ini?"
-        message="Rekod kehadiran sesi ini akan turut dipadam. Tindakan ini tidak boleh dibatalkan."
-        confirmLabel="Padam Sesi"
-        destructive
-        busy={deleteSessionBusy}
-        onConfirm={() => void confirmDeleteSession()}
-        onCancel={() => setConfirmingDeleteSession(false)}
-      />
     </>
   );
 }

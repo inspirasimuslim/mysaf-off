@@ -910,3 +910,8 @@ Rujukan: `20261125000185_perkaderan_naqib_tak_urus_kumpulan.sql`. Lajnah Perkade
 tamrin, markah ujian. UI: skrin `usrah-group-create` DIBUANG; Hub naqib tiada butang Cipta/Kumpulan Baru (ketik kumpulan terus ke `perkaderan-group-detail`);
 partner + tambah/nyahaktif mad'u dalam `perkaderan-group-detail` hanya untuk admin (`canPurge`); borang sesi tiada pilihan Partner Naqib dan tiada "+ Tambah Mad'u".
 Lajur `partner_naqib_*` pada sesi lama kekal di DB (tidak dipaparkan lagi untuk sesi baharu).
+
+## Naqib: hanya tambah sesi + tengok sejarah (2026-11-25, migration 186, sudah live di produksi)
+Rujukan: `20261125000186_perkaderan_tamrin_ujian_lp_sahaja.sql`. Panel naqib (`components/naqib-hub-section.tsx`) kini HANYA: senarai kumpulan sendiri dengan butang "+ Sesi Baharu"
+(terus ke `usrah-session-form`) dan "Sesi Lampau" (helaian view-only + senarai mad'u hadir; tiada padam/sunting). Tiada lagi pautan Urus Kumpulan atau Tamrin.
+DB: `perkaderan_tamrin_roster/set` dan `perkaderan_ujian_roster/set` kini admin Lajnah/Super Admin sahaja (naqib 42501) — kehadiran tamrin dan markah ujian diurus LP.
