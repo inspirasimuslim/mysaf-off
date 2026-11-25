@@ -861,3 +861,8 @@ Rujukan: `supabase/migrations/20261125000179_laporan_usrah_silibus.sql`, `app/(a
 - Padanan naqib: nama pertama + generasi dalam `members`, padanan unik sahaja (+ alias ejaan: Aliff→Alif Fahmi, Shaafy→Shafy, Iman→Imanul, Hakimah→Nurhakimah, Wadhihah→Wadihah).
 - DILANGKAU/ditandakan: kumpulan 3 naqib (hanya 2 pertama disimpan), kumpulan Hidayah I26 (tiada mad'u), Tingkatan 3 (tiada senarai), 7 laporan berganda (kekal yang pertama), tahun salah dibetulkan ke 2026, 'penuh/semua hadir' tanpa bilangan = semua mad'u kumpulan. Sheet 2025 dan TL (tamat) TIDAK diimport.
 - Skrin Analisa Usrah ada butang muat turun Excel (`downloadAnalisaUsrah`).
+
+## Struktur kumpulan: sekolah > tingkatan > kumpulan > naqib (2026-11-25, migration 182, sudah live di produksi)
+- `perkaderan_sekolah` (senarai sekolah diurus admin Lajnah/Super Admin; disemai 7 nama lama, tanpa "Lain-lain"). `sekolah_usrah_groups` +`tingkatan`, `no_kumpulan` (1-10); satu kumpulan aktif sahaja bagi (sekolah, tingkatan, no). Kumpulan import diisi semula (tingkatan daripada mad'u, nombor ikut fail kehadiran). `group_name` kini "Usrah {sekolah} T{x} K{n} - {naqib}".
+- RPC admin: `perkaderan_slot_assign` (cipta/tukar naqib + naqib kedua setaraf; melantik naqib serentak jika belum), `perkaderan_slots(sekolah)`, `perkaderan_sekolah_padam` (ditolak jika masih ada kumpulan aktif). Skrin `admin/naqib-assignments.tsx` diubah: sekolah -> tingkatan -> kumpulan -> naqib, lompat ke kumpulan kosong seterusnya; senarai naqib rata kekal di bawah.
+- Skrin naqib sendiri (`usrah-group-create`) masih guna senarai sekolah tetap dan tidak mengisi tingkatan/no — belum diselaraskan.

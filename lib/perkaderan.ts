@@ -477,3 +477,58 @@ export async function fetchSessionViewDetail(sessionId: string): Promise<Session
     attendees,
   };
 }
+
+// =============================================================================
+// Struktur kumpulan: sekolah > tingkatan > kumpulan > naqib (migration 182)
+// =============================================================================
+
+export type PerkaderanSekolah = { id: string; nama: string };
+export type PerkaderanSlot = {
+  group_id: string;
+  tingkatan: string;
+  no_kumpulan: number;
+  naqib_id: string;
+  naqib_nama: string;
+  partner_id: string | null;
+  partner_nama: string | null;
+  madu: number;
+};
+
+export async function fetchSekolahList(): Promise<PerkaderanSekolah[]> {
+  const { data, error } = await supabase.from('perkaderan_sekolah').select('id, nama').order('nama');
+  if (error) throw error;
+  return (data as PerkaderanSekolah[] | null) ?? [];
+}
+
+export async function addSekolah(nama: string): Promise<void> {
+  const { error } = await supabase.from('perkaderan_sekolah').insert({ nama: nama.trim() });
+  if (error) throw error;
+}
+
+export async function removeSekolah(id: string): Promise<void> {
+  const { error } = await supabase.rpc('perkaderan_sekolah_padam', { p_id: id });
+  if (error) throw error;
+}
+
+export async function fetchSlots(sekolah: string): Promise<PerkaderanSlot[]> {
+  const { data, error } = await supabase.rpc('perkaderan_slots', { p_sekolah: sekolah });
+  if (error) throw error;
+  return (data as PerkaderanSlot[] | null) ?? [];
+}
+
+export async function assignSlot(args: {
+  sekolah: string;
+  tingkatan: string;
+  no: number;
+  naqibId: string;
+  partnerId: string | null;
+}): Promise<void> {
+  const { error } = await supabase.rpc('perkaderan_slot_assign', {
+    p_sekolah: args.sekolah,
+    p_tingkatan: args.tingkatan,
+    p_no: args.no,
+    p_naqib: args.naqibId,
+    p_partner: args.partnerId,
+  });
+  if (error) throw error;
+}
