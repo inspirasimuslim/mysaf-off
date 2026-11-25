@@ -24,7 +24,7 @@ export const FEATURE_GROUPS: FeatureGroup[] = [
     items: [
       'Ringkasan yuran dan PIPIS dalam satu paparan.',
       'Pengumuman dan acara terkini persatuan.',
-      'Notifikasi dalam app dan push ke telefon untuk balasan, permohonan dan perkara yang perlu tindakan.',
+      'Notifikasi dalam app dan push ke telefon untuk program baharu, peringatan program, pengumuman, balasan, permohonan dan perkara yang perlu tindakan (loceng di atas skrin).',
       'Hari jadi ahli pada bulan semasa.',
     ],
   },
@@ -92,16 +92,6 @@ export const FEATURE_GROUPS: FeatureGroup[] = [
       'Akses data mengikut peranan dan department.',
       'Kunci masa tidak aktif secara automatik.',
       'Data sensitif (kesihatan, kaunseling) dilindungi dengan akses terhad.',
-    ],
-  },
-  {
-    version: '1.3.35',
-    date: '25 Nov 2026',
-    highlights: [
-      'Notifikasi program, usrah dan pengumuman: program baharu, peringatan 24 jam dan 2 jam sebelum bermula, serta perubahan atau pembatalan.',
-      'Loceng Notifikasi di bahagian atas setiap skrin dengan peti masuk 60 hari.',
-      'Admin boleh menghidupkan atau mematikan setiap jenis notifikasi bagi setiap program, usrah dan pengumuman.',
-      'Latar bahagian Majlis Baitul Muslim dimudahkan.',
     ],
   },
 ];
@@ -178,6 +168,16 @@ export const CHANGELOG: ChangelogEntry[] = [
       'Hanya panel yang dipilih menerima permohonan; panel lain dan admin tidak melihat butiran pemohon.',
       'Notifikasi push ke telefon untuk maklum balas, kaunseling, permohonan bantuan dan permohonan MBM.',
       'Lantik panel MBM dalam Hub Admin.',
+    ],
+  },
+  {
+    version: '1.3.35',
+    date: '25 Nov 2026',
+    highlights: [
+      'Notifikasi program, usrah dan pengumuman: program baharu, peringatan 24 jam dan 2 jam sebelum bermula, serta perubahan atau pembatalan.',
+      'Loceng Notifikasi di bahagian atas setiap skrin dengan peti masuk 60 hari.',
+      'Admin boleh menghidupkan atau mematikan setiap jenis notifikasi bagi setiap program, usrah dan pengumuman.',
+      'Latar bahagian Majlis Baitul Muslim dimudahkan.',
     ],
   },
 ];
