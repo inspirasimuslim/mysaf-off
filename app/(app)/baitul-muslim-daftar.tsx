@@ -96,6 +96,8 @@ export default function BaitulMuslimDaftarScreen() {
     <Screen padTop={false}>
       <ScreenHeader title="Daftar Sekarang" onBackPress={goBack} />
 
+      <View style={{ height: 16, backgroundColor: MBM.ivory }} />
+
       <MbmGreen>
         <View className="items-center px-6 pb-6 pt-5">
           <Text accessibilityRole="header" style={{ fontFamily: MBM_SERIF, fontSize: 26, color: '#fff', textAlign: 'center' }}>

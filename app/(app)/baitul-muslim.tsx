@@ -62,6 +62,8 @@ export default function BaitulMuslimScreen() {
     <Screen padTop={false}>
       <ScreenHeader title="Majlis Baitul Muslim" onBackPress={goBack} />
 
+      <View style={{ height: 16, backgroundColor: MBM.ivory }} />
+
       <MbmGreen>
         <View className="items-center px-6 pb-8 pt-6">
           <View

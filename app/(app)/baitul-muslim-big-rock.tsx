@@ -36,6 +36,8 @@ export default function BaitulMuslimBigRockScreen() {
     <Screen padTop={false}>
       <ScreenHeader title="Konsep The Big Rock" onBackPress={goBack} />
 
+      <View style={{ height: 16, backgroundColor: MBM.ivory }} />
+
       <MbmGreen>
         <View className="items-center px-6 pb-8 pt-6">
           <Text
