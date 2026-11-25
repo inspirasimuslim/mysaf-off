@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Text, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { ScrollView, Text, View } from 'react-native';
 
 import { NoAccessScreen } from '@/components/no-access';
 import { ScreenHeader } from '@/components/screen-header';
@@ -16,6 +16,24 @@ import { deliveryMessage, type DeliveryMode } from '@/lib/file-delivery';
 import { useGoBack } from '@/lib/navigation';
 import { type AnalisaUsrah, downloadAnalisaUsrah, fetchAnalisaUsrah, pct } from '@/lib/perkaderan-program';
 import { usePermissions } from '@/lib/permissions';
+
+const COLS = [
+  { key: 'k', label: 'Kump.', w: 56 },
+  { key: 'n', label: 'Naqib', w: 220 },
+  { key: 'm', label: "Mad'u", w: 56 },
+  { key: 's', label: 'Sesi', w: 100 },
+  { key: 'l', label: 'Liputan bulan', w: 110 },
+  { key: 'h', label: 'Kehadiran', w: 110 },
+  { key: 't', label: 'Sesi terakhir', w: 100 },
+];
+
+function Cell({ w, strong, children }: { w: number; strong?: boolean; children: string }) {
+  return (
+    <Text style={{ width: w }} className={'pr-2 text-xs ' + (strong ? 'font-bold text-ink' : 'text-ink')}>
+      {children}
+    </Text>
+  );
+}
 
 const fmt = (v: number | null) => (v == null ? '—' : Math.round(v) + '%');
 
@@ -75,6 +93,19 @@ export default function PerkaderanAnalisaScreen() {
   if (!allowed) return <NoAccessScreen title="Analisa Usrah" description="Hanya untuk admin Lajnah Perkaderan dan Super Admin." />;
 
   const k = data?.kumpulan ?? [];
+  // sekolah -> tingkatan -> kumpulan (RPC sudah menyusun mengikut sekolah, tingkatan, no. kumpulan)
+  const sekolahGroups = useMemo(() => {
+    const out: [string, [string, typeof k][]][] = [];
+    for (const x of k) {
+      let sek = out.find((e) => e[0] === x.sekolah);
+      if (!sek) out.push((sek = [x.sekolah, []]));
+      const t = x.tingkatan ?? 'Tanpa tingkatan';
+      let ting = sek[1].find((e) => e[0] === t);
+      if (!ting) sek[1].push((ting = [t, []]));
+      ting[1].push(x);
+    }
+    return out;
+  }, [k]);
   const sum = (f: (x: (typeof k)[number]) => number) => k.reduce((a, x) => a + f(x), 0);
   const liputan = pct(sum((x) => x.bulan_ada), sum((x) => x.bulan_sepatutnya));
   const kehadiran = pct(sum((x) => x.hadir), sum((x) => x.peluang));
@@ -135,36 +166,42 @@ export default function PerkaderanAnalisaScreen() {
               />
             </Panel>
 
-            <Panel title="Kehadiran mad'u setiap kumpulan" caption="Disusun mengikut sekolah" full>
-              <ValueBars
-                format={(v) => Math.round(v) + '%'}
-                rows={k.map((x) => ({
-                  key: x.group_id,
-                  label: x.group_name ?? x.sekolah,
-                  value: pct(x.hadir, x.peluang) ?? 0,
-                  fill: (pct(x.hadir, x.peluang) ?? 0) / 100,
-                  display: fmt(pct(x.hadir, x.peluang)),
-                  note: x.sesi + ' sesi · ' + x.madu + " mad'u",
-                }))}
-              />
-            </Panel>
-
-            <Panel title="Liputan bulan setiap kumpulan" caption="Bulan tanpa sesi ditunjukkan di bawah nama kumpulan" full>
-              <View className="gap-3">
-                {k.map((x) => (
-                  <View key={x.group_id} className="rounded-card border border-line p-3">
-                    <Text className="text-base font-semibold text-ink">{x.group_name ?? x.sekolah}</Text>
-                    <Text className="text-xs text-ink-muted">
-                      {x.bulan_ada}/{x.bulan_sepatutnya} bulan ({fmt(pct(x.bulan_ada, x.bulan_sepatutnya))}) · Fikrah diliputi {x.unit_silibus} · Bonding {x.sesi_bonding}
-                      {x.sesi_terakhir ? ' · sesi terakhir ' + x.sesi_terakhir : ''}
-                    </Text>
-                    {x.bulan_tiada.length > 0 ? (
-                      <Text className="mt-1 text-xs text-ink">Tiada sesi: {x.bulan_tiada.join(', ')}</Text>
-                    ) : null}
+            {sekolahGroups.map(([nama, rows]) => (
+              <Panel key={nama} title={nama} caption={rows.reduce((n, r) => n + r[1].length, 0) + ' kumpulan'} full>
+                <ScrollView horizontal showsHorizontalScrollIndicator>
+                  <View style={{ minWidth: 760 }}>
+                    <View className="flex-row border-b border-line pb-2">
+                      {COLS.map((c) => (
+                        <Text key={c.key} style={{ width: c.w }} className="text-xs font-semibold text-ink-muted">
+                          {c.label}
+                        </Text>
+                      ))}
+                    </View>
+                    {rows.map(([tingkatan, list]) => (
+                      <View key={tingkatan}>
+                        <Text className="bg-surface-muted px-1 py-1.5 text-xs font-bold text-ink">{tingkatan}</Text>
+                        {list.map((x) => (
+                          <View key={x.group_id} className="border-b border-line py-2">
+                            <View className="flex-row items-center">
+                              <Cell w={COLS[0]!.w} strong>{x.no_kumpulan ? 'K' + x.no_kumpulan : '—'}</Cell>
+                              <Cell w={COLS[1]!.w}>{[x.naqib, x.naqib2].filter(Boolean).join(' & ') || '—'}</Cell>
+                              <Cell w={COLS[2]!.w}>{String(x.madu)}</Cell>
+                              <Cell w={COLS[3]!.w}>{x.sesi + (x.sesi_bonding ? ' (' + x.sesi_bonding + ' bonding)' : '')}</Cell>
+                              <Cell w={COLS[4]!.w}>{x.bulan_ada + '/' + x.bulan_sepatutnya + ' · ' + fmt(pct(x.bulan_ada, x.bulan_sepatutnya))}</Cell>
+                              <Cell w={COLS[5]!.w}>{x.peluang ? x.hadir + '/' + x.peluang + ' · ' + fmt(pct(x.hadir, x.peluang)) : '—'}</Cell>
+                              <Cell w={COLS[6]!.w}>{x.sesi_terakhir ?? '—'}</Cell>
+                            </View>
+                            {x.bulan_tiada.length > 0 ? (
+                              <Text className="mt-1 text-xs text-ink-muted">Tiada sesi: {x.bulan_tiada.join(', ')}</Text>
+                            ) : null}
+                          </View>
+                        ))}
+                      </View>
+                    ))}
                   </View>
-                ))}
-              </View>
-            </Panel>
+                </ScrollView>
+              </Panel>
+            ))}
           </>
         ) : null}
       </View>

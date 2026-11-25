@@ -205,6 +205,10 @@ export type AnalisaKumpulan = {
   group_id: string;
   sekolah: string;
   group_name: string | null;
+  tingkatan: string | null;
+  no_kumpulan: number | null;
+  naqib: string | null;
+  naqib2: string | null;
   madu: number;
   sesi: number;
   sesi_bonding: number;
@@ -239,7 +243,9 @@ export async function downloadAnalisaUsrah(
   const book = XLSX.utils.book_new();
   const ringkas = data.kumpulan.map((x) => ({
     Sekolah: x.sekolah,
-    Kumpulan: x.group_name ?? '',
+    Tingkatan: x.tingkatan ?? '',
+    Kumpulan: x.no_kumpulan ?? '',
+    Naqib: [x.naqib, x.naqib2].filter(Boolean).join(' & '),
     "Bil. Mad'u": x.madu,
     'Bil. Sesi': x.sesi,
     'Sesi Bonding': x.sesi_bonding,
