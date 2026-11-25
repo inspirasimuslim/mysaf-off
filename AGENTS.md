@@ -900,5 +900,6 @@ Ketuk baris -> `naqib-session-history` seperti dulu; bahagian muat turun laporan
 - 2026-11-25 (susulan 2): Pantauan Usrah Sekolah ditukar kepada jadual BULANAN (`admin/perkaderan-groups.tsx`, `lib/perkaderan-pantauan.ts`): baris = kumpulan (sekolah > tingkatan > kumpulan, TANPA nama naqib),
   lajur Jan–Dis; sel = kod Fikrah yang dibuat (F1, F2; "Bonding") atau "Tiada" (bulan akan datang kosong). Ketuk "T4 K1" -> helaian nama naqib + generasi (ketuk nama -> `naqib-session-history`).
   Data: `sekolah_usrah_sessions` dibaca terus (RLS `can_view_perkaderan`), silibus daripada `perkaderan_silibus` (`silibus_ids`); sesi import guna teks `topik` ("Fikrah 1 : ...") -> kod F#.
-  Butang "Muat Turun Ringkasan (.xlsx)" = satu baris/kumpulan (Sekolah, Tingkatan, Kumpulan, Naqib+generasi, Jan–Dis dengan tajuk Fikrah penuh atau "Tiada usrah"). Laporan sesi terperinci (bulan/tahun) kekal di bawah.
-  BELUM disahkan: format Excel belum dipadankan dengan fail "Laporan Usrah 2026 (General)" (fail itu tiada dalam Drive/lampiran); tiada migration.
+  Excel "Muat Turun Ringkasan (.xlsx)" = susun atur SAMA dokumen Google Doc "LAPORAN USRAH 2026 (General)": satu jadual setiap tingkatan (CALON I28 = T5, I29 = T4, I30 = T3), baris Sek (Falahiah dulu, kemudian Naim),
+  baris "Nama/Bulan" + "Group N: nama pendek gen" (N berjalan merentas sekolah dalam satu tingkatan), baris Jan–Dis; sel = FF1 / NB1 (awalan F/N + F=Fikrah/B=Bonding + nombor; bonding dinomborkan ikut tarikh) atau X; bulan akan datang kosong.
+  Nama pendek = nama sebelum BIN/BINTI (BUKAN nama panggilan seperti dalam doc). Format T3 doc asal (Tarikh/Tajuk/Naqib) TIDAK ditiru — T3 guna jadual yang sama. KUIZ 3K tiada dalam eksport (bukan sesi usrah).
