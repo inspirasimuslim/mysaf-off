@@ -868,3 +868,8 @@ Rujukan: `supabase/migrations/20261125000179_laporan_usrah_silibus.sql`, `app/(a
 - Skrin naqib sendiri (`usrah-group-create`) masih guna senarai sekolah tetap dan tidak mengisi tingkatan/no — belum diselaraskan.
 
 - 2026-11-25 (migration 183): `perkaderan_analisa_usrah` +`tingkatan`, `no_kumpulan`, `naqib`, `naqib2`; skrin Analisa Usrah = satu jadual setiap sekolah, dikumpul ikut tingkatan > kumpulan (skrol mendatar di telefon). Eksport Excel ada lajur Tingkatan/Kumpulan/Naqib.
+
+# Hub Admin: fokus seksyen selepas back (2026-11-25, tiada migration)
+Rujukan: `lib/hub-focus.tsx`, `components/ui/collapsible-section.tsx`, `app/(app)/admin/index.tsx`. `Screen` menatal ke atas setiap kali difokus
+(`useResetScrollOnFocus`), jadi back dari fungsi dalam lajnah melompat ke atas Hub. Kini `CollapsibleSection` melaporkan buka/tutup + kedudukan Y kepada
+`HubFocusProvider`; Hub menatal ke seksyen dibuka (`scrollTarget`) dan menatal semula ke situ selepas fokus (`useFocusEffect`, 60ms). Tutup seksyen = lepas fokus.

@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Children, isValidElement, useState, type ReactElement, type ReactNode } from 'react';
+import { Children, isValidElement, useRef, useState, type ReactElement, type ReactNode } from 'react';
 import { Pressable, Text, View } from 'react-native';
+import { useHubFocus } from '@/lib/hub-focus';
 import { useHubSearch } from '@/lib/hub-search';
 import { useColors } from '@/lib/theme';
 
@@ -46,6 +47,14 @@ export function CollapsibleSection({
   const colors = useColors();
   const [open, setOpen] = useState(defaultOpen);
   const plain = variant === 'plain';
+  const hubFocus = useHubFocus();
+  const yRef = useRef(0);
+  const toggle = () => {
+    const next = !open;
+    setOpen(next);
+    if (next) hubFocus?.opened(title, yRef.current);
+    else hubFocus?.closed(title);
+  };
 
   /*
     Carian Hub Admin (lib/hub-search): bila ada kata carian, seksyen dibuka paksa dan hanya kad
@@ -74,12 +83,17 @@ export function CollapsibleSection({
   const isOpen = open || searching;
 
   return (
-    <View className={plain ? '' : 'overflow-hidden rounded-card border border-line bg-surface'}>
+    <View
+      className={plain ? '' : 'overflow-hidden rounded-card border border-line bg-surface'}
+      onLayout={(e) => {
+        yRef.current = e.nativeEvent.layout.y;
+        hubFocus?.moved(title, yRef.current);
+      }}>
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={title}
         accessibilityState={{ expanded: isOpen }}
-        onPress={() => setOpen((current) => !current)}
+        onPress={toggle}
         className={`flex-row items-center gap-4 active:opacity-70 ${plain ? 'py-2' : 'p-card'}`}>
         <View className="flex-1">
           <Text className={plain ? 'text-lg font-bold text-ink' : 'text-base font-semibold text-ink'}>{title}</Text>

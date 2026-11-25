@@ -1,5 +1,5 @@
-import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { View } from 'react-native';
 
 import { PendingTasksNotice } from '@/components/admin-notifications-ui';
@@ -7,6 +7,7 @@ import { NaqibHubSection } from '@/components/naqib-hub-section';
 import { ScreenHeader } from '@/components/screen-header';
 import { ActionRow } from '@/components/ui/action-row';
 import { CollapsibleSection } from '@/components/ui/collapsible-section';
+import { HubFocusProvider } from '@/lib/hub-focus';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Screen } from '@/components/ui/screen';
 import { TextField } from '@/components/ui/text-field';
@@ -154,8 +155,40 @@ export default function AdminHubScreen() {
   const nothingAvailable = visibleSections === 0;
   const openByDefault = visibleSections === 1;
 
+  // Fokus seksyen: buka lajnah -> tatal ke situ; back dari fungsi dalamnya -> tatal ke situ semula (bukan ke atas).
+  const containerY = useRef(0);
+  const focused = useRef<{ title: string; y: number } | null>(null);
+  const [scrollTarget, setScrollTarget] = useState<{ y: number; token: number } | undefined>(undefined);
+  const scrollToFocused = useCallback(() => {
+    const f = focused.current;
+    if (f) setScrollTarget({ y: Math.max(0, containerY.current + f.y - 8), token: Date.now() });
+  }, []);
+  const hubFocus = useMemo(
+    () => ({
+      opened: (title: string, y: number) => {
+        focused.current = { title, y };
+        scrollToFocused();
+      },
+      closed: (title: string) => {
+        if (focused.current?.title === title) focused.current = null;
+      },
+      moved: (title: string, y: number) => {
+        if (focused.current?.title === title) focused.current.y = y;
+      },
+    }),
+    [scrollToFocused],
+  );
+  // Screen menatal ke atas bila difokus semula; kesan ini berjalan selepasnya dan memulihkan seksyen yang dibuka.
+  useFocusEffect(
+    useCallback(() => {
+      if (!focused.current) return;
+      const t = setTimeout(scrollToFocused, 60);
+      return () => clearTimeout(t);
+    }, [scrollToFocused]),
+  );
+
   return (
-    <Screen padTop={false}>
+    <Screen padTop={false} scrollTarget={scrollTarget}>
       <ScreenHeader
         eyebrow="Panel Pentadbiran"
         title="Hub Admin"
@@ -163,7 +196,8 @@ export default function AdminHubScreen() {
       />
 
       <HubSearchProvider value={hubSearch}>
-      <View className="gap-4 px-gutter pt-6">
+      <HubFocusProvider value={hubFocus}>
+      <View className="gap-4 px-gutter pt-6" onLayout={(e) => { containerY.current = e.nativeEvent.layout.y; }}>
         <PendingTasksNotice />
         {/* Cari modul: tapis kad ikut tajuk/keterangan merentas semua seksyen (seksyen yang sepadan dibuka sendiri). */}
         {accessLoading || visibleSections < 3 ? null : (
@@ -879,6 +913,7 @@ export default function AdminHubScreen() {
         </>
         )}
       </View>
+      </HubFocusProvider>
       </HubSearchProvider>
     </Screen>
   );

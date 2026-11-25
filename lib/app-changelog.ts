@@ -186,6 +186,7 @@ export const CHANGELOG: ChangelogEntry[] = [
       'Analisa Usrah boleh dimuat turun sebagai Excel.',
       'Pelantikan naqib ikut struktur: sekolah (senarai boleh ditambah/dibuang), tingkatan 3-5, kumpulan 1-10, kemudian naqib.',
       'Analisa Usrah dipaparkan dalam jadual setiap sekolah, dikategori ikut tingkatan dan kumpulan.',
+      'Hub Admin: bila tekan back dari fungsi dalam sesuatu lajnah, skrin kembali ke lajnah itu (bukan melompat ke atas).',
       'Dua naqib kumpulan setaraf — kedua-duanya boleh merekod sesi dan kehadiran.',
       'Jenis tamrin (TAQ, Tampenor, QTC, Kuiz 3K, Tamrin 3K) dan skrin Silibus Fikrah untuk admin Lajnah.',
     ],
