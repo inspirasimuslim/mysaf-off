@@ -18,8 +18,10 @@ import { toMalayErrorVerbose } from '@/lib/errors';
 import { fetchMembersForPicker } from '@/lib/members';
 import { useGoBack } from '@/lib/navigation';
 import {
+  addMadU,
   addSekolah,
   assignSlot,
+  fetchMadU,
   fetchSekolahList,
   fetchSlots,
   removeSekolah,
@@ -58,6 +60,7 @@ export default function NaqibAssignmentsScreen() {
   const [naqib3Id, setNaqib3Id] = useState<string | null>(null);
   const [, setNaqib4Id] = useState<string | null>(null);
   const [naqibCount, setNaqibCount] = useState(1);
+  const [madUText, setMadUText] = useState('');
   const [busy, setBusy] = useState(false);
   const formY = useRef(0);
   const [scrollTarget, setScrollTarget] = useState<{ y: number; token: number } | undefined>(undefined);
@@ -110,6 +113,7 @@ export default function NaqibAssignmentsScreen() {
     setBanner(null);
     setEditing(false);
     setNaqibCount(1);
+    setMadUText('');
     // Cadang kumpulan kosong pertama dalam sekolah + tingkatan semasa.
     const used = new Set(groups.filter((x) => x.sekolah === sekolah && x.tingkatan === tingkatan).map((x) => String(x.no_kumpulan)));
     setNoKump(NO_OPTIONS.find((o) => !used.has(o.value))?.value ?? '1');
@@ -119,6 +123,7 @@ export default function NaqibAssignmentsScreen() {
   const openEdit = useCallback((g: Group) => {
     setBanner(null);
     setEditing(true);
+    setMadUText('');
     setSekolah(g.sekolah);
     setTingkatan(g.tingkatan);
     setNoKump(String(g.no_kumpulan));
@@ -140,6 +145,20 @@ export default function NaqibAssignmentsScreen() {
         partnerId: naqibCount >= 2 ? partnerId : null,
         tambahanIds: naqibCount >= 3 && naqib3Id ? [naqib3Id] : [],
       });
+      // Nama mad'u (satu setiap baris) ditambah ke kumpulan ini; nama yang sudah ada dilangkau.
+      const names = madUText.split('\n').map((n) => n.replace(/^\s*\d+[.)]\s*/, '').trim()).filter(Boolean);
+      if (names.length > 0) {
+        const slots = await fetchSlots(sekolah);
+        const slot = slots.find((x) => x.tingkatan === tingkatan && String(x.no_kumpulan) === noKump);
+        if (slot) {
+          const existing = new Set((await fetchMadU(slot.group_id)).map((m) => m.nama.trim().toLowerCase()));
+          for (const n of names) {
+            if (existing.has(n.toLowerCase())) continue;
+            existing.add(n.toLowerCase());
+            await addMadU(slot.group_id, n, tingkatan);
+          }
+        }
+      }
       await load();
       setBanner({ tone: 'positive', message: 'Disimpan: ' + sekolah + ', ' + tingkatan + ', Kumpulan ' + noKump + '.' });
       setFormOpen(false);
@@ -148,7 +167,7 @@ export default function NaqibAssignmentsScreen() {
     } finally {
       setBusy(false);
     }
-  }, [busy, load, naqib3Id, naqibCount, naqibId, noKump, partnerId, sekolah, tingkatan]);
+  }, [busy, load, madUText, naqib3Id, naqibCount, naqibId, noKump, partnerId, sekolah, tingkatan]);
 
   // --- Urus senarai sekolah ---
   const [managingSekolah, setManagingSekolah] = useState(false);
@@ -245,6 +264,15 @@ export default function NaqibAssignmentsScreen() {
                 <MemberPickerField label="Naqib/Naqibah 3" value={naqib3Id} candidates={candidates} onChange={setNaqib3Id} placeholder="Pilih naqib" disabled={busy} />
               ) : null}
               {naqibCount < 3 ? <Button label="+ Tambah Naqib" variant="secondary" disabled={busy} onPress={() => setNaqibCount((n) => Math.min(3, n + 1))} /> : null}
+              <TextField
+                label={editing ? "Tambah Mad'u (satu nama setiap baris)" : "Nama Mad'u (satu nama setiap baris)"}
+                value={madUText}
+                onChangeText={setMadUText}
+                multiline
+                numberOfLines={4}
+                autoCapitalize="words"
+                editable={!busy}
+              />
               {editing ? null : <Button label="Urus Senarai Sekolah" variant="secondary" onPress={() => setManagingSekolah(true)} />}
               <View className="flex-row gap-3">
                 <View className="flex-1">

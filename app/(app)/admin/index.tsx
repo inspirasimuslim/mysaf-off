@@ -533,6 +533,12 @@ export default function AdminHubScreen() {
               subtitle="Kehadiran usrah dan tamrin mad'u, dengan carta"
               onPress={() => router.push('/(app)/admin/perkaderan-prestasi')}
             />
+            <ActionRow
+              icon="podium-outline"
+              title="Ranking Tamrin 3K"
+              subtitle="Mad'u paling layak ikut mata usrah, TAQ, TAMPENOR, QTC"
+              onPress={() => router.push('/(app)/admin/perkaderan-ranking')}
+            />
 
             <ActionRow
               icon="stats-chart-outline"

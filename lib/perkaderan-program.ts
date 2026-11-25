@@ -271,3 +271,24 @@ export async function downloadAnalisaUsrah(
   const result = await deliverWorkbook(book, fileName, 'Analisa Usrah', mode);
   return { rows: ringkas.length, fileName, result };
 }
+
+// ----- Ranking kelayakan Tamrin 3K (migration 188) -----
+export type RankingRow = {
+  mad_u_id: string;
+  nama: string;
+  sekolah: string;
+  no_kumpulan: number | null;
+  tingkatan: string;
+  usrah_hadir: number;
+  usrah_jumlah: number;
+  taq: boolean;
+  tampenor: boolean;
+  qtc: boolean;
+  mata: number;
+};
+
+export async function fetchRanking3K(tingkatan: string | null): Promise<RankingRow[]> {
+  const { data, error } = await supabase.rpc('perkaderan_ranking_3k', { p_tingkatan: tingkatan });
+  if (error) throw error;
+  return (data as RankingRow[] | null) ?? [];
+}

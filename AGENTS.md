@@ -929,3 +929,10 @@ Diuji pada produksi dalam transaksi yang di-rollback (impersonasi JWT naqib kemu
   Kini sesi `sumber = 'import_google_form'` tanpa baris kehadiran dikecualikan daripada prestasi PER MAD'U; ringkasan bulanan guna `hadir_rekod/jumlah_rekod` untuk sesi import.
 - **Perhatian**: `my_member_id(uid)` memulangkan NULL bagi akaun `must_change_password` atau `disekat` -> RLS menolak naqib itu merekod sesi sehingga kata laluan sementara ditukar
   (2026-11-25: 18 daripada 34 naqib aktif belum tukar). Ini by design.
+
+# Ranking Tamrin 3K + nama mad'u dalam borang kumpulan (2026-11-26, migration 188, sudah live di produksi)
+Rujukan: `20261126000188_ranking_3k.sql`, `app/(app)/admin/perkaderan-ranking.tsx`, `lib/perkaderan-program.ts` (`fetchRanking3K`), `naqib-assignments.tsx`.
+- `perkaderan_ranking_3k(p_tingkatan)` (admin Lajnah/Super Admin): 1 item = 1 mata = setiap usrah dihadiri + TAQ + TAMPENOR + QTC; susun mata tertinggi. Dropdown tingkatan di skrin; Hub -> Lajnah Perkaderan -> "Ranking Tamrin 3K".
+- Usrah = `sekolah_usrah_mad_u.usrah_import_hadir/jumlah` (baseline daripada grid KEHADIRAN_USRAH_2026.xlsx, 161/161 mad'u dipadan ikut nama) + baris kehadiran sebenar sesi naqib bukan import. `usrah_import_jumlah` = max(bilangan sesi import kumpulan, hadir tertinggi dalam kumpulan) — anggaran, sebab satu bulan boleh ada 2 Fikrah dalam satu sel.
+- Tamrin: program "Pra-Keahlian 2026" dicipta (belum ada sebelum ini; semua kumpulan aktif dipautkan). 6 rekod tamrin import (TAQ/TAMPENOR/QTC x T4/T5, nama ada "import", tarikh 2026-01-01 PLACEHOLDER — admin betulkan di Program & Tamrin) + 77 tanda hadir daripada kotak semak sheet 2026. Tamrin baharu (jenis taq/tampenor/qtc) + kehadiran masuk ranking sendiri.
+- Borang Tambah/Edit Kumpulan: medan "Nama Mad'u" (satu setiap baris, nama sedia ada dilangkau).
