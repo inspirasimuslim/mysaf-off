@@ -1,7 +1,6 @@
-import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { useCallback, useMemo, useState } from 'react';
+import { View } from 'react-native';
 
 import { SaveShareButtons } from '@/components/save-share-buttons';
 import { ScreenHeader } from '@/components/screen-header';
@@ -18,11 +17,9 @@ import { usePerkaderanAccess } from '@/lib/department-access';
 import { toMalayErrorVerbose } from '@/lib/errors';
 import { deliveryMessage, type DeliveryMode } from '@/lib/file-delivery';
 import { useGoBack } from '@/lib/navigation';
-import { useIsDesktop } from '@/lib/use-desktop';
-import { fetchNaqibOverview } from '@/lib/perkaderan';
+import { fetchNaqibOverview, fetchSekolahList, fetchSlots, type PerkaderanSlot } from '@/lib/perkaderan';
 import { downloadPerkaderanReport } from '@/lib/perkaderan-report';
-import { generationLabel, MONTH_OPTIONS, type NaqibOverview } from '@/types/database';
-import { useColors } from '@/lib/theme';
+import { MONTH_OPTIONS, type NaqibOverview } from '@/types/database';
 
 type Banner = { tone: 'positive' | 'info' | 'negative'; message: string } | null;
 
@@ -30,20 +27,18 @@ const ALL_MONTHS = '0';
 const MONTH_FILTER_OPTIONS = [{ value: ALL_MONTHS, label: 'Semua Bulan' }, ...MONTH_OPTIONS];
 
 /**
- * PERINGKAT 1 navigasi admin: senarai NAQIB (bukan senarai kumpulan terus) —
- * naqib boleh pegang >1 kumpulan/sekolah, jadi menyenaraikan mengikut
- * kumpulan akan mengulang nama naqib yang sama berkali-kali. Tap satu naqib
+ * PERINGKAT 1 navigasi admin: jadual ringkasan naqib mengikut sekolah > tingkatan > kumpulan
+ * (satu baris setiap naqib; naqib yang pegang >1 kumpulan muncul di setiap kumpulannya). Tap satu naqib
  * -> PERINGKAT 2 (`naqib-session-history.tsx`) -> PERINGKAT 3 (butiran sesi,
  * reuse `usrah-session-form.tsx` sedia ada, kebenaran edit tidak berubah).
  */
 export default function PerkaderanGroupsScreen() {
-  const colors = useColors();
   const router = useRouter();
-  const desktop = useIsDesktop();
   const goBack = useGoBack();
   const { loading: accessLoading, canView } = usePerkaderanAccess();
 
   const [naqibs, setNaqibs] = useState<NaqibOverview[]>([]);
+  const [slots, setSlots] = useState<{ sekolah: string; slots: PerkaderanSlot[] }[]>([]);
   const [loading, setLoading] = useState(true);
   const [banner, setBanner] = useState<Banner>(null);
   const [exporting, setExporting] = useState<DeliveryMode | null>(null);
@@ -53,7 +48,10 @@ export default function PerkaderanGroupsScreen() {
 
   const load = useCallback(async () => {
     try {
-      setNaqibs(await fetchNaqibOverview());
+      const [overview, sekolahList] = await Promise.all([fetchNaqibOverview(), fetchSekolahList()]);
+      setNaqibs(overview);
+      const perSekolah = await Promise.all(sekolahList.map(async (x) => ({ sekolah: x.nama, slots: await fetchSlots(x.nama) })));
+      setSlots(perSekolah.filter((x) => x.slots.length > 0));
     } catch (caught) {
       setBanner({ tone: 'negative', message: toMalayErrorVerbose(caught, 'Gagal memuatkan senarai naqib.') });
     } finally {
@@ -69,6 +67,33 @@ export default function PerkaderanGroupsScreen() {
       void load();
     }, [accessLoading, canView, load]),
   );
+
+  // Satu baris setiap naqib; Ting./Kump./Mad'u dipaparkan pada baris pertama kumpulan sahaja.
+  const sekolahTables = useMemo(() => {
+    const byId = new Map(naqibs.map((n) => [n.member_id, n]));
+    return slots.map(({ sekolah, slots: list }) => {
+      const sorted = [...list].sort((a, b) => a.tingkatan.localeCompare(b.tingkatan) || a.no_kumpulan - b.no_kumpulan);
+      const rows: { key: string; tingkatan: string; no: number; madu: number; naqibId: string; nama: string; sesi: number; first: boolean }[] = [];
+      for (const g of sorted) {
+        const people: { id: string; nama: string }[] = [{ id: g.naqib_id, nama: g.naqib_nama }];
+        if (g.partner_id) people.push({ id: g.partner_id, nama: g.partner_nama ?? byId.get(g.partner_id)?.full_name ?? '—' });
+        for (const id of g.tambahan_ids ?? []) people.push({ id, nama: byId.get(id)?.full_name ?? '—' });
+        people.forEach((pp, i) =>
+          rows.push({
+            key: g.group_id + pp.id,
+            tingkatan: g.tingkatan.replace('Tingkatan ', ''),
+            no: g.no_kumpulan,
+            madu: g.madu,
+            naqibId: pp.id,
+            nama: pp.nama,
+            sesi: byId.get(pp.id)?.session_count ?? 0,
+            first: i === 0,
+          }),
+        );
+      }
+      return { sekolah, groups: sorted.length, rows };
+    });
+  }, [naqibs, slots]);
 
   const exportAll = useCallback(
     async (mode: DeliveryMode) => {
@@ -116,69 +141,40 @@ export default function PerkaderanGroupsScreen() {
       <ScreenHeader
         eyebrow="Panel Admin"
         title="Pantauan Usrah Sekolah"
-        subtitle={naqibs.length + ' naqib aktif'}
+        subtitle={naqibs.length + ' naqib aktif · ' + slots.reduce((n, x) => n + x.slots.length, 0) + ' kumpulan'}
         onBackPress={goBack}
       />
 
       <View className="gap-6 px-gutter pt-6">
         {banner ? <ToastBanner tone={banner.tone} message={banner.message} /> : null}
 
-        <View>
-          <SectionTitle title="Senarai Naqib" caption="Ketuk seorang naqib untuk lihat sejarah sesinya." />
-
-          {naqibs.length === 0 ? (
-            <EmptyState
-              icon="school-outline"
-              title="Belum ada naqib"
-              description="Naqib yang dilantik akan muncul di sini."
-            />
-          ) : desktop ? (
-            <DataTable
-              rows={naqibs}
-              keyOf={(n) => n.member_id}
-              onRowPress={(n) =>
-                router.push({
-                  pathname: '/(app)/admin/naqib-session-history',
-                  params: { memberId: n.member_id, naqibName: n.full_name },
-                })
-              }
-              columns={[
-                { key: 'nama', header: 'Nama', flex: 2, render: (n) => <CellText strong>{n.full_name}</CellText> },
-                { key: 'gen', header: 'Generasi', flex: 1, render: (n) => <CellText muted>{n.generasi ? generationLabel(n.generasi) : '—'}</CellText> },
-                { key: 'sekolah', header: 'Sekolah', flex: 2, render: (n) => <CellText muted>{n.sekolah_list}</CellText> },
-                { key: 'kumpulan', header: 'Kumpulan', width: 100, align: 'right', render: (n) => <CellText>{String(n.group_count)}</CellText> },
-                { key: 'sesi', header: 'Jumlah Sesi', width: 110, align: 'right', render: (n) => <CellText>{String(n.session_count)}</CellText> },
-              ]}
-            />
-          ) : (
-            <View className="gap-2">
-              {naqibs.map((naqib) => (
-                <Pressable
-                  key={naqib.member_id}
-                  accessibilityRole="button"
-                  onPress={() =>
-                    router.push({
-                      pathname: '/(app)/admin/naqib-session-history',
-                      params: { memberId: naqib.member_id, naqibName: naqib.full_name },
-                    })
-                  }
-                  className="flex-row items-center gap-3 rounded-card border border-line bg-surface p-card active:opacity-70">
-                  <View className="flex-1">
-                    <Text className="text-base font-semibold text-ink">{naqib.full_name}</Text>
-                    <Text className="mt-0.5 text-sm text-ink-muted" numberOfLines={1}>
-                      {naqib.sekolah_list}
-                      {naqib.generasi ? ' · ' + generationLabel(naqib.generasi) : ''}
-                    </Text>
-                    <Text className="mt-1 text-xs text-ink-faint">
-                      {naqib.group_count + ' kumpulan · ' + naqib.session_count + ' sesi jumlah'}
-                    </Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={18} color={colors.inkMuted} />
-                </Pressable>
-              ))}
+        {sekolahTables.length === 0 ? (
+          <EmptyState icon="school-outline" title="Belum ada kumpulan" description="Kumpulan usrah yang dilantik akan muncul di sini." />
+        ) : (
+          sekolahTables.map((t) => (
+            <View key={t.sekolah} className="gap-2">
+              <SectionTitle title={t.sekolah} caption={t.groups + ' kumpulan · ' + t.rows.length + ' naqib · ketuk nama untuk sejarah sesi'} />
+              <DataTable
+                fill
+                rows={t.rows}
+                keyOf={(r) => r.key}
+                onRowPress={(r) =>
+                  router.push({
+                    pathname: '/(app)/admin/naqib-session-history',
+                    params: { memberId: r.naqibId, naqibName: r.nama },
+                  })
+                }
+                columns={[
+                  { key: 'ting', header: 'Ting.', width: 52, render: (r) => <CellText strong>{r.first ? 'T' + r.tingkatan : ''}</CellText> },
+                  { key: 'kump', header: 'Kump.', width: 52, render: (r) => <CellText>{r.first ? 'K' + r.no : ''}</CellText> },
+                  { key: 'nama', header: 'Naqib', flex: 1, render: (r) => <CellText strong>{r.nama}</CellText> },
+                  { key: 'madu', header: "Mad'u", width: 52, align: 'right', render: (r) => <CellText muted>{r.first ? String(r.madu) : ''}</CellText> },
+                  { key: 'sesi', header: 'Sesi', width: 48, align: 'right', render: (r) => <CellText muted>{String(r.sesi)}</CellText> },
+                ]}
+              />
             </View>
-          )}
-        </View>
+          ))
+        )}
 
         <View className="pb-8">
           <SectionTitle title="Muat Turun Laporan" caption="Ringkasan sesi dan kehadiran terperinci, boleh ditapis ikut bulan/tahun (.xlsx)." />

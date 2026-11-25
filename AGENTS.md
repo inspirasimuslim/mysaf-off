@@ -887,3 +887,8 @@ Rujukan: `supabase/migrations/20261125000184_naqib_hingga_4.sql`, `app/(app)/adm
 `admin/naqib-assignments.tsx`: senarai kumpulan (dikumpul ikut sekolah; "T4 · K1 · 9 mad'u" + nama naqib) dengan butang edit pada setiap kumpulan. Butang "+ Tambah Kumpulan" di atas
 membuka borang (sekolah, tingkatan, kumpulan, 4 naqib) — hanya dipaparkan bila ditekan; mod edit mengunci sekolah/tingkatan/no. Senarai naqib rata, "Lantik tanpa kumpulan" dan
 buang naqib DIBUANG daripada skrin ini (fungsi `assignNaqib`/`removeNaqib` dalam `lib/perkaderan.ts` kekal tetapi tidak lagi dipanggil dari sini).
+
+## Pantauan Usrah Sekolah jadi jadual (2026-11-25, tiada migration)
+`admin/perkaderan-groups.tsx`: senarai naqib rata diganti satu jadual setiap sekolah (`DataTable fill`), disusun tingkatan > kumpulan, SATU BARIS SETIAP NAQIB
+(Ting./Kump./Mad'u pada baris pertama kumpulan sahaja, lajur Sesi = jumlah sesi naqib itu). Data: `fetchSlots` setiap sekolah + `fetchNaqibOverview` (nama/sesi).
+Ketuk baris -> `naqib-session-history` seperti dulu; bahagian muat turun laporan tidak berubah. Naqib dalam >1 kumpulan muncul di setiap kumpulannya.
