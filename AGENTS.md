@@ -882,3 +882,8 @@ Rujukan: `supabase/migrations/20261125000184_naqib_hingga_4.sql`, `app/(app)/adm
 - Data: Ahmad Nuruddin (F4 Falahiah K3) dan Siti Nurhakimah (K4) dimasukkan sebagai naqib ke-3; kumpulan T5 K6 Falahiah (Nurul Hidayah i26, tiada mad'u — naqibah isi sendiri) dicipta.
 - Semakan padanan 33 naqib terhadap `members` (nama + generasi): semua padan. Perhatian: "Aqwa" = MUHAMAD AMIR AQWA i27 (sheet hanya tulis AQWA); "Wadhihah" = FARAH WADIHAH i16 (ejaan DB);
   `MUHAMMADIMANUL SYAHID` dalam `members` tiada ruang (ralat data asal). Migration 184 belum direkod dalam sejarah CLI (dijalankan melalui Management API).
+
+## Skrin Naqib/Naqibah dirombak ringkas (2026-11-25, tiada migration)
+`admin/naqib-assignments.tsx`: senarai kumpulan (dikumpul ikut sekolah; "T4 · K1 · 9 mad'u" + nama naqib) dengan butang edit pada setiap kumpulan. Butang "+ Tambah Kumpulan" di atas
+membuka borang (sekolah, tingkatan, kumpulan, 4 naqib) — hanya dipaparkan bila ditekan; mod edit mengunci sekolah/tingkatan/no. Senarai naqib rata, "Lantik tanpa kumpulan" dan
+buang naqib DIBUANG daripada skrin ini (fungsi `assignNaqib`/`removeNaqib` dalam `lib/perkaderan.ts` kekal tetapi tidak lagi dipanggil dari sini).
