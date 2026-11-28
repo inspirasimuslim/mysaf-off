@@ -4,6 +4,8 @@ import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Linking, Platform, Pressable, Text, View } from 'react-native';
 
+import { ZoomablePoster } from '@/components/zoomable-poster';
+import { useIsDesktop } from '@/lib/use-desktop';
 import { EventQrCard } from '@/components/event-qr-card';
 import { LinkifiedText } from '@/components/linkified-text';
 import { StaticMap } from '@/components/static-map';
@@ -52,6 +54,7 @@ import { useColors } from '@/lib/theme';
  * tetapan geofence didedahkan.
  */
 export default function EventInfoScreen() {
+  const isWide = useIsDesktop();
   const colors = useColors();
   const goBack = useGoBack();
   const router = useRouter();
@@ -200,23 +203,22 @@ export default function EventInfoScreen() {
       />
 
       <View className="gap-6 px-gutter pt-6">
-        {/* --- Poster: tiada poster, tiada bahagian ------------------------------ */}
-        {event.poster_url ? (
-          <Image
-            source={{ uri: event.poster_url }}
-            style={{ width: '100%', aspectRatio: 3 / 4, borderRadius: 20 }}
-            contentFit="cover"
-            transition={150}
-            accessibilityLabel={'Poster ' + event.name}
-          />
-        ) : null}
-
-        {/* --- Kod QR Kehadiran: thumbnail, ketik untuk besarkan ------------------ */}
-        <EventQrCard
-          token={event.qr_token}
-          eventName={event.name}
-          subtitle="Simpan atau screenshot kod ni untuk scan semasa program."
-        />
+        {/* --- Poster (kiri, penuh 3:4, ketik untuk besarkan) + Kod QR (kanan) --- */}
+        <View className="flex-row items-start gap-3">
+          {event.poster_url ? (
+            <View style={{ flex: isWide ? 0 : 1, width: isWide ? 300 : undefined }}>
+              <ZoomablePoster uri={event.poster_url} label={'Poster ' + event.name} />
+            </View>
+          ) : null}
+          <View style={{ flex: 1 }}>
+            <EventQrCard
+              stacked={!isWide}
+              token={event.qr_token}
+              eventName={event.name}
+              subtitle="Simpan atau screenshot kod ni untuk scan semasa program."
+            />
+          </View>
+        </View>
 
         {/*
           --- Album Gambar: crowd-sourced, semua ahli boleh sumbang --------------
@@ -427,19 +429,7 @@ export default function EventInfoScreen() {
 /** Poster tambahan dipapar PENUH (tidak dipotong) — nisbah diambil daripada gambar sebaik ia dimuatkan. */
 function ExtraPoster({ uri, label }: { uri: string; label: string }) {
   const [ratio, setRatio] = useState(3 / 4);
-  return (
-    <Image
-      source={{ uri }}
-      style={{ width: '100%', aspectRatio: ratio, borderRadius: 20 }}
-      contentFit="cover"
-      transition={150}
-      accessibilityLabel={label}
-      onLoad={(loaded) => {
-        const { width, height } = loaded.source;
-        if (width > 0 && height > 0) setRatio(width / height);
-      }}
-    />
-  );
+  return <ZoomablePoster uri={uri} label={label} ratio={ratio} onLoadRatio={setRatio} />;
 }
 
 function Row({ icon, label, value }: { icon: keyof typeof Ionicons.glyphMap; label: string; value: string }) {

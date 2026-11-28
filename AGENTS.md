@@ -940,3 +940,9 @@ Rujukan: `20261126000188_ranking_3k.sql`, `app/(app)/admin/perkaderan-ranking.ts
 # Betulkan kehadiran usrah menyegerakkan scan acara (2026-11-28, migration 189, sudah live di produksi)
 Rujukan: `20261128000189_betulkan_kehadiran_segerak_scan.sql`. PUNCA aduan "berjaya tapi rekod tidak berubah": `admin_set_usrah_attendance` hanya menulis grid bulanan; Kehadiran Live/Excel acara membaca `usrah_attendance_scans`.
 Kini `usrah_sync_scan()` (dalaman) dipanggil oleh `admin_set_usrah_attendance` dan `admin_clear_usrah_attendance`: hadir + kawasan -> scan `manual` pada acara usrah kawasan+bulan itu (tarikh sama, jika tidak terawal), scan acara usrah bulan itu yang lain dibuang; tidak hadir/kosongkan -> semua scan acara usrah bulan itu dibuang. 5 pembetulan 28 Nov 2026 (UTS) diisi semula. Diuji (rollback): hadir=1, tidak hadir=0, kosongkan=0.
+
+# Poster + QR dua lajur, zoom, RLS maklumat tambahan (2026-11-28, migration 190, sudah live di produksi)
+Rujukan: `components/zoomable-poster.tsx`, `components/event-qr-card.tsx` (+prop `stacked`), `admin/usrah-event-detail.tsx`, `event-info.tsx`, `20261128000190_extra_info_kawasan_admin.sql`.
+- Skrin admin dan skrin ahli: poster di KIRI (3:4, `contain`, tidak dipotong; ketik -> modal penuh), kod QR di KANAN (mobile: QR menegak `stacked`; desktop: poster 300px). Poster tambahan ahli pun `ZoomablePoster`.
+- Semua muat naik poster (utama + tambahan) melalui `uploadImage` -> lebar 1080, JPEG 0.7 (fail produksi maks ~345 KB). Tiada perubahan pemampatan diperlukan.
+- PEPIJAT dibetulkan (190): RLS `event_extra_info` hanya `can_edit_usrah()/can_edit_program()`, tetapi storage + `usrah_events` juga benarkan admin kawasan usrah -> poster tambahan terupload tetapi simpan baris gagal. Kini `can_edit_event_id(event_id)`.

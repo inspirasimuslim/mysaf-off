@@ -27,6 +27,8 @@ type Props = {
   dimmed?: boolean;
   /** Kandungan tambahan di bawah baris thumbnail — status, togol admin. */
   children?: ReactNode;
+  /** Susun menegak (thumbnail di atas) — untuk lajur sempit di sebelah poster. */
+  stacked?: boolean;
 };
 
 /**
@@ -38,7 +40,7 @@ type Props = {
  *
  * Dikongsi oleh skrin butiran admin dan skrin butiran ahli.
  */
-export function EventQrCard({ token, eventName, subtitle, dimmed = false, children }: Props) {
+export function EventQrCard({ token, eventName, subtitle, dimmed = false, children, stacked = false }: Props) {
   const colors = useColors();
   const { width } = useWindowDimensions();
   const qrSize = Math.max(160, Math.min(MODAL_MAX_QR, width - 120));
@@ -106,14 +108,14 @@ export function EventQrCard({ token, eventName, subtitle, dimmed = false, childr
           accessibilityRole="button"
           accessibilityLabel="Besarkan kod QR kehadiran"
           onPress={openModal}
-          className="flex-row items-center gap-4 p-3 active:opacity-70">
+          className={(stacked ? 'items-center gap-2 p-3' : 'flex-row items-center gap-4 p-3') + ' active:opacity-70'}>
           <View
             style={{ width: THUMB_BOX, height: THUMB_BOX, opacity: dimmed ? 0.35 : 1 }}
             className="items-center justify-center rounded-field border border-line bg-white">
             <QRCode value={token} size={THUMB_QR} color={colors.ink} backgroundColor={colors.white} />
           </View>
 
-          <View className="flex-1">
+          <View className={stacked ? 'items-center' : 'flex-1'}>
             <Text className="text-base font-semibold text-ink">Kod QR Kehadiran</Text>
             {subtitle ? <Text className="mt-0.5 text-xs text-ink-muted">{subtitle}</Text> : null}
             <View className="mt-1.5 flex-row items-center gap-1">

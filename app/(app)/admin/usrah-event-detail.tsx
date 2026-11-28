@@ -1,10 +1,11 @@
-import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
 
 import { EventExtraInfoEditor } from '@/components/event-extra-info-editor';
 import { EventQrCard } from '@/components/event-qr-card';
+import { ZoomablePoster } from '@/components/zoomable-poster';
+import { useIsDesktop } from '@/lib/use-desktop';
 import { LocationPicker } from '@/components/location-picker';
 import { SaveShareButtons } from '@/components/save-share-buttons';
 import { ScreenHeader } from '@/components/screen-header';
@@ -65,6 +66,7 @@ export default function UsrahEventDetailScreen() {
    * `posterError` / `extraError`: dihantar oleh skrin cipta bila acara tercipta tetapi poster
    * (atau maklumat tambahan) gagal disimpan.
    */
+  const isWide = useIsDesktop();
   const { id, posterError, extraError } = useLocalSearchParams<{ id?: string; posterError?: string; extraError?: string }>();
   /*
     Kebenaran diambil daripada KEDUA-DUA department kerana skrin ini melayan
@@ -431,9 +433,34 @@ export default function UsrahEventDetailScreen() {
           />
         ) : null}
 
-        {/* --- Kod QR: thumbnail padat (ketik untuk besarkan & simpan). --------- */}
+        {/* --- Poster (kiri, penuh 3:4) + Kod QR (kanan) --------------------- */}
+        <View className="flex-row items-start gap-3">
+          <View style={{ flex: isWide ? 0 : 1, width: isWide ? 300 : undefined }}>
+        <View>
+          {event.poster_url ? (
+            <ZoomablePoster uri={event.poster_url} label={'Poster ' + event.name} />
+          ) : (
+            <Text className="text-sm text-ink-muted">Tiada poster dimuat naik.</Text>
+          )}
+
+          {canEdit ? (
+            <View className="pt-3">
+              <Button
+                label={event.poster_url ? 'Tukar Poster' : 'Muat Naik Poster'}
+                variant="secondary"
+                loading={busy}
+                disabled={busy}
+                onPress={() => void changePoster()}
+              />
+            </View>
+          ) : null}
+        </View>
+
+          </View>
+          <View style={{ flex: 1 }}>
         <View className="gap-3">
           <EventQrCard
+            stacked={isWide ? false : true}
             token={event.qr_token}
             eventName={event.name}
             subtitle={'Sah sehingga ' + new Date(event.valid_until).toLocaleString('ms-MY')}
@@ -468,32 +495,7 @@ export default function UsrahEventDetailScreen() {
           ) : null}
         </View>
 
-        {/* --- Poster -------------------------------------------------------- */}
-        <View>
-          <SectionTitle title="Poster" />
-          {event.poster_url ? (
-            <Image
-              source={{ uri: event.poster_url }}
-              style={{ width: '100%', height: 200, borderRadius: 12 }}
-              contentFit="cover"
-              transition={150}
-              accessibilityLabel={'Poster ' + event.name}
-            />
-          ) : (
-            <Text className="text-sm text-ink-muted">Tiada poster dimuat naik.</Text>
-          )}
-
-          {canEdit ? (
-            <View className="pt-3">
-              <Button
-                label={event.poster_url ? 'Tukar Poster' : 'Muat Naik Poster'}
-                variant="secondary"
-                loading={busy}
-                disabled={busy}
-                onPress={() => void changePoster()}
-              />
-            </View>
-          ) : null}
+          </View>
         </View>
 
         {canEdit ? (
