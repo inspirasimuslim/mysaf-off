@@ -435,7 +435,7 @@ export default function UsrahEventDetailScreen() {
 
         {/* --- Poster (kiri, penuh 3:4) + Kod QR (kanan) --------------------- */}
         <View className="flex-row items-start gap-3">
-          <View style={{ flex: isWide ? 0 : 1, width: isWide ? 300 : undefined }}>
+          <View style={isWide ? { width: 300, flexGrow: 0, flexShrink: 0 } : { flex: 1 }}>
         <View>
           {event.poster_url ? (
             <ZoomablePoster uri={event.poster_url} label={'Poster ' + event.name} />

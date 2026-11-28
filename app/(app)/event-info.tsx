@@ -206,7 +206,7 @@ export default function EventInfoScreen() {
         {/* --- Poster (kiri, penuh 3:4, ketik untuk besarkan) + Kod QR (kanan) --- */}
         <View className="flex-row items-start gap-3">
           {event.poster_url ? (
-            <View style={{ flex: isWide ? 0 : 1, width: isWide ? 300 : undefined }}>
+            <View style={isWide ? { width: 300, flexGrow: 0, flexShrink: 0 } : { flex: 1 }}>
               <ZoomablePoster uri={event.poster_url} label={'Poster ' + event.name} />
             </View>
           ) : null}
