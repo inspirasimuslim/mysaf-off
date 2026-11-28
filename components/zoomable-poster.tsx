@@ -30,11 +30,11 @@ export function ZoomablePoster({ uri, label, width = '100%', ratio = 3 / 4, onLo
         accessibilityRole="imagebutton"
         accessibilityLabel={label + ' — ketik untuk besarkan'}
         onPress={() => setOpen(true)}
-        style={{ width, aspectRatio: ratio }}
+        style={{ width, aspectRatio: ratio, minHeight: 120 }}
         className="overflow-hidden rounded-card border border-line bg-surface active:opacity-80">
         <Image
           source={{ uri }}
-          style={{ width: '100%', height: '100%' }}
+          style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
           contentFit="contain"
           transition={150}
           onLoad={(loaded) => {
